@@ -14,7 +14,7 @@ B2B2C SaaS для вузов: расписание, задания, матери
 | Новый разработчик | Поднять проект и начать кодить | [01_ONBOARDING.md](01_ONBOARDING.md) |
 | AI-агент | Взять модуль и реализовать | [01_ONBOARDING.md](01_ONBOARDING.md) → нужный `modules/*.md` |
 | Продукт / CEO | Стратегия и метрики | [strategy/](strategy/vision.md), [product/](product/overview.md) |
-| Новый участник команды | Понять контекст | [02_GLOSSARY.md](02_GLOSSARY.md), [architecture/system-overview.md](architecture/system-overview.md) |
+| Новый участник команды | Понять контекст | [02_GLOSSARY.md](02_GLOSSARY.md), [architecture/README.md](architecture/README.md) |
 
 ---
 
@@ -25,7 +25,7 @@ docs/
 ├── 00_START_HERE.md              # ← ты здесь
 ├── 01_ONBOARDING.md              # Путь нового разработчика / AI (≤ 30 мин)
 ├── 02_GLOSSARY.md                # Единая терминология
-├── 03_DECISIONS/                 # Архитектурные решения (ADR)
+├── decisions/                    # Архитектурные решения (ADR)
 │
 ├── strategy/                     # Видение, монетизация, роадмап, питч
 ├── product/                      # Обзор продукта, персоны, метрики

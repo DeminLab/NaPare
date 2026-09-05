@@ -19,7 +19,7 @@
 | **Файлы** | S3-совместимое | — | Yandex Object Storage / MinIO для файлов ДЗ |
 | **Push (Android)** | Firebase Cloud Messaging | — | Стандарт |
 | **Push (iOS)** | Apple Push Notification | — | Стандарт |
-| **Auth** | JWT (access + refresh) | — | Stateless, см. [ADR-0004](../03_DECISIONS/0004-jwt-auth.md) |
+| **Auth** | JWT (access + refresh) | — | Stateless, см. [ADR-0004](../decisions/0004-jwt-auth.md) |
 | **API Docs** | OpenAPI 3 (Swagger) | — | Генерируется из кода = source of truth |
 | **Аналитика** | PostHog | — | Продуктовые события |
 | **Мониторинг ошибок** | Sentry | — | Ошибки на всех клиентах |
@@ -30,9 +30,9 @@
 ## Принципы выбора
 
 1. **TypeScript везде** где возможно (web + backend + max-miniapp)
-2. **Модульный монолит** на старте — см. [ADR-0001](../03_DECISIONS/0001-modular-monolith.md)
+2. **Модульный монолит** на старте — см. [ADR-0001](../decisions/0001-modular-monolith.md)
 3. **OpenAPI из кода** — генерируется, не рисуется вручную
-4. **Мультивузовость** через `university_id` — см. [ADR-0005](../03_DECISIONS/0005-multitenancy-university-id.md)
+4. **Мультивузовость** через `university_id` — см. [ADR-0005](../decisions/0005-multitenancy-university-id.md)
 
 ## Монорепозиторий
 

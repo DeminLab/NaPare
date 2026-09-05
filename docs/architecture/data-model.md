@@ -3,7 +3,7 @@
 ## Обзор сущностей
 
 Все доменные сущности (кроме справочников) имеют `university_id` для мультивузовости.  
-Полная SQL-схема: [database/schema-overview.md](../database/schema-overview.md).
+Полная SQL-схема: [database/schema-full.sql](../database/schema-full.sql).
 
 ```mermaid
 erDiagram
@@ -33,32 +33,32 @@ erDiagram
 
 ## Ключевые сущности
 
-| Сущность | Описание | Ключевые поля |
-|----------|----------|---------------|
-| **User** | Пользователь системы | id, phone, email, roles[], university_id, group_id |
-| **University** | Учебное заведение | id, name, city, connector_config, status |
-| **Faculty** | Факультет | id, university_id, name, code, dean_user_id |
-| **Group** | Учебная группа | id, faculty_id, name, curriculum_year, specialization |
-| **Teacher** | Привязка преподавателя | id, user_id, university_id, department |
-| **Lesson** | Пара (ключевая сущность) | id, university_id, group_id, teacher_id, subject, room, day_of_week, start_time, end_time, week_type, start_date, end_date |
-| **LessonChange** | Изменение пары | id, lesson_id, change_type, old_values, new_values |
-| **PairSpace** | Пространство пары | id, lesson_id, active_until |
-| **Announcement** | Объявление | id, pair_space_id, author_id, text, is_pinned |
-| **Homework** | Домашнее задание | id, pair_space_id, title, description, deadline |
-| **HomeworkSubmission** | Статус сдачи ДЗ | id, homework_id, student_id, status |
-| **FileAttachment** | Файл | id, pair_space_id, file_url, file_type, size |
-| **DiscussionMessage** | Сообщение обсуждения | id, pair_space_id, user_id, text, parent_id |
-| **AbsenceStatus** | Статус отсутствия | id, user_id, type, start_date, end_date, comment |
-| **AbsenceConfirmation** | Подтверждение куратора | id, absence_id, curator_id, status |
-| **Notification** | Уведомление | id, user_id, type, title, body, deep_link, is_read |
-| **DeviceToken** | Токен устройства | id, user_id, platform, token |
-| **AuditLog** | Лог действий | id, user_id, action, entity, entity_id, ip |
+| Сущность | Описание | Ключевые поля | Типы |
+|----------|----------|---------------|------|
+| **User** | Пользователь системы | id, phone, email, roles[], university_id, group_id | UUID, VARCHAR, VARCHAR, TEXT[], UUID, UUID |
+| **University** | Учебное заведение | id, name, city, connector_config, status | UUID, VARCHAR, VARCHAR, JSONB, VARCHAR |
+| **Faculty** | Факультет | id, university_id, name, code, dean_user_id | UUID, UUID, VARCHAR, VARCHAR, UUID |
+| **Group** | Учебная группа | id, faculty_id, name, curriculum_year, specialization | UUID, UUID, VARCHAR, INTEGER, VARCHAR |
+| **Teacher** | Привязка преподавателя | id, user_id, university_id, department | UUID, UUID, UUID, VARCHAR |
+| **Lesson** | Пара (ключевая сущность) | id, university_id, group_id, teacher_id, subject, room, day_of_week, start_time, end_time, week_type, start_date, end_date | UUID, UUID, UUID, UUID, VARCHAR, VARCHAR, INTEGER, TIME, TIME, VARCHAR, DATE, DATE |
+| **LessonChange** | Изменение пары | id, lesson_id, change_type, old_values, new_values | UUID, UUID, VARCHAR, JSONB, JSONB |
+| **PairSpace** | Пространство пары | id, lesson_id, active_until | UUID, UUID, TIMESTAMP |
+| **Announcement** | Объявление | id, pair_space_id, author_id, text, is_pinned | UUID, UUID, UUID, TEXT, BOOLEAN |
+| **Homework** | Домашнее задание | id, pair_space_id, title, description, deadline | UUID, UUID, VARCHAR, TEXT, TIMESTAMP |
+| **HomeworkSubmission** | Статус сдачи ДЗ | id, homework_id, student_id, status | UUID, UUID, UUID, VARCHAR |
+| **FileAttachment** | Файл | id, pair_space_id, file_url, file_type, size | UUID, UUID, VARCHAR, VARCHAR, INTEGER |
+| **DiscussionMessage** | Сообщение обсуждения | id, pair_space_id, user_id, text, parent_id | UUID, UUID, UUID, TEXT, UUID |
+| **AbsenceStatus** | Статус отсутствия | id, user_id, type, start_date, end_date, comment | UUID, UUID, VARCHAR, DATE, DATE, TEXT |
+| **AbsenceConfirmation** | Подтверждение куратора | id, absence_id, curator_id, status | UUID, UUID, UUID, VARCHAR |
+| **Notification** | Уведомление | id, user_id, type, title, body, deep_link, is_read | UUID, UUID, VARCHAR, VARCHAR, TEXT, VARCHAR, BOOLEAN |
+| **DeviceToken** | Токен устройства | id, user_id, platform, token | UUID, UUID, VARCHAR, VARCHAR |
+| **AuditLog** | Лог действий | id, user_id, action, entity, entity_id, ip | UUID, UUID, VARCHAR, VARCHAR, UUID, VARCHAR |
 
 ## Мультивузовость
 
 Каждая сущность, привязанная к вузу, имеет `university_id` (UUID → universities.id).  
 Все API-запросы фильтруются по `university_id` текущего пользователя.  
-См. [ADR-0005](../03_DECISIONS/0005-multitenancy-university-id.md).
+См. [ADR-0002](../decisions/0002-multitenancy-university-id.md).
 
 ## Статусы отсутствий
 

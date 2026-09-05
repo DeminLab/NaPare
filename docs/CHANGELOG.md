@@ -1,5 +1,41 @@
 # Changelog
 
+## [2.1.0] — 2026-09-05
+
+### Архитектура кода
+
+Детальное проектирование архитектуры кода для всех компонентов системы.
+
+#### Архитектурные решения (ADR)
+- `03_DECISIONS/0001-modular-monolith.md` — модульный монолит
+- `03_DECISIONS/0002-multitenancy-university-id.md` — мультивузовость
+- `03_DECISIONS/0003-jwt-auth.md` — JWT-авторизация
+- `03_DECISIONS/0004-openapi-source-of-truth.md` — OpenAPI
+- `03_DECISIONS/0005-tech-stack.md` — стек технологий
+- `03_DECISIONS/0006-monorepo-vs-polyrepo.md` — монорепозиторий
+- `03_DECISIONS/0007-deployment-strategy.md` — стратегия деплоя
+
+#### Архитектура кода (общая)
+- `architecture/backend-architecture.md` — структура NestJS: модули, сервисы, контроллеры, паттерны
+- `architecture/mobile-architecture.md` — структура Flutter: провайдеры, репозитории, модели
+- `architecture/web-architecture.md` — структура Next.js: компоненты, хуки, страницы
+- `architecture/max-miniapp-architecture.md` — структура React: MAX интеграция
+- `architecture/shared-types-architecture.md` — общие типы и интерфейсы
+
+#### Детальные реализации модулей
+- `architecture/modules/auth-module.md` — Auth: сервис, контроллер, JWT стратегии, DTO, тесты
+- `architecture/modules/schedule-module.md` — Schedule: сущности, коннекторы, детект изменений
+- `architecture/modules/pair-space-module.md` — PairSpace: объявления, ДЗ, файлы, обсуждение
+
+#### Инфраструктура
+- `architecture/common-components.md` — Guards, Interceptors, Filters, Decorators
+- `architecture/docker-cicd.md` — Docker Compose, Dockerfile, GitHub Actions CI/CD
+
+#### Безопасность
+- `security/threat-model.md` — модель угроз
+
+---
+
 ## [2.0.0] — 2026-09-05
 
 ### Реорганизация документации
@@ -14,13 +50,13 @@
 - `02_GLOSSARY.md` — единая терминология
 
 **Архитектурные решения (ADR):**
-- `03_DECISIONS/0001-modular-monolith.md` — модульный монолит
-- `03_DECISIONS/0002-flutter-mobile.md` — Flutter для mobile
-- `03_DECISIONS/0003-nestjs-backend.md` — NestJS для backend
-- `03_DECISIONS/0004-jwt-auth.md` — JWT access + refresh
-- `03_DECISIONS/0005-multitenancy-university-id.md` — мультивузовость
-- `03_DECISIONS/0006-connectors-layer.md` — слой коннекторов
-- `03_DECISIONS/0007-no-ai-in-mvp.md` — нет AI в MVP
+- `decisions/0001-modular-monolith.md` — модульный монолит
+- `decisions/0002-flutter-mobile.md` — Flutter для mobile
+- `decisions/0003-nestjs-backend.md` — NestJS для backend
+- `decisions/0004-jwt-auth.md` — JWT access + refresh
+- `decisions/0005-multitenancy-university-id.md` — мультивузовость
+- `decisions/0006-connectors-layer.md` — слой коннекторов
+- `decisions/0007-no-ai-in-mvp.md` — нет AI в MVP
 
 **Архитектура:**
 - `architecture/system-overview.md` — системная схема + Mermaid

@@ -58,7 +58,7 @@ graph TB
 
 ## Модульный монолит
 
-Единый NestJS-процесс с модульной структурой. См. [ADR-0001](../03_DECISIONS/0001-modular-monolith.md).
+Единый NestJS-процесс с модульной структурой. См. [ADR-0001](../decisions/0001-modular-monolith.md).
 
 Каждый модуль — автономная область ответственности:
 
@@ -124,4 +124,4 @@ sequenceDiagram
 - [data-model.md](data-model.md) — модель данных
 - [roles-and-permissions.md](roles-and-permissions.md) — матрица прав
 - [connectors.md](connectors.md) — слой коннекторов
-- [03_DECISIONS/](../03_DECISIONS/) — архитектурные решения
+- [decisions/](../decisions/) — архитектурные решения

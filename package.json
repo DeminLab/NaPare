@@ -1,0 +1,18 @@
+{
+  "name": "napare",
+  "version": "1.0.0",
+  "private": true,
+  "description": "НаПаре — операционная система учебного дня студента",
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "test:coverage": "turbo run test:coverage",
+    "clean": "turbo run clean"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.0"
+  },
+  "packageManager": "pnpm@9.0.0"
+}
