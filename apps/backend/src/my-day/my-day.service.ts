@@ -14,22 +14,22 @@ export class MyDayService {
     private readonly notificationsService: NotificationsService,
   ) {}
 
-  async getMyDay(userId: string, universityId: string, role: string) {
+  async getMyDay(userId: string, universityId: string, roles: string[]) {
     const today = new Date().toISOString().split('T')[0];
 
     // Get today's schedule
     let lessons;
-    if (role === 'student') {
+    if (roles.includes('student')) {
       // TODO: Get student's group
       lessons = await this.scheduleService.findByDate(universityId, today);
-    } else if (role === 'teacher') {
+    } else if (roles.includes('teacher')) {
       lessons = await this.scheduleService.findByTeacher(universityId, userId, today);
     } else {
       lessons = await this.scheduleService.findByDate(universityId, today);
     }
 
     // Get PairSpaces for today's lessons
-    const pairSpaces = [];
+    const pairSpaces: any[] = [];
     for (const lesson of lessons) {
       try {
         const pairSpace = await this.pairSpaceService.findByLesson(lesson.id);
@@ -50,7 +50,7 @@ export class MyDayService {
       lessons,
       pairSpaces,
       absences: absences.filter(
-        (a) => new Date(a.date).toISOString().split('T')[0] === today,
+        (a) => new Date(a.startDate).toISOString().split('T')[0] === today,
       ),
       notifications: {
         unreadCount,

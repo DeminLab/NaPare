@@ -10,6 +10,8 @@ export class UpdateUserRoleDto {
       'faculty_dean',
       'department_head',
       'university_admin',
+      'superadmin',
+      'developer',
     ],
   })
   @IsEnum([
@@ -19,6 +21,8 @@ export class UpdateUserRoleDto {
     'faculty_dean',
     'department_head',
     'university_admin',
+    'superadmin',
+    'developer',
   ])
   role: string;
 }

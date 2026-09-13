@@ -35,7 +35,7 @@ erDiagram
 
 | Сущность | Описание | Ключевые поля | Типы |
 |----------|----------|---------------|------|
-| **User** | Пользователь системы | id, phone, email, roles[], university_id, group_id | UUID, VARCHAR, VARCHAR, TEXT[], UUID, UUID |
+| **User** | Пользователь системы | id, phone, email, roles[], university_id, group_id | UUID, VARCHAR, VARCHAR, comma-separated string (simple-array), UUID, UUID |
 | **University** | Учебное заведение | id, name, city, connector_config, status | UUID, VARCHAR, VARCHAR, JSONB, VARCHAR |
 | **Faculty** | Факультет | id, university_id, name, code, dean_user_id | UUID, UUID, VARCHAR, VARCHAR, UUID |
 | **Group** | Учебная группа | id, faculty_id, name, curriculum_year, specialization | UUID, UUID, VARCHAR, INTEGER, VARCHAR |

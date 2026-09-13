@@ -1,16 +1,24 @@
-import { ROLES, LESSON_STATUS, ABSENCE_STATUS } from '../constants';
+import { ROLES } from '../constants/roles';
+import { ABSENCE_TYPES, AbsenceType } from '../constants/absence-types';
+import { LESSON_CHANGE_TYPES, LessonChangeType } from '../constants/change-types';
+import { NOTIFICATION_TYPES, NotificationType } from '../constants/notification-types';
 
-export const isValidEmail = (email: string): boolean => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
-};
-
-export const isValidPassword = (password: string): boolean => {
-  return password.length >= 6;
-};
+export * from './schemas';
 
 export const isValidRole = (role: string): boolean => {
   return Object.values(ROLES).includes(role as any);
+};
+
+export const isValidAbsenceType = (type: string): boolean => {
+  return Object.values(ABSENCE_TYPES).includes(type as AbsenceType);
+};
+
+export const isValidLessonChangeType = (type: string): boolean => {
+  return Object.values(LESSON_CHANGE_TYPES).includes(type as LessonChangeType);
+};
+
+export const isValidNotificationType = (type: string): boolean => {
+  return Object.values(NOTIFICATION_TYPES).includes(type as NotificationType);
 };
 
 export const isValidDate = (date: string): boolean => {
@@ -27,19 +35,6 @@ export const isValidPairNumber = (pairNumber: number): boolean => {
   return pairNumber >= 1 && pairNumber <= 8;
 };
 
-export const isValidLessonStatus = (status: string): boolean => {
-  return Object.values(LESSON_STATUS).includes(status as any);
-};
-
-export const isValidAbsenceStatus = (status: string): boolean => {
-  return Object.values(ABSENCE_STATUS).includes(status as any);
-};
-
 export const sanitizeString = (str: string): string => {
   return str.trim().replace(/\s+/g, ' ');
-};
-
-export const truncate = (str: string, maxLength: number): string => {
-  if (str.length <= maxLength) return str;
-  return str.slice(0, maxLength - 3) + '...';
 };

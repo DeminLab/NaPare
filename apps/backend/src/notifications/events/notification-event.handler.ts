@@ -27,12 +27,12 @@ export class NotificationEventHandler {
       universityId: event.universityId,
       title: 'Изменение в расписании',
       body: `Изменения: ${event.changeDescription}`,
-      type: 'warning',
+      type: 'schedule_change',
       data: {
         lessonId: event.lessonId,
         changes: event.changeDescription,
       },
-      link: `/schedule?lessonId=${event.lessonId}`,
+      deepLink: `/schedule?lessonId=${event.lessonId}`,
     };
 
     // TODO: Send push notifications to affected students

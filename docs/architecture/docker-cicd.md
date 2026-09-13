@@ -50,8 +50,8 @@ services:
       - '9000:9000'
       - '9001:9001'
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_ROOT_USER: napare_minio
+      MINIO_ROOT_PASSWORD: napare_minio_secret
     volumes:
       - miniodata:/data
     command: server /data --console-address ':9001'
@@ -438,8 +438,8 @@ REDIS_PORT=6379
 # ===========================================
 S3_ENDPOINT=localhost:9000
 S3_BUCKET=napare
-S3_ACCESS_KEY=minioadmin
-S3_SECRET_KEY=minioadmin
+S3_ACCESS_KEY=napare_minio
+S3_SECRET_KEY=napare_minio_secret
 S3_REGION=us-east-1
 
 # ===========================================

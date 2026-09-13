@@ -24,11 +24,21 @@ export class CreateNotificationDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsEnum(['info', 'warning', 'success', 'error'])
+  @IsEnum([
+    'schedule_change',
+    'new_announcement',
+    'new_homework',
+    'new_file',
+    'deadline',
+    'absence_decision',
+    'new_absence',
+    'system',
+    'other',
+  ])
   type?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
-  link?: string;
+  deepLink?: string;
 }

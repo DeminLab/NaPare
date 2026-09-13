@@ -2,13 +2,16 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-COPY package.json pnpm-lock.yaml ./
-RUN corepack enable && pnpm install --frozen-lockfile
+COPY apps/backend/package.json ./package.json
+RUN npm install
 
-COPY . .
-RUN pnpm build
+COPY apps/backend/src ./src
+COPY apps/backend/nest-cli.json ./
+COPY apps/backend/tsconfig.json ./
 
-FROM node:20-alpine AS runner
+RUN npx nest build
+
+FROM node:20-alpine
 
 WORKDIR /app
 

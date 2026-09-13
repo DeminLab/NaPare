@@ -5,25 +5,26 @@ import {
   IsBoolean,
   IsDateString,
   IsUUID,
+  IsIn,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateLessonDto {
-  @ApiProperty()
-  @IsDateString()
-  date: Date;
-
-  @ApiProperty()
-  @IsNumber()
-  pairNumber: number;
-
-  @ApiProperty()
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsString()
-  startTime: string;
+  @IsUUID()
+  universityId?: string;
 
   @ApiProperty()
+  @IsUUID()
+  groupId: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsString()
-  endTime: string;
+  @IsUUID()
+  teacherId?: string;
 
   @ApiProperty()
   @IsString()
@@ -37,16 +38,6 @@ export class CreateLessonDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
-  teacherName?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  teacherId?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
   room?: string;
 
   @ApiPropertyOptional()
@@ -54,10 +45,45 @@ export class CreateLessonDto {
   @IsString()
   building?: string;
 
+  @ApiProperty()
+  @IsNumber()
+  dayOfWeek: number;
+
+  @ApiProperty()
+  @IsString()
+  startTime: string;
+
+  @ApiProperty()
+  @IsString()
+  endTime: string;
+
+  @ApiProperty()
+  @IsNumber()
+  pairNumber: number;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
-  group?: string;
+  @IsIn(['odd', 'even', 'both'])
+  weekType?: string;
+
+  @ApiProperty()
+  @IsDateString()
+  startDate: Date;
+
+  @ApiProperty()
+  @IsDateString()
+  endDate: Date;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  teacherName?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  groupName?: string;
 
   @ApiPropertyOptional()
   @IsOptional()

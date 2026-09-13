@@ -14,6 +14,7 @@ import { AdminModule } from './admin/admin.module';
 import { MyDayModule } from './my-day/my-day.module';
 import { DatabaseModule } from './database/database.module';
 import { HealthController } from './health.controller';
+import { AppController } from './app.controller';
 
 @Module({
   imports: [
@@ -24,16 +25,28 @@ import { HealthController } from './health.controller';
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        type: 'postgres',
-        host: configService.get('DB_HOST', 'localhost'),
-        port: configService.get<number>('DB_PORT', 5432),
-        username: configService.get('DB_USERNAME', 'postgres'),
-        password: configService.get('DB_PASSWORD', 'postgres'),
-        database: configService.get('DB_NAME', 'napare'),
-        autoLoadEntities: true,
-        synchronize: configService.get('NODE_ENV') !== 'production',
-      }),
+      useFactory: (configService: ConfigService) => {
+        // Support both DATABASE_URL and individual DB_* vars
+        const databaseUrl = configService.get<string>('DATABASE_URL');
+        if (databaseUrl) {
+          return {
+            type: 'postgres' as const,
+            url: databaseUrl,
+            autoLoadEntities: true,
+            synchronize: configService.get<string>('NODE_ENV') !== 'production',
+          };
+        }
+        return {
+          type: 'postgres' as const,
+          host: configService.get<string>('DB_HOST', 'localhost'),
+          port: configService.get<number>('DB_PORT', 5432),
+          username: configService.get<string>('DB_USERNAME', 'postgres'),
+          password: configService.get<string>('DB_PASSWORD', 'postgres'),
+          database: configService.get<string>('DB_NAME', 'napare'),
+          autoLoadEntities: true,
+          synchronize: configService.get<string>('NODE_ENV') !== 'production',
+        };
+      },
     }),
     EventEmitterModule.forRoot(),
     ThrottlerModule.forRoot([{
@@ -50,7 +63,7 @@ import { HealthController } from './health.controller';
     MyDayModule,
     DatabaseModule,
   ],
-  controllers: [HealthController],
+  controllers: [AppController, HealthController],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

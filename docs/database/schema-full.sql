@@ -83,7 +83,7 @@ CREATE TABLE users (
     first_name VARCHAR(100) NOT NULL,
     last_name VARCHAR(100) NOT NULL,
     avatar_url TEXT,
-    roles TEXT[] NOT NULL DEFAULT ARRAY['student'::text],
+    roles VARCHAR NOT NULL DEFAULT 'student',
     university_id UUID REFERENCES universities(id) ON DELETE SET NULL,
     group_id UUID REFERENCES groups(id) ON DELETE SET NULL,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,

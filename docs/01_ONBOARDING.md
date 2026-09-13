@@ -95,8 +95,8 @@ pnpm run dev
 
 | Ресурс | Где |
 |--------|-----|
-| OpenAPI (локально) | `http://localhost:3000/api/docs` |
-| OpenAPI (staging) | `https://staging.napare.ru/api/docs` |
+| OpenAPI (локально) | `http://localhost:3000/api/v1/docs` |
+| OpenAPI (staging) | `https://staging.napare.ru/api/v1/docs` |
 | Grafana | `https://grafana.napare.ru` |
 | Sentry | `https://sentry.napare.ru` |
 | GitHub | `https://github.com/napare/napare` |

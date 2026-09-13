@@ -502,8 +502,8 @@ REDIS_PORT=6379
 # S3
 S3_ENDPOINT=localhost:9000
 S3_BUCKET=napare
-S3_ACCESS_KEY=minioadmin
-S3_SECRET_KEY=minioadmin
+S3_ACCESS_KEY=napare_minio
+S3_SECRET_KEY=napare_minio_secret
 
 # Push
 FCM_PROJECT_ID=your-project-id

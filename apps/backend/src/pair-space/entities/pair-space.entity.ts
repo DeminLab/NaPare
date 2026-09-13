@@ -4,13 +4,13 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
-  ManyToOne,
   OneToMany,
-  JoinColumn,
 } from 'typeorm';
 
 import { Announcement } from './announcement.entity';
 import { Homework } from './homework.entity';
+import { FileAttachment } from './file-attachment.entity';
+import { DiscussionMessage } from './discussion-message.entity';
 
 @Entity('pair_spaces')
 export class PairSpace {
@@ -44,11 +44,20 @@ export class PairSpace {
   @Column({ default: true })
   isActive: boolean;
 
+  @Column({ type: 'timestamp', nullable: true })
+  activeUntil: Date;
+
   @OneToMany(() => Announcement, (announcement) => announcement.pairSpace)
   announcements: Announcement[];
 
   @OneToMany(() => Homework, (homework) => homework.pairSpace)
   homeworks: Homework[];
+
+  @OneToMany(() => FileAttachment, (file) => file.pairSpace)
+  files: FileAttachment[];
+
+  @OneToMany(() => DiscussionMessage, (message) => message.pairSpace)
+  messages: DiscussionMessage[];
 
   @CreateDateColumn()
   createdAt: Date;

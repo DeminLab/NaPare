@@ -6,6 +6,7 @@ import { Notification } from './entities/notification.entity';
 import { DeviceToken } from './entities/device-token.entity';
 import { NotificationsService } from './notifications.service';
 import { NotificationsController } from './notifications.controller';
+import { DevicesController } from './devices.controller';
 import { NotificationEventHandler } from './events/notification-event.handler';
 
 @Module({
@@ -14,7 +15,7 @@ import { NotificationEventHandler } from './events/notification-event.handler';
     EventEmitterModule,
   ],
   providers: [NotificationsService, NotificationEventHandler],
-  controllers: [NotificationsController],
+  controllers: [NotificationsController, DevicesController],
   exports: [NotificationsService],
 })
 export class NotificationsModule {}

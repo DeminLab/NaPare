@@ -1,5 +1,6 @@
 import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 
 import { UsersService } from '../users/users.service';
@@ -13,6 +14,7 @@ export class AuthService {
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
   ) {}
 
   async login(loginDto: LoginDto): Promise<AuthResponse> {
@@ -58,7 +60,7 @@ export class AuthService {
   async refreshToken(refreshToken: string): Promise<AuthResponse> {
     try {
       const payload = this.jwtService.verify<JwtPayload>(refreshToken, {
-        secret: process.env.JWT_REFRESH_SECRET || 'napare-refresh-secret',
+        secret: this.configService.get('JWT_REFRESH_SECRET', 'napare-refresh-secret'),
       });
 
       const user = await this.usersService.findById(payload.sub);
@@ -83,8 +85,8 @@ export class AuthService {
 
     const accessToken = this.jwtService.sign(payload);
     const refreshToken = this.jwtService.sign(payload, {
-      secret: process.env.JWT_REFRESH_SECRET || 'napare-refresh-secret',
-      expiresIn: '7d',
+      secret: this.configService.get('JWT_REFRESH_SECRET', 'napare-refresh-secret'),
+      expiresIn: this.configService.get('JWT_REFRESH_EXPIRATION', '30d'),
     });
 
     return {

@@ -34,7 +34,7 @@ export class ScheduleController {
 ```bash
 # TypeScript клиент из OpenAPI
 npx @openapitools/openapi-generator-cli generate \
-  -i http://localhost:3000/api/docs-json \
+  -i http://localhost:3000/api/v1/docs-json \
   -g typescript-axios \
   -o packages/api-client/src
 ```

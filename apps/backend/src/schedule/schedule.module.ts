@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { HttpModule } from '@nestjs/axios';
 
 import { Lesson } from './entities/lesson.entity';
 import { LessonChange } from './entities/lesson-change.entity';
@@ -10,7 +11,7 @@ import { ExcelConnectorService } from './connectors/excel-connector.service';
 import { SibitConnectorService } from './connectors/sibit-connector.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Lesson, LessonChange])],
+  imports: [TypeOrmModule.forFeature([Lesson, LessonChange]), HttpModule],
   providers: [
     ScheduleService,
     ChangeDetectorService,

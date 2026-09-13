@@ -1,5 +1,5 @@
 import { Controller, Get, UseGuards, Request } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 
 import { MyDayService } from './my-day.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
@@ -13,6 +13,8 @@ export class MyDayController {
 
   @Get()
   @ApiOperation({ summary: 'Получить данные для главного экрана' })
+  @ApiResponse({ status: 200, description: 'Данные получены' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getMyDay(@Request() req) {
     return this.myDayService.getMyDay(
       req.user.id,

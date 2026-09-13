@@ -63,7 +63,7 @@ pnpm dev
 
 | Сервис | URL | Ожидаемый результат |
 |--------|-----|---------------------|
-| Backend | http://localhost:3000/api/docs | Swagger UI |
+| Backend | http://localhost:3000/api/v1/docs | Swagger UI |
 | Web | http://localhost:3001 | Страница входа |
 | PostgreSQL | localhost:5432 | Подключение |
 | Redis | localhost:6379 | PONG |

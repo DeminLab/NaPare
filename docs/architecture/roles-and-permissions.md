@@ -64,7 +64,7 @@
 
 ## Реализация
 
-- Роли хранятся в `users.roles` (TEXT[] в PostgreSQL)
+- Роли хранятся в `users.roles` (comma-separated string (simple-array))
 - Проверка через Guards в NestJS: `@Roles('teacher')`, `@Roles('university_admin')`
 - Фильтрация по `university_id` — автоматически на уровне сервисов
 - Дополнительные ограничения (только свои пары, только своя группа) — в бизнес-логике модулей

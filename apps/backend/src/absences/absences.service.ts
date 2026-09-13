@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, Between } from 'typeorm';
 
 import { Absence } from './entities/absence.entity';
 import { CreateAbsenceDto } from './dto/create-absence.dto';
@@ -16,13 +16,13 @@ export class AbsencesService {
   async findByStudent(studentId: string): Promise<Absence[]> {
     return this.absenceRepository.find({
       where: { studentId },
-      order: { date: 'DESC', pairNumber: 'ASC' },
+      order: { createdAt: 'DESC' },
     });
   }
 
   async findByLesson(lessonId: string): Promise<Absence[]> {
     return this.absenceRepository.find({
-      where: { lessonId },
+      where: { affectedLessonIds: lessonId } as any,
     });
   }
 
@@ -34,9 +34,9 @@ export class AbsencesService {
     return this.absenceRepository.find({
       where: {
         universityId,
-        date: Between(new Date(startDate), new Date(endDate)),
+        startDate: Between(new Date(startDate), new Date(endDate)),
       },
-      order: { date: 'DESC', pairNumber: 'ASC' },
+      order: { createdAt: 'DESC' },
     });
   }
 
@@ -56,21 +56,35 @@ export class AbsencesService {
     return this.absenceRepository.save(absence);
   }
 
-  async confirm(id: string, curatorId: string): Promise<Absence> {
+  async findByUniversity(
+    universityId: string,
+    status?: string,
+  ): Promise<Absence[]> {
+    const where: any = { universityId };
+    if (status === 'pending') {
+      where.confirmationRequired = true;
+    }
+    return this.absenceRepository.find({
+      where,
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  async confirm(id: string, curatorId: string, comment?: string): Promise<Absence> {
     const absence = await this.absenceRepository.findOne({ where: { id } });
 
     if (!absence) {
       throw new NotFoundException(`Absence with id ${id} not found`);
     }
 
-    absence.status = 'excused';
-    absence.confirmedBy = curatorId;
-    absence.confirmedAt = new Date();
-
+    absence.confirmationRequired = false;
+    if (comment) {
+      absence.comment = comment;
+    }
     return this.absenceRepository.save(absence);
   }
 
-  async excuse(
+  async reject(
     id: string,
     curatorId: string,
     reason: string,
@@ -81,31 +95,34 @@ export class AbsencesService {
       throw new NotFoundException(`Absence with id ${id} not found`);
     }
 
-    absence.isExcused = true;
-    absence.excusedBy = curatorId;
-    absence.excusedAt = new Date();
-    absence.reason = reason;
-    absence.status = 'excused';
-
+    absence.comment = reason;
     return this.absenceRepository.save(absence);
+  }
+
+  async delete(id: string): Promise<void> {
+    const absence = await this.absenceRepository.findOne({ where: { id } });
+
+    if (!absence) {
+      throw new NotFoundException(`Absence with id ${id} not found`);
+    }
+
+    await this.absenceRepository.delete(id);
   }
 
   async getStats(
     universityId: string,
     studentId: string,
-  ): Promise<{ total: number; excused: number; unexcused: number }> {
+  ): Promise<{ total: number; byType: Record<string, number> }> {
     const absences = await this.absenceRepository.find({
       where: { universityId, studentId },
     });
 
     const total = absences.length;
-    const excused = absences.filter((a) => a.isExcused).length;
-    const unexcused = total - excused;
+    const byType: Record<string, number> = {};
+    for (const absence of absences) {
+      byType[absence.type] = (byType[absence.type] || 0) + 1;
+    }
 
-    return { total, excused, unexcused };
+    return { total, byType };
   }
-}
-
-function Between(startDate: Date, endDate: Date) {
-  return { $gte: startDate, $lte: endDate } as any;
 }

@@ -28,9 +28,9 @@ export class ChangeDetectorService {
       const existingLesson = await this.lessonRepository.findOne({
         where: {
           universityId,
-          date: newLesson.date,
+          groupId: newLesson.groupId,
+          dayOfWeek: newLesson.dayOfWeek,
           pairNumber: newLesson.pairNumber,
-          group: newLesson.group,
         },
       });
 
@@ -39,12 +39,10 @@ export class ChangeDetectorService {
 
         if (diff.hasChanges) {
           const change = await this.lessonChangeRepository.save({
-            universityId,
             lessonId: existingLesson.id,
-            oldValue: diff.oldValues,
-            newValue: diff.newValues,
-            changeType: 'auto',
-            reason: diff.changeDescription,
+            changeType: diff.changeType,
+            oldValues: diff.oldValues,
+            newValues: diff.newValues,
           });
 
           changes.push(change);
@@ -81,12 +79,14 @@ export class ChangeDetectorService {
     const changes: string[] = [];
     const oldValues: any = {};
     const newValues: any = {};
+    let changeType = 'moved';
 
     // Check room change
     if (oldLesson.room !== newLesson.room) {
       changes.push('аудитория');
       oldValues.room = oldLesson.room;
       newValues.room = newLesson.room;
+      changeType = 'room_changed';
     }
 
     // Check building change
@@ -101,6 +101,7 @@ export class ChangeDetectorService {
       changes.push('преподаватель');
       oldValues.teacherName = oldLesson.teacherName;
       newValues.teacherName = newLesson.teacherName;
+      changeType = 'teacher_changed';
     }
 
     // Check time change
@@ -118,6 +119,7 @@ export class ChangeDetectorService {
 
     return {
       hasChanges: changes.length > 0,
+      changeType,
       changeDescription: changes.join(', '),
       oldValues,
       newValues,

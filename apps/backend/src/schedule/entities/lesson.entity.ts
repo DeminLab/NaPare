@@ -8,9 +8,8 @@ import {
 } from 'typeorm';
 
 @Entity('lessons')
-@Index(['universityId', 'date', 'pairNumber'])
-@Index(['universityId', 'teacherId', 'date'])
-@Index(['universityId', 'group', 'date'])
+@Index(['universityId', 'groupId', 'dayOfWeek'])
+@Index(['universityId', 'teacherId', 'dayOfWeek'])
 export class Lesson {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -18,17 +17,11 @@ export class Lesson {
   @Column({ type: 'uuid' })
   universityId: string;
 
-  @Column()
-  date: Date;
+  @Column({ type: 'uuid' })
+  groupId: string;
 
-  @Column({ type: 'int' })
-  pairNumber: number;
-
-  @Column()
-  startTime: string;
-
-  @Column()
-  endTime: string;
+  @Column({ type: 'uuid', nullable: true })
+  teacherId: string;
 
   @Column()
   subject: string;
@@ -37,19 +30,41 @@ export class Lesson {
   subjectType: string;
 
   @Column({ nullable: true })
-  teacherName: string;
-
-  @Column({ nullable: true })
-  teacherId: string;
-
-  @Column({ nullable: true })
   room: string;
 
   @Column({ nullable: true })
   building: string;
 
+  @Column({ type: 'int' })
+  dayOfWeek: number;
+
+  @Column()
+  startTime: string;
+
+  @Column()
+  endTime: string;
+
+  @Column({ type: 'int' })
+  pairNumber: number;
+
+  @Column({
+    type: 'enum',
+    enum: ['odd', 'even', 'both'],
+    default: 'both',
+  })
+  weekType: string;
+
+  @Column({ type: 'timestamp' })
+  startDate: Date;
+
+  @Column({ type: 'timestamp' })
+  endDate: Date;
+
   @Column({ nullable: true })
-  group: string;
+  teacherName: string;
+
+  @Column({ nullable: true })
+  groupName: string;
 
   @Column({ nullable: true })
   subgroup: string;

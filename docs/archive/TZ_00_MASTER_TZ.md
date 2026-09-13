@@ -3307,8 +3307,8 @@ spec:
 ### 23.4. API Documentation (Swagger)
 
 **Доступ:**
-- Staging: `https://staging.napare.ru/api/docs`
-- Production: `https://api.napare.ru/api/docs`
+- Staging: `https://staging.napare.ru/api/v1/docs`
+- Production: `https://api.napare.ru/api/v1/docs`
 
 **Генерация из кода:**
 - NestJS: `@nestjs/swagger`

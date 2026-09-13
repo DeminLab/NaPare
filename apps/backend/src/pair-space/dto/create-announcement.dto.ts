@@ -4,11 +4,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 export class CreateAnnouncementDto {
   @ApiProperty()
   @IsString()
-  title: string;
-
-  @ApiProperty()
-  @IsString()
-  content: string;
+  text: string;
 
   @ApiPropertyOptional()
   @IsOptional()

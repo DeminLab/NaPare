@@ -4,8 +4,6 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
-  ManyToOne,
-  JoinColumn,
 } from 'typeorm';
 import { Exclude } from 'class-transformer';
 
@@ -34,23 +32,16 @@ export class User {
   avatarUrl: string;
 
   @Column({
-    type: 'enum',
-    enum: [
-      'student',
-      'teacher',
-      'curator',
-      'faculty_dean',
-      'department_head',
-      'university_admin',
-      'superadmin',
-      'developer',
-    ],
+    type: 'simple-array',
     default: 'student',
   })
-  role: string;
+  roles: string[];
 
   @Column({ type: 'uuid' })
   universityId: string;
+
+  @Column({ type: 'uuid', nullable: true })
+  groupId: string;
 
   @Column({ default: true })
   isActive: boolean;

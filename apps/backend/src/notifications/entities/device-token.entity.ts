@@ -24,7 +24,7 @@ export class DeviceToken {
   platform: string;
 
   @Column({ nullable: true })
-  deviceName: string;
+  deviceName?: string;
 
   @Column({ default: true })
   isActive: boolean;

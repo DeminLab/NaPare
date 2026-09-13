@@ -25,11 +25,8 @@ export class Announcement {
   @Column({ type: 'uuid' })
   authorId: string;
 
-  @Column()
-  title: string;
-
   @Column({ type: 'text' })
-  content: string;
+  text: string;
 
   @Column({ default: false })
   isPinned: boolean;

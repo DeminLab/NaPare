@@ -4,8 +4,6 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
-  ManyToOne,
-  JoinColumn,
 } from 'typeorm';
 
 @Entity('absences')
@@ -19,42 +17,33 @@ export class Absence {
   @Column({ type: 'uuid' })
   studentId: string;
 
-  @Column({ type: 'uuid', nullable: true })
-  lessonId: string;
-
-  @Column()
-  date: Date;
-
-  @Column({ type: 'int' })
-  pairNumber: number;
-
-  @Column()
-  subject: string;
-
   @Column({
     type: 'enum',
-    enum: ['absent', 'late', 'excused', 'pending'],
-    default: 'pending',
+    enum: ['learning', 'sick', 'work', 'other_city', 'other'],
+    default: 'other',
   })
-  status: string;
+  type: string;
+
+  @Column({ type: 'timestamp' })
+  startDate: Date;
+
+  @Column({ type: 'timestamp' })
+  endDate: Date;
 
   @Column({ nullable: true })
-  reason: string;
-
-  @Column({ nullable: true })
-  confirmedBy: string;
-
-  @Column({ nullable: true })
-  confirmedAt: Date;
+  comment: string;
 
   @Column({ default: false })
-  isExcused: boolean;
+  isSensitive: boolean;
 
-  @Column({ nullable: true })
-  excusedBy: string;
+  @Column({ default: true })
+  confirmationRequired: boolean;
 
-  @Column({ nullable: true })
-  excusedAt: Date;
+  @Column({ type: 'simple-array', nullable: true })
+  affectedLessonIds: string[];
+
+  @Column({ type: 'int', default: 0 })
+  affectedLessonsCount: number;
 
   @CreateDateColumn()
   createdAt: Date;

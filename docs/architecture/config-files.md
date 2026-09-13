@@ -224,8 +224,8 @@ services:
       - "9000:9000"
       - "9001:9001"
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_ROOT_USER: napare_minio
+      MINIO_ROOT_PASSWORD: napare_minio_secret
     volumes:
       - miniodata:/data
     command: server /data --console-address ":9001"
@@ -415,8 +415,8 @@ JWT_REFRESH_EXPIRATION=30d
 # S3 (MinIO for dev)
 S3_ENDPOINT=http://localhost:9000
 S3_BUCKET=napare-files
-S3_ACCESS_KEY=minioadmin
-S3_SECRET_KEY=minioadmin
+S3_ACCESS_KEY=napare_minio
+S3_SECRET_KEY=napare_minio_secret
 S3_REGION=us-east-1
 S3_FORCE_PATH_STYLE=true
 
@@ -622,7 +622,7 @@ pnpm dev
 | Сервис | URL |
 |--------|-----|
 | Backend API | http://localhost:3000 |
-| Swagger Docs | http://localhost:3000/api/docs |
+| Swagger Docs | http://localhost:3000/api/v1/docs |
 | Web App | http://localhost:3001 |
 | PostgreSQL | localhost:5432 |
 | Redis | localhost:6379 |

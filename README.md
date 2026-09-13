@@ -168,9 +168,10 @@ pnpm typeorm:migration:run        # Применение миграций
 ### Для разработчиков (Web)
 
 - **Стек**: Next.js 14+ (App Router), TanStack Query, Tailwind CSS
-- **Структура**: `apps/web/src/app/` — роуты по сценариям (auth, student)
-- **Компоненты**: `apps/web/src/components/` — layout/, ui/
-- **Хуки и запросы**: `apps/web/src/lib/hooks/`, `apps/web/src/lib/queries/`
+- **Четыре приложения**: `apps/web-student` (студент), `apps/web-staff` (преподаватель и куратор), `apps/web-admin` (администратор), `apps/web-developer` (консоль разработки)
+- **Общий код**: `packages/shared-ui`, `packages/shared-api`, `packages/shared-types`
+- **Структура**: `apps/web-*/src/app/` — роуты по сценариям, `src/components/` — layout/, ui/, `src/lib/` — hooks/, queries/
+- **Запуск**: `pnpm dev:student`, `pnpm dev:staff`, `pnpm dev:admin`, `pnpm dev:developer` — порты 3001–3004
 
 ### Для мобильного разработчика (Flutter)
 

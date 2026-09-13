@@ -1,0 +1,9 @@
+# Зависимости и артефакты сборки не должны попадать в контекст Docker
+**/node_modules
+**/.next
+**/dist
+**/.turbo
+**/coverage
+.git
+.env
+*.zip

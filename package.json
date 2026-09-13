@@ -5,14 +5,23 @@
   "description": "НаПаре — операционная система учебного дня студента",
   "scripts": {
     "dev": "turbo run dev",
+    "dev:student": "turbo run dev --filter=@napare/web-student",
+    "dev:staff": "turbo run dev --filter=@napare/web-staff",
+    "dev:admin": "turbo run dev --filter=@napare/web-admin",
+    "dev:developer": "turbo run dev --filter=@napare/web-developer",
     "build": "turbo run build",
+    "build:student": "turbo run build --filter=@napare/web-student",
+    "build:staff": "turbo run build --filter=@napare/web-staff",
+    "build:admin": "turbo run build --filter=@napare/web-admin",
+    "build:developer": "turbo run build --filter=@napare/web-developer",
     "lint": "turbo run lint",
     "test": "turbo run test",
     "test:coverage": "turbo run test:coverage",
     "clean": "turbo run clean"
   },
   "devDependencies": {
-    "turbo": "^2.0.0"
+    "turbo": "^2.0.0",
+    "typescript": "5.9.3"
   },
   "packageManager": "pnpm@9.0.0"
 }

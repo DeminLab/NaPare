@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
+import { Repository, Between } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
 import { Lesson } from './entities/lesson.entity';
@@ -20,6 +20,23 @@ export class ScheduleService {
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
+  async findById(id: string): Promise<Lesson> {
+    const lesson = await this.lessonRepository.findOne({ where: { id } });
+
+    if (!lesson) {
+      throw new Error('Lesson not found');
+    }
+
+    return lesson;
+  }
+
+  async getLessonChanges(lessonId: string): Promise<LessonChange[]> {
+    return this.lessonChangeRepository.find({
+      where: { lessonId },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
   async findByDate(universityId: string, date: string): Promise<Lesson[]> {
     const startDate = new Date(date);
     const endDate = new Date(date);
@@ -28,7 +45,7 @@ export class ScheduleService {
     return this.lessonRepository.find({
       where: {
         universityId,
-        date: Between(startDate, endDate),
+        startDate: Between(startDate, endDate),
       },
       order: { pairNumber: 'ASC' },
     });
@@ -42,15 +59,15 @@ export class ScheduleService {
     return this.lessonRepository.find({
       where: {
         universityId,
-        date: Between(new Date(startDate), new Date(endDate)),
+        startDate: Between(new Date(startDate), new Date(endDate)),
       },
-      order: { date: 'ASC', pairNumber: 'ASC' },
+      order: { startDate: 'ASC', pairNumber: 'ASC' },
     });
   }
 
   async findByGroup(
     universityId: string,
-    group: string,
+    groupId: string,
     date: string,
   ): Promise<Lesson[]> {
     const startDate = new Date(date);
@@ -60,8 +77,8 @@ export class ScheduleService {
     return this.lessonRepository.find({
       where: {
         universityId,
-        group,
-        date: Between(startDate, endDate),
+        groupId,
+        startDate: Between(startDate, endDate),
       },
       order: { pairNumber: 'ASC' },
     });
@@ -80,7 +97,7 @@ export class ScheduleService {
       where: {
         universityId,
         teacherId,
-        date: Between(startDate, endDate),
+        startDate: Between(startDate, endDate),
       },
       order: { pairNumber: 'ASC' },
     });
@@ -105,11 +122,10 @@ export class ScheduleService {
 
     // Record change
     await this.lessonChangeRepository.save({
-      universityId: lesson.universityId,
       lessonId: lesson.id,
-      oldValue,
-      newValue: updatedLesson,
-      changeType: 'manual',
+      changeType: 'moved',
+      oldValues: oldValue as any,
+      newValues: updatedLesson as any,
     });
 
     // Emit change event
@@ -138,9 +154,9 @@ export class ScheduleService {
       const existingLesson = await this.lessonRepository.findOne({
         where: {
           universityId,
-          date: lessonData.date,
+          groupId: lessonData.groupId,
+          dayOfWeek: lessonData.dayOfWeek,
           pairNumber: lessonData.pairNumber,
-          group: lessonData.group,
         },
       });
 
@@ -168,7 +184,7 @@ export class ScheduleService {
     return this.lessonRepository.find({
       where: {
         universityId,
-        date: Between(startDate, endDate),
+        startDate: Between(startDate, endDate),
         isChanged: true,
       },
       order: { pairNumber: 'ASC' },

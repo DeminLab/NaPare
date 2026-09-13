@@ -18,33 +18,37 @@ export class ExcelConnectorService {
   }
 
   private mapToLessons(data: any[]): CreateLessonDto[] {
-    return data.map((row) => ({
-      date: this.parseDate(row['Дата'] || row['date']),
-      pairNumber: parseInt(row['Пара'] || row['pairNumber'], 10),
-      startTime: row['Начало'] || row['startTime'] || '09:00',
-      endTime: row['Конец'] || row['endTime'] || '10:30',
-      subject: row['Предмет'] || row['subject'] || '',
-      subjectType: row['Тип'] || row['subjectType'] || '',
-      teacherName: row['Преподаватель'] || row['teacherName'] || '',
-      room: row['Аудитория'] || row['room'] || '',
-      building: row['Корпус'] || row['building'] || '',
-      group: row['Группа'] || row['group'] || '',
-      subgroup: row['Подгруппа'] || row['subgroup'] || '',
-      department: row['Кафедра'] || row['department'] || '',
-      faculty: row['Факультет'] || row['faculty'] || '',
-    }));
+    return data.map((row) => {
+      const date = this.parseDate(row['Дата'] || row['date']);
+      return {
+        groupId: row['Группа'] || row['group'] || '',
+        dayOfWeek: date.getDay(),
+        startTime: row['Начало'] || row['startTime'] || '09:00',
+        endTime: row['Конец'] || row['endTime'] || '10:30',
+        pairNumber: parseInt(row['Пара'] || row['pairNumber'], 10),
+        subject: row['Предмет'] || row['subject'] || '',
+        subjectType: row['Тип'] || row['subjectType'] || '',
+        teacherName: row['Преподаватель'] || row['teacherName'] || '',
+        room: row['Аудитория'] || row['room'] || '',
+        building: row['Корпус'] || row['building'] || '',
+        subgroup: row['Подгруппа'] || row['subgroup'] || '',
+        department: row['Кафедра'] || row['department'] || '',
+        faculty: row['Факультет'] || row['faculty'] || '',
+        weekType: 'both',
+        startDate: date,
+        endDate: date,
+      };
+    });
   }
 
   private parseDate(dateStr: string): Date {
     if (!dateStr) return new Date();
 
-    // Try to parse various date formats
     const date = new Date(dateStr);
     if (!isNaN(date.getTime())) {
       return date;
     }
 
-    // Try DD.MM.YYYY format
     const parts = dateStr.split('.');
     if (parts.length === 3) {
       return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));

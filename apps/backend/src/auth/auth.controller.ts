@@ -1,5 +1,5 @@
 import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
@@ -36,5 +36,14 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Неверный токен' })
   async refreshToken(@Body() refreshTokenDto: RefreshTokenDto) {
     return this.authService.refreshToken(refreshTokenDto.refreshToken);
+  }
+
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Выход из системы' })
+  @ApiResponse({ status: 200, description: 'Успешный выход' })
+  async logout() {
+    return { success: true };
   }
 }

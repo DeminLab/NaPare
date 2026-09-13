@@ -15,35 +15,29 @@ export class LessonChange {
   id: string;
 
   @Column({ type: 'uuid' })
-  universityId: string;
-
-  @Column({ type: 'uuid' })
   lessonId: string;
 
   @ManyToOne(() => Lesson)
   @JoinColumn({ name: 'lessonId' })
   lesson: Lesson;
 
-  @Column({ type: 'jsonb' })
-  oldValue: any;
-
-  @Column({ type: 'jsonb' })
-  newValue: any;
-
-  @Column()
+  @Column({
+    type: 'enum',
+    enum: ['moved', 'cancelled', 'room_changed', 'teacher_changed', 'added'],
+  })
   changeType: string;
 
-  @Column({ nullable: true })
-  reason: string;
+  @Column({ type: 'jsonb' })
+  oldValues: Record<string, any>;
 
-  @Column({ default: false })
-  isApproved: boolean;
+  @Column({ type: 'jsonb' })
+  newValues: Record<string, any>;
 
-  @Column({ nullable: true })
-  approvedBy: string;
+  @Column({ type: 'uuid', nullable: true })
+  changedBy: string;
 
-  @Column({ nullable: true })
-  approvedAt: Date;
+  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  changedAt: Date;
 
   @CreateDateColumn()
   createdAt: Date;

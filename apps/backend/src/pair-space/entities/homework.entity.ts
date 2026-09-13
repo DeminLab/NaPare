@@ -35,6 +35,12 @@ export class Homework {
   deadline: Date;
 
   @Column({ default: false })
+  isRecurring: boolean;
+
+  @Column({ nullable: true })
+  recurringRule: string;
+
+  @Column({ default: false })
   isCompleted: boolean;
 
   @CreateDateColumn()

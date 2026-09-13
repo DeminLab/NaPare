@@ -27,7 +27,7 @@ export class SibitConnectorService {
         }),
       );
 
-      return this.mapToLessons(response.data);
+      return this.mapToLessons(response.data, startDate, endDate);
     } catch (error) {
       this.logger.error(`Failed to fetch schedule from Sibit: ${error.message}`);
       throw error;
@@ -60,21 +60,25 @@ export class SibitConnectorService {
     }
   }
 
-  private mapToLessons(data: any[]): CreateLessonDto[] {
+  private mapToLessons(data: any[], startDate: string, endDate: string): CreateLessonDto[] {
     return data.map((item) => ({
-      date: new Date(item.date),
-      pairNumber: item.pairNumber,
+      groupId: item.groupId || item.group || '',
+      dayOfWeek: new Date(item.date).getDay(),
       startTime: item.startTime,
       endTime: item.endTime,
+      pairNumber: item.pairNumber,
       subject: item.subject,
       subjectType: item.subjectType,
       teacherName: item.teacher,
+      teacherId: item.teacherId,
       room: item.room,
       building: item.building,
-      group: item.group,
       subgroup: item.subgroup,
       department: item.department,
       faculty: item.faculty,
+      weekType: 'both',
+      startDate: new Date(startDate),
+      endDate: new Date(endDate),
       externalId: item.id?.toString(),
       source: 'sibit',
     }));

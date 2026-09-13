@@ -12,9 +12,9 @@ OpenAPI-спецификация **генерируется из кода** (Nes
 
 | Среда | URL |
 |-------|-----|
-| Local | `http://localhost:3000/api/docs` |
-| Staging | `https://staging.napare.ru/api/docs` |
-| Production | `https://api.napare.ru/api/docs` |
+| Local | `http://localhost:3000/api/v1/docs` |
+| Staging | `https://staging.napare.ru/api/v1/docs` |
+| Production | `https://api.napare.ru/api/v1/docs` |
 
 ---
 
@@ -78,7 +78,7 @@ GET /api/v1/schedule/my?page=1&limit=20&sort=startTime&order=asc
 ```bash
 # Генерация TypeScript-клиента из OpenAPI
 npx @openapitools/openapi-generator-cli generate \
-  -i http://localhost:3000/api/docs-json \
+  -i http://localhost:3000/api/v1/docs-json \
   -g typescript-axios \
   -o packages/api-client/src
 ```

@@ -17,30 +17,40 @@ export class Notification {
   @Column({ type: 'uuid' })
   universityId: string;
 
+  @Column({
+    type: 'enum',
+    enum: [
+      'schedule_change',
+      'new_announcement',
+      'new_homework',
+      'new_file',
+      'deadline',
+      'absence_decision',
+      'new_absence',
+      'system',
+      'other',
+    ],
+    default: 'other',
+  })
+  type: string;
+
   @Column()
   title: string;
 
   @Column({ type: 'text' })
   body: string;
 
-  @Column({ type: 'jsonb', nullable: true })
-  data: any;
-
-  @Column({
-    type: 'enum',
-    enum: ['info', 'warning', 'success', 'error'],
-    default: 'info',
-  })
-  type: string;
+  @Column({ nullable: true })
+  deepLink: string;
 
   @Column({ default: false })
   isRead: boolean;
 
-  @Column({ nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   readAt: Date;
 
-  @Column({ nullable: true })
-  link: string;
+  @Column({ type: 'jsonb', nullable: true })
+  data: Record<string, any>;
 
   @CreateDateColumn()
   createdAt: Date;

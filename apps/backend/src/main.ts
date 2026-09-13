@@ -20,7 +20,7 @@ async function bootstrap() {
     Sentry.init({
       dsn: sentryDsn,
       environment: configService.get('NODE_ENV'),
-      tracesSampleRate: 0.1,
+      tracesSampleRate: configService.get<number>('SENTRY_TRACES_SAMPLE_RATE', 0.1),
     });
   }
 
@@ -45,8 +45,17 @@ async function bootstrap() {
     credentials: true,
   });
 
+  // Root routes (bypass /api prefix)
+  const httpAdapter = app.getHttpAdapter();
+  httpAdapter.get('/', (_req, res) => {
+    res.redirect('/api/v1/docs');
+  });
+  httpAdapter.get('/favicon.ico', (_req, res) => {
+    res.status(204).end();
+  });
+
   // API prefix
-  app.setGlobalPrefix('api');
+  app.setGlobalPrefix('api/v1');
 
   // Swagger
   const config = new DocumentBuilder()
@@ -57,14 +66,14 @@ async function bootstrap() {
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document);
+  SwaggerModule.setup('api/v1/docs', app, document);
 
   // Start
   const port = configService.get('PORT', 3000);
   await app.listen(port);
 
   logger.log(`Application is running on: http://localhost:${port}`);
-  logger.log(`Swagger docs: http://localhost:${port}/api/docs`);
+  logger.log(`Swagger docs: http://localhost:${port}/api/v1/docs`);
 }
 
 bootstrap();
