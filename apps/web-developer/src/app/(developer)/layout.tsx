@@ -57,14 +57,14 @@ export default function DeveloperLayout({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="developer-shell flex h-screen overflow-hidden bg-[var(--color-background)]">
       {/* Sidebar */}
-      <aside className={`flex flex-col border-r border-slate-200 bg-[var(--color-sidebar)] transition-all duration-300 ${collapsed ? 'w-[68px]' : 'w-64'}`}>
+      <aside className={`flex flex-col border-r border-slate-200 bg-[var(--color-sidebar)] transition-all duration-[var(--motion-sidebar)] ${collapsed ? 'w-[68px]' : 'w-64'}`}>
         {/* Header */}
         <div className="flex h-16 items-center justify-between border-b border-white/10 px-4">
           {!collapsed && (
             <div className="flex items-center gap-2.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-500 text-xs font-bold text-white">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-400 text-xs font-bold text-slate-950 shadow-lg shadow-cyan-400/20">
                 НП
               </div>
               <div>
@@ -93,7 +93,7 @@ export default function DeveloperLayout({ children }: { children: ReactNode }) {
                 href={item.href}
                 className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
                   active
-                    ? 'bg-sky-600 text-white shadow-sm shadow-sky-600/25'
+                    ? 'bg-cyan-400 text-slate-950 shadow-sm shadow-cyan-400/25'
                     : 'text-white/50 hover:bg-white/10 hover:text-white/80'
                 }`}
                 title={collapsed ? item.label : undefined}
@@ -130,7 +130,7 @@ export default function DeveloperLayout({ children }: { children: ReactNode }) {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 overflow-y-auto bg-[var(--color-background)]">
+      <main className="ds-page-enter flex-1 overflow-y-auto bg-[var(--color-background)]">
         {children}
       </main>
     </div>

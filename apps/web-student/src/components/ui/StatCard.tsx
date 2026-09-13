@@ -9,7 +9,7 @@ interface StatCardProps {
   gradient?: string;
 }
 
-export function StatCard({ label, value, icon, gradient = 'from-sky-500 to-sky-600' }: StatCardProps) {
+export function StatCard({ label, value, icon, gradient = 'from-indigo-500 to-indigo-600' }: StatCardProps) {
   return (
     <div className={`rounded-2xl bg-gradient-to-br ${gradient} p-5 text-white shadow-lg`}>
       <div className="flex items-center justify-between">

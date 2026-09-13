@@ -5,13 +5,41 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 :root {
-  --color-primary: #0ea5e9;
-  --color-primary-dark: #0284c7;
-  --color-accent: #6366f1;
-  --color-surface: #ffffff;
-  --color-background: #f8fafc;
-  --color-sidebar: #0f172a;
-  --color-sidebar-hover: #1e293b;
+  --color-background: #070b14;
+  --color-surface: #0f172a;
+  --color-surface-secondary: #0b1220;
+  --color-text: #f8fafc;
+  --color-text-secondary: #94a3b8;
+  --color-border: #243247;
+  --color-brand: #22d3ee;
+  --color-brand-soft: rgb(34 211 238 / 0.12);
+  --color-success: #34d399;
+  --color-warning: #fbbf24;
+  --color-danger: #f87171;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.2);
+  --shadow-md: 0 8px 24px rgb(0 0 0 / 0.28);
+  --type-page-size: 30px;
+  --type-section-size: 19px;
+  --type-card-size: 16px;
+  --type-body-size: 15px;
+  --type-meta-size: 13px;
+  --motion-page: 180ms;
+  --motion-hover: 150ms;
+  --motion-modal: 200ms;
+  --motion-sidebar: 220ms;
+  --motion-notification: 250ms;
+  --motion-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --color-primary: #22d3ee;
+  --color-primary-dark: #06b6d4;
+  --color-accent: #818cf8;
+  --color-surface: #0f172a;
+  --color-background: #070b14;
+  --color-sidebar: #050811;
+  --color-sidebar-hover: #111827;
   --color-success: #10b981;
   --color-warning: #f59e0b;
   --color-danger: #ef4444;
@@ -29,6 +57,28 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background: var(--color-background);
+  color: #cbd5e1;
+}
+
+@layer components {
+  .ds-page-title { font-size: var(--type-page-size); line-height: 1.2; font-weight: 700; letter-spacing: -0.025em; }
+  .ds-section-title { font-size: var(--type-section-size); line-height: 1.4; font-weight: 650; letter-spacing: -0.01em; }
+  .ds-card-title { font-size: var(--type-card-size); line-height: 1.4; font-weight: 600; }
+  .ds-body { font-size: var(--type-body-size); line-height: 1.55; font-weight: 400; }
+  .ds-meta { font-size: var(--type-meta-size); line-height: 1.4; font-weight: 500; }
+  .ds-card { border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: var(--shadow-sm); transition: border-color var(--motion-hover) var(--motion-ease), box-shadow var(--motion-hover) var(--motion-ease), background-color var(--motion-hover) var(--motion-ease); }
+  .ds-input { border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface-secondary); color: var(--color-text); }
+  .ds-input:focus { border-color: var(--color-brand); outline: none; box-shadow: 0 0 0 4px var(--color-brand-soft); }
+}
+
+@keyframes ds-page-enter { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes ds-modal-enter { from { opacity: 0; transform: translateY(6px) scale(0.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes ds-notification-enter { from { opacity: 0; transform: translateX(10px); } to { opacity: 1; transform: translateX(0); } }
+.ds-page-enter { animation: ds-page-enter var(--motion-page) var(--motion-ease) both; }
+.ds-modal { animation: ds-modal-enter var(--motion-modal) var(--motion-ease) both; }
+.ds-notification { animation: ds-notification-enter var(--motion-notification) var(--motion-ease) both; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 1ms !important; transition-duration: 1ms !important; scroll-behavior: auto !important; }
 }
 
 code, pre, .font-mono {
@@ -44,12 +94,43 @@ code, pre, .font-mono {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: #334155;
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: #475569;
 }
+
+/* Authenticated developer surfaces use a separate terminal-like visual language. */
+.developer-shell .bg-white { background-color: #0f172a !important; }
+.developer-shell .bg-slate-50 { background-color: #0b1220 !important; }
+.developer-shell .bg-slate-100 { background-color: #172033 !important; }
+.developer-shell .bg-slate-200 { background-color: #263449 !important; }
+.developer-shell .bg-sky-600 { background-color: #22d3ee !important; color: #07111f !important; }
+.developer-shell .bg-sky-100 { background-color: rgba(34, 211, 238, 0.12) !important; }
+.developer-shell .bg-indigo-100,
+.developer-shell .bg-violet-100 { background-color: rgba(129, 140, 248, 0.14) !important; }
+.developer-shell .bg-emerald-100 { background-color: rgba(16, 185, 129, 0.14) !important; }
+.developer-shell .bg-amber-100 { background-color: rgba(245, 158, 11, 0.14) !important; }
+.developer-shell .text-sky-600 { color: #67e8f9 !important; }
+.developer-shell .text-indigo-600,
+.developer-shell .text-violet-600 { color: #a5b4fc !important; }
+.developer-shell .hover\:bg-sky-700:hover { background-color: #06b6d4 !important; }
+.developer-shell .border-slate-200,
+.developer-shell .border-slate-100 { border-color: #243247 !important; }
+.developer-shell .ring-slate-100 { --tw-ring-color: #243247 !important; }
+.developer-shell .text-slate-950,
+.developer-shell .text-slate-900 { color: #f8fafc !important; }
+.developer-shell .text-slate-800,
+.developer-shell .text-slate-700 { color: #e2e8f0 !important; }
+.developer-shell .text-slate-600 { color: #cbd5e1 !important; }
+.developer-shell .text-slate-500 { color: #94a3b8 !important; }
+.developer-shell .text-slate-400 { color: #64748b !important; }
+.developer-shell .hover\:bg-slate-50:hover { background-color: #172033 !important; }
+.developer-shell .hover\:bg-slate-100:hover { background-color: #1e293b !important; }
+.developer-shell .hover\:bg-slate-200:hover { background-color: #263449 !important; }
+.developer-shell .font-mono { letter-spacing: -0.02em; }
+.developer-shell main { background: var(--color-background); }
 
 /* ── Pulse dot animation ──────────────────────────────── */
 @keyframes pulse-dot {

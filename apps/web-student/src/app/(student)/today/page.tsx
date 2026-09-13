@@ -2,169 +2,78 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { apiFetch } from '@/lib/api';
+import { apiFetch, getUser } from '@/lib/api';
 import { Card, Badge, Skeleton, EmptyState } from '@/components/ui';
 
-interface Lesson {
-  id: string;
-  subject: string;
-  subjectType: string;
-  teacherName: string;
-  room: string;
-  startTime: string;
-  endTime: string;
-  pairNumber: number;
-  isChanged: boolean;
-  changeDescription: string;
-  groupName: string;
+interface Lesson { id: string; subject: string; subjectType: string; teacherName: string; room: string; startTime: string; endTime: string; isChanged: boolean; changeDescription: string; }
+interface Absence { status: string; }
+type LessonState = 'past' | 'current' | 'next' | 'normal';
+
+const typeLabels: Record<string, string> = { lecture: 'Лекция', practice: 'Практика', lab: 'Лабораторная', exam: 'Экзамен', consultation: 'Консультация', coursework: 'Курсовая', test: 'Зачёт' };
+const time = (value: string) => value.includes('T') ? value.slice(11, 16) : value;
+
+function timestamp(value: string): number {
+  const parsed = Date.parse(value);
+  if (!Number.isNaN(parsed)) return parsed;
+  const [hours, minutes] = value.split(':').map(Number);
+  const date = new Date();
+  date.setHours(hours, minutes, 0, 0);
+  return Number.isFinite(hours) && Number.isFinite(minutes) ? date.getTime() : NaN;
 }
-
-const typeLabels: Record<string, string> = {
-  lecture: 'Лекция',
-  practice: 'Практика',
-  lab: 'Лабораторная',
-  exam: 'Экзамен',
-  consultation: 'Консультация',
-  coursework: 'Курсовая',
-  test: 'Зачёт',
-};
-
-const typeBadgeVariant: Record<string, 'sky' | 'green' | 'amber' | 'pink' | 'purple' | 'indigo' | 'teal'> = {
-  lecture: 'sky',
-  practice: 'green',
-  lab: 'amber',
-  exam: 'pink',
-  consultation: 'purple',
-  coursework: 'indigo',
-  test: 'teal',
-};
-
-const typeColor: Record<string, string> = {
-  lecture: 'border-l-sky-500',
-  practice: 'border-l-emerald-500',
-  lab: 'border-l-amber-500',
-  exam: 'border-l-pink-500',
-  consultation: 'border-l-purple-500',
-  coursework: 'border-l-indigo-500',
-  test: 'border-l-teal-500',
-};
-
-function formatDate(date: Date): string {
-  const days = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
-  const months = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
-  return `${days[date.getDay()]}, ${date.getDate()} ${months[date.getMonth()]}`;
-}
-
-function isToday(dateStr: string): boolean {
-  const today = new Date().toISOString().split('T')[0];
-  return dateStr === today;
+function minutesLeft(endTime: string, now: number): number {
+  return Math.max(0, Math.ceil((timestamp(endTime) - now) / 60000));
 }
 
 export default function TodayPage() {
   const [lessons, setLessons] = useState<Lesson[]>([]);
+  const [absences, setAbsences] = useState<Absence[]>([]);
+  const [name, setName] = useState('студент');
   const [loading, setLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [now, setNow] = useState(() => Date.now());
+  const date = new Date();
+  const dateKey = date.toISOString().split('T')[0];
 
   useEffect(() => {
-    setLoading(true);
-    apiFetch<Lesson[]>(`/schedule?date=${selectedDate}`)
-      .then(data => setLessons(data))
-      .catch(() => setLessons([]))
-      .finally(() => setLoading(false));
-  }, [selectedDate]);
+    Promise.all([apiFetch<Lesson[]>(`/schedule?date=${dateKey}`), apiFetch<Absence[]>('/absences/my'), getUser()])
+      .then(([todayLessons, myAbsences, user]) => { setLessons(todayLessons); setAbsences(myAbsences); setName(user.firstName || 'студент'); })
+      .catch(() => {}).finally(() => setLoading(false));
+  }, [dateKey]);
 
-  const navigateDate = (offset: number) => {
-    const d = new Date(selectedDate);
-    d.setDate(d.getDate() + offset);
-    setSelectedDate(d.toISOString().split('T')[0]);
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 60000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const ranges = lessons.map(lesson => ({ lesson, start: timestamp(lesson.startTime), end: timestamp(lesson.endTime) }));
+  const current = ranges.find(item => item.start <= now && now < item.end);
+  const next = ranges.filter(item => item.start > now).sort((a, b) => a.start - b.start)[0];
+  const primary = current || next;
+  const stateFor = (lesson: Lesson): LessonState => {
+    const item = ranges.find(range => range.lesson.id === lesson.id);
+    if (!item || Number.isNaN(item.start) || Number.isNaN(item.end)) return 'normal';
+    if (current?.lesson.id === lesson.id) return 'current';
+    if (item.end <= now) return 'past';
+    if (next?.lesson.id === lesson.id) return 'next';
+    return 'normal';
   };
-
-  const today = new Date(selectedDate);
-  const dayLabel = isToday(selectedDate) ? 'Сегодня' : formatDate(today);
+  const changedCount = lessons.filter(lesson => lesson.isChanged).length;
+  const attendance = absences.length === 0 ? 100 : Math.round((absences.filter(a => a.status === 'confirmed' || a.status === 'excused').length / absences.length) * 100);
+  const dateLabel = date.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' });
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
-      {/* Date selector */}
-      <div className="flex items-center justify-between">
-        <button onClick={() => navigateDate(-1)} className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors">
-          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
-        <div className="text-center">
-          <h1 className="text-xl font-bold text-slate-900">{dayLabel}</h1>
-          <p className="text-sm text-slate-500">{formatDate(today)}</p>
-        </div>
-        <button onClick={() => navigateDate(1)} className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors">
-          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        </button>
-      </div>
-
-      {/* Lessons */}
-      {loading ? (
-        <div className="space-y-4">
-          {[1, 2, 3].map(i => (
-            <Card key={i}>
-              <Skeleton className="h-24" />
-            </Card>
-          ))}
-        </div>
-      ) : lessons.length === 0 ? (
-        <EmptyState
-          icon={<svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" /></svg>}
-          title="Нет пар"
-          description="В этот день нетcheduled занятий"
-        />
-      ) : (
-        <div className="space-y-3">
-          {lessons.map((lesson) => (
-            <Link key={lesson.id} href={`/pair-space/${lesson.id}`}>
-              <Card hover className={`border-l-4 ${typeColor[lesson.subjectType] || 'border-l-slate-300'}`}>
-                <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0 text-center">
-                    <p className="text-lg font-bold text-slate-900">{lesson.startTime}</p>
-                    <p className="text-xs text-slate-400">{lesson.endTime}</p>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-semibold text-slate-900">{lesson.subject}</h3>
-                      <Badge variant={typeBadgeVariant[lesson.subjectType] || 'slate'}>
-                        {typeLabels[lesson.subjectType] || lesson.subjectType}
-                      </Badge>
-                    </div>
-                    <div className="mt-2 flex items-center gap-4 text-sm text-slate-500">
-                      {lesson.teacherName && (
-                        <span className="flex items-center gap-1">
-                          <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-                          </svg>
-                          {lesson.teacherName}
-                        </span>
-                      )}
-                      {lesson.room && (
-                        <span className="flex items-center gap-1">
-                          <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
-                          </svg>
-                          {lesson.room}
-                        </span>
-                      )}
-                    </div>
-                    {lesson.isChanged && (
-                      <div className="mt-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-1.5 text-xs font-medium text-amber-700">
-                        ⚠️ {lesson.changeDescription || 'Изменение'}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </Card>
-            </Link>
-          ))}
-        </div>
-      )}
+    <div className="mx-auto max-w-5xl space-y-8">
+      <section><p className="ds-meta font-medium text-indigo-600">{dateLabel}</p><h1 className="ds-page-title mt-1 text-slate-900">Добрый день, {name}</h1><p className="ds-body mt-2 text-slate-500">Вот как выглядит твой учебный день.</p></section>
+      <section className="grid gap-x-8 gap-y-3 border-y border-slate-200 py-4 sm:grid-cols-3">
+        <div><p className="text-2xl font-bold text-slate-900">{loading ? '—' : lessons.length}</p><p className="ds-meta mt-1 text-slate-500">Пар сегодня</p></div>
+        <div><p className="text-2xl font-bold text-slate-900">{loading ? '—' : changedCount}</p><p className="ds-meta mt-1 text-slate-500">Изменений</p></div>
+        <div><p className="text-2xl font-bold text-slate-900">{loading ? '—' : `${attendance}%`}</p><p className="ds-meta mt-1 text-slate-500">Посещаемость</p></div>
+      </section>
+      <section>
+        <div className="mb-3 flex items-center justify-between"><h2 className="ds-section-title text-slate-900">{current ? 'Сейчас' : 'Ближайшая пара'}</h2><Link href="/week" className="ds-meta font-semibold text-indigo-600 hover:text-indigo-700">Всё расписание</Link></div>
+        {loading ? <Card><Skeleton className="h-24" /></Card> : primary ? <Link href={`/pair-space/${primary.lesson.id}`}><Card hover className={current ? 'border-emerald-200 bg-emerald-50/40' : 'border-indigo-200 bg-indigo-50/40'}><div className="flex items-start justify-between gap-4"><div>{current && <Badge variant="success" dot>ИДЁТ СЕЙЧАС</Badge>}<p className={`text-sm font-semibold ${current ? 'mt-3 text-emerald-700' : 'text-indigo-700'}`}>{time(primary.lesson.startTime)} — {time(primary.lesson.endTime)}</p><h3 className="mt-2 text-xl font-bold text-slate-900">{primary.lesson.subject}</h3><p className="mt-1 text-sm text-slate-500">{typeLabels[primary.lesson.subjectType] || primary.lesson.subjectType}{primary.lesson.room ? ` · ауд. ${primary.lesson.room}` : ''}</p>{current && <p className="mt-4 text-sm font-semibold text-emerald-700">Осталось {minutesLeft(current.lesson.endTime, now)} мин.</p>}</div><span className="hidden rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-500 sm:inline-flex">Открыть</span></div></Card></Link> : <EmptyState title="На сегодня пар нет" description="Можно спокойно заняться своими делами." />}
+        {current && next && <div className="mt-6"><div className="mb-2 flex items-center justify-between"><h3 className="ds-meta font-semibold uppercase tracking-wide text-slate-400">Следующая</h3><span className="ds-meta text-slate-400">{time(next.lesson.startTime)}</span></div><Link href={`/pair-space/${next.lesson.id}`} className="group flex items-center justify-between border-b border-slate-200 py-3 hover:border-indigo-300"><div><p className="font-semibold text-slate-900">{next.lesson.subject}</p><p className="ds-meta mt-1 text-slate-500">{typeLabels[next.lesson.subjectType] || next.lesson.subjectType}{next.lesson.room ? ` · ауд. ${next.lesson.room}` : ''}</p></div><span className="text-lg text-indigo-600 transition-transform group-hover:translate-x-1" aria-hidden="true">→</span></Link></div>}
+      </section>
+      {!loading && lessons.length > 0 && <section><div className="mb-3 flex items-center justify-between"><h2 className="text-lg font-bold text-slate-900">Сегодня</h2><span className="text-sm text-slate-400">{lessons.length} пар</span></div><div className="divide-y divide-slate-200 border-y border-slate-200">{lessons.map(lesson => { const state = stateFor(lesson); const isCurrent = state === 'current'; return <Link key={lesson.id} href={`/pair-space/${lesson.id}`} className={`group grid grid-cols-[72px_1fr_auto] gap-4 px-2 py-4 transition-colors hover:bg-slate-50 sm:grid-cols-[88px_1fr_auto] sm:gap-6 ${state === 'past' ? 'opacity-55' : state === 'current' ? 'bg-emerald-50/60' : state === 'next' ? 'bg-indigo-50/45' : ''}`}><div className={`border-r pr-4 ${isCurrent ? 'border-emerald-300' : 'border-slate-200'}`}><p className={`font-mono text-sm font-semibold ${state === 'past' ? 'text-slate-400' : 'text-slate-900'}`}>{time(lesson.startTime)}</p><div className="my-2 h-px bg-slate-200" /><p className="font-mono text-xs text-slate-400">{time(lesson.endTime)}</p></div><div className="min-w-0"><div className="flex flex-wrap items-center gap-2">{isCurrent && <Badge variant="success" dot>ИДЁТ СЕЙЧАС</Badge>}<h3 className={`truncate font-semibold ${state === 'past' ? 'text-slate-500' : 'text-slate-900'}`}>{lesson.subject}</h3>{!isCurrent && <Badge variant="subject">{typeLabels[lesson.subjectType] || lesson.subjectType}</Badge>}</div><p className={`mt-1 text-sm ${state === 'past' ? 'text-slate-400' : 'text-slate-500'}`}>{lesson.teacherName || 'Преподаватель не указан'}{lesson.room ? ` · ${lesson.room}` : ''}</p>{isCurrent && <p className="mt-2 text-xs font-semibold text-emerald-700">Осталось {minutesLeft(lesson.endTime, now)} мин.</p>}{lesson.isChanged && <div className="mt-2"><Badge variant="warning">Изменено{lesson.changeDescription ? ` · ${lesson.changeDescription}` : ''}</Badge></div>}</div><span className="self-center text-lg font-medium text-indigo-600 opacity-0 transition-opacity group-hover:opacity-100" aria-hidden="true">→</span></Link>; })}</div></section>}
     </div>
   );
 }

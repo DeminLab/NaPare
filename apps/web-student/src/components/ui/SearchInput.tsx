@@ -16,7 +16,7 @@ export function SearchInput({ onSearch, className = '', ...props }: SearchInputP
         type="text"
         placeholder="Поиск..."
         onChange={(e) => onSearch?.(e.target.value)}
-        className="block w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-sm text-slate-900 placeholder-slate-400 transition-colors focus:border-sky-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-sky-100"
+        className="ds-input block w-full py-2.5 pl-10 pr-4 text-sm placeholder-slate-400 transition-colors"
         {...props}
       />
     </div>

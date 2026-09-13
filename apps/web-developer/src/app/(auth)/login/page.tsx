@@ -30,17 +30,17 @@ export default function LoginPage() {
       <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2220%22%20height%3D%2220%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Ccircle%20cx%3D%221%22%20cy%3D%221%22%20r%3D%221%22%20fill%3D%22rgba(255,255,255,0.03)%22/%3E%3C/svg%3E')] opacity-40" />
 
       <div className="relative w-full max-w-md">
-        <div className="rounded-2xl bg-white p-8 shadow-2xl shadow-black/20 ring-1 ring-slate-200">
+        <div className="rounded-2xl border border-white/10 bg-slate-950/80 p-8 shadow-2xl shadow-black/40 ring-1 ring-cyan-400/10 backdrop-blur-xl">
           <div className="mb-8 text-center">
-            <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-sky-100">
-              <svg className="h-6 w-6 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-cyan-400/10">
+              <svg className="h-6 w-6 text-cyan-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.25 6.22L7.5 14.97m9.75-8.75l-3.75 3.75m0 0L7.5 14.97m3.75-3.75L3.75 20.25" />
               </svg>
             </div>
-            <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-sky-600">
+            <p className="mb-1 font-mono text-xs font-semibold uppercase tracking-widest text-cyan-300">
               НаПаре
             </p>
-            <h1 className="text-2xl font-bold text-slate-900">Вход разработчика</h1>
+            <h1 className="text-2xl font-bold text-white">Вход разработчика</h1>
             <p className="mt-2 text-sm text-slate-400">Консоль управления API</p>
           </div>
 
@@ -52,7 +52,7 @@ export default function LoginPage() {
             )}
 
             <div>
-              <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-slate-700">
+              <label htmlFor="email" className="mb-1.5 block font-mono text-sm font-medium text-slate-300">
                 Email
               </label>
               <input
@@ -62,12 +62,12 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="dev@napare.ru"
-                className="block w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 placeholder-slate-400 transition-colors focus:border-sky-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-sky-100"
+                className="block w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 font-mono text-sm text-white placeholder-slate-500 transition-colors focus:border-cyan-400 focus:bg-black/30 focus:outline-none focus:ring-4 focus:ring-cyan-400/10"
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-slate-700">
+              <label htmlFor="password" className="mb-1.5 block font-mono text-sm font-medium text-slate-300">
                 Пароль
               </label>
               <input
@@ -77,14 +77,14 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;"
-                className="block w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 placeholder-slate-400 transition-colors focus:border-sky-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-sky-100"
+                className="block w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 font-mono text-sm text-white placeholder-slate-500 transition-colors focus:border-cyan-400 focus:bg-black/30 focus:outline-none focus:ring-4 focus:ring-cyan-400/10"
               />
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-xl bg-sky-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-sky-600/25 transition-all hover:bg-sky-700 hover:shadow-xl disabled:opacity-50 disabled:shadow-none"
+              className="w-full rounded-xl bg-cyan-400 px-4 py-3 text-sm font-semibold text-slate-950 shadow-lg shadow-cyan-400/20 transition-all hover:bg-cyan-300 hover:shadow-xl disabled:opacity-50 disabled:shadow-none"
             >
               {loading ? (
                 <span className="inline-flex items-center gap-2">

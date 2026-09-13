@@ -15,7 +15,7 @@ export default function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <h1 className="text-2xl font-bold text-slate-900">Настройки</h1>
+      <h1 className="ds-page-title text-slate-900">Настройки</h1>
 
       <Card>
         <h3 className="mb-4 font-bold text-slate-900">Профиль</h3>
@@ -39,7 +39,7 @@ export default function SettingsPage() {
           ].map((item) => (
             <label key={item.label} className="flex items-center justify-between rounded-xl px-4 py-3 hover:bg-slate-50 cursor-pointer">
               <span className="text-sm font-medium text-slate-700">{item.label}</span>
-              <input type="checkbox" defaultChecked={item.default} className="h-5 w-5 rounded-lg border-slate-300 text-sky-500 focus:ring-sky-500" />
+              <input type="checkbox" defaultChecked={item.default} className="h-5 w-5 rounded-lg border-slate-300 text-indigo-500 focus:ring-indigo-500" />
             </label>
           ))}
         </div>

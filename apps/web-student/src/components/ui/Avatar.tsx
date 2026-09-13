@@ -7,13 +7,13 @@ interface AvatarProps {
 }
 
 const colors = [
-  'from-sky-400 to-sky-600',
-  'from-purple-400 to-purple-600',
+  'from-indigo-400 to-indigo-600',
+  'from-slate-400 to-slate-600',
   'from-emerald-400 to-emerald-600',
   'from-amber-400 to-amber-600',
-  'from-pink-400 to-pink-600',
+  'from-blue-400 to-blue-600',
   'from-indigo-400 to-indigo-600',
-  'from-teal-400 to-teal-600',
+  'from-slate-500 to-slate-700',
   'from-rose-400 to-rose-600',
 ];
 

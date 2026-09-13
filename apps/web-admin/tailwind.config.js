@@ -8,6 +8,15 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        surface: 'var(--color-surface)',
+        'surface-secondary': 'var(--color-surface-secondary)',
+        ink: 'var(--color-text)',
+        muted: 'var(--color-text-secondary)',
+        border: 'var(--color-border)',
+        brand: 'var(--color-brand)',
+        success: 'var(--color-success)',
+        warning: 'var(--color-warning)',
+        danger: 'var(--color-danger)',
         primary: {
           50: '#f0f9ff',
           100: '#e0f2fe',
@@ -21,6 +30,8 @@ module.exports = {
           900: '#0c4a6e',
         },
       },
+      borderRadius: { sm: 'var(--radius-sm)', md: 'var(--radius-md)', lg: 'var(--radius-lg)', xl: 'var(--radius-xl)' },
+      boxShadow: { ds: 'var(--shadow-sm)', 'ds-md': 'var(--shadow-md)' },
     },
   },
   plugins: [],

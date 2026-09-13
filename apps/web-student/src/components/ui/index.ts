@@ -10,3 +10,5 @@ export { StatCard } from './StatCard';
 export { TabBar } from './TabBar';
 export { SearchInput } from './SearchInput';
 export { ToastProvider, useToast } from './Toast';
+export { Icon } from './Icons';
+export type { IconName } from './Icons';

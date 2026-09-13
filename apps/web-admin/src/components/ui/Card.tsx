@@ -13,7 +13,7 @@ const paddings = { sm: 'p-4', md: 'p-6', lg: 'p-8' };
 
 export function Card({ children, className = '', hover = false, padding = 'md', ...props }: CardProps) {
   return (
-    <div className={`rounded-2xl border border-slate-200 bg-white shadow-sm ${hover ? 'transition-all hover:border-sky-200 hover:shadow-md hover:shadow-sky-100 cursor-pointer' : ''} ${paddings[padding]} ${className}`} {...props}>
+    <div className={`ds-card ${hover ? 'transition-all hover:border-sky-200 hover:shadow-md hover:shadow-sky-100 cursor-pointer' : ''} ${paddings[padding]} ${className}`} {...props}>
       {children}
     </div>
   );

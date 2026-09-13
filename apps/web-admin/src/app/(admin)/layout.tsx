@@ -90,7 +90,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-[var(--sidebar-w)] flex-col border-r border-slate-200 bg-white transition-transform lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
+        className={`fixed inset-y-0 left-0 z-40 flex w-[var(--sidebar-w)] flex-col border-r border-slate-200 bg-white transition-transform duration-[var(--motion-sidebar)] lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
       >
         <div className="flex h-16 items-center gap-3 border-b border-slate-100 px-5">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-slate-800 to-sky-600 text-sm font-bold text-white">
@@ -113,11 +113,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   onClick={() => setSidebarOpen(false)}
                   className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
                     active
-                      ? 'bg-sky-50 text-sky-700'
+                      ? 'bg-indigo-50 text-indigo-700'
                       : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                   }`}
                 >
-                  <span className={active ? 'text-sky-600' : 'text-slate-400'}>{item.icon}</span>
+                  <span className={active ? 'text-indigo-600' : 'text-slate-400'}>{item.icon}</span>
                   {item.label}
                 </Link>
               );
@@ -164,7 +164,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
         </header>
 
-        <main className="flex-1 p-4 lg:p-6">{children}</main>
+        <main className="ds-page-enter flex-1 p-4 lg:p-6">{children}</main>
       </div>
     </div>
   );

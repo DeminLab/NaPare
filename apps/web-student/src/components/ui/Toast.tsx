@@ -39,7 +39,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const colors: Record<ToastType, string> = {
     success: 'bg-emerald-500',
     error: 'bg-red-500',
-    info: 'bg-sky-500',
+    info: 'bg-indigo-500',
   };
 
   return (
@@ -50,7 +50,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           <div
             key={t.id}
             onClick={() => remove(t.id)}
-            className={`cursor-pointer rounded-xl px-4 py-3 text-sm font-medium text-white shadow-lg ${colors[t.type]} animate-in slide-in-from-right`}
+            className={`ds-notification cursor-pointer rounded-xl px-4 py-3 text-sm font-medium text-white shadow-lg ${colors[t.type]}`}
           >
             {t.message}
           </div>

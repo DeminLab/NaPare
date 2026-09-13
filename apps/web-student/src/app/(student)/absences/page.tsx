@@ -1,48 +1,27 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '@/lib/api';
 import { Card, Badge, Button, EmptyState, Skeleton } from '@/components/ui';
 
-interface Absence {
-  id: string;
-  date: string;
-  subject: string;
-  pairNumber: number;
-  status: string;
-  reason: string;
-  confirmationRequired: boolean;
-}
+interface Absence { id: string; date: string; subject: string; pairNumber: number; status: string; reason: string; confirmationRequired: boolean; }
 
-const statusConfig: Record<string, { label: string; variant: 'green' | 'amber' | 'red' | 'purple' | 'slate'; icon: string }> = {
-  confirmed: { label: 'Подтверждён', variant: 'green', icon: '✅' },
-  pending: { label: 'Ожидает', variant: 'amber', icon: '⏳' },
-  absent: { label: 'Пропуск', variant: 'red', icon: '❌' },
-  excused: { label: 'Уважительный', variant: 'purple', icon: '📋' },
-  late: { label: 'Опоздал', variant: 'slate', icon: '⏰' },
+const statusConfig: Record<string, { label: string; variant: 'success' | 'warning' | 'danger' | 'neutral' }> = {
+  confirmed: { label: 'Подтверждён', variant: 'success' }, pending: { label: 'Ожидает', variant: 'warning' },
+  absent: { label: 'Пропуск', variant: 'danger' }, excused: { label: 'Уважительный', variant: 'neutral' }, late: { label: 'Опоздал', variant: 'neutral' },
 };
-
-function formatDate(dateStr: string): string {
-  const d = new Date(dateStr);
-  return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
-}
+const formatDate = (dateStr: string) => new Date(dateStr).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
 
 export default function AbsencesPage() {
   const [absences, setAbsences] = useState<Absence[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    apiFetch<Absence[]>('/absences/my')
-      .then(data => setAbsences(data))
-      .catch(() => setAbsences([]))
-      .finally(() => setLoading(false));
+    apiFetch<Absence[]>('/absences/my').then(setAbsences).catch(() => setAbsences([])).finally(() => setLoading(false));
   }, []);
 
   const handleConfirm = async (id: string) => {
-    try {
-      await apiFetch(`/absences/${id}/confirm`, { method: 'POST' });
-      setAbsences(prev => prev.map(a => a.id === id ? { ...a, status: 'confirmed', confirmationRequired: false } : a));
-    } catch {}
+    try { await apiFetch(`/absences/${id}/confirm`, { method: 'POST' }); setAbsences(prev => prev.map(a => a.id === id ? { ...a, status: 'confirmed', confirmationRequired: false } : a)); } catch {}
   };
 
   const stats = {
@@ -51,70 +30,19 @@ export default function AbsencesPage() {
     pending: absences.filter(a => a.status === 'pending').length,
     excused: absences.filter(a => a.status === 'excused').length,
   };
+  const subjectStats = useMemo(() => {
+    const counts = absences.reduce<Record<string, number>>((result, absence) => { result[absence.subject] = (result[absence.subject] || 0) + 1; return result; }, {});
+    return Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  }, [absences]);
+  const maxSubjectCount = subjectStats[0]?.[1] || 1;
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
-      <h1 className="text-2xl font-bold text-slate-900">Мои пропуски</h1>
-
-      {!loading && absences.length > 0 && (
-        <div className="grid grid-cols-4 gap-3">
-          <Card padding="sm" className="text-center">
-            <p className="text-xl font-extrabold text-slate-900">{stats.total}</p>
-            <p className="text-xs text-slate-500">Всего</p>
-          </Card>
-          <Card padding="sm" className="text-center">
-            <p className="text-xl font-extrabold text-emerald-600">{stats.confirmed}</p>
-            <p className="text-xs text-slate-500">Подтв.</p>
-          </Card>
-          <Card padding="sm" className="text-center">
-            <p className="text-xl font-extrabold text-amber-600">{stats.pending}</p>
-            <p className="text-xs text-slate-500">Ожидает</p>
-          </Card>
-          <Card padding="sm" className="text-center">
-            <p className="text-xl font-extrabold text-purple-600">{stats.excused}</p>
-            <p className="text-xs text-slate-500">Уважит.</p>
-          </Card>
-        </div>
-      )}
-
-      {loading ? (
-        <div className="space-y-3">
-          {[1, 2, 3].map(i => <Card key={i}><Skeleton className="h-16" /></Card>)}
-        </div>
-      ) : absences.length === 0 ? (
-        <EmptyState
-          icon={<svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
-          title="Нет пропусков"
-          description="Отлично! У вас нет пропусков занятий"
-        />
-      ) : (
-        <div className="space-y-2">
-          {absences.map((a) => {
-            const config = statusConfig[a.status] || statusConfig.pending;
-            return (
-              <Card key={a.id} padding="sm">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="flex-shrink-0 text-center w-12">
-                      <p className="text-sm font-bold text-slate-900">{formatDate(a.date)}</p>
-                    </div>
-                    <div>
-                      <p className="font-medium text-slate-900">{a.subject}</p>
-                      <p className="text-xs text-slate-500">Пара #{a.pairNumber}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant={config.variant} dot>{config.label}</Badge>
-                    {a.confirmationRequired && a.status === 'pending' && (
-                      <Button size="sm" variant="secondary" onClick={() => handleConfirm(a.id)}>Подтвердить</Button>
-                    )}
-                  </div>
-                </div>
-              </Card>
-            );
-          })}
-        </div>
-      )}
+    <div className="mx-auto max-w-4xl space-y-8">
+      <div><h1 className="ds-page-title text-slate-900">Посещаемость</h1><p className="ds-body mt-1 text-slate-500">Контроль пропусков и учебной нагрузки</p></div>
+      <Card className="flex flex-col items-center justify-center bg-indigo-50/40 py-8 text-center"><p className="text-5xl font-extrabold tracking-tight text-indigo-700">—</p><p className="mt-2 text-lg font-semibold text-slate-900">Посещаемость</p><p className="mt-1 text-sm text-slate-500">Процент появится, когда API будет отдавать посещённые занятия</p></Card>
+      {!loading && <section className="grid gap-4 sm:grid-cols-3"><Card padding="sm"><p className="text-2xl font-bold text-slate-900">{stats.total}</p><p className="mt-1 text-sm text-slate-500">Всего пропусков</p></Card><Card padding="sm"><p className="text-2xl font-bold text-emerald-600">{stats.confirmed}</p><p className="mt-1 text-sm text-slate-500">Подтверждено</p></Card><Card padding="sm"><p className="text-2xl font-bold text-slate-700">{stats.excused}</p><p className="mt-1 text-sm text-slate-500">Уважительных</p></Card></section>}
+      {!loading && subjectStats.length > 0 && <section><h2 className="mb-3 text-lg font-bold text-slate-900">Пропуски по предметам</h2><Card padding="sm" className="divide-y divide-slate-100">{subjectStats.map(([subject, count]) => <div key={subject} className="py-4 first:pt-1 last:pb-1"><div className="flex items-center justify-between gap-4"><span className="truncate text-sm font-medium text-slate-800">{subject}</span><span className="shrink-0 text-sm font-semibold text-slate-500">{count} {count === 1 ? 'пропуск' : 'пропуска'}</span></div><div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-indigo-500" style={{ width: `${Math.max(12, (count / maxSubjectCount) * 100)}%` }} /></div></div>)}</Card></section>}
+      <section><h2 className="mb-3 text-lg font-bold text-slate-900">Список пропусков</h2>{loading ? <div className="space-y-3">{[1, 2, 3].map(i => <Card key={i}><Skeleton className="h-16" /></Card>)}</div> : absences.length === 0 ? <EmptyState title="Нет пропусков" description="Отлично! У вас нет пропусков занятий" /> : <div className="space-y-2">{absences.map(a => { const config = statusConfig[a.status] || statusConfig.pending; return <Card key={a.id} padding="sm"><div className="flex items-center justify-between gap-4"><div className="min-w-0"><p className="truncate font-medium text-slate-900">{a.subject}</p><p className="mt-1 text-xs text-slate-500">{formatDate(a.date)} · Пара #{a.pairNumber}</p></div><div className="flex shrink-0 items-center gap-2"><Badge variant={config.variant} dot>{config.label}</Badge>{a.confirmationRequired && a.status === 'pending' && <Button size="sm" variant="secondary" onClick={() => handleConfirm(a.id)}>Подтвердить</Button>}</div></div></Card>; })}</div>}</section>
     </div>
   );
 }

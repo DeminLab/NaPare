@@ -1,118 +1,234 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '@/lib/api';
-import { StatCard } from '@/components/ui/StatCard';
 
 interface AdminStats {
-  totalUsers: number;
-  totalStudents: number;
-  totalTeachers: number;
-  totalGroups: number;
-  recentActivity?: { action: string; user: string; time: string }[];
+  totalUsers?: number;
+  totalStudents?: number;
+  totalTeachers?: number;
+  totalGroups?: number;
+  recentActivity?: Activity[];
+}
+
+interface Activity {
+  action?: string;
+  user?: string;
+  time?: string;
+  createdAt?: string;
+}
+
+interface ChangedLesson {
+  id: string;
+  subject: string;
+  subjectType?: string;
+  groupName?: string;
+  startTime?: string;
+  endTime?: string;
+  room?: string;
+  changeDescription?: string;
+}
+
+interface SyncStatus {
+  status?: string;
+  lastSync?: string | null;
+}
+
+const numberFormatter = new Intl.NumberFormat('ru-RU');
+
+function todayIso() {
+  const now = new Date();
+  const offset = now.getTimezoneOffset() * 60000;
+  return new Date(now.getTime() - offset).toISOString().slice(0, 10);
+}
+
+function formatDate(date: Date) {
+  return new Intl.DateTimeFormat('ru-RU', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  }).format(date);
+}
+
+function formatTime(value?: string) {
+  if (!value) return '—';
+  return value.slice(0, 5);
+}
+
+function formatSyncDate(value?: string | null) {
+  if (!value) return 'Ещё не запускалась';
+  return new Intl.DateTimeFormat('ru-RU', {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(value));
+}
+
+function SectionHeading({ title, meta }: { title: string; meta?: string }) {
+  return (
+    <div className="mb-3 flex items-center justify-between border-b border-slate-200 pb-3">
+      <h2 className="ds-meta font-semibold uppercase tracking-[0.08em] text-slate-700">{title}</h2>
+      {meta && <span className="text-xs text-slate-400">{meta}</span>}
+    </div>
+  );
+}
+
+function Metric({ label, value, detail, tone = 'indigo' }: { label: string; value: string | number; detail: string; tone?: 'indigo' | 'green' | 'slate' }) {
+  const tones = {
+    indigo: 'bg-indigo-500',
+    green: 'bg-emerald-500',
+    slate: 'bg-slate-400',
+  };
+
+  return (
+    <div className="relative overflow-hidden rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <span className={`absolute inset-y-0 left-0 w-1 ${tones[tone]}`} />
+      <p className="text-xs font-medium uppercase tracking-[0.08em] text-slate-500">{label}</p>
+      <p className="mt-3 text-3xl font-bold tracking-tight text-slate-950">{value}</p>
+      <p className="mt-1 text-xs text-slate-400">{detail}</p>
+    </div>
+  );
 }
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<AdminStats | null>(null);
-  const [error, setError] = useState('');
+  const [changes, setChanges] = useState<ChangedLesson[]>([]);
+  const [sync, setSync] = useState<SyncStatus | null>(null);
+  const [statsError, setStatsError] = useState('');
+  const [operationsError, setOperationsError] = useState('');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    apiFetch<AdminStats>('/admin/stats')
-      .then(setStats)
-      .catch((err) => setError(err instanceof Error ? err.message : 'Ошибка загрузки'));
+    const date = todayIso();
+    Promise.allSettled([
+      apiFetch<AdminStats>('/admin/stats'),
+      apiFetch<ChangedLesson[]>(`/schedule/changes?date=${date}`),
+      apiFetch<SyncStatus>('/admin/schedule/sync-status'),
+    ]).then(([statsResult, changesResult, syncResult]) => {
+      if (statsResult.status === 'fulfilled') setStats(statsResult.value);
+      else setStatsError(statsResult.reason instanceof Error ? statsResult.reason.message : 'Не удалось загрузить статистику');
+
+      if (changesResult.status === 'fulfilled') setChanges(changesResult.value || []);
+      else setOperationsError('Часть операционных данных недоступна');
+
+      if (syncResult.status === 'fulfilled') setSync(syncResult.value);
+      else setOperationsError('Часть операционных данных недоступна');
+
+      setLoading(false);
+    });
   }, []);
 
-  if (error) {
-    return (
-      <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-3 text-sm font-medium text-red-600">
-        {error}
-      </div>
-    );
+  const dateLabel = useMemo(() => formatDate(new Date()), []);
+  const imports = (stats?.recentActivity || []).filter((item) => item.action?.toLowerCase().includes('импорт'));
+  const activePercent = stats?.totalUsers && stats.totalUsers > 0 ? '—' : '—';
+  const statValue = (value?: number) => (value !== undefined ? numberFormatter.format(value) : '—');
+  const syncUnavailable = !sync;
+  const syncFailed = sync?.status === 'error';
+
+  if (statsError && !stats) {
+    return <div className="rounded-xl border border-red-200 bg-red-50 px-5 py-4 text-sm font-medium text-red-700">{statsError}</div>;
   }
 
-  const cards = [
-    {
-      label: 'Пользователей',
-      value: stats?.totalUsers ?? '—',
-      gradient: 'from-sky-500 to-sky-600',
-      icon: (
-        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
-        </svg>
-      ),
-    },
-    {
-      label: 'Студентов',
-      value: stats?.totalStudents ?? '—',
-      gradient: 'from-purple-500 to-purple-600',
-      icon: (
-        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4.26 10.147a60.436 60.436 0 00-.491 6.347A48.627 48.627 0 0112 20.904a48.627 48.627 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.57 50.57 0 00-2.658-.813A59.905 59.905 0 0112 3.493a59.902 59.902 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.697 50.697 0 0112 13.489a50.702 50.702 0 017.74-3.342" />
-        </svg>
-      ),
-    },
-    {
-      label: 'Преподавателей',
-      value: stats?.totalTeachers ?? '—',
-      gradient: 'from-emerald-500 to-emerald-600',
-      icon: (
-        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 00.75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 00-3.413-.387m4.5 8.006c-.194.165-.42.295-.673.38A23.978 23.978 0 0112 15.75c-2.648 0-5.195-.429-7.577-1.22a2.016 2.016 0 01-.673-.38m0 0A2.18 2.18 0 013 12.489V8.706c0-1.081.768-2.015 1.837-2.175a48.111 48.111 0 013.413-.387m7.5 0V5.25A2.25 2.25 0 0013.5 3h-3a2.25 2.25 0 00-2.25 2.25v.894m7.5 0a48.667 48.667 0 00-7.5 0M12 12.75h.008v.008H12v-.008z" />
-        </svg>
-      ),
-    },
-    {
-      label: 'Групп',
-      value: stats?.totalGroups ?? '—',
-      gradient: 'from-amber-500 to-amber-600',
-      icon: (
-        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
-        </svg>
-      ),
-    },
-  ];
-
-  const activity = stats?.recentActivity || [
-    { action: 'Вход в систему', user: 'Иванов И.И.', time: '2 мин назад' },
-    { action: 'Изменение роли', user: 'Петрова А.С.', time: '15 мин назад' },
-    { action: 'Импорт расписания', user: 'Система', time: '1 час назад' },
-    { action: 'Создание группы', user: 'Козлов Д.В.', time: '3 часа назад' },
-  ];
-
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-extrabold text-slate-900">Дашборд</h1>
-        <p className="mt-1 text-sm text-slate-500">Обзорная статистика университета</p>
+    <div className="mx-auto max-w-[1440px] space-y-8">
+      <div className="flex flex-col justify-between gap-2 md:flex-row md:items-end">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-indigo-600">Операционный центр</p>
+          <h1 className="ds-page-title mt-1 text-slate-950">Dashboard</h1>
+          <p className="mt-1 text-sm capitalize text-slate-500">Сегодня · {dateLabel}</p>
+        </div>
+        <Link href="/schedule" className="text-sm font-medium text-indigo-600 transition-colors hover:text-indigo-800">
+          Открыть расписание →
+        </Link>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {cards.map((card) => (
-          <StatCard key={card.label} label={card.label} value={card.value} icon={card.icon} gradient={card.gradient} />
-        ))}
-      </div>
+      <section>
+        <SectionHeading title="Сегодня" meta={loading ? 'Загрузка…' : 'Сводка университета'} />
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <Metric label="Студенты" value={loading ? '…' : statValue(stats?.totalStudents)} detail="Всего в университете" />
+          <Metric label="Активные" value={loading ? '…' : activePercent} detail="Доля активных пользователей" tone="green" />
+          <Metric label="Группы" value={loading ? '…' : statValue(stats?.totalGroups)} detail="Учебные группы" tone="slate" />
+          <Metric label="Преподаватели" value={loading ? '…' : statValue(stats?.totalTeachers)} detail="Всего преподавателей" />
+        </div>
+      </section>
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="mb-4 text-lg font-bold text-slate-900">Последняя активность</h2>
-        <div className="divide-y divide-slate-100">
-          {activity.map((item, i) => (
-            <div key={i} className="flex items-center justify-between py-3 first:pt-0 last:pb-0">
-              <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-500">
-                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
+      <section>
+        <SectionHeading title="Изменения расписания" meta={`${changes.length} за сегодня`} />
+        {operationsError && <p className="mb-3 text-xs text-amber-700">{operationsError}</p>}
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+          {changes.length === 0 ? (
+            <div className="px-5 py-8 text-center">
+              <p className="text-sm font-medium text-slate-700">Изменений за сегодня нет</p>
+              <p className="mt-1 text-xs text-slate-400">Данные появятся после синхронизации расписания</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-slate-100">
+              {changes.map((lesson) => (
+                <div key={lesson.id} className="grid gap-3 px-5 py-4 md:grid-cols-[92px_1fr_auto] md:items-center">
+                  <p className="font-mono text-sm font-semibold text-slate-600">{formatTime(lesson.startTime)}–{formatTime(lesson.endTime)}</p>
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">{lesson.subject || 'Без названия'}</p>
+                    <p className="mt-1 text-xs text-slate-500">{lesson.groupName || 'Группа не указана'} · {lesson.room || 'Аудитория не указана'}</p>
+                  </div>
+                  <span className="text-xs font-medium text-amber-700">{lesson.changeDescription || 'Расписание изменено'}</span>
                 </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      <div className="grid gap-8 xl:grid-cols-2">
+        <section>
+          <SectionHeading title="Последние импорты" />
+          <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+            {imports.length === 0 ? (
+              <div className="px-5 py-8 text-center">
+                <p className="text-sm font-medium text-slate-700">История импортов пока пуста</p>
+                <p className="mt-1 text-xs text-slate-400">После подключения журнала здесь появятся последние операции</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-slate-100">
+                {imports.slice(0, 5).map((item, index) => (
+                  <div key={`${item.createdAt || item.time || 'import'}-${index}`} className="flex items-center justify-between gap-4 px-5 py-4">
+                    <div>
+                      <p className="text-sm font-medium text-slate-800">{item.action}</p>
+                      <p className="mt-1 text-xs text-slate-400">{item.user || 'Система'}</p>
+                    </div>
+                    <span className="whitespace-nowrap text-xs text-slate-400">{item.time || '—'}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+
+        <section>
+          <SectionHeading title="Состояние коннекторов" />
+          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <span className={`mt-1 h-2.5 w-2.5 rounded-full ${syncFailed ? 'bg-red-500' : syncUnavailable ? 'bg-slate-300' : 'bg-emerald-500'}`} />
                 <div>
-                  <p className="text-sm font-medium text-slate-900">{item.action}</p>
-                  <p className="text-xs text-slate-400">{item.user}</p>
+                  <p className="text-sm font-semibold text-slate-900">Синхронизация расписания</p>
+                  <p className="mt-1 text-xs text-slate-500">Статус: {sync?.status || 'неизвестен'}</p>
                 </div>
               </div>
-              <span className="text-xs text-slate-400">{item.time}</span>
+              <span className={`rounded-full px-2 py-1 text-xs font-medium ${syncFailed ? 'bg-red-50 text-red-700' : syncUnavailable ? 'bg-slate-100 text-slate-500' : 'bg-emerald-50 text-emerald-700'}`}>
+                {syncFailed ? 'Ошибка' : syncUnavailable ? 'Нет данных' : 'Работает'}
+              </span>
             </div>
-          ))}
-        </div>
+            <div className="mt-5 flex items-center justify-between border-t border-slate-100 pt-4 text-xs">
+              <span className="text-slate-400">Последний запуск</span>
+              <span className="font-medium text-slate-600">{formatSyncDate(sync?.lastSync)}</span>
+            </div>
+            <Link href="/settings" className="mt-4 inline-flex text-sm font-medium text-indigo-600 hover:text-indigo-800">
+              Управлять подключениями →
+            </Link>
+          </div>
+        </section>
       </div>
     </div>
   );

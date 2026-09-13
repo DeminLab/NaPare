@@ -5,9 +5,37 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 :root {
-  --primary: #0ea5e9;
-  --primary-dark: #0284c7;
-  --accent: #8b5cf6;
+  --color-background: #f7f8fa;
+  --color-surface: #ffffff;
+  --color-surface-secondary: #f1f3f5;
+  --color-text: #111827;
+  --color-text-secondary: #667085;
+  --color-border: #e4e7ec;
+  --color-brand: #2563eb;
+  --color-brand-soft: #eff6ff;
+  --color-success: #16a34a;
+  --color-warning: #d97706;
+  --color-danger: #dc2626;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --shadow-sm: 0 1px 2px rgb(16 24 40 / 0.04);
+  --shadow-md: 0 8px 24px rgb(16 24 40 / 0.08);
+  --type-page-size: 30px;
+  --type-section-size: 19px;
+  --type-card-size: 16px;
+  --type-body-size: 15px;
+  --type-meta-size: 13px;
+  --motion-page: 180ms;
+  --motion-hover: 150ms;
+  --motion-modal: 200ms;
+  --motion-sidebar: 220ms;
+  --motion-notification: 250ms;
+  --motion-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --primary: #4f46e5;
+  --primary-dark: #4338ca;
+  --accent: #6366f1;
   --sidebar-w: 260px;
 }
 
@@ -19,6 +47,29 @@ body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background: var(--color-background);
+  color: var(--color-text);
+}
+
+@layer components {
+  .ds-page-title { font-size: var(--type-page-size); line-height: 1.2; font-weight: 700; letter-spacing: -0.025em; }
+  .ds-section-title { font-size: var(--type-section-size); line-height: 1.4; font-weight: 650; letter-spacing: -0.01em; }
+  .ds-card-title { font-size: var(--type-card-size); line-height: 1.4; font-weight: 600; }
+  .ds-body { font-size: var(--type-body-size); line-height: 1.55; font-weight: 400; }
+  .ds-meta { font-size: var(--type-meta-size); line-height: 1.4; font-weight: 500; }
+  .ds-card { border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: var(--shadow-sm); transition: border-color var(--motion-hover) var(--motion-ease), box-shadow var(--motion-hover) var(--motion-ease), background-color var(--motion-hover) var(--motion-ease); }
+  .ds-input { border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface-secondary); color: var(--color-text); }
+  .ds-input:focus { border-color: var(--color-brand); outline: none; box-shadow: 0 0 0 4px var(--color-brand-soft); }
+}
+
+@keyframes ds-page-enter { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes ds-modal-enter { from { opacity: 0; transform: translateY(6px) scale(0.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes ds-notification-enter { from { opacity: 0; transform: translateX(10px); } to { opacity: 1; transform: translateX(0); } }
+.ds-page-enter { animation: ds-page-enter var(--motion-page) var(--motion-ease) both; }
+.ds-modal { animation: ds-modal-enter var(--motion-modal) var(--motion-ease) both; }
+.ds-notification { animation: ds-notification-enter var(--motion-notification) var(--motion-ease) both; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 1ms !important; transition-duration: 1ms !important; scroll-behavior: auto !important; }
 }
 
 @layer utilities {
