@@ -1,151 +1,31 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { apiFetch, apiFetchList } from '@/lib/api';
-import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { RequestState } from '@/components/ui/RequestState';
+import { Badge, Button, Card, EmptyState, RequestState, Skeleton } from '@/components/ui';
 
-interface Connector {
-  id: string;
-  name: string;
-  type: string;
-  isActive: boolean;
-  lastSyncAt?: string;
-  config?: Record<string, unknown>;
-}
+interface Connector { id: string; name: string; type: string; status: 'active' | 'inactive' | 'error' | 'syncing' | string; }
+const descriptions: Record<string, string> = { api: 'Синхронизация данных через API', file: 'Импорт расписания из файлов' };
+const typeLabels: Record<string, string> = { api: 'API', file: 'File import' };
 
-const CONNECTOR_TYPES: Record<string, { label: string; variant: 'sky' | 'purple' | 'green' | 'amber' | 'red' | 'slate' }> = {
-  bulletin: { label: 'Бюллетень', variant: 'sky' },
-  isu: { label: 'ИСУ', variant: 'purple' },
-  lms: { label: 'LMS', variant: 'green' },
-  custom: { label: 'Свой', variant: 'amber' },
-};
+function statusInfo(status: string) { if (status === 'active') return { label: 'Connected', variant: 'green' as const }; if (status === 'syncing') return { label: 'Syncing', variant: 'amber' as const }; if (status === 'error') return { label: 'Error', variant: 'red' as const }; return { label: 'Disconnected', variant: 'slate' as const }; }
 
 export default function ConnectorsPage() {
   const [connectors, setConnectors] = useState<Connector[]>([]);
   const [loading, setLoading] = useState(true);
+  const [busyId, setBusyId] = useState('');
   const [error, setError] = useState('');
-  const [togglingId, setTogglingId] = useState('');
+  const [actionMessage, setActionMessage] = useState('');
 
-  const load = async () => {
-    setLoading(true);
-    setError('');
-    try {
-      setConnectors(await apiFetchList<Connector>('/superadmin/connectors'));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка загрузки');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const load = () => { setLoading(true); setError(''); apiFetchList<Connector>('/superadmin/connectors').then(setConnectors).catch((err) => setError(err instanceof Error ? err.message : 'Не удалось загрузить connectors.')).finally(() => setLoading(false)); };
+  useEffect(() => { load(); }, []);
+  const counts = useMemo(() => ({ connected: connectors.filter((item) => item.status === 'active').length, syncing: connectors.filter((item) => item.status === 'syncing').length, errors: connectors.filter((item) => item.status === 'error').length }), [connectors]);
+  const updateStatus = async (connector: Connector, status: 'active' | 'inactive') => { setBusyId(connector.id); setError(''); setActionMessage(''); try { await apiFetch(`/superadmin/connectors/${connector.id}`, { method: 'PATCH', body: JSON.stringify({ status }) }); setConnectors((items) => items.map((item) => item.id === connector.id ? { ...item, status } : item)); setActionMessage(status === 'inactive' ? `${connector.name} отключён.` : `${connector.name} подключён.`); } catch (err) { setError(err instanceof Error ? err.message : 'Не удалось изменить статус connector.'); } finally { setBusyId(''); } };
+  const sync = async (connector: Connector) => { setBusyId(connector.id); setActionMessage(''); setError(''); setConnectors((items) => items.map((item) => item.id === connector.id ? { ...item, status: 'syncing' } : item)); try { await apiFetch('/admin/schedule/sync', { method: 'POST' }); setConnectors((items) => items.map((item) => item.id === connector.id ? { ...item, status: 'active' } : item)); setActionMessage(`Синхронизация ${connector.name} запущена.`); } catch (err) { setConnectors((items) => items.map((item) => item.id === connector.id ? { ...item, status: 'error' } : item)); setError(err instanceof Error ? err.message : 'Не удалось запустить синхронизацию.'); } finally { setBusyId(''); } };
 
-  useEffect(() => {
-    load();
-  }, []);
+  if (loading) return <div className="space-y-4"><Skeleton className="h-24" /><Skeleton className="h-32" />{[1, 2].map((item) => <Skeleton key={item} className="h-44" />)}</div>;
+  if (error && !connectors.length) return <RequestState title="Не удалось загрузить connectors" description={error} onRetry={load} />;
 
-  const toggleActive = async (c: Connector) => {
-    setTogglingId(c.id);
-    try {
-      await apiFetch(`/superadmin/connectors/${c.id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ isActive: !c.isActive }),
-      });
-      await load();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка изменения');
-    } finally {
-      setTogglingId('');
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="space-y-4">
-        <div className="h-8 w-40 animate-pulse rounded-lg bg-slate-200" />
-        {Array.from({ length: 2 }).map((_, i) => (
-          <div key={i} className="h-28 animate-pulse rounded-2xl bg-slate-200" />
-        ))}
-      </div>
-    );
-  }
-
-  if (error && connectors.length === 0) {
-    return <RequestState title="Не удалось загрузить коннекторы" description={error} onRetry={load} />;
-  }
-
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-extrabold text-slate-900">Коннекторы</h1>
-        <p className="mt-1 text-sm text-slate-500">Интеграции с внешними системами</p>
-      </div>
-
-      {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
-          {error}
-        </div>
-      )}
-
-      <div className="space-y-3">
-        {connectors.map((c) => {
-          const typeInfo = CONNECTOR_TYPES[c.type] || CONNECTOR_TYPES.custom;
-          return (
-            <div
-              key={c.id}
-              className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:shadow-md"
-            >
-              <div className="flex items-center gap-4">
-                <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${
-                  c.isActive ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'
-                }`}>
-                  <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m9.86-4.686a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
-                  </svg>
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-bold text-slate-900">{c.name}</p>
-                    <Badge variant={typeInfo.variant} size="sm">{typeInfo.label}</Badge>
-                  </div>
-                  <p className="mt-0.5 text-xs text-slate-400">
-                    {c.lastSyncAt
-                      ? `Последняя синхронизация: ${new Date(c.lastSyncAt).toLocaleString('ru-RU')}`
-                      : 'Синхронизация не выполнялась'}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Badge variant={c.isActive ? 'green' : 'slate'} dot>
-                  {c.isActive ? 'Активен' : 'Отключен'}
-                </Badge>
-                <Button
-                  variant={c.isActive ? 'secondary' : 'primary'}
-                  size="sm"
-                  onClick={() => toggleActive(c)}
-                  loading={togglingId === c.id}
-                >
-                  {c.isActive ? 'Отключить' : 'Включить'}
-                </Button>
-              </div>
-            </div>
-          );
-        })}
-
-        {connectors.length === 0 && (
-          <EmptyState
-            icon={
-              <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m9.86-4.686a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
-              </svg>
-            }
-            title="Коннекторов пока нет"
-            description="Подключите внешние системы для импорта данных"
-          />
-        )}
-      </div>
-    </div>
-  );
+  return <div className="space-y-6"><div className="flex items-center gap-2 text-sm text-slate-500"><Link href="/dashboard" className="hover:text-slate-900">Admin</Link><span>/</span><span className="text-slate-900">Connectors</span></div><div><h1 className="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Integrations</h1><p className="mt-1 text-sm text-slate-500">Подключения и обмен данными с внешними системами</p></div><div className="grid grid-cols-3 gap-3"><Card padding="sm"><p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Connected</p><p className="mt-2 text-2xl font-bold text-slate-950">{counts.connected}</p></Card><Card padding="sm"><p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Syncing</p><p className="mt-2 text-2xl font-bold text-slate-950">{counts.syncing}</p></Card><Card padding="sm"><p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Errors</p><p className="mt-2 text-2xl font-bold text-slate-950">{counts.errors}</p></Card></div>{error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}{actionMessage && <p role="status" className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{actionMessage}</p>}{connectors.length ? <div className="grid gap-4 lg:grid-cols-2">{connectors.map((connector) => { const info = statusInfo(connector.status); return <Card key={connector.id} className={connector.status === 'error' ? 'border-red-200' : ''}><div className="flex items-start justify-between gap-4"><div className="flex min-w-0 items-start gap-3"><div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-sm font-bold ${connector.status === 'error' ? 'bg-red-50 text-red-700' : 'bg-slate-100 text-slate-700'}`}>↔</div><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h2 className="text-base font-bold text-slate-950">{connector.name}</h2><Badge variant="slate">{typeLabels[connector.type] || connector.type}</Badge></div><p className="mt-1 text-sm text-slate-500">{descriptions[connector.type] || 'Интеграция с внешней системой'}</p></div></div><Badge variant={info.variant} dot>{info.label}</Badge></div><div className="mt-5 grid grid-cols-2 gap-4 border-t border-slate-100 pt-4"><div><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Status</p><p className="mt-1 text-sm font-medium text-slate-700">{info.label}</p></div><div><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Last sync</p><p className="mt-1 text-sm font-medium text-slate-500">Нет данных</p></div></div>{connector.status === 'error' && <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3"><p className="text-xs font-semibold uppercase tracking-wide text-red-700">Error details</p><p className="mt-1 text-sm leading-5 text-red-800">Синхронизация connector завершилась ошибкой. Повторите попытку.</p><button type="button" onClick={() => sync(connector)} disabled={busyId === connector.id} className="mt-2 text-sm font-semibold text-red-700 hover:text-red-900">Retry →</button></div>}<div className="mt-5 flex flex-wrap gap-2 border-t border-slate-100 pt-4"><Link href="/university" className="rounded-lg px-2.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100">Settings</Link><button type="button" disabled={busyId === connector.id || connector.status === 'inactive'} onClick={() => sync(connector)} className="rounded-lg px-2.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-50">Sync now</button><button type="button" disabled title="Test endpoint пока не подключён" className="rounded-lg px-2.5 py-2 text-xs font-semibold text-slate-400">Test</button><button type="button" disabled={busyId === connector.id || connector.status === 'inactive'} onClick={() => updateStatus(connector, 'inactive')} className="rounded-lg px-2.5 py-2 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50">Disconnect</button></div></Card>; })}</div> : <EmptyState title="Connectors не настроены" description="Подключения к внешним системам пока отсутствуют." />}</div>;
 }

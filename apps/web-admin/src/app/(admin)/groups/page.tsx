@@ -1,245 +1,53 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { apiFetch, apiFetchList } from '@/lib/api';
-import { Modal } from '@/components/ui/Modal';
-import { Input } from '@/components/ui/Input';
-import { Button } from '@/components/ui/Button';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { Badge } from '@/components/ui/Badge';
-import { RequestState } from '@/components/ui/RequestState';
+import { Badge, Button, Card, EmptyState, Input, Modal, RequestState, SearchInput, Skeleton } from '@/components/ui';
 
-interface Faculty {
-  id: string;
-  name: string;
-  abbreviation?: string;
-}
+interface Faculty { id: string; name: string; abbreviation?: string; }
+interface Group { id: string; name: string; curriculumYear?: number; course?: number; facultyId: string; faculty?: Faculty; curatorId?: string; }
+interface Student { id: string; firstName: string; lastName: string; email: string; role?: string; }
+interface Lesson { id: string; subject: string; groupName: string; startTime?: string; endTime?: string; room?: string; teacherName?: string; teacher?: { firstName?: string; lastName?: string }; }
+type DetailTab = 'overview' | 'students' | 'teachers' | 'schedule' | 'attendance' | 'pairSpaces';
 
-interface Group {
-  id: string;
-  name: string;
-  course: number;
-  facultyId: string;
-  faculty?: Faculty;
-}
+const detailTabs: Array<{ id: DetailTab; label: string }> = [{ id: 'overview', label: 'Overview' }, { id: 'students', label: 'Students' }, { id: 'teachers', label: 'Teachers' }, { id: 'schedule', label: 'Schedule' }, { id: 'attendance', label: 'Attendance' }, { id: 'pairSpaces', label: 'Pair Spaces' }];
+function course(group: Group) { return group.curriculumYear ?? group.course ?? '—'; }
+function facultyName(group: Group, faculties: Faculty[]) { return group.faculty?.name || faculties.find((faculty) => faculty.id === group.facultyId)?.name || '—'; }
+function datePart(value?: string) { return value ? value.slice(0, 10) : '—'; }
+function timePart(value?: string) { return value?.includes('T') ? value.slice(11, 16) : value || '—'; }
 
 export default function GroupsPage() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [faculties, setFaculties] = useState<Faculty[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [lessons, setLessons] = useState<Lesson[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [selected, setSelected] = useState<Group | null>(null);
+  const [detailTab, setDetailTab] = useState<DetailTab>('overview');
+  const [search, setSearch] = useState('');
   const [facultyFilter, setFacultyFilter] = useState('all');
+  const [courseFilter, setCourseFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Group | null>(null);
   const [formName, setFormName] = useState('');
-  const [formCourse, setFormCourse] = useState('1');
-  const [formFacultyId, setFormFacultyId] = useState('');
+  const [formYear, setFormYear] = useState('1');
+  const [formFaculty, setFormFaculty] = useState('');
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const load = async () => {
-    setLoading(true);
-    setError('');
-    try {
-      const [g, f] = await Promise.all([
-        apiFetchList<Group>('/admin/groups'),
-        apiFetchList<Faculty>('/admin/faculties'),
-      ]);
-      setGroups(g);
-      setFaculties(f);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка загрузки');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const load = () => { setLoading(true); setError(''); Promise.all([apiFetchList<Group>('/admin/groups'), apiFetchList<Faculty>('/admin/faculties'), apiFetchList<Lesson>('/schedule/range?startDate=2026-01-01&endDate=2026-12-31').catch(() => [])]).then(([groupItems, facultyItems, lessonItems]) => { setGroups(groupItems); setFaculties(facultyItems); setLessons(lessonItems); }).catch((err) => setError(err instanceof Error ? err.message : 'Не удалось загрузить группы.')).finally(() => setLoading(false)); };
+  useEffect(() => { load(); }, []);
 
-  useEffect(() => {
-    load();
-  }, []);
+  const courses = [...new Set(groups.map(course).filter((item) => item !== '—'))].sort();
+  const filtered = useMemo(() => groups.filter((group) => { const q = search.trim().toLowerCase(); return (!q || group.name.toLowerCase().includes(q)) && (facultyFilter === 'all' || group.facultyId === facultyFilter) && (courseFilter === 'all' || String(course(group)) === courseFilter) && (statusFilter === 'all' || statusFilter === 'active'); }), [groups, search, facultyFilter, courseFilter, statusFilter]);
+  const selectedLessons = selected ? lessons.filter((lesson) => lesson.groupName === selected.name).sort((a, b) => (a.startTime || '').localeCompare(b.startTime || '')) : [];
 
-  const filtered = facultyFilter === 'all' ? groups : groups.filter((g) => g.facultyId === facultyFilter);
+  const openCreate = () => { setEditing(null); setFormName(''); setFormYear('1'); setFormFaculty(faculties[0]?.id || ''); setModalOpen(true); };
+  const openEdit = (group: Group) => { setEditing(group); setFormName(group.name); setFormYear(String(course(group) === '—' ? 1 : course(group))); setFormFaculty(group.facultyId); setModalOpen(true); };
+  const saveGroup = async () => { setSaving(true); setError(''); try { const body = { name: formName.trim(), curriculumYear: formYear, facultyId: formFaculty || undefined }; if (editing) await apiFetch(`/admin/groups/${editing.id}`, { method: 'PATCH', body: JSON.stringify(body) }); else await apiFetch('/admin/groups', { method: 'POST', body: JSON.stringify(body) }); setModalOpen(false); await load(); } catch (err) { setError(err instanceof Error ? err.message : 'Не удалось сохранить группу.'); } finally { setSaving(false); } };
+  const openDetail = (group: Group) => { setSelected(group); setDetailTab('overview'); setDetailLoading(true); apiFetchList<Student>(`/admin/groups/${group.id}/students`).then(setStudents).catch(() => setStudents([])).finally(() => setDetailLoading(false)); };
 
-  const openCreate = () => {
-    setEditing(null);
-    setFormName('');
-    setFormCourse('1');
-    setFormFacultyId(faculties[0]?.id || '');
-    setModalOpen(true);
-  };
-
-  const openEdit = (g: Group) => {
-    setEditing(g);
-    setFormName(g.name);
-    setFormCourse(String(g.course));
-    setFormFacultyId(g.facultyId);
-    setModalOpen(true);
-  };
-
-  const handleSave = async () => {
-    setSaving(true);
-    setError('');
-    try {
-      const body = {
-        name: formName,
-        course: Number(formCourse),
-        facultyId: formFacultyId,
-      };
-      if (editing) {
-        await apiFetch(`/admin/groups/${editing.id}`, { method: 'PATCH', body: JSON.stringify(body) });
-      } else {
-        await apiFetch('/admin/groups', { method: 'POST', body: JSON.stringify(body) });
-      }
-      setModalOpen(false);
-      await load();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка сохранения');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="space-y-4">
-        <div className="h-8 w-32 animate-pulse rounded-lg bg-slate-200" />
-        {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="h-20 animate-pulse rounded-2xl bg-slate-200" />
-        ))}
-      </div>
-    );
-  }
-
-  if (error && groups.length === 0) {
-    return <RequestState title="Не удалось загрузить группы" description={error} onRetry={load} />;
-  }
-
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-extrabold text-slate-900">Группы</h1>
-          <p className="mt-1 text-sm text-slate-500">{filtered.length} из {groups.length} групп</p>
-        </div>
-        <Button onClick={openCreate}>
-          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.5v15m7.5-7.5h-15" />
-          </svg>
-          Добавить
-        </Button>
-      </div>
-
-      {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
-          {error}
-        </div>
-      )}
-
-      <div className="flex flex-wrap gap-1.5">
-        <button
-          onClick={() => setFacultyFilter('all')}
-          className={`min-h-11 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-            facultyFilter === 'all' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-          }`}
-        >
-          Все
-        </button>
-        {faculties.map((f) => (
-          <button
-            key={f.id}
-            onClick={() => setFacultyFilter(f.id)}
-            className={`min-h-11 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-              facultyFilter === f.id ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-            }`}
-          >
-            {f.abbreviation || f.name}
-          </button>
-        ))}
-      </div>
-
-      <div className="space-y-2">
-        {filtered.map((g) => (
-          <div
-            key={g.id}
-            className="flex flex-col items-stretch gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:shadow-md sm:flex-row sm:items-center sm:justify-between sm:p-5"
-          >
-            <div className="flex items-center gap-4">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 text-sm font-bold text-slate-600">
-                {g.name.slice(0, 3)}
-              </div>
-              <div>
-                <p className="text-sm font-bold text-slate-900">{g.name}</p>
-                <p className="text-xs text-slate-400">
-                  {g.course} курс{g.faculty ? ` · ${g.faculty.name}` : ''}
-                </p>
-              </div>
-            </div>
-            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-              <Badge variant="sky" size="sm">{g.course} курс</Badge>
-              <button
-                onClick={() => openEdit(g)}
-                className="min-h-11 rounded-lg px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100"
-              >
-                Редактировать
-              </button>
-            </div>
-          </div>
-        ))}
-
-        {filtered.length === 0 && (
-          <EmptyState
-            icon={
-              <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
-              </svg>
-            }
-            title="Групп пока нет"
-            description="Добавьте первую группу"
-            action={<Button onClick={openCreate}>Добавить группу</Button>}
-          />
-        )}
-      </div>
-
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? 'Редактировать группу' : 'Новая группа'}>
-        <div className="space-y-4">
-          <Input
-            label="Название"
-            value={formName}
-            onChange={(e) => setFormName(e.target.value)}
-            placeholder="ИТ-21-1"
-            error={modalOpen && !formName.trim() ? 'Укажите название группы' : undefined}
-          />
-          <Input
-            label="Курс"
-            type="number"
-            min={1}
-            max={6}
-            value={formCourse}
-            onChange={(e) => setFormCourse(e.target.value)}
-          />
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-slate-700">Факультет</label>
-            <select
-              value={formFacultyId}
-              onChange={(e) => setFormFacultyId(e.target.value)}
-              className="block min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 transition-colors focus:border-sky-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-sky-100"
-            >
-              {faculties.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="secondary" onClick={() => setModalOpen(false)}>
-              Отмена
-            </Button>
-            <Button onClick={handleSave} loading={saving} disabled={!formName.trim() || !formFacultyId}>
-              {editing ? 'Сохранить' : 'Создать'}
-            </Button>
-          </div>
-        </div>
-      </Modal>
-    </div>
-  );
+  return <div className="space-y-6"><div className="flex items-center gap-2 text-sm text-slate-500"><span>Admin</span><span>/</span><span className="text-slate-900">Groups</span></div><div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end"><div><h1 className="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Groups</h1><p className="mt-1 text-sm text-slate-500">{filtered.length} из {groups.length} групп</p></div><Button onClick={openCreate}>Создать группу</Button></div><div className="flex flex-col gap-3 lg:flex-row"><SearchInput value={search} onChange={(event) => setSearch(event.target.value)} onSearch={setSearch} placeholder="Search groups..." /><select aria-label="Faculty" value={facultyFilter} onChange={(event) => setFacultyFilter(event.target.value)} className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-slate-500"><option value="all">Все факультеты</option>{faculties.map((faculty) => <option key={faculty.id} value={faculty.id}>{faculty.name}</option>)}</select><select aria-label="Course" value={courseFilter} onChange={(event) => setCourseFilter(event.target.value)} className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-slate-500"><option value="all">Все курсы</option>{courses.map((item) => <option key={item} value={item}>{item} курс</option>)}</select><select aria-label="Status" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-slate-500"><option value="all">Любой статус</option><option value="active">Активные</option></select></div>{loading ? <div className="space-y-3">{[1, 2, 3].map((item) => <Skeleton key={item} className="h-16" />)}</div> : error && !groups.length ? <RequestState title="Не удалось загрузить группы" description={error} onRetry={load} /> : !filtered.length ? <EmptyState title="Группы не найдены" description="Измените параметры поиска или создайте новую группу." /> : <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white"><div className="min-w-[900px] grid grid-cols-[1.5fr_1.4fr_100px_1.2fr_1fr_100px] gap-4 border-b border-slate-200 bg-slate-50 px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500"><span>Group</span><span>Faculty</span><span>Students</span><span>Curator</span><span>Schedule</span><span>Status</span></div><div className="min-w-[900px] divide-y divide-slate-100">{filtered.map((group) => { const groupLessons = lessons.filter((lesson) => lesson.groupName === group.name); return <button key={group.id} type="button" onClick={() => openDetail(group)} className="grid w-full grid-cols-[1.5fr_1.4fr_100px_1.2fr_1fr_100px] gap-4 px-5 py-4 text-left transition-colors hover:bg-slate-50"><span className="font-semibold text-slate-900">{group.name}</span><span className="text-sm text-slate-600">{facultyName(group, faculties)}</span><span className="text-sm text-slate-600">—</span><span className="text-sm text-slate-600">{group.curatorId || '—'}</span><span className="text-sm text-slate-600">{groupLessons.length ? `${groupLessons.length} занятий` : '—'}</span><span><Badge variant="green" size="sm">Активна</Badge></span></button>; })}</div></div>}{error && groups.length > 0 && <p className="text-sm text-red-700">{error}</p>}{selected && <div className="fixed inset-0 z-50 flex justify-end bg-slate-950/40" onClick={() => setSelected(null)}><aside role="dialog" aria-modal="true" className="h-full w-full max-w-2xl overflow-y-auto border-l border-slate-200 bg-white p-6 shadow-2xl" onClick={(event) => event.stopPropagation()}><div className="flex items-start justify-between gap-4"><div><p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Group detail</p><h2 className="mt-2 text-2xl font-bold text-slate-950">{selected.name}</h2><p className="mt-1 text-sm text-slate-500">{facultyName(selected, faculties)} · {course(selected)} курс</p></div><button type="button" onClick={() => setSelected(null)} className="rounded-lg px-2 py-1 text-slate-400 hover:bg-slate-100" aria-label="Закрыть">×</button></div><div className="mt-6 flex gap-1 overflow-x-auto border-b border-slate-200">{detailTabs.map((item) => <button key={item.id} type="button" onClick={() => setDetailTab(item.id)} className={`shrink-0 border-b-2 px-3 py-3 text-sm font-medium ${detailTab === item.id ? 'border-slate-900 text-slate-950' : 'border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-900'}`}>{item.label}</button>)}</div>{detailLoading ? <div className="mt-6"><Skeleton className="h-32" /></div> : detailTab === 'overview' ? <div className="mt-6 grid gap-3 sm:grid-cols-2"><Card padding="sm"><p className="text-xs uppercase tracking-wide text-slate-400">Faculty</p><p className="mt-2 font-semibold text-slate-900">{facultyName(selected, faculties)}</p></Card><Card padding="sm"><p className="text-xs uppercase tracking-wide text-slate-400">Students</p><p className="mt-2 font-semibold text-slate-900">{students.length || '—'}</p></Card><Card padding="sm"><p className="text-xs uppercase tracking-wide text-slate-400">Curator</p><p className="mt-2 font-semibold text-slate-900">{selected.curatorId || '—'}</p></Card><Card padding="sm"><p className="text-xs uppercase tracking-wide text-slate-400">Status</p><p className="mt-2"><Badge variant="green">Активна</Badge></p></Card><div className="sm:col-span-2"><Button variant="secondary" onClick={() => openEdit(selected)}>Редактировать группу</Button></div></div> : detailTab === 'students' ? <div className="mt-6">{students.length ? <div className="divide-y divide-slate-100">{students.map((student) => <div key={student.id} className="flex items-center justify-between py-3"><div><p className="text-sm font-semibold text-slate-900">{student.lastName} {student.firstName}</p><p className="mt-1 text-xs text-slate-500">{student.email}</p></div><span className="text-xs text-slate-400">Student</span></div>)}</div> : <EmptyState title="Студенты не найдены" description="В группе пока нет пользователей со статусом студента." />}</div> : detailTab === 'schedule' ? <div className="mt-6">{selectedLessons.length ? <div className="space-y-2">{selectedLessons.map((lesson) => <div key={lesson.id} className="rounded-xl bg-slate-50 px-4 py-3"><div className="flex justify-between gap-3"><p className="text-sm font-semibold text-slate-900">{lesson.subject || 'Без названия'}</p><span className="text-xs text-slate-500">{timePart(lesson.startTime)}–{timePart(lesson.endTime)}</span></div><p className="mt-1 text-xs text-slate-500">{datePart(lesson.startTime)} · ауд. {lesson.room || '—'}</p></div>)}</div> : <EmptyState title="Расписание не найдено" description="Для группы нет занятий в загруженном диапазоне." />}</div> : detailTab === 'teachers' ? <div className="mt-6"><EmptyState title="Преподаватели не загружены" description="В текущем API расписания нет отдельного списка преподавателей группы." /></div> : <div className="mt-6"><p className="text-sm leading-6 text-slate-500">Для этого раздела отдельный API endpoint пока не подключён.</p><Button className="mt-4" variant="secondary" onClick={() => setSelected(null)}>Закрыть детали</Button></div>}</aside></div>}<Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? 'Редактировать группу' : 'Создать группу'}><div className="space-y-4"><Input label="Название" value={formName} onChange={(event) => setFormName(event.target.value)} placeholder="ИС-21" /><Input label="Учебный год / курс" type="number" min={1} max={6} value={formYear} onChange={(event) => setFormYear(event.target.value)} /><label className="block text-sm font-medium text-slate-700">Факультет<select value={formFaculty} onChange={(event) => setFormFaculty(event.target.value)} className="mt-1.5 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-slate-500"><option value="">Без факультета</option>{faculties.map((faculty) => <option key={faculty.id} value={faculty.id}>{faculty.name}</option>)}</select></label><div className="flex justify-end gap-2 pt-2"><Button variant="secondary" onClick={() => setModalOpen(false)}>Отмена</Button><Button loading={saving} disabled={!formName.trim()} onClick={saveGroup}>{editing ? 'Сохранить' : 'Создать'}</Button></div></div></Modal></div>;
 }

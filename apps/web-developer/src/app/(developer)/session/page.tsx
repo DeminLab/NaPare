@@ -1,166 +1,54 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getUser, getHealth, getToken, getRefreshToken } from '@/lib/api';
-import type { UserInfo, HealthInfo } from '@/lib/api';
 import Card from '@/components/ui/Card';
-import Badge from '@/components/ui/Badge';
-import Avatar from '@/components/ui/Avatar';
-import Skeleton from '@/components/ui/Skeleton';
-import { RequestState } from '@/components/ui/RequestState';
+import Button from '@/components/ui/Button';
+import { getToken } from '@/lib/api';
+
+interface SessionRecord {
+  device: string;
+  ip: string;
+  location: string;
+  created: string;
+  activity: string;
+  status: 'Active' | 'Expired' | 'Revoked';
+  current?: boolean;
+}
+
+function Status({ value }: { value: SessionRecord['status'] }) {
+  const styles = {
+    Active: 'border-emerald-400/20 bg-emerald-400/10 text-emerald-300',
+    Expired: 'border-amber-400/20 bg-amber-400/10 text-amber-300',
+    Revoked: 'border-red-400/20 bg-red-400/10 text-red-300',
+  };
+  return <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium ${styles[value]}`}><span className="h-1.5 w-1.5 rounded-full bg-current" />{value}</span>;
+}
 
 export default function SessionPage() {
-  const [user, setUser] = useState<UserInfo | null>(null);
-  const [health, setHealth] = useState<HealthInfo | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [session, setSession] = useState<SessionRecord | null>(null);
+  const [notice, setNotice] = useState('');
 
-  const loadSession = () => {
-    setLoading(true);
-    setError('');
-    Promise.allSettled([
-      getUser().then(setUser).catch((e) => setError(e instanceof Error ? e.message : 'Не удалось загрузить сессию.')),
-      getHealth().then(setHealth).catch(() => {}),
-    ]).finally(() => setLoading(false));
-  };
+  useEffect(() => {
+    const token = getToken();
+    const userAgent = navigator.userAgent;
+    const device = userAgent.includes('Edg') ? 'Microsoft Edge' : userAgent.includes('Chrome') ? 'Google Chrome' : userAgent.includes('Firefox') ? 'Firefox' : 'Current browser';
+    setSession(token ? { device, ip: 'Unavailable', location: 'Local browser', created: 'Unavailable', activity: new Intl.DateTimeFormat('ru-RU', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date()), status: 'Active', current: true } : null);
+  }, []);
 
-  useEffect(() => { loadSession(); }, []);
+  const announceUnavailable = (action: string) => setNotice(`${action} недоступно: backend не предоставляет endpoint управления сессиями.`);
 
-  const accessToken = typeof window !== 'undefined' ? getToken() : null;
-  const refreshToken = typeof window !== 'undefined' ? getRefreshToken() : null;
+  return <div className="min-h-full bg-[#0b0e14] px-4 py-6 text-white sm:px-6 lg:px-8 lg:py-8"><div className="mx-auto max-w-7xl space-y-7">
+    <div className="flex items-center gap-2 text-xs text-white/40">Developer <span>/</span> <span className="text-white/80">Sessions</span></div>
+    <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end"><div><h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Sessions</h1><p className="mt-1 text-sm text-white/45">Manage signed-in browsers and protect access to your developer account.</p></div><Button variant="secondary" onClick={() => announceUnavailable('Revoke all other sessions')}>Revoke all others</Button></div>
 
-  const roleColors: Record<string, string> = {
-    admin: 'danger',
-    developer: 'purple',
-    teacher: 'info',
-    student: 'success',
-  };
+    <div className="grid grid-cols-3 gap-3"><Card className="border-white/10 bg-white/[0.04]"><p className="text-xs text-white/40">Active</p><p className="mt-2 text-2xl font-bold text-emerald-300">{session ? '1' : '—'}</p></Card><Card className="border-white/10 bg-white/[0.04]"><p className="text-xs text-white/40">Expired</p><p className="mt-2 text-2xl font-bold text-white">—</p></Card><Card className="border-white/10 bg-white/[0.04]"><p className="text-xs text-white/40">Revoked</p><p className="mt-2 text-2xl font-bold text-white">—</p></Card></div>
 
-  return (
-    <div className="p-4 sm:p-6 lg:p-8">
-      <div className="mx-auto max-w-3xl">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-slate-900">Текущая сессия</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Информация об авторизованном пользователе и токенах
-          </p>
-        </div>
+    {notice && <div role="status" className="rounded-xl border border-amber-400/20 bg-amber-400/[0.08] px-4 py-3 text-sm text-amber-200">{notice}</div>}
+    <section className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03]"><div className="flex items-center justify-between border-b border-white/10 px-5 py-4 sm:px-6"><div><h2 className="text-base font-semibold">Signed-in sessions</h2><p className="mt-1 text-xs text-white/35">Only the current browser session is available from the existing authentication API.</p></div><span className="text-xs text-white/30">{session ? '1 session' : 'No active session'}</span></div>
+      <div className="hidden overflow-x-auto md:block"><table className="w-full min-w-[760px] text-left text-sm"><thead className="bg-black/10 text-[11px] uppercase tracking-wider text-white/35"><tr><th className="px-6 py-3 font-medium">Device</th><th className="px-4 py-3 font-medium">IP</th><th className="px-4 py-3 font-medium">Location</th><th className="px-4 py-3 font-medium">Created</th><th className="px-4 py-3 font-medium">Last activity</th><th className="px-4 py-3 font-medium">Status</th><th className="px-6 py-3" /></tr></thead><tbody className="divide-y divide-white/10">{session ? <tr className="text-white/65"><td className="px-6 py-4"><div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-lg bg-sky-400/10 text-sky-300">▣</span><div><p className="font-medium text-white/85">{session.device}</p><span className="mt-1 inline-flex rounded-md bg-sky-400/10 px-1.5 py-0.5 text-[10px] font-medium text-sky-300">Current session</span></div></div></td><td className="px-4 py-4 font-mono text-xs text-white/40">{session.ip}</td><td className="px-4 py-4">{session.location}</td><td className="px-4 py-4 text-white/40">{session.created}</td><td className="px-4 py-4 text-white/55">{session.activity}</td><td className="px-4 py-4"><Status value={session.status} /></td><td className="px-6 py-4 text-right"><button type="button" onClick={() => announceUnavailable('Revoke')} className="text-xs text-white/35 hover:text-red-300">Revoke</button></td></tr> : <tr><td colSpan={7} className="px-6 py-12 text-center text-sm text-white/40">Нет активной сессии в этом браузере.</td></tr>}</tbody></table></div>
+      <div className="space-y-3 p-4 md:hidden">{session ? <div className="rounded-xl border border-white/10 bg-black/10 p-4"><div className="flex items-start justify-between gap-3"><div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-lg bg-sky-400/10 text-sky-300">▣</span><div><p className="font-medium text-white/85">{session.device}</p><span className="mt-1 inline-flex rounded-md bg-sky-400/10 px-1.5 py-0.5 text-[10px] font-medium text-sky-300">Current session</span></div></div><Status value={session.status} /></div><dl className="mt-4 grid grid-cols-2 gap-3 text-xs"><div><dt className="text-white/30">IP</dt><dd className="mt-1 font-mono text-white/55">{session.ip}</dd></div><div><dt className="text-white/30">Location</dt><dd className="mt-1 text-white/55">{session.location}</dd></div><div><dt className="text-white/30">Created</dt><dd className="mt-1 text-white/55">{session.created}</dd></div><div><dt className="text-white/30">Last activity</dt><dd className="mt-1 text-white/55">{session.activity}</dd></div></dl><button type="button" onClick={() => announceUnavailable('Revoke')} className="mt-4 w-full rounded-lg border border-white/10 px-3 py-2 text-xs text-white/45 hover:border-red-400/30 hover:text-red-300">Revoke</button></div> : <p className="py-8 text-center text-sm text-white/40">Нет активной сессии в этом браузере.</p>}</div>
+    </section>
 
-        {error && <div className="mb-6"><RequestState title="Не удалось загрузить сессию" description={error} onRetry={loadSession} /></div>}
-
-        {/* User card */}
-        <Card className="mb-6">
-          <div className="mb-4 flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-100 text-violet-600">
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-              </svg>
-            </div>
-            <h2 className="text-base font-bold text-slate-900">Пользователь</h2>
-          </div>
-
-          {loading ? (
-            <Skeleton className="h-32" />
-          ) : user ? (
-            <div className="space-y-3">
-              <div className="flex items-center gap-4 rounded-xl bg-slate-50 p-4">
-                <Avatar name={`${user.firstName} ${user.lastName}`} size="lg" />
-                <div>
-                  <p className="text-base font-semibold text-slate-900">
-                    {user.firstName} {user.lastName}
-                  </p>
-                  <p className="text-sm text-slate-500">{user.email}</p>
-                </div>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-xl bg-slate-50 px-4 py-3">
-                  <p className="text-xs font-medium text-slate-500">ID</p>
-                  <p className="mt-0.5 truncate text-sm font-semibold text-slate-900 font-mono">{user.id}</p>
-                </div>
-                <div className="rounded-xl bg-slate-50 px-4 py-3">
-                  <p className="text-xs font-medium text-slate-500">Роль</p>
-                  <div className="mt-0.5">
-                    <Badge variant={(roleColors[user.role] as 'danger' | 'purple' | 'info' | 'success') || 'default'}>
-                      {user.role}
-                    </Badge>
-                  </div>
-                </div>
-                {user.universityId && (
-                  <div className="col-span-2 rounded-xl bg-slate-50 px-4 py-3">
-                    <p className="text-xs font-medium text-slate-500">Университет</p>
-                    <p className="mt-0.5 text-sm font-semibold text-slate-900 font-mono">{user.universityId}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="rounded-xl bg-slate-50 px-4 py-8 text-center">
-              <p className="text-sm text-slate-400">Данные пользователя недоступны</p>
-            </div>
-          )}
-        </Card>
-
-        {/* Tokens */}
-        <Card className="mb-6">
-          <div className="mb-4 flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
-              </svg>
-            </div>
-            <h2 className="text-base font-bold text-slate-900">Токены</h2>
-          </div>
-
-          <div className="space-y-3">
-            <div className="rounded-xl bg-slate-50 p-4">
-              <p className="text-xs font-medium text-slate-500">Access Token</p>
-              <p className="mt-1 break-all font-mono text-xs text-slate-700">
-                {accessToken ? `${accessToken.slice(0, 40)}...` : 'Отсутствует'}
-              </p>
-            </div>
-            <div className="rounded-xl bg-slate-50 p-4">
-              <p className="text-xs font-medium text-slate-500">Refresh Token</p>
-              <p className="mt-1 break-all font-mono text-xs text-slate-700">
-                {refreshToken ? `${refreshToken.slice(0, 40)}...` : 'Отсутствует'}
-              </p>
-            </div>
-          </div>
-        </Card>
-
-        {/* Server info */}
-        <Card>
-          <div className="mb-4 flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600">
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5.25 14.25h13.5m-13.5 0a3 3 0 01-3-3m3 3a3 3 0 100 6h13.5a3 3 0 100-6m-16.5-3a3 3 0 013-3h13.5a3 3 0 013 3m-19.5 0a4.5 4.5 0 01.9-2.7L5.737 5.1a3.375 3.375 0 012.7-1.35h7.126c1.062 0 2.062.5 2.7 1.35l2.587 3.45a4.5 4.5 0 01.9 2.7m0 0a3 3 0 01-3 3m0 3h.008v.008h-.008v-.008zm0-6h.008v.008h-.008v-.008zm-3 6h.008v.008h-.008v-.008zm0-6h.008v.008h-.008v-.008z" />
-              </svg>
-            </div>
-            <h2 className="text-base font-bold text-slate-900">Сервер</h2>
-          </div>
-
-          {loading ? (
-            <Skeleton className="h-24" />
-          ) : (
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-xl bg-slate-50 px-4 py-3">
-                <p className="text-xs font-medium text-slate-500">Статус</p>
-                <div className="mt-1">
-                  <Badge variant={health?.status === 'ok' ? 'success' : 'danger'}>
-                    <span className={`h-1.5 w-1.5 rounded-full ${health?.status === 'ok' ? 'bg-emerald-500' : 'bg-red-500'}`} />
-                    {health?.status ?? 'Недоступен'}
-                  </Badge>
-                </div>
-              </div>
-              <div className="rounded-xl bg-slate-50 px-4 py-3">
-                <p className="text-xs font-medium text-slate-500">Время сервера</p>
-                <p className="mt-1 text-sm font-semibold text-slate-900 font-mono">
-                  {health?.timestamp ?? '—'}
-                </p>
-              </div>
-            </div>
-          )}
-        </Card>
-      </div>
-    </div>
-  );
+    <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 sm:p-6"><div className="flex items-start gap-4"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-400/10 text-amber-300">!</span><div><h2 className="text-base font-semibold">Security information</h2><p className="mt-2 max-w-3xl text-sm leading-6 text-white/45">Review active sessions regularly. If you see an unfamiliar browser, revoke it immediately and rotate your access credentials. IP address, location, session history, and remote revocation require a dedicated sessions API, which is not currently available in the backend.</p></div></div></section>
+  </div></div>;
 }

@@ -1,270 +1,53 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { apiFetch, apiFetchList } from '@/lib/api';
-import { SearchInput } from '@/components/ui/SearchInput';
-import { Badge } from '@/components/ui/Badge';
-import { Avatar } from '@/components/ui/Avatar';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { Skeleton } from '@/components/ui/Skeleton';
-import { RequestState } from '@/components/ui/RequestState';
+import { Avatar, Badge, Button, Card, EmptyState, RequestState, SearchInput, Skeleton } from '@/components/ui';
 
-interface AdminUser {
-  id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  roles: string[];
-  isActive: boolean;
-}
+interface AdminUser { id: string; email: string; firstName: string; lastName: string; role?: string; roles?: string[]; groupId?: string; facultyId?: string; isActive: boolean; lastLoginAt?: string; }
+interface Group { id: string; name: string; facultyId?: string; }
+interface Faculty { id: string; name: string; }
+type Filter = 'all' | 'student' | 'teacher' | 'admin';
 
-const ASSIGNABLE_ROLES = [
-  'student',
-  'teacher',
-  'curator',
-  'faculty_dean',
-  'department_head',
-  'university_admin',
-  'superadmin',
-  'developer',
-];
+const roleLabels: Record<string, string> = { student: 'Студент', teacher: 'Преподаватель', curator: 'Куратор', faculty_dean: 'Декан', department_head: 'Зав. кафедрой', university_admin: 'Администратор', superadmin: 'Суперадмин', developer: 'Разработчик' };
+const roleVariants: Record<string, 'sky' | 'purple' | 'teal' | 'amber' | 'pink' | 'slate' | 'red' | 'green'> = { student: 'sky', teacher: 'purple', curator: 'teal', faculty_dean: 'amber', department_head: 'pink', university_admin: 'slate', superadmin: 'red', developer: 'green' };
+const assignableRoles = ['student', 'teacher', 'curator', 'faculty_dean', 'department_head', 'university_admin', 'superadmin', 'developer'];
 
-const ROLE_LABELS: Record<string, string> = {
-  student: 'Студент',
-  teacher: 'Преподаватель',
-  curator: 'Куратор',
-  faculty_dean: 'Декан',
-  department_head: 'Зав. кафедрой',
-  university_admin: 'Админ',
-  superadmin: 'Суперадмин',
-  developer: 'Разработчик',
-};
-
-const ROLE_BADGE: Record<string, 'sky' | 'purple' | 'teal' | 'amber' | 'pink' | 'slate' | 'red' | 'green'> = {
-  student: 'sky',
-  teacher: 'purple',
-  curator: 'teal',
-  faculty_dean: 'amber',
-  department_head: 'pink',
-  university_admin: 'slate',
-  superadmin: 'red',
-  developer: 'green',
-};
-
-const ROLE_FILTERS = ['all', ...ASSIGNABLE_ROLES];
-const PAGE_SIZE = 20;
+function userRole(user: AdminUser) { return user.role || user.roles?.[0] || 'student'; }
+function lastActive(value?: string) { return value ? new Date(value).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Нет данных'; }
+function roleMatches(role: string, filter: Filter) { if (filter === 'all') return true; if (filter === 'admin') return ['university_admin', 'superadmin', 'developer'].includes(role); return role === filter; }
 
 export default function UsersPage() {
   const [users, setUsers] = useState<AdminUser[]>([]);
-  const [error, setError] = useState('');
-  const [savingId, setSavingId] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [faculties, setFaculties] = useState<Faculty[]>([]);
   const [search, setSearch] = useState('');
-  const [roleFilter, setRoleFilter] = useState('all');
-  const [page, setPage] = useState(1);
+  const [role, setRole] = useState<Filter>('all');
+  const [faculty, setFaculty] = useState('all');
+  const [group, setGroup] = useState('all');
+  const [status, setStatus] = useState('all');
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [detail, setDetail] = useState<AdminUser | null>(null);
+  const [bulkRole, setBulkRole] = useState('teacher');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
 
-  const loadUsers = async () => {
-    setLoading(true);
-    setError('');
-    try {
-      setUsers(await apiFetchList<AdminUser>('/admin/users'));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка загрузки');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const load = () => { setLoading(true); setError(''); Promise.all([apiFetchList<AdminUser>('/admin/users'), apiFetchList<Group>('/admin/groups').catch(() => []), apiFetchList<Faculty>('/admin/faculties').catch(() => [])]).then(([userItems, groupItems, facultyItems]) => { setUsers(userItems); setGroups(groupItems); setFaculties(facultyItems); }).catch((err) => setError(err instanceof Error ? err.message : 'Не удалось загрузить пользователей.')).finally(() => setLoading(false)); };
+  useEffect(() => { load(); }, []);
 
-  useEffect(() => {
-    loadUsers();
-  }, []);
+  const groupMap = new Map(groups.map((item) => [item.id, item]));
+  const facultyMap = new Map(faculties.map((item) => [item.id, item.name]));
+  const filtered = useMemo(() => users.filter((user) => { const currentRole = userRole(user); const query = search.toLowerCase().trim(); const groupItem = groupMap.get(user.groupId || ''); const facultyId = user.facultyId || groupItem?.facultyId; return roleMatches(currentRole, role) && (faculty === 'all' || facultyId === faculty) && (group === 'all' || user.groupId === group) && (status === 'all' || (status === 'active' ? user.isActive : !user.isActive)) && (!query || `${user.firstName} ${user.lastName} ${user.email}`.toLowerCase().includes(query)); }), [users, groups, faculties, search, role, faculty, group, status]);
+  const allVisibleSelected = filtered.length > 0 && filtered.every((user) => selectedIds.includes(user.id));
+  const toggleAll = () => setSelectedIds(allVisibleSelected ? selectedIds.filter((id) => !filtered.some((user) => user.id === id)) : [...new Set([...selectedIds, ...filtered.map((user) => user.id)])]);
+  const toggle = (id: string) => setSelectedIds((items) => items.includes(id) ? items.filter((item) => item !== id) : [...items, id]);
+  const changeRole = async (id: string, nextRole: string) => { setSaving(true); setError(''); try { await apiFetch(`/admin/users/${id}/roles`, { method: 'PATCH', body: JSON.stringify({ role: nextRole }) }); setUsers((items) => items.map((user) => user.id === id ? { ...user, role: nextRole, roles: [nextRole] } : user)); setMessage('Роль пользователя обновлена.'); } catch (err) { setError(err instanceof Error ? err.message : 'Не удалось изменить роль.'); } finally { setSaving(false); } };
+  const bulkChangeRole = async () => { setSaving(true); setError(''); try { await Promise.all(selectedIds.map((id) => apiFetch(`/admin/users/${id}/roles`, { method: 'PATCH', body: JSON.stringify({ role: bulkRole }) }))); setUsers((items) => items.map((user) => selectedIds.includes(user.id) ? { ...user, role: bulkRole, roles: [bulkRole] } : user)); setSelectedIds([]); setMessage(`Роль изменена для ${selectedIds.length} пользователей.`); } catch (err) { setError(err instanceof Error ? err.message : 'Не удалось применить массовое действие.'); } finally { setSaving(false); } };
 
-  const filtered = useMemo(() => {
-    let result = users;
-    if (roleFilter !== 'all') {
-      result = result.filter((u) => u.roles?.includes(roleFilter));
-    }
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      result = result.filter(
-        (u) =>
-          u.firstName?.toLowerCase().includes(q) ||
-          u.lastName?.toLowerCase().includes(q) ||
-          u.email?.toLowerCase().includes(q)
-      );
-    }
-    return result;
-  }, [users, roleFilter, search]);
+  const statCards = [{ label: 'Всего', value: users.length, filter: 'all' as Filter }, { label: 'Студенты', value: users.filter((user) => userRole(user) === 'student').length, filter: 'student' as Filter }, { label: 'Преподаватели', value: users.filter((user) => userRole(user) === 'teacher').length, filter: 'teacher' as Filter }, { label: 'Администраторы', value: users.filter((user) => roleMatches(userRole(user), 'admin')).length, filter: 'admin' as Filter }, { label: 'Заблокированы', value: users.filter((user) => !user.isActive).length, filter: 'all' as Filter }];
 
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
-  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-
-  useEffect(() => {
-    setPage(1);
-  }, [search, roleFilter]);
-
-  if (loading) {
-    return <div className="space-y-4"><Skeleton className="h-8 w-48" />{[1, 2, 3].map((item) => <Skeleton key={item} className="h-20" />)}</div>;
-  }
-
-  if (error && users.length === 0) {
-    return <RequestState title="Не удалось загрузить пользователей" description={error} onRetry={loadUsers} />;
-  }
-
-  const changeRole = async (userId: string, role: string) => {
-    setSavingId(userId);
-    setError('');
-    try {
-      await apiFetch(`/admin/users/${userId}/roles`, {
-        method: 'PATCH',
-        body: JSON.stringify({ role }),
-      });
-      await loadUsers();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Не удалось изменить роль');
-    } finally {
-      setSavingId('');
-    }
-  };
-
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-extrabold text-slate-900">Пользователи</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          {filtered.length} из {users.length} пользователей
-        </p>
-      </div>
-
-      {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
-          {error}
-        </div>
-      )}
-
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <SearchInput
-          placeholder="Поиск по имени или email..."
-          onSearch={setSearch}
-          className="sm:w-72"
-        />
-        <div className="flex flex-wrap gap-1.5">
-          {ROLE_FILTERS.map((r) => (
-            <button
-              key={r}
-              onClick={() => setRoleFilter(r)}
-              className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-                roleFilter === r
-                  ? 'bg-slate-900 text-white'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
-            >
-              {r === 'all' ? 'Все' : ROLE_LABELS[r] || r}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        {paginated.map((user) => {
-          const role = user.roles?.[0] || 'student';
-          return (
-            <div
-              key={user.id}
-              className="flex flex-col items-stretch gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:shadow-md sm:flex-row sm:items-center sm:gap-4 sm:p-5"
-            >
-              <div className="flex min-w-0 items-center gap-3 sm:contents">
-                <Avatar name={`${user.firstName} ${user.lastName}`} size="md" />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-bold text-slate-900">
-                    {user.firstName} {user.lastName}
-                  </p>
-                  <p className="truncate text-xs text-slate-400">{user.email}</p>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2 sm:flex-shrink-0 sm:flex-nowrap sm:gap-3">
-                <Badge variant={ROLE_BADGE[role] || 'slate'} size="md">
-                  {ROLE_LABELS[role] || role}
-                </Badge>
-
-                <select
-                  value={role}
-                  disabled={savingId === user.id}
-                  onChange={(e) => changeRole(user.id, e.target.value)}
-                  className="min-h-11 min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-700 transition-colors focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100 disabled:opacity-50 sm:flex-none"
-                >
-                  {Array.from(new Set([role, ...ASSIGNABLE_ROLES])).map((r) => (
-                    <option key={r} value={r}>
-                      {ROLE_LABELS[r] || r}
-                    </option>
-                  ))}
-                </select>
-
-                <div className="flex items-center gap-1.5">
-                  <div className={`h-2 w-2 rounded-full ${user.isActive ? 'bg-emerald-400' : 'bg-slate-300'}`} />
-                  <span className="text-xs font-medium text-slate-500">
-                    {user.isActive ? 'Активен' : 'Откл.'}
-                  </span>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-
-        {paginated.length === 0 && (
-          <EmptyState
-            icon={
-              <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
-              </svg>
-            }
-            title="Пользователей не найдено"
-            description="Попробуйте изменить фильтры или поисковый запрос"
-          />
-        )}
-      </div>
-
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2">
-          <button
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page === 1}
-            className="rounded-lg px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 disabled:opacity-40"
-          >
-            Назад
-          </button>
-          {Array.from({ length: totalPages }, (_, i) => i + 1)
-            .filter((p) => Math.abs(p - page) <= 2 || p === 1 || p === totalPages)
-            .reduce<(number | string)[]>((acc, p, i, arr) => {
-              if (i > 0 && (arr[i - 1] as number) < p - 1) acc.push('...');
-              acc.push(p);
-              return acc;
-            }, [])
-            .map((p, i) =>
-              typeof p === 'string' ? (
-                <span key={`dots-${i}`} className="px-1 text-xs text-slate-400">...</span>
-              ) : (
-                <button
-                  key={p}
-                  onClick={() => setPage(p)}
-                  className={`h-8 w-8 rounded-lg text-xs font-medium transition-colors ${
-                    page === p ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'
-                  }`}
-                >
-                  {p}
-                </button>
-              )
-            )}
-          <button
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            disabled={page === totalPages}
-            className="rounded-lg px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 disabled:opacity-40"
-          >
-            Далее
-          </button>
-        </div>
-      )}
-    </div>
-  );
+  return <div className="space-y-6"><div className="flex items-center gap-2 text-sm text-slate-500"><span>Admin</span><span>/</span><span className="text-slate-900">Users</span></div><div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end"><div><h1 className="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Пользователи</h1><p className="mt-1 text-sm text-slate-500">{filtered.length} из {users.length} пользователей</p></div><Button disabled title="Endpoint создания пользователя пока не подключён">Добавить пользователя</Button></div><div className="grid grid-cols-2 gap-3 xl:grid-cols-5">{statCards.map((stat) => <button key={stat.label} type="button" onClick={() => setRole(stat.filter)} className="text-left"><Card className={`h-full transition-shadow hover:shadow-md ${role === stat.filter && stat.label !== 'Заблокированы' ? 'border-slate-900' : ''}`} padding="sm"><p className="text-xs font-semibold uppercase tracking-wider text-slate-500">{stat.label}</p><p className="mt-2 text-2xl font-bold text-slate-950">{stat.value}</p></Card></button>)}</div><Card padding="sm"><div className="grid gap-3 md:grid-cols-[minmax(220px,1.4fr)_repeat(4,minmax(130px,1fr))]"><SearchInput value={search} onChange={(event) => setSearch(event.target.value)} onSearch={setSearch} placeholder="Search users..." /><select aria-label="Role" value={role} onChange={(event) => setRole(event.target.value as Filter)} className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-slate-500"><option value="all">Все роли</option><option value="student">Студенты</option><option value="teacher">Преподаватели</option><option value="admin">Администраторы</option></select><select aria-label="Faculty" value={faculty} onChange={(event) => setFaculty(event.target.value)} className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-slate-500"><option value="all">Все факультеты</option>{faculties.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><select aria-label="Group" value={group} onChange={(event) => setGroup(event.target.value)} className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-slate-500"><option value="all">Все группы</option>{groups.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><select aria-label="Status" value={status} onChange={(event) => setStatus(event.target.value)} className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-slate-500"><option value="all">Любой статус</option><option value="active">Активные</option><option value="blocked">Заблокированные</option></select></div></Card>{selectedIds.length > 0 && <Card padding="sm" className="flex flex-col gap-3 border-slate-300 bg-slate-50 sm:flex-row sm:items-center"><span className="text-sm font-semibold text-slate-700">Выбрано: {selectedIds.length}</span><select value={bulkRole} onChange={(event) => setBulkRole(event.target.value)} className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm"><option value="teacher">Преподаватель</option><option value="student">Студент</option><option value="curator">Куратор</option><option value="university_admin">Администратор</option></select><Button size="sm" loading={saving} onClick={bulkChangeRole}>Изменить роль</Button><button type="button" onClick={() => setSelectedIds([])} className="text-sm text-slate-500 hover:text-slate-900">Сбросить</button></Card>}{message && <p role="status" className="text-sm font-medium text-emerald-700">{message}</p>}{error && users.length > 0 && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}{loading ? <div className="space-y-3">{[1, 2, 3, 4].map((item) => <Skeleton key={item} className="h-16" />)}</div> : error && !users.length ? <RequestState title="Не удалось загрузить пользователей" description={error} onRetry={load} /> : !filtered.length ? <EmptyState title="Пользователи не найдены" description="Измените параметры поиска или фильтров." /> : <div className="overflow-hidden rounded-xl border border-slate-200 bg-white"><div className="hidden grid-cols-[36px_minmax(190px,1.4fr)_minmax(180px,1.2fr)_140px_140px_130px_110px_110px] gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 xl:grid"><input type="checkbox" checked={allVisibleSelected} onChange={toggleAll} aria-label="Выбрать всех" /><span>Имя</span><span>Email</span><span>Роль</span><span>Факультет</span><span>Группа</span><span>Status</span><span>Last active</span></div><div className="divide-y divide-slate-100">{filtered.map((user) => { const currentRole = userRole(user); const groupItem = groupMap.get(user.groupId || ''); const facultyName = facultyMap.get(user.facultyId || groupItem?.facultyId || '') || '—'; return <div key={user.id} className="grid gap-3 px-4 py-4 md:grid-cols-[36px_minmax(190px,1.4fr)_minmax(180px,1.2fr)_140px_140px_130px_110px_110px] md:items-center md:px-4"><input type="checkbox" checked={selectedIds.includes(user.id)} onChange={() => toggle(user.id)} aria-label={`Выбрать ${user.firstName} ${user.lastName}`} /><div className="flex items-center gap-3"><Avatar name={`${user.firstName} ${user.lastName}`} size="sm" /><button type="button" onClick={() => setDetail(user)} className="text-left text-sm font-semibold text-slate-900 hover:text-sky-700">{user.firstName} {user.lastName}</button></div><div><span className="md:hidden text-xs text-slate-400">Email · </span><span className="break-all text-sm text-slate-600">{user.email}</span></div><div><span className="md:hidden text-xs text-slate-400">Роль · </span><select disabled={saving} value={currentRole} onChange={(event) => changeRole(user.id, event.target.value)} className="h-9 max-w-full rounded-lg border border-slate-200 bg-white px-2 text-xs font-medium text-slate-700 outline-none focus:border-sky-500">{assignableRoles.map((item) => <option key={item} value={item}>{roleLabels[item]}</option>)}</select></div><div className="text-sm text-slate-600"><span className="md:hidden text-xs text-slate-400">Факультет · </span>{facultyName}</div><div className="text-sm text-slate-600"><span className="md:hidden text-xs text-slate-400">Группа · </span>{groupItem?.name || '—'}</div><div><Badge variant={user.isActive ? 'green' : 'red'} size="sm">{user.isActive ? 'Активен' : 'Заблокирован'}</Badge></div><div className="text-xs text-slate-500"><span className="md:hidden text-xs text-slate-400">Last active · </span>{lastActive(user.lastLoginAt)}</div><div className="flex gap-2 md:col-start-2 md:col-span-7"><button type="button" onClick={() => setDetail(user)} className="text-xs font-semibold text-sky-700 hover:text-sky-900">View</button><button type="button" onClick={() => setDetail(user)} className="text-xs font-semibold text-slate-600 hover:text-slate-900">Edit</button><button type="button" disabled title="Endpoint блокировки пользователя пока не подключён" className="text-xs font-semibold text-slate-400">Block</button><button type="button" disabled title="Reset password API пока не подключён" className="text-xs font-semibold text-slate-400">Reset password</button></div></div>; })}</div></div>}{detail && <div className="fixed inset-0 z-50 flex justify-end bg-slate-950/40" onClick={() => setDetail(null)}><aside role="dialog" aria-modal="true" className="h-full w-full max-w-md overflow-y-auto border-l border-slate-200 bg-white p-6 shadow-2xl" onClick={(event) => event.stopPropagation()}><div className="flex items-start justify-between gap-4"><div><p className="text-xs font-semibold uppercase tracking-wider text-slate-400">User details</p><h2 className="mt-2 text-xl font-bold text-slate-950">{detail.firstName} {detail.lastName}</h2></div><button type="button" onClick={() => setDetail(null)} className="rounded-lg px-2 py-1 text-slate-400 hover:bg-slate-100" aria-label="Закрыть">×</button></div><div className="mt-6 flex items-center gap-3"><Avatar name={`${detail.firstName} ${detail.lastName}`} size="lg" /><div><Badge variant={roleVariants[userRole(detail)] || 'slate'}>{roleLabels[userRole(detail)] || userRole(detail)}</Badge><p className="mt-2 text-sm text-slate-500">{detail.isActive ? 'Активен' : 'Заблокирован'}</p></div></div><dl className="mt-6 divide-y divide-slate-100"><div className="flex justify-between gap-4 py-3"><dt className="text-sm text-slate-500">Email</dt><dd className="break-all text-right text-sm font-medium text-slate-800">{detail.email}</dd></div><div className="flex justify-between gap-4 py-3"><dt className="text-sm text-slate-500">Факультет</dt><dd className="text-right text-sm font-medium text-slate-800">{facultyMap.get(detail.facultyId || groupMap.get(detail.groupId || '')?.facultyId || '') || '—'}</dd></div><div className="flex justify-between gap-4 py-3"><dt className="text-sm text-slate-500">Группа</dt><dd className="text-right text-sm font-medium text-slate-800">{groupMap.get(detail.groupId || '')?.name || '—'}</dd></div><div className="flex justify-between gap-4 py-3"><dt className="text-sm text-slate-500">Last active</dt><dd className="text-right text-sm font-medium text-slate-800">{lastActive(detail.lastLoginAt)}</dd></div></dl><div className="mt-6 border-t border-slate-100 pt-5"><label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Роль</label><select disabled={saving} value={userRole(detail)} onChange={(event) => { changeRole(detail.id, event.target.value); setDetail({ ...detail, role: event.target.value, roles: [event.target.value] }); }} className="mt-2 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-sky-500"><option value={userRole(detail)}>{roleLabels[userRole(detail)] || userRole(detail)}</option>{assignableRoles.filter((item) => item !== userRole(detail)).map((item) => <option key={item} value={item}>{roleLabels[item]}</option>)}</select></div><div className="mt-6 flex flex-col gap-2"><Button disabled title="Endpoint блокировки пользователя пока не подключён" variant="secondary">Block user</Button><Button disabled title="Reset password API пока не подключён" variant="secondary">Reset password</Button></div></aside></div>}</div>;
 }

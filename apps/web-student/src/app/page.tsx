@@ -1,120 +1,28 @@
 import Link from 'next/link';
+import { PublicFooter, PublicNavigation } from '@/components/navigation/PublicNavigation';
 
-export default function Home() {
-  return (
-    <main className="min-h-screen">
-      <section className="relative overflow-hidden bg-gradient-to-br from-indigo-700 via-indigo-600 to-blue-600 px-6 py-24 text-white sm:py-32">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2220%22%20height%3D%2220%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Ccircle%20cx%3D%221%22%20cy%3D%221%22%20r%3D%221%22%20fill%3D%22rgba(255,255,255,0.08)%22/%3E%3C/svg%3E')] opacity-40" />
-        <div className="relative mx-auto max-w-4xl text-center">
-          <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1.5 text-sm font-medium backdrop-blur-sm">
-            <span className="flex h-2 w-2 rounded-full bg-green-400" />
-            Университетская платформа
-          </div>
-          <h1 className="text-4xl font-extrabold tracking-tight sm:text-6xl">
-            Расписание
-            <br />
-            <span className="bg-gradient-to-r from-white to-indigo-100 bg-clip-text text-transparent">
-              твоей пары
-            </span>
-          </h1>
-          <p className="mx-auto mt-6 max-w-xl text-lg text-white/80">
-            Актуальное расписание с уведомлениями об изменениях, пространством пары и общением с преподавателями
-          </p>
-          <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-            <Link
-              href="/login"
-              className="inline-flex items-center gap-2 rounded-2xl bg-white px-8 py-3.5 text-sm font-semibold text-indigo-600 shadow-lg shadow-indigo-500/25 transition-all hover:bg-indigo-50 hover:shadow-xl hover:shadow-indigo-500/30"
-            >
-              Войти
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-              </svg>
-            </Link>
-            <Link
-              href="/register"
-              className="inline-flex items-center gap-2 rounded-2xl border border-white/30 bg-white/10 px-8 py-3.5 text-sm font-semibold text-white backdrop-blur-sm transition-all hover:bg-white/20"
-            >
-              Зарегистрироваться
-            </Link>
-          </div>
-        </div>
-      </section>
+const navItems = ['Сегодня', 'Расписание', 'Задания', 'Уведомления', 'Пропуски'];
+const faqs = [
+  ['Что такое NaPare?', 'NaPare объединяет расписание, учебные материалы, задания, уведомления и коммуникацию университета в одном рабочем пространстве.'],
+  ['Подходит ли NaPare студентам?', 'Да. Студент видит актуальное расписание, текущую пару, задания, уведомления и историю пропусков в одном месте.'],
+  ['Можно ли использовать NaPare преподавателю?', 'Преподаватели управляют группами, материалами, заданиями и посещаемостью без переключения между сервисами.'],
+  ['Как подключается университет?', 'Администратор настраивает структуру университета и импортирует расписание, после чего пользователи получают доступ по своим ролям.'],
+  ['Работает ли сервис с телефона?', 'Да. Интерфейс адаптирован для мобильного экрана: ключевые разделы доступны через нижнюю навигацию.'],
+  ['Что происходит при изменении расписания?', 'Изменения отображаются в расписании и попадают в центр уведомлений, чтобы студент и преподаватель не пропустили обновление.'],
+  ['Можно ли перенести данные из другой системы?', 'NaPare предусматривает импорт расписания и интеграции с существующими университетскими системами.'],
+  ['Куда обратиться за поддержкой?', 'Обратитесь к администратору университета или в центр поддержки NaPare.'],
+];
 
-      <section className="px-6 py-20 sm:py-24">
-        <div className="mx-auto max-w-5xl">
-          <div className="mb-12 text-center">
-            <h2 className="text-2xl font-bold text-slate-900 sm:text-3xl">Всё что нужно студенту</h2>
-            <p className="mt-3 text-sm text-slate-500">Одно приложение для расписания, общения и учёбы</p>
-          </div>
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="group rounded-2xl border border-slate-200 bg-white p-8 shadow-sm transition-all hover:border-indigo-200 hover:shadow-md hover:shadow-indigo-100">
-              <div className="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600 transition-colors group-hover:bg-indigo-600 group-hover:text-white">
-                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-bold text-slate-900">Расписание</h3>
-              <p className="mt-2 text-sm leading-relaxed text-slate-500">Актуальное расписание пар с уведомлениями об изменениях в реальном времени</p>
-            </div>
-
-            <div className="group rounded-2xl border border-slate-200 bg-white p-8 shadow-sm transition-all hover:border-indigo-200 hover:shadow-md hover:shadow-indigo-100">
-              <div className="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600 transition-colors group-hover:bg-indigo-600 group-hover:text-white">
-                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-bold text-slate-900">Пространство пары</h3>
-              <p className="mt-2 text-sm leading-relaxed text-slate-500">Объявления, домашние задания и обсуждение с преподавателем</p>
-            </div>
-
-            <div className="group rounded-2xl border border-slate-200 bg-white p-8 shadow-sm transition-all hover:border-slate-300 hover:shadow-md hover:shadow-slate-100">
-              <div className="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-slate-600 transition-colors group-hover:bg-slate-700 group-hover:text-white">
-                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-bold text-slate-900">Уведомления</h3>
-              <p className="mt-2 text-sm leading-relaxed text-slate-500">Push-уведомления об изменениях расписания и важных новостях</p>
-            </div>
-
-            <div className="group rounded-2xl border border-slate-200 bg-white p-8 shadow-sm transition-all hover:border-indigo-200 hover:shadow-md hover:shadow-indigo-100">
-              <div className="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600 transition-colors group-hover:bg-indigo-600 group-hover:text-white">
-                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-bold text-slate-900">Домашние задания</h3>
-              <p className="mt-2 text-sm leading-relaxed text-slate-500">Просмотр и сдача домашних заданий прямо из приложения</p>
-            </div>
-
-            <div className="group rounded-2xl border border-slate-200 bg-white p-8 shadow-sm transition-all hover:border-slate-300 hover:shadow-md hover:shadow-slate-100">
-              <div className="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-slate-600 transition-colors group-hover:bg-slate-700 group-hover:text-white">
-                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-bold text-slate-900">Пропуски</h3>
-              <p className="mt-2 text-sm leading-relaxed text-slate-500">Отслеживание и подтверждение пропусков занятий</p>
-            </div>
-
-            <div className="group rounded-2xl border border-slate-200 bg-white p-8 shadow-sm transition-all hover:border-indigo-200 hover:shadow-md hover:shadow-indigo-100">
-              <div className="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600 transition-colors group-hover:bg-indigo-600 group-hover:text-white">
-                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 01-.825-.242m9.345-8.334a2.126 2.126 0 00-.476-.095 48.64 48.64 0 00-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0011.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-bold text-slate-900">Чат пары</h3>
-              <p className="mt-2 text-sm leading-relaxed text-slate-500">Общение с преподавателями и студентами по каждой паре</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <footer className="border-t border-slate-200 bg-white px-6 py-8">
-        <div className="mx-auto max-w-5xl text-center text-sm text-slate-400">
-          &copy; 2026 НаПаре. Все права защищены.
-        </div>
-      </footer>
-    </main>
-  );
+function ProductPreview({ large = false }: { large?: boolean }) {
+  return <div className={`overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_24px_70px_rgba(30,64,175,0.15)] ${large ? 'w-full' : 'w-full max-w-[640px]'}`}>
+    <div className="flex h-9 items-center gap-2 border-b border-slate-100 bg-white px-3"><span className="h-2 w-2 rounded-full bg-red-300"/><span className="h-2 w-2 rounded-full bg-amber-300"/><span className="h-2 w-2 rounded-full bg-emerald-300"/><div className="ml-4 h-5 flex-1 rounded-md bg-slate-50"/></div>
+    <div className="grid min-h-[320px] grid-cols-[112px_1fr] sm:grid-cols-[148px_1fr]">
+      <aside className="bg-slate-950 p-3 text-white"><div className="mb-7 flex items-center gap-2 text-xs font-bold"><span className="flex h-6 w-6 items-center justify-center rounded-md bg-indigo-500">Н</span>НаПаре</div><div className="space-y-1 text-[10px] text-white/55">{navItems.map((item, index) => <div key={item} className={`rounded-md px-2 py-2 ${index === 0 ? 'bg-indigo-500 text-white' : ''}`}>{['⌂', '▦', '✓', '◉', '◌'][index]} <span className="ml-1">{item}</span></div>)}</div></aside>
+      <div className="bg-slate-50 p-4 sm:p-5"><div className="mb-4 flex items-center justify-between"><div><p className="text-[10px] text-slate-400">НаПаре /</p><h3 className="text-lg font-bold text-slate-900">Сегодня</h3></div><span className="rounded-md bg-white px-2 py-1 text-[10px] text-slate-500">14 мая, вторник</span></div><div className="grid gap-3 sm:grid-cols-[1.25fr_0.9fr]"><div className="rounded-xl border border-slate-200 bg-white p-3"><div className="mb-3 flex justify-between text-[10px] text-slate-400"><span>РАСПИСАНИЕ</span><span className="text-indigo-600">Все занятия</span></div>{[['09:00','Математический анализ','Ауд. 301'],['10:45','Программирование','Ауд. 412'],['13:00','Английский язык','Ауд. 210']].map(([time,name,room],i)=><div key={name} className={`flex gap-3 border-t border-slate-100 py-3 ${i===0?'border-l-2 border-l-emerald-500 pl-2':''}`}><span className="text-[10px] font-semibold text-slate-500">{time}</span><div><p className="text-xs font-semibold text-slate-800">{name}</p><p className="mt-0.5 text-[10px] text-slate-400">{room}</p></div></div>)}</div><div className="space-y-3"><div className="rounded-xl border border-emerald-100 bg-white p-3"><p className="text-[10px] font-semibold text-emerald-600">ТЕКУЩАЯ ПАРА</p><p className="mt-2 text-xs font-bold text-slate-800">Математический анализ</p><p className="mt-1 text-[10px] text-slate-400">09:00 — 10:30 · Ауд. 301</p><button className="mt-3 w-full rounded-md bg-indigo-600 py-1.5 text-[10px] font-semibold text-white">Открыть пространство</button></div><div className="rounded-xl border border-slate-200 bg-white p-3"><p className="text-[10px] font-semibold text-slate-400">СЛЕДУЮЩАЯ ПАРА</p><p className="mt-2 text-xs font-bold text-slate-800">Программирование</p><p className="mt-1 text-[10px] text-slate-400">10:45 — 12:15 · Ауд. 412</p></div></div></div><div className="mt-3 grid gap-3 sm:grid-cols-2"><div className="rounded-xl border border-red-100 bg-white p-3"><p className="text-[10px] font-semibold text-red-500">УВЕДОМЛЕНИЕ</p><p className="mt-1 text-[11px] font-semibold text-slate-700">Изменилось время занятия</p><p className="mt-1 text-[10px] text-slate-400">Программирование · сегодня</p></div><div className="rounded-xl border border-amber-100 bg-white p-3"><p className="text-[10px] font-semibold text-amber-600">ДОМАШНЕЕ ЗАДАНИЕ</p><p className="mt-1 text-[11px] font-semibold text-slate-700">Задачи по математическому анализу</p><p className="mt-1 text-[10px] text-red-500">Срок: сегодня, 23:59</p></div></div></div>
+    </div>
+  </div>;
 }
+
+function RolePreview({ type }: { type: 'student' | 'teacher' | 'university' }) { const content = { student: ['Студент', 'Расписание на сегодня', '3 занятия · 1 задание'], teacher: ['Преподаватель', 'Учебный процесс', '4 группы · 12 заданий'], university: ['Университет', 'Состояние системы', 'Расписание синхронизировано'] }[type]; return <div className="rounded-xl border border-slate-200 bg-slate-50 p-3"><div className="flex items-center justify-between border-b border-slate-200 pb-3"><span className="text-[10px] font-bold text-slate-500">НаПаре · {content[0]}</span><span className="h-5 w-5 rounded-full bg-indigo-200"/></div><div className="mt-4 grid grid-cols-[0.8fr_1.2fr] gap-3"><div className="space-y-2">{['Сегодня', 'Расписание', 'Задания', 'Уведомления'].map((x, i) => <div key={x} className={`rounded-md px-2 py-1.5 text-[9px] ${i === 0 ? 'bg-indigo-100 text-indigo-700' : 'text-slate-400'}`}>{x}</div>)}</div><div className="rounded-lg border border-slate-200 bg-white p-3"><p className="text-[10px] text-slate-400">{content[1]}</p><p className="mt-3 text-sm font-bold text-slate-800">{content[2]}</p><div className="mt-4 h-2 rounded-full bg-indigo-100"><div className="h-2 w-2/3 rounded-full bg-indigo-500"/></div></div></div></div>; }
+
+export default function Home() { return <main className="min-h-screen bg-white text-slate-900"><PublicNavigation /><section className="overflow-hidden bg-gradient-to-b from-indigo-50/70 to-white px-4 pb-16 pt-16 sm:px-6 lg:pb-20 lg:pt-24"><div className="mx-auto grid max-w-7xl items-center gap-12 lg:grid-cols-[0.9fr_1.1fr]"><div><p className="mb-5 text-sm font-semibold text-indigo-600">Цифровая платформа университета</p><h1 className="max-w-xl text-4xl font-extrabold tracking-[-0.04em] text-slate-950 sm:text-6xl">Всё обучение —<br/><span className="text-indigo-600">в одном месте</span></h1><p className="mt-6 max-w-xl text-lg leading-8 text-slate-600">Расписание, пары, задания, уведомления, посещаемость и общение без десятка разных сервисов.</p><div className="mt-8 flex flex-col gap-3 sm:flex-row"><Link href="/login" className="rounded-xl bg-indigo-600 px-5 py-3 text-center text-sm font-semibold text-white shadow-lg shadow-indigo-200 hover:bg-indigo-700">Открыть НаПаре →</Link><a href="#showcase" className="rounded-xl border border-slate-300 px-5 py-3 text-center text-sm font-semibold text-slate-700 hover:bg-white">Посмотреть возможности</a></div><div className="mt-9 grid max-w-md grid-cols-3 gap-4 text-xs text-slate-500"><span>◉ Актуальное расписание</span><span>✓ Всё в одном месте</span><span>⌁ Связь с группой</span></div></div><ProductPreview /></div></section><section id="showcase" className="px-4 py-16 sm:px-6 lg:py-24"><div className="mx-auto max-w-7xl"><div className="mx-auto mb-10 max-w-2xl text-center"><h2 className="text-3xl font-bold tracking-tight sm:text-4xl">NaPare объединяет всё, что происходит в университете</h2><p className="mt-4 text-slate-500">Один понятный интерфейс для учебного дня, материалов и общения.</p></div><ProductPreview large /></div></section><section id="students" className="bg-slate-50 px-4 py-16 sm:px-6 lg:py-20"><div className="mx-auto max-w-7xl"><div className="mb-10 text-center"><h2 className="text-3xl font-bold">Для каждой роли — своё NaPare</h2><p className="mt-3 text-slate-500">Инструменты под реальные задачи студентов, преподавателей и университета.</p></div><div className="grid gap-5 lg:grid-cols-3">{[['student','Студент','Всё необходимое для спокойного учебного дня.','Открыть кабинет'],['teacher','Преподаватель','Группы, задания и посещаемость в одном потоке.','Для преподавателей'],['university','Университет','Единая среда управления учебным процессом.','Для университета']].map(([type,title,desc,cta])=><article key={type} id={type==='teacher'?'teachers':type==='university'?'universities':undefined} className="rounded-2xl border border-slate-200 bg-white p-5"><RolePreview type={type as 'student'|'teacher'|'university'} /><h3 className="mt-5 text-xl font-bold">{title}</h3><p className="mt-2 text-sm leading-6 text-slate-500">{desc}</p><a href="#final-cta" className="mt-5 inline-block text-sm font-semibold text-indigo-600">{cta} →</a></article>)}</div></div></section><section id="how-it-works" className="px-4 py-16 sm:px-6 lg:py-20"><div className="mx-auto max-w-7xl"><h2 className="text-center text-3xl font-bold">Как это работает</h2><div className="mt-10 grid gap-8 md:grid-cols-4">{[['01','Войдите','Создайте аккаунт или войдите через университет.'],['02','Выберите группу','Укажите свою учебную группу и роль.'],['03','Получите расписание','NaPare покажет актуальные занятия и изменения.'],['04','Следите за процессом','Открывайте пары, задания, уведомления и общение.']].map(([n,t,d])=><div key={n} className="relative"><span className="text-4xl font-extrabold text-indigo-100">{n}</span><h3 className="mt-2 font-bold">{t}</h3><p className="mt-2 text-sm leading-6 text-slate-500">{d}</p></div>)}</div></div></section><section id="about" className="bg-slate-50 px-4 py-16 sm:px-6 lg:py-20"><div className="mx-auto max-w-5xl"><div className="mb-8 flex items-end justify-between"><div><h2 className="text-3xl font-bold">Частые вопросы</h2><p className="mt-2 text-slate-500">Коротко о платформе и подключении.</p></div></div><div className="grid gap-3 md:grid-cols-2">{faqs.map(([q,a])=><details key={q} className="group rounded-xl border border-slate-200 bg-white px-5 py-4"><summary className="flex cursor-pointer list-none items-center justify-between text-sm font-semibold text-slate-800">{q}<span className="ml-3 text-indigo-600 transition group-open:rotate-45">＋</span></summary><p className="mt-3 pr-5 text-sm leading-6 text-slate-500">{a}</p></details>)}</div></div></section><section id="final-cta" className="px-4 py-14 sm:px-6"><div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-6 rounded-3xl bg-indigo-600 px-8 py-10 text-center text-white sm:flex-row sm:text-left"><div><h2 className="text-3xl font-bold">Готовы упростить учебный день?</h2><p className="mt-2 text-indigo-100">Начните пользоваться NaPare уже сегодня.</p></div><div className="flex flex-col gap-3 sm:flex-row"><Link href="/login" className="rounded-xl bg-white px-5 py-3 text-center text-sm font-semibold text-indigo-700 hover:bg-indigo-50">Войти</Link><Link href="/register" className="rounded-xl border border-white/40 px-5 py-3 text-center text-sm font-semibold hover:bg-white/10">Создать аккаунт</Link></div></div></section><PublicFooter /></main>; }

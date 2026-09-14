@@ -1,8 +1,9 @@
 import Link from 'next/link';
+import { PublicNavigation, PublicFooter } from '@/components/navigation/PublicNavigation';
 
 export default function Home() {
   return (
-    <main className="min-h-screen">
+    <main className="min-h-screen"><PublicNavigation />
       <section className="relative overflow-hidden bg-gradient-to-br from-purple-600 via-purple-500 to-sky-500 px-6 py-24 text-white sm:py-32">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2220%22%20height%3D%2220%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Ccircle%20cx%3D%221%22%20cy%3D%221%22%20r%3D%221%22%20fill%3D%22rgba(255,255,255,0.08)%22/%3E%3C/svg%3E')] opacity-40" />
         <div className="relative mx-auto max-w-4xl text-center">
@@ -74,11 +75,7 @@ export default function Home() {
         </div>
       </section>
 
-      <footer className="border-t border-slate-200 bg-white px-6 py-8">
-        <div className="mx-auto max-w-5xl text-center text-sm text-slate-400">
-          &copy; 2026 НаПаре. Все права защищены.
-        </div>
-      </footer>
+      <PublicFooter />
     </main>
   );
 }

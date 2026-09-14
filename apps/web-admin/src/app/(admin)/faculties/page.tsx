@@ -1,185 +1,42 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { apiFetch, apiFetchList } from '@/lib/api';
-import { Modal } from '@/components/ui/Modal';
-import { Input } from '@/components/ui/Input';
-import { Button } from '@/components/ui/Button';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { RequestState } from '@/components/ui/RequestState';
+import { Badge, Button, Card, EmptyState, Input, Modal, RequestState, Skeleton } from '@/components/ui';
 
-interface Faculty {
-  id: string;
-  name: string;
-  abbreviation?: string;
-  universityId: string;
-}
+interface Faculty { id: string; name: string; code: string; deanUserId?: string; }
+interface Group { id: string; name: string; facultyId: string; }
+interface User { id: string; firstName: string; lastName: string; role: string; groupId?: string; }
+
+function roleIs(user: User, role: string) { return user.role === role || (user.role === 'university_admin' && role === 'admin'); }
 
 export default function FacultiesPage() {
   const [faculties, setFaculties] = useState<Faculty[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [selected, setSelected] = useState<Faculty | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Faculty | null>(null);
-  const [formName, setFormName] = useState('');
-  const [formAbbr, setFormAbbr] = useState('');
+  const [name, setName] = useState('');
+  const [code, setCode] = useState('');
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
 
-  const load = async () => {
-    setLoading(true);
-    setError('');
-    try {
-      setFaculties(await apiFetchList<Faculty>('/admin/faculties'));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка загрузки');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const load = () => { setLoading(true); setError(''); Promise.all([apiFetchList<Faculty>('/admin/faculties'), apiFetchList<Group>('/admin/groups').catch(() => []), apiFetchList<User>('/admin/users').catch(() => [])]).then(([facultyItems, groupItems, userItems]) => { setFaculties(facultyItems); setGroups(groupItems); setUsers(userItems); }).catch((err) => setError(err instanceof Error ? err.message : 'Не удалось загрузить факультеты.')).finally(() => setLoading(false)); };
+  useEffect(() => { load(); }, []);
 
-  useEffect(() => {
-    load();
-  }, []);
+  const metrics = (faculty: Faculty) => { const facultyGroups = groups.filter((group) => group.facultyId === faculty.id); const groupIds = new Set(facultyGroups.map((group) => group.id)); return { groups: facultyGroups.length, students: users.filter((user) => user.groupId && groupIds.has(user.groupId) && roleIs(user, 'student')).length, teachers: undefined as number | undefined }; };
+  const totals = { groups: groups.length, students: users.filter((user) => roleIs(user, 'student')).length, teachers: users.filter((user) => roleIs(user, 'teacher')).length };
+  const selectedGroups = selected ? groups.filter((group) => group.facultyId === selected.id) : [];
+  const selectedMetrics = selected ? metrics(selected) : null;
+  const openCreate = () => { setEditing(null); setName(''); setCode(''); setModalOpen(true); };
+  const openEdit = (faculty: Faculty) => { setEditing(faculty); setName(faculty.name); setCode(faculty.code); setModalOpen(true); };
+  const save = async () => { setSaving(true); setError(''); try { const body = { name: name.trim(), code: code.trim() }; if (editing) await apiFetch(`/admin/faculties/${editing.id}`, { method: 'PATCH', body: JSON.stringify(body) }); else await apiFetch('/admin/faculties', { method: 'POST', body: JSON.stringify(body) }); setModalOpen(false); await load(); } catch (err) { setError(err instanceof Error ? err.message : 'Не удалось сохранить факультет.'); } finally { setSaving(false); } };
 
-  const openCreate = () => {
-    setEditing(null);
-    setFormName('');
-    setFormAbbr('');
-    setModalOpen(true);
-  };
+  if (loading) return <div className="space-y-4"><Skeleton className="h-24" /><Skeleton className="h-28" /><Skeleton className="h-64" /></div>;
+  if (error && !faculties.length) return <RequestState title="Не удалось загрузить факультеты" description={error} onRetry={load} />;
 
-  const openEdit = (f: Faculty) => {
-    setEditing(f);
-    setFormName(f.name);
-    setFormAbbr(f.abbreviation || '');
-    setModalOpen(true);
-  };
-
-  const handleSave = async () => {
-    setSaving(true);
-    setError('');
-    try {
-      if (editing) {
-        await apiFetch(`/admin/faculties/${editing.id}`, {
-          method: 'PATCH',
-          body: JSON.stringify({ name: formName, abbreviation: formAbbr }),
-        });
-      } else {
-        await apiFetch('/admin/faculties', {
-          method: 'POST',
-          body: JSON.stringify({ name: formName, abbreviation: formAbbr }),
-        });
-      }
-      setModalOpen(false);
-      await load();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка сохранения');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="space-y-4">
-        <div className="h-8 w-40 animate-pulse rounded-lg bg-slate-200" />
-        {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="h-20 animate-pulse rounded-2xl bg-slate-200" />
-        ))}
-      </div>
-    );
-  }
-
-  if (error && faculties.length === 0) {
-    return <RequestState title="Не удалось загрузить факультеты" description={error} onRetry={load} />;
-  }
-
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-extrabold text-slate-900">Факультеты</h1>
-          <p className="mt-1 text-sm text-slate-500">{faculties.length} факультетов</p>
-        </div>
-        <Button onClick={openCreate}>
-          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.5v15m7.5-7.5h-15" />
-          </svg>
-          Добавить
-        </Button>
-      </div>
-
-      {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
-          {error}
-        </div>
-      )}
-
-      <div className="space-y-2">
-        {faculties.map((f) => (
-          <div
-            key={f.id}
-            className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:shadow-md sm:p-5"
-          >
-            <div className="flex items-center gap-4">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 text-sm font-bold text-slate-600">
-                {f.abbreviation?.slice(0, 3) || f.name[0]}
-              </div>
-              <div>
-                <p className="text-sm font-bold text-slate-900">{f.name}</p>
-                {f.abbreviation && (
-                  <p className="text-xs text-slate-400">{f.abbreviation}</p>
-                )}
-              </div>
-            </div>
-            <button
-              onClick={() => openEdit(f)}
-              className="rounded-lg px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100"
-            >
-              Редактировать
-            </button>
-          </div>
-        ))}
-
-        {faculties.length === 0 && (
-          <EmptyState
-            icon={
-              <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
-              </svg>
-            }
-            title="Факультетов пока нет"
-            description="Добавьте первый факультет"
-            action={<Button onClick={openCreate}>Добавить факультет</Button>}
-          />
-        )}
-      </div>
-
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? 'Редактировать факультет' : 'Новый факультет'}>
-        <div className="space-y-4">
-          <Input
-            label="Название"
-            value={formName}
-            onChange={(e) => setFormName(e.target.value)}
-            placeholder="Факультет информатики"
-            error={modalOpen && !formName.trim() ? 'Укажите название факультета' : undefined}
-          />
-          <Input
-            label="Аббревиатура"
-            value={formAbbr}
-            onChange={(e) => setFormAbbr(e.target.value)}
-            placeholder="ФИ"
-          />
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="secondary" onClick={() => setModalOpen(false)}>
-              Отмена
-            </Button>
-            <Button onClick={handleSave} loading={saving} disabled={!formName.trim()}>
-              {editing ? 'Сохранить' : 'Создать'}
-            </Button>
-          </div>
-        </div>
-      </Modal>
-    </div>
-  );
+  return <div className="space-y-6"><div className="flex items-center gap-2 text-sm text-slate-500"><Link href="/dashboard" className="hover:text-slate-900">Admin</Link><span>/</span><span className="text-slate-900">Faculties</span></div><div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end"><div><h1 className="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Факультеты</h1><p className="mt-1 text-sm text-slate-500">{faculties.length} факультетов в университете</p></div><Button onClick={openCreate}>Добавить факультет</Button></div><div className="grid grid-cols-2 gap-3 sm:grid-cols-4">{[{ label: 'Факультеты', value: faculties.length }, { label: 'Группы', value: totals.groups }, { label: 'Студенты', value: totals.students }, { label: 'Преподаватели', value: totals.teachers }].map((item) => <Card key={item.label} padding="sm"><p className="text-xs font-semibold uppercase tracking-wider text-slate-500">{item.label}</p><p className="mt-2 text-2xl font-bold text-slate-950">{item.value}</p></Card>)}</div>{error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}{faculties.length ? <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white"><div className="min-w-[760px] grid grid-cols-[1.6fr_1.2fr_110px_120px_140px_100px] gap-4 border-b border-slate-200 bg-slate-50 px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500"><span>Название</span><span>Код</span><span>Группы</span><span>Студенты</span><span>Преподаватели</span><span>Status</span></div><div className="min-w-[760px] divide-y divide-slate-100">{faculties.map((faculty) => { const stat = metrics(faculty); return <button key={faculty.id} type="button" onClick={() => setSelected(faculty)} className="grid w-full grid-cols-[1.6fr_1.2fr_110px_120px_140px_100px] gap-4 px-5 py-4 text-left transition-colors hover:bg-slate-50"><span className="font-semibold text-slate-900">{faculty.name}</span><span className="font-mono text-sm text-slate-500">{faculty.code}</span><span className="text-sm text-slate-600">{stat.groups}</span><span className="text-sm text-slate-600">{stat.students || '—'}</span><span className="text-sm text-slate-600">{stat.teachers || '—'}</span><span><Badge variant="green" size="sm">Активен</Badge></span></button>; })}</div></div> : <EmptyState title="Факультетов пока нет" description="Добавьте первый факультет, чтобы организовать структуру университета." action={<Button onClick={openCreate}>Добавить факультет</Button>} />}{selected && <div className="fixed inset-0 z-50 flex justify-end bg-slate-950/40" onClick={() => setSelected(null)}><aside role="dialog" aria-modal="true" className="h-full w-full max-w-xl overflow-y-auto border-l border-slate-200 bg-white p-6 shadow-2xl" onClick={(event) => event.stopPropagation()}><div className="flex items-start justify-between gap-4"><div><p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Faculty detail</p><h2 className="mt-2 text-2xl font-bold text-slate-950">{selected.name}</h2><p className="mt-1 font-mono text-sm text-slate-500">{selected.code}</p></div><button type="button" onClick={() => setSelected(null)} className="rounded-lg px-2 py-1 text-slate-400 hover:bg-slate-100" aria-label="Закрыть">×</button></div><div className="mt-6 grid grid-cols-3 gap-3"><Card padding="sm"><p className="text-xs text-slate-400">Группы</p><p className="mt-2 text-xl font-bold text-slate-900">{selectedMetrics?.groups}</p></Card><Card padding="sm"><p className="text-xs text-slate-400">Студенты</p><p className="mt-2 text-xl font-bold text-slate-900">{selectedMetrics?.students || '—'}</p></Card><Card padding="sm"><p className="text-xs text-slate-400">Преподаватели</p><p className="mt-2 text-xl font-bold text-slate-900">{selectedMetrics?.teachers || '—'}</p></Card></div><div className="mt-7 flex items-center justify-between border-b border-slate-200 pb-3"><h3 className="text-sm font-bold uppercase tracking-wider text-slate-700">Группы факультета</h3><Button size="sm" variant="secondary" onClick={() => openEdit(selected)}>Редактировать</Button></div>{selectedGroups.length ? <div className="divide-y divide-slate-100">{selectedGroups.map((group) => <Link key={group.id} href={`/groups?group=${group.id}`} className="flex items-center justify-between py-3 hover:text-sky-700"><span className="text-sm font-semibold">{group.name}</span><span className="text-xs text-slate-400">Открыть →</span></Link>)}</div> : <p className="py-5 text-sm text-slate-500">Группы ещё не созданы.</p>}<div className="mt-7 rounded-xl bg-slate-50 p-4 text-sm leading-6 text-slate-500">Декан факультета и детальная статистика преподавателей пока не передаются текущим API.</div></aside></div>}<Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? 'Редактировать факультет' : 'Добавить факультет'}><div className="space-y-4"><Input label="Название" value={name} onChange={(event) => setName(event.target.value)} placeholder="Факультет информатики" /><Input label="Код" value={code} onChange={(event) => setCode(event.target.value)} placeholder="ФИ" /><div className="flex justify-end gap-2 pt-2"><Button variant="secondary" onClick={() => setModalOpen(false)}>Отмена</Button><Button loading={saving} disabled={!name.trim() || !code.trim()} onClick={save}>{editing ? 'Сохранить' : 'Создать'}</Button></div></div></Modal></div>;
 }

@@ -1,154 +1,32 @@
 'use client';
 
-import { ReactNode, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { getUser, logout } from '@/lib/api';
-import type { UserInfo } from '@/lib/api';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { apiFetch, getHealth, getUser, logout } from '@/lib/api';
+import type { HealthInfo, UserInfo } from '@/lib/api';
 import Avatar from '@/components/ui/Avatar';
 
-const navItems = [
-  {
-    href: '/api',
-    label: 'API',
-    icon: (
-      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.91 11.672a.375.375 0 010 .656l-5.603 3.113a.375.375 0 01-.557-.328V8.887c0-.286.307-.466.557-.327l5.603 3.112z" />
-      </svg>
-    ),
-  },
-  {
-    href: '/docs',
-    label: 'Документация',
-    icon: (
-      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
-      </svg>
-    ),
-  },
-  {
-    href: '/architecture',
-    label: 'Архитектура',
-    icon: (
-      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
-      </svg>
-    ),
-  },
-  {
-    href: '/session',
-    label: 'Сессия',
-    icon: (
-      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
-      </svg>
-    ),
-  },
+type NavItem = { href: string; label: string; icon: string };
+const groups: Array<{ label: string; items: NavItem[] }> = [
+  { label: 'Overview', items: [{ href: '/overview', label: 'Overview', icon: '⌂' }] },
+  { label: 'API', items: [{ href: '/api', label: 'API Explorer', icon: '⌁' }, { href: '/api#endpoints', label: 'Endpoints', icon: '≡' }, { href: '/api#authentication', label: 'Authentication', icon: '⌑' }] },
+  { label: 'Documentation', items: [{ href: '/docs', label: 'Documentation', icon: '▤' }] },
+  { label: 'Architecture', items: [{ href: '/architecture', label: 'Architecture', icon: '◇' }] },
+  { label: 'Tools', items: [{ href: '/session', label: 'Sessions', icon: '◌' }, { href: '/notifications', label: 'Notifications', icon: '◉' }] },
 ];
+const allItems = groups.flatMap((group) => group.items);
+function Glyph({ icon }: { icon: string }) { return <span aria-hidden="true" className="flex h-5 w-5 items-center justify-center font-mono text-sm">{icon}</span>; }
 
 export default function DeveloperLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const [user, setUser] = useState<UserInfo | null>(null);
-  const [collapsed, setCollapsed] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
-
-  useEffect(() => {
-    getUser().then(setUser).catch(() => {});
-  }, []);
-
-  return (
-    <div className="developer-shell flex min-h-screen bg-[var(--color-background)] lg:h-screen lg:overflow-hidden">
-      {mobileOpen && <div className="fixed inset-0 z-40 bg-black/60 lg:hidden" onClick={() => setMobileOpen(false)} />}
-      {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-50 flex w-72 -translate-x-full flex-col border-r border-slate-200 bg-[var(--color-sidebar)] transition-transform duration-[var(--motion-sidebar)] ${mobileOpen ? 'translate-x-0' : ''} lg:static lg:z-auto lg:translate-x-0 ${collapsed ? 'lg:w-[68px]' : 'lg:w-64'}`}>
-        {/* Header */}
-        <div className="flex h-16 items-center justify-between border-b border-white/10 px-4">
-          {!collapsed && (
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-400 text-xs font-bold text-slate-950 shadow-lg shadow-cyan-400/20">
-                НП
-              </div>
-              <div>
-                <p className="text-xs font-semibold text-white/90">НаПаре</p>
-                <p className="text-[10px] text-white/40">Developer</p>
-              </div>
-            </div>
-          )}
-          <button
-            onClick={() => setMobileOpen(false)}
-            className="flex h-11 w-11 items-center justify-center rounded-lg text-white/70 hover:bg-white/10 lg:hidden"
-            aria-label="Закрыть меню"
-          >
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-          </button>
-          <button
-            onClick={() => setCollapsed(!collapsed)}
-            className="hidden h-11 w-11 items-center justify-center rounded-lg text-white/40 hover:bg-white/10 hover:text-white/70 lg:flex"
-          >
-            <svg className={`h-4 w-4 transition-transform ${collapsed ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.75 19.5L8.25 12l7.5-7.5" />
-            </svg>
-          </button>
-        </div>
-
-        {/* Navigation */}
-        <nav className="flex-1 space-y-1 px-3 py-4">
-          {navItems.map((item) => {
-            const active = pathname === item.href;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setMobileOpen(false)}
-                className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
-                  active
-                    ? 'bg-cyan-400 text-slate-950 shadow-sm shadow-cyan-400/25'
-                    : 'text-white/50 hover:bg-white/10 hover:text-white/80'
-                }`}
-                title={collapsed ? item.label : undefined}
-              >
-                {item.icon}
-                {!collapsed && <span>{item.label}</span>}
-              </Link>
-            );
-          })}
-        </nav>
-
-        {/* User section */}
-        <div className="border-t border-white/10 p-3">
-          {user && !collapsed && (
-            <div className="mb-2 flex items-center gap-2.5 rounded-xl px-3 py-2">
-              <Avatar name={`${user.firstName} ${user.lastName}`} size="sm" />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-xs font-medium text-white/80">{user.firstName} {user.lastName}</p>
-                <p className="truncate text-[10px] text-white/40">{user.email}</p>
-              </div>
-            </div>
-          )}
-          <button
-            onClick={logout}
-            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-white/40 transition-all hover:bg-white/10 hover:text-white/70"
-            title={collapsed ? 'Выйти' : undefined}
-          >
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
-            </svg>
-            {!collapsed && <span>Выйти</span>}
-          </button>
-        </div>
-      </aside>
-
-      {/* Main content */}
-      <main className="ds-page-enter min-w-0 flex-1 bg-[var(--color-background)] lg:overflow-y-auto">
-        <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-white/10 bg-slate-950/90 px-4 backdrop-blur lg:hidden">
-          <button onClick={() => setMobileOpen(true)} className="flex h-11 w-11 items-center justify-center rounded-xl text-cyan-200 hover:bg-white/10" aria-label="Открыть меню">
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" /></svg>
-          </button>
-          <span className="min-w-0 truncate text-sm font-semibold text-white">НаПаре · Developer</span>
-        </header>
-        {children}
-      </main>
-    </div>
-  );
+  const [user, setUser] = useState<UserInfo | null>(null); const [health, setHealth] = useState<HealthInfo | null>(null); const [unread, setUnread] = useState(0);
+  const [collapsed, setCollapsed] = useState(false); const [mobileOpen, setMobileOpen] = useState(false); const [paletteOpen, setPaletteOpen] = useState(false); const [profileOpen, setProfileOpen] = useState(false); const [query, setQuery] = useState('');
+  useEffect(() => { getUser().then(setUser).catch(() => undefined); getHealth().then(setHealth).catch(() => setHealth(null)); apiFetch<{ data: Array<{ isRead: boolean }> }>('/notifications').then((response) => setUnread(response.data.filter((item) => !item.isRead).length)).catch(() => undefined); }, []);
+  useEffect(() => { const handler = (event: KeyboardEvent) => { if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); setPaletteOpen(true); } if (event.key === 'Escape') { setPaletteOpen(false); setProfileOpen(false); } }; window.addEventListener('keydown', handler); return () => window.removeEventListener('keydown', handler); }, []);
+  const title = allItems.find((item) => pathname === item.href.split('#')[0])?.label || 'Overview';
+  const filtered = useMemo(() => allItems.filter((item) => item.label.toLowerCase().includes(query.toLowerCase())), [query]);
+  const active = (item: NavItem) => pathname === item.href.split('#')[0];
+  const itemLink = (item: NavItem) => <Link href={item.href} onClick={() => setMobileOpen(false)} title={collapsed ? item.label : undefined} className={`flex min-h-10 items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 ${active(item) ? 'bg-cyan-400 font-semibold text-slate-950' : 'text-white/55 hover:bg-white/10 hover:text-white'}`}><Glyph icon={item.icon} /><span className={collapsed ? 'lg:hidden' : ''}>{item.label}</span></Link>;
+  return <div className="developer-shell flex min-h-screen bg-[var(--color-background)] text-white lg:h-screen lg:overflow-hidden"><div className={`fixed inset-0 z-40 bg-black/60 lg:hidden ${mobileOpen ? 'block' : 'hidden'}`} onClick={() => setMobileOpen(false)} /><aside className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-white/10 bg-[var(--color-sidebar)] transition-all duration-200 lg:static lg:translate-x-0 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'} ${collapsed ? 'lg:w-[72px]' : 'lg:w-64'}`}><div className="flex h-16 items-center justify-between border-b border-white/10 px-4"><Link href="/overview" className="flex items-center gap-2.5 rounded-lg font-bold tracking-tight text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-400 text-xs font-bold text-slate-950">Н</span><span className={collapsed ? 'lg:hidden' : ''}>NaPare</span></Link><div className="flex gap-1"><button type="button" onClick={() => setMobileOpen(false)} className="h-9 w-9 rounded-lg text-white/60 hover:bg-white/10 lg:hidden" aria-label="Закрыть меню">×</button><button type="button" onClick={() => setCollapsed((value) => !value)} className="hidden h-9 w-9 rounded-lg text-white/50 hover:bg-white/10 hover:text-white lg:block" aria-label={collapsed ? 'Развернуть sidebar' : 'Свернуть sidebar'}>{collapsed ? '→' : '←'}</button></div></div><nav className="flex-1 space-y-5 overflow-y-auto px-3 py-5" aria-label="Developer portal navigation">{groups.map((group) => <section key={group.label}><p className={`mb-1 px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-white/30 ${collapsed ? 'lg:hidden' : ''}`}>{group.label}</p><div className="space-y-0.5">{group.items.map((item) => <div key={`${group.label}-${item.label}`}>{itemLink(item)}</div>)}</div></section>)}</nav><div className="border-t border-white/10 p-3"><button type="button" onClick={() => setProfileOpen((value) => !value)} className="flex w-full items-center gap-3 rounded-lg p-2 text-left hover:bg-white/10" aria-expanded={profileOpen}><Avatar name={user ? `${user.firstName} ${user.lastName}` : 'Developer'} size="sm" /><span className={`min-w-0 flex-1 ${collapsed ? 'lg:hidden' : ''}`}><span className="block truncate text-xs font-semibold text-white/80">{user ? `${user.firstName} ${user.lastName}` : 'Developer'}</span><span className="block text-[10px] text-white/35">developer avatar</span></span></button>{profileOpen && <div className="absolute bottom-20 left-3 right-3 z-50 rounded-lg border border-white/10 bg-slate-900 p-1 shadow-2xl"><Link href="/overview" className="block rounded-md px-3 py-2 text-sm text-white/75 hover:bg-white/10">Overview</Link><button type="button" onClick={logout} className="block w-full rounded-md px-3 py-2 text-left text-sm text-red-300 hover:bg-red-500/10">Sign out</button></div>}</div></aside><main className="min-w-0 flex-1 bg-[var(--color-background)] lg:overflow-y-auto"><header className="sticky top-0 z-30 flex min-h-16 items-center gap-3 border-b border-white/10 bg-slate-950/90 px-4 backdrop-blur lg:px-6"><button type="button" onClick={() => setMobileOpen(true)} className="h-10 w-10 rounded-lg text-lg text-cyan-200 hover:bg-white/10 lg:hidden" aria-label="Открыть меню">☰</button><div className="min-w-0 shrink-0"><div className="text-[11px] text-white/35">Developer <span aria-hidden="true">/</span></div><h1 className="truncate text-sm font-semibold text-white">{title}</h1></div><button type="button" onClick={() => setPaletteOpen(true)} className="ml-auto hidden h-9 min-w-0 max-w-xl flex-1 items-center justify-between rounded-lg border border-white/10 bg-white/5 px-3 text-left text-xs text-white/40 lg:flex" aria-label="Открыть global search"><span>Search API, docs and tools</span><kbd className="font-mono text-white/60">Ctrl/⌘ K</kbd></button><span className={`hidden items-center gap-2 text-xs md:flex ${health ? 'text-emerald-300' : 'text-amber-300'}`}><span className={`h-2 w-2 rounded-full ${health ? 'bg-emerald-400' : 'bg-amber-400'}`} />API {health ? 'online' : 'unavailable'}</span><Link href="/notifications" className="relative flex h-10 w-10 items-center justify-center rounded-lg text-lg text-white/55 hover:bg-white/10" aria-label="Уведомления">♧{unread > 0 && <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-cyan-300" />}</Link><button type="button" onClick={() => setProfileOpen((value) => !value)} className="rounded-full" aria-label="Открыть developer profile"><Avatar name={user ? `${user.firstName} ${user.lastName}` : 'Developer'} size="sm" /></button></header>{paletteOpen && <div className="fixed inset-0 z-[60] bg-black/60 p-4 pt-[12vh]" onClick={() => setPaletteOpen(false)}><div role="dialog" aria-modal="true" aria-label="Command Palette" className="mx-auto max-w-xl overflow-hidden rounded-xl border border-white/10 bg-slate-900 shadow-2xl" onClick={(event) => event.stopPropagation()}><div className="border-b border-white/10 px-4"><input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} className="h-14 w-full bg-transparent text-sm text-white outline-none placeholder:text-white/35" placeholder="Search API, docs and tools" /></div><div className="max-h-80 overflow-y-auto p-2">{filtered.map((item) => <Link key={`${item.href}-${item.label}`} href={item.href} onClick={() => { setPaletteOpen(false); setQuery(''); }} className="flex items-center gap-3 rounded-lg px-3 py-3 text-sm text-white/75 hover:bg-white/10"><Glyph icon={item.icon} />{item.label}</Link>)}</div></div></div>}<div className="ds-page-enter min-h-[calc(100vh-4rem)]">{children}</div></main></div>;
 }

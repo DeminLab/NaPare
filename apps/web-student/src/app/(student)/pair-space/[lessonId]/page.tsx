@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { apiFetch, getUser } from '@/lib/api';
+import { apiFetch, apiFetchList, getUser } from '@/lib/api';
 import { Card, Badge, Button, Input, TabBar, EmptyState, Avatar, Skeleton, Icon, RequestState } from '@/components/ui';
 
 interface Announcement {
@@ -34,6 +35,7 @@ interface PairSpace {
   announcements: Announcement[];
   homeworks: Homework[];
   messages: Message[];
+  files?: { id: string; name?: string; fileName?: string; createdAt: string }[];
 }
 
 interface Lesson {
@@ -45,6 +47,7 @@ interface Lesson {
   startTime: string;
   endTime: string;
   groupName: string;
+  date?: string;
 }
 
 const typeLabels: Record<string, string> = {
@@ -64,7 +67,7 @@ export default function PairSpacePage() {
   const params = useParams();
   const router = useRouter();
   const lessonId = params.lessonId as string;
-  const [activeTab, setActiveTab] = useState('announcements');
+  const [activeTab, setActiveTab] = useState('overview');
   const [pairSpace, setPairSpace] = useState<PairSpace | null>(null);
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [loading, setLoading] = useState(true);
@@ -72,15 +75,19 @@ export default function PairSpacePage() {
   const [notes, setNotes] = useState('');
   const [error, setError] = useState('');
   const [messageSaving, setMessageSaving] = useState(false);
+  const [homeworkSaving, setHomeworkSaving] = useState('');
+  const [nextLesson, setNextLesson] = useState<Lesson | null>(null);
 
   useEffect(() => {
     setError('');
     Promise.all([
       apiFetch<PairSpace>(`/pair-spaces/${lessonId}`),
       apiFetch<Lesson>(`/schedule/lessons/${lessonId}`),
-    ]).then(([ps, l]) => {
+      apiFetchList<Lesson>(`/schedule/range?startDate=${new Date().toISOString().split('T')[0]}&endDate=${new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0]}`).catch(() => []),
+    ]).then(([ps, l, lessons]) => {
       setPairSpace(ps);
       setLesson(l);
+      setNextLesson(lessons.filter(item => item.id !== l.id && new Date(item.startTime).getTime() > new Date(l.startTime).getTime()).sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())[0] || null);
     }).catch((err) => setError(err instanceof Error ? err.message : 'Не удалось загрузить пространство пары.')).finally(() => setLoading(false));
   }, [lessonId]);
 
@@ -112,6 +119,11 @@ export default function PairSpacePage() {
     }
   };
 
+  const handleSubmitHomework = async (id: string) => {
+    setHomeworkSaving(id); setError('');
+    try { await apiFetch(`/pair-spaces/homeworks/${id}/submit`, { method: 'PATCH', body: JSON.stringify({}) }); setPairSpace(prev => prev ? { ...prev, homeworks: prev.homeworks.map(homework => homework.id === id ? { ...homework, isCompleted: true } : homework) } : prev); } catch (err) { setError(err instanceof Error ? err.message : 'Не удалось сдать задание.'); } finally { setHomeworkSaving(''); }
+  };
+
   if (loading) {
     return (
       <div className="mx-auto max-w-2xl space-y-6 p-4">
@@ -126,29 +138,33 @@ export default function PairSpacePage() {
   }
 
   const tabs = [
-    { id: 'announcements', label: 'Материалы', count: pairSpace?.announcements.length },
-    { id: 'homeworks', label: 'Домашнее задание', count: pairSpace?.homeworks.length },
-    { id: 'notes', label: 'Заметки' },
-    { id: 'chat', label: 'Обсуждение', count: pairSpace?.messages.length },
+    { id: 'overview', label: 'Обзор' },
+    { id: 'announcements', label: 'Объявления', count: pairSpace?.announcements.length },
+    { id: 'homeworks', label: 'Задания', count: pairSpace?.homeworks.length },
+    { id: 'materials', label: 'Материалы', count: pairSpace?.files?.length },
+    { id: 'chat', label: 'Чат', count: pairSpace?.messages.length },
+    { id: 'participants', label: 'Участники' },
   ];
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="mx-auto max-w-[1400px] space-y-6">
       {/* Header */}
       <div>
-        <button onClick={() => router.push('/week')} className="mb-4 flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-indigo-600">
+        <div className="mb-4 text-xs font-medium text-slate-400">НаПаре <span aria-hidden="true">/</span> Расписание <span aria-hidden="true">/</span> <span className="text-slate-600">{lesson?.subject || 'Пространство пары'}</span></div><button onClick={() => router.push('/week')} className="mb-4 flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-indigo-600">
           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
           Назад к расписанию
         </button>
         {lesson && (
-          <div><h1 className="break-words text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">{lesson.subject}</h1><p className="mt-2 text-sm text-slate-500">{typeLabels[lesson.subjectType] || lesson.subjectType} · {lesson.startTime?.slice(11, 16)}–{lesson.endTime?.slice(11, 16)}</p><div className="mt-5 grid gap-3 sm:grid-cols-2"><Card padding="sm" className="bg-slate-50"><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Аудитория</p><p className="mt-1 break-words font-semibold text-slate-900">{lesson.room || 'Не указана'}</p></Card><Card padding="sm" className="bg-slate-50"><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Преподаватель</p><p className="mt-1 break-words font-semibold text-slate-900">{lesson.teacherName || 'Не указан'}</p></Card></div></div>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"><div><h1 className="break-words text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">{lesson.subject}</h1><div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-slate-500"><Badge variant="subject">{typeLabels[lesson.subjectType] || lesson.subjectType}</Badge><span>{lesson.startTime?.slice(11, 16)}–{lesson.endTime?.slice(11, 16)}</span><span>· Ауд. {lesson.room || '—'}</span></div><p className="mt-3 text-sm text-slate-600"><span className="font-medium">Преподаватель:</span> {lesson.teacherName || 'Не указан'}</p></div><button onClick={() => setActiveTab('chat')} className="rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700">Открыть чат</button></div>
         )}
       </div>
 
-      <TabBar tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
+      <div className="sticky top-16 z-20 -mx-2 overflow-x-auto border-b border-slate-200 bg-slate-50/95 px-2 py-2 backdrop-blur sm:mx-0"><TabBar tabs={tabs} activeTab={activeTab} onChange={setActiveTab} /></div>
       {error && <RequestState title="Не удалось выполнить действие" description={error} onRetry={() => setError('')} />}
+
+      {activeTab === 'overview' && <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]"><div className="space-y-6"><Card><h2 className="text-lg font-bold text-slate-950">Следующее занятие</h2>{nextLesson ? <Link href={`/pair-space/${nextLesson.id}`} className="mt-4 block rounded-xl border border-slate-200 p-4 hover:border-indigo-300"><p className="text-xs font-semibold text-indigo-600">{nextLesson.startTime?.slice(11, 16)}–{nextLesson.endTime?.slice(11, 16)}</p><p className="mt-2 font-semibold text-slate-900">{nextLesson.subject}</p><p className="mt-1 text-sm text-slate-500">{nextLesson.teacherName || 'Преподаватель не указан'} · ауд. {nextLesson.room || '—'}</p></Link> : <p className="mt-3 text-sm text-slate-500">Следующее занятие не найдено в расписании.</p>}</Card><Card><h2 className="text-lg font-bold text-slate-950">Описание</h2><p className="mt-3 text-sm leading-6 text-slate-500">Материалы, объявления, задания и обсуждение по занятию собраны в одном пространстве.</p></Card><Card><h2 className="text-lg font-bold text-slate-950">Последние объявления</h2>{pairSpace?.announcements.length ? <div className="mt-3 space-y-3">{pairSpace.announcements.slice(0, 3).map(a => <div key={a.id} className="rounded-xl bg-slate-50 p-3 text-sm text-slate-700">{a.text}</div>)}</div> : <p className="mt-3 text-sm text-slate-500">Объявлений пока нет.</p>}<h2 className="mt-6 text-lg font-bold text-slate-950">Ближайшие задания</h2>{pairSpace?.homeworks.length ? <div className="mt-3 space-y-3">{pairSpace.homeworks.slice(0, 3).map(h => <div key={h.id} className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 p-3 text-sm"><span className="truncate">{h.title}</span><span className="shrink-0 text-xs text-slate-500">{h.deadline ? new Date(h.deadline).toLocaleDateString('ru-RU') : 'Без срока'}</span></div>)}</div> : <p className="mt-3 text-sm text-slate-500">Заданий пока нет.</p>}</Card></div><aside className="space-y-4"><Card padding="sm"><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Следующее занятие</p><p className="mt-2 font-semibold">{nextLesson?.subject || 'Не найдено'}</p></Card><Card padding="sm"><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Ближайший дедлайн</p><p className="mt-2 font-semibold">{pairSpace?.homeworks.filter(h => h.deadline && !h.isCompleted).sort((a,b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime())[0]?.title || 'Нет активных заданий'}</p></Card><Card padding="sm"><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Участники</p><p className="mt-2 font-semibold">Состав группы</p><p className="mt-1 text-sm text-slate-500">Список участников пока не возвращается API.</p></Card></aside></div>}
 
       {/* Announcements */}
       {activeTab === 'announcements' && (
@@ -169,6 +185,14 @@ export default function PairSpacePage() {
             ))
           )}
         </div>
+      )}
+
+      {activeTab === 'materials' && (
+        <Card><div className="flex items-center gap-3"><Icon name="Paperclip" className="h-5 w-5 text-indigo-500" /><div><h3 className="font-semibold text-slate-900">Материалы</h3><p className="text-sm text-slate-500">Файлы, добавленные в пространство пары.</p></div></div>{pairSpace?.files?.length ? <div className="mt-5 divide-y divide-slate-100">{pairSpace.files.map(file => <div key={file.id} className="flex items-center justify-between py-3 text-sm"><span>{file.name || file.fileName || 'Файл'}</span><span className="text-xs text-slate-400">{timeAgo(file.createdAt)}</span></div>)}</div> : <EmptyState title="Материалов пока нет" description="Файлы от преподавателя появятся здесь." />}</Card>
+      )}
+
+      {activeTab === 'participants' && (
+        <Card><h3 className="font-semibold text-slate-900">Участники</h3><p className="mt-2 text-sm text-slate-500">Список участников пока не возвращается текущим API pair-space.</p></Card>
       )}
 
       {activeTab === 'notes' && (
@@ -197,7 +221,7 @@ export default function PairSpacePage() {
                     )}
                   </div>
                   {!h.isCompleted && (
-                    <Button size="sm" variant="secondary">Сдать</Button>
+                    <Button size="sm" variant="secondary" loading={homeworkSaving === h.id} onClick={() => void handleSubmitHomework(h.id)}>Сдать</Button>
                   )}
                 </div>
               </Card>

@@ -1,172 +1,49 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { getUser, logout, type Me } from '@/lib/api';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { apiFetch, apiFetchList, getUser, logout, type Me } from '@/lib/api';
+import { Avatar, Button } from '@/components/ui';
 
-const NAV_ITEMS = [
-  {
-    label: 'Дашборд',
-    href: '/dashboard',
-    icon: (
-      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
-      </svg>
-    ),
-  },
-  {
-    label: 'Пользователи',
-    href: '/users',
-    icon: (
-      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
-      </svg>
-    ),
-  },
-  {
-    label: 'Университет',
-    href: '/university',
-    icon: (
-      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4.26 10.147a60.436 60.436 0 00-.491 6.347A48.627 48.627 0 0112 20.904a48.627 48.627 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.57 50.57 0 00-2.658-.813A59.905 59.905 0 0112 3.493a59.902 59.902 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.697 50.697 0 0112 13.489a50.702 50.702 0 017.74-3.342M6.75 15a.75.75 0 100-1.5.75.75 0 000 1.5zm0 0v-3.675A55.378 55.378 0 0112 8.443m-7.007 11.55A5.981 5.981 0 006.75 15.75v-1.5" />
-      </svg>
-    ),
-  },
-  {
-    label: 'Факультеты',
-    href: '/faculties',
-    icon: (
-      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
-      </svg>
-    ),
-  },
-  {
-    label: 'Группы',
-    href: '/groups',
-    icon: (
-      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
-      </svg>
-    ),
-  },
-  {
-    label: 'Импорт расписания',
-    href: '/schedule-import',
-    icon: (
-      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-      </svg>
-    ),
-  },
-  {
-    label: 'Коннекторы',
-    href: '/connectors',
-    icon: (
-      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m9.86-4.686a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
-      </svg>
-    ),
-  },
+interface NavItem { href: string; label: string; icon: string; }
+interface NavGroup { label: string; items: NavItem[]; }
+
+const groups: NavGroup[] = [
+  { label: 'Dashboard', items: [{ href: '/dashboard', label: 'Dashboard', icon: '▦' }] },
+  { label: 'University', items: [{ href: '/university', label: 'Университет', icon: '▥' }, { href: '/faculties', label: 'Факультеты', icon: '≡' }, { href: '/groups', label: 'Группы', icon: '♧' }, { href: '/schedule-import', label: 'Расписание', icon: '◫' }] },
+  { label: 'Users', items: [{ href: '/users', label: 'Пользователи', icon: '○' }, { href: '/users?role=student', label: 'Студенты', icon: '◌' }, { href: '/users?role=teacher', label: 'Преподаватели', icon: '◍' }] },
+  { label: 'Integrations', items: [{ href: '/connectors', label: 'Connectors', icon: '↔' }, { href: '/schedule-import', label: 'Импорт расписания', icon: '⇧' }] },
+  { label: 'System', items: [{ href: '/dashboard?view=logs', label: 'Логи', icon: '≋' }, { href: '/dashboard?view=system', label: 'Состояние системы', icon: '◉' }] },
+  { label: 'Settings', items: [{ href: '/university', label: 'Настройки', icon: '⚙' }] },
 ];
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+const pageTitles: Record<string, string> = { '/dashboard': 'Dashboard', '/university': 'Университет', '/faculties': 'Факультеты', '/groups': 'Группы', '/users': 'Пользователи', '/connectors': 'Connectors', '/schedule-import': 'Импорт расписания', '/notifications': 'Уведомления' };
+const flatItems = groups.flatMap((group) => group.items);
+
+function Glyph({ icon }: { icon: string }) { return <span aria-hidden="true" className="flex h-5 w-5 items-center justify-center text-[15px] leading-none">{icon}</span>; }
+
+export default function AdminLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [user, setUser] = useState<Me | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [notificationCount, setNotificationCount] = useState(0);
+  const [systemStatus, setSystemStatus] = useState<'checking' | 'online' | 'offline'>('checking');
+  const [query, setQuery] = useState('');
 
-  useEffect(() => {
-    getUser()
-      .then(setUser)
-      .catch(() => router.push('/login'));
-  }, [router]);
+  useEffect(() => { getUser().then(setUser).catch(() => router.push('/login')); apiFetchList<{ isRead: boolean }>('/notifications').then((items) => setNotificationCount(items.filter((item) => !item.isRead).length)).catch(() => undefined); apiFetch<{ status: string }>('/health').then(() => setSystemStatus('online')).catch(() => setSystemStatus('offline')); }, [router]);
+  useEffect(() => { const handler = (event: KeyboardEvent) => { if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); setPaletteOpen(true); } if (event.key === 'Escape') { setPaletteOpen(false); setProfileOpen(false); } }; window.addEventListener('keydown', handler); return () => window.removeEventListener('keydown', handler); }, []);
 
-  return (
-    <div className="flex min-h-screen bg-slate-50">
-      {sidebarOpen && (
-        <div className="fixed inset-0 z-30 bg-black/30 backdrop-blur-sm lg:hidden" onClick={() => setSidebarOpen(false)} />
-      )}
+  const currentTitle = pageTitles[pathname] || (pathname.includes('view=logs') ? 'Логи' : pathname.includes('view=system') ? 'Состояние системы' : 'Dashboard');
+  const searchItems = useMemo(() => flatItems.filter((item) => item.label.toLowerCase().includes(query.toLowerCase())), [query]);
+  const active = (item: NavItem) => pathname === item.href || (item.href === '/users' && pathname.startsWith('/users'));
+  const renderNav = (item: NavItem) => <Link href={item.href} onClick={() => setDrawerOpen(false)} title={collapsed ? item.label : undefined} className={`group flex min-h-10 items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 ${active(item) ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950'} ${collapsed ? 'lg:justify-center lg:px-2' : ''}`}><Glyph icon={item.icon} /><span className={collapsed ? 'lg:hidden' : ''}>{item.label}</span></Link>;
 
-      <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-[var(--sidebar-w)] flex-col border-r border-slate-200 bg-white transition-transform duration-[var(--motion-sidebar)] lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
-      >
-        <div className="flex h-16 items-center gap-3 border-b border-slate-100 px-5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-slate-800 to-sky-600 text-sm font-bold text-white">
-            НП
-          </div>
-          <div>
-            <p className="text-sm font-bold text-slate-900">НаПаре</p>
-            <p className="text-[11px] text-slate-400">Администрирование</p>
-          </div>
-        </div>
+  if (!user) return <div className="flex min-h-screen items-center justify-center bg-slate-100 text-sm text-slate-500">Загрузка панели…</div>;
 
-        <nav className="flex-1 overflow-y-auto px-3 py-4 scrollbar-thin">
-          <div className="space-y-1">
-            {NAV_ITEMS.map((item) => {
-              const active = pathname === item.href;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setSidebarOpen(false)}
-                  className={`flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
-                    active
-                      ? 'bg-indigo-50 text-indigo-700'
-                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                  }`}
-                >
-                  <span className={active ? 'text-indigo-600' : 'text-slate-400'}>{item.icon}</span>
-                  {item.label}
-                </Link>
-              );
-            })}
-          </div>
-        </nav>
-
-        <div className="border-t border-slate-100 p-3">
-          <div className="flex items-center gap-3 rounded-xl px-3 py-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-slate-700 to-slate-800 text-xs font-bold text-white">
-              {user ? `${(user.firstName || '')[0] || ''}${(user.lastName || '')[0] || ''}`.toUpperCase() : '...'}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-slate-900">
-                {user ? `${user.firstName} ${user.lastName}` : '...'}
-              </p>
-              <p className="truncate text-xs text-slate-400">{user?.email}</p>
-            </div>
-            <button
-              onClick={logout}
-              className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500"
-              title="Выйти"
-            >
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
-              </svg>
-            </button>
-          </div>
-        </div>
-      </aside>
-
-      <div className="flex flex-1 flex-col lg:pl-[var(--sidebar-w)]">
-        <header className="sticky top-0 z-20 flex h-16 items-center gap-4 border-b border-slate-200 bg-white/80 px-4 backdrop-blur-md lg:px-6">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="flex h-11 w-11 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 lg:hidden"
-            aria-label="Открыть меню"
-          >
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-            </svg>
-          </button>
-          <div className="hidden text-sm font-semibold text-slate-700 lg:block">
-            {NAV_ITEMS.find((i) => i.href === pathname)?.label || ''}
-          </div>
-        </header>
-
-        <main className="ds-page-enter flex-1 p-4 lg:p-6">{children}</main>
-      </div>
-    </div>
-  );
+  return <div className="flex min-h-screen bg-slate-100 text-slate-900"><div className={`fixed inset-0 z-40 bg-slate-950/50 lg:hidden ${drawerOpen ? 'block' : 'hidden'}`} onClick={() => setDrawerOpen(false)} /><aside className={`fixed inset-y-0 left-0 z-50 flex flex-col border-r border-slate-200 bg-white transition-all duration-200 lg:static lg:translate-x-0 ${drawerOpen ? 'translate-x-0' : '-translate-x-full'} ${collapsed ? 'lg:w-[76px]' : 'w-72 lg:w-64'}`}><div className="flex h-16 items-center justify-between border-b border-slate-200 px-4"><Link href="/dashboard" className="flex min-w-0 items-center gap-2.5 rounded-md font-bold tracking-tight text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-slate-950 text-sm text-white">Н</span><span className={collapsed ? 'lg:hidden' : ''}>NaPare Admin</span></Link><button type="button" onClick={() => setCollapsed((value) => !value)} className="hidden h-8 w-8 rounded-md text-slate-500 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 lg:block" aria-label={collapsed ? 'Развернуть sidebar' : 'Свернуть sidebar'}>{collapsed ? '→' : '←'}</button></div><nav className="flex-1 space-y-5 overflow-y-auto p-3" aria-label="Admin navigation">{groups.map((group) => <section key={group.label}><p className={`mb-1 px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400 ${collapsed ? 'lg:hidden' : ''}`}>{group.label}</p><div className="space-y-0.5">{group.items.map((item) => <div key={`${group.label}-${item.label}`}>{renderNav(item)}</div>)}</div></section>)}</nav><div className="border-t border-slate-200 p-3"><button type="button" onClick={() => setProfileOpen((value) => !value)} aria-expanded={profileOpen} className={`flex w-full items-center gap-3 rounded-lg p-2 text-left hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 ${collapsed ? 'lg:justify-center' : ''}`}><Avatar name={`${user.firstName} ${user.lastName}`} size="sm" /><span className={`min-w-0 flex-1 ${collapsed ? 'lg:hidden' : ''}`}><span className="block truncate text-sm font-semibold">{user.firstName} {user.lastName}</span><span className="block text-xs text-slate-400">Admin profile</span></span><span className={`text-slate-400 ${collapsed ? 'lg:hidden' : ''}`}>⌄</span></button>{profileOpen && <div className="absolute bottom-20 left-3 right-3 z-50 rounded-lg border border-slate-200 bg-white p-1 shadow-xl"><Link href="/university" className="block rounded-md px-3 py-2 text-sm hover:bg-slate-100">Профиль организации</Link><Link href="/university" className="block rounded-md px-3 py-2 text-sm hover:bg-slate-100">Настройки</Link><button type="button" onClick={logout} className="block w-full rounded-md px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50">Выйти</button></div>}</div></aside><div className="min-w-0 flex-1"><header className="sticky top-0 z-30 flex min-h-16 items-center gap-3 border-b border-slate-200 bg-white px-4 lg:px-7"><button type="button" onClick={() => setDrawerOpen(true)} className="h-10 w-10 rounded-md text-lg text-slate-500 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 lg:hidden" aria-label="Открыть меню">☰</button><div className="min-w-0 shrink-0"><div className="text-xs font-medium text-slate-400">Admin <span aria-hidden="true">/</span></div><h1 className="truncate text-sm font-bold text-slate-900">{currentTitle}</h1></div><button type="button" onClick={() => setPaletteOpen(true)} className="ml-auto hidden h-9 min-w-0 max-w-xl flex-1 items-center justify-between rounded-md border border-slate-200 bg-slate-50 px-3 text-left text-xs text-slate-400 hover:border-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 lg:flex" aria-label="Открыть command palette"><span>Search users, groups and actions</span><kbd className="rounded border border-slate-200 bg-white px-1.5 py-0.5 font-mono text-[10px]">⌘ K</kbd></button><div className="hidden items-center gap-2 text-xs text-slate-500 md:flex"><span className={`h-2 w-2 rounded-full ${systemStatus === 'online' ? 'bg-emerald-500' : systemStatus === 'offline' ? 'bg-red-500' : 'bg-amber-400'}`} />{systemStatus === 'online' ? 'System operational' : systemStatus === 'offline' ? 'System unavailable' : 'Checking system'}</div><Link href="/notifications" className="relative flex h-10 w-10 items-center justify-center rounded-md text-lg text-slate-500 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400" aria-label="Уведомления">♧{notificationCount > 0 && <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-red-500" />}</Link><button type="button" onClick={() => setProfileOpen((value) => !value)} className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400" aria-label="Открыть профиль"><Avatar name={`${user.firstName} ${user.lastName}`} size="sm" /></button></header><main className="ds-page-enter mx-auto min-h-[calc(100vh-4rem)] w-full max-w-[1500px] p-4 sm:p-6 lg:p-7">{children}</main></div>{paletteOpen && <div className="fixed inset-0 z-[60] bg-slate-950/50 p-4 pt-[12vh]" onClick={() => setPaletteOpen(false)}><div role="dialog" aria-modal="true" aria-label="Command Palette" className="mx-auto max-w-xl overflow-hidden rounded-lg border border-slate-200 bg-white shadow-2xl" onClick={(event) => event.stopPropagation()}><div className="flex items-center gap-3 border-b border-slate-200 px-4"><span className="font-mono text-slate-400">⌕</span><input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search users, groups and actions" className="h-14 w-full text-sm outline-none" /></div><div className="max-h-80 overflow-y-auto p-2">{searchItems.map((item) => <Link key={`${item.href}-${item.label}`} href={item.href} onClick={() => { setPaletteOpen(false); setQuery(''); }} className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm hover:bg-slate-100"><Glyph icon={item.icon} />{item.label}<span className="ml-auto text-xs text-slate-400">Open</span></Link>)}{!searchItems.length && <p className="px-3 py-5 text-center text-sm text-slate-500">No matching commands</p>}</div><div className="border-t border-slate-200 px-4 py-3 font-mono text-[10px] text-slate-400">Ctrl/⌘ K to open · Esc to close</div></div></div>}</div>;
 }

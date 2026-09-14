@@ -1,166 +1,40 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '@/lib/api';
-import { Button } from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
+import { Badge, Button, Card, EmptyState, RequestState, Skeleton } from '@/components/ui';
+
+type Step = 1 | 2 | 3 | 4 | 5;
+interface PreviewRow { date: string; time: string; subject: string; teacher: string; group: string; room: string; }
+interface ImportResult { imported: number; skipped: number; errors: number; message?: string; }
+interface HistoryItem { id: string; date: string; file: string; format: string; status: string; imported: number; }
+
+const steps = ['Upload', 'Validate', 'Preview', 'Import', 'Result'];
+const fields = ['Дата', 'Время', 'Предмет', 'Преподаватель', 'Группа', 'Аудитория'];
+
+function extension(file: File) { return file.name.split('.').pop()?.toLowerCase() || ''; }
+function parseCsv(value: string): PreviewRow[] { const lines = value.split(/\r?\n/).filter(Boolean); if (lines.length < 2) return []; const rows = lines.slice(1).map((line) => line.split(/[;,]/).map((item) => item.trim())); return rows.slice(0, 8).map((row) => ({ date: row[0] || '—', time: row[1] || '—', subject: row[2] || '—', teacher: row[3] || '—', group: row[4] || '—', room: row[5] || '—' })); }
+function parseJson(value: string): PreviewRow[] { const data = JSON.parse(value); const rows = Array.isArray(data) ? data : data.lessons; if (!Array.isArray(rows)) return []; return rows.slice(0, 8).map((row) => ({ date: String(row.date || row.startTime || '—'), time: String(row.time || row.startTime || '—'), subject: String(row.subject || row.title || '—'), teacher: String(row.teacher || row.teacherName || '—'), group: String(row.group || row.groupName || '—'), room: String(row.room || '—') })); }
 
 export default function ScheduleImportPage() {
+  const [step, setStep] = useState<Step>(1);
   const [file, setFile] = useState<File | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [uploadResult, setUploadResult] = useState<{ success: boolean; message: string } | null>(null);
-  const [error, setError] = useState('');
+  const [rows, setRows] = useState<PreviewRow[]>([]);
+  const [validation, setValidation] = useState({ success: [] as string[], warnings: [] as string[], errors: [] as string[] });
   const [dragOver, setDragOver] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [result, setResult] = useState<ImportResult | null>(null);
+  const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOver(false);
-    const f = e.dataTransfer.files[0];
-    if (f) setFile(f);
-  }, []);
+  useEffect(() => { try { setHistory(JSON.parse(localStorage.getItem('napare:import-history') || '[]')); } catch { setHistory([]); } }, []);
+  const chooseFile = useCallback(async (selected: File) => { const ext = extension(selected); if (!['csv', 'xlsx', 'xls', 'json'].includes(ext)) { setError('Поддерживаются только CSV, Excel и JSON.'); return; } setError(''); setFile(selected); setStep(2); setRows([]); const next = { success: [`Файл ${selected.name} выбран`, `Формат ${ext.toUpperCase()} распознан`], warnings: [] as string[], errors: [] as string[] }; try { if (ext === 'csv' || ext === 'json') { const text = await selected.text(); const parsed = ext === 'csv' ? parseCsv(text) : parseJson(text); setRows(parsed); if (!parsed.length) next.errors.push('Не удалось найти строки расписания.'); else next.success.push(`Найдено строк для preview: ${parsed.length}`); } else { next.warnings.push('Для Excel preview будет доступен после серверной валидации.'); } } catch { next.errors.push('Файл не удалось прочитать или формат данных некорректен.'); } setValidation(next); }, []);
+  const onDrop = (event: React.DragEvent) => { event.preventDefault(); setDragOver(false); const selected = event.dataTransfer.files[0]; if (selected) chooseFile(selected); };
+  const runValidation = () => { setStep(3); };
+  const startImport = async () => { if (!file || validation.errors.length) return; setStep(4); setLoading(true); setProgress(20); setError(''); try { setProgress(55); const response = await apiFetch<{ imported?: number; updated?: number; message?: string }>('/admin/schedule/upload', { method: 'POST', body: JSON.stringify({ fileName: file.name, format: extension(file) }) }); setProgress(100); const next: ImportResult = { imported: response.imported || 0, skipped: response.updated || 0, errors: 0, message: response.message }; setResult(next); const item: HistoryItem = { id: `${Date.now()}`, date: new Date().toISOString(), file: file.name, format: extension(file).toUpperCase(), status: next.errors ? 'Ошибка' : 'Завершён', imported: next.imported }; const nextHistory = [item, ...history].slice(0, 10); setHistory(nextHistory); localStorage.setItem('napare:import-history', JSON.stringify(nextHistory)); setStep(5); } catch (err) { setProgress(100); setError(err instanceof Error ? err.message : 'Импорт не выполнен.'); setResult({ imported: 0, skipped: 0, errors: 1 }); setStep(5); } finally { setLoading(false); } };
+  const reset = () => { setStep(1); setFile(null); setRows([]); setResult(null); setProgress(0); setValidation({ success: [], warnings: [], errors: [] }); setError(''); };
+  const format = useMemo(() => file ? extension(file).toUpperCase() : '—', [file]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    if (f) setFile(f);
-  };
-
-  const handleUpload = async () => {
-    if (!file) return;
-    setUploading(true);
-    setError('');
-    setUploadResult(null);
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      const result = await apiFetch<{ success: boolean; message: string }>('/admin/schedule/upload', {
-        method: 'POST',
-        body: formData,
-        headers: {},
-      });
-      setUploadResult(result);
-      setFile(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка загрузки');
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-extrabold text-slate-900">Импорт расписания</h1>
-        <p className="mt-1 text-sm text-slate-500">Загрузка расписания из файла</p>
-      </div>
-
-      {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
-          {error}
-        </div>
-      )}
-
-      {uploadResult && (
-        <div className={`rounded-xl border px-4 py-3 text-sm font-medium ${
-          uploadResult.success
-            ? 'border-emerald-200 bg-emerald-50 text-emerald-600'
-            : 'border-red-200 bg-red-50 text-red-600'
-        }`}>
-          {uploadResult.message}
-        </div>
-      )}
-
-      <div
-        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-        onDragLeave={() => setDragOver(false)}
-        onDrop={handleDrop}
-        className={`relative rounded-2xl border-2 border-dashed p-6 text-center transition-colors sm:p-12 ${
-          dragOver
-            ? 'border-sky-400 bg-sky-50'
-            : file
-              ? 'border-emerald-300 bg-emerald-50'
-              : 'border-slate-300 bg-white hover:border-slate-400'
-        }`}
-      >
-        <input
-          type="file"
-          accept=".xlsx,.xls,.csv"
-          onChange={handleFileChange}
-          className="absolute inset-0 cursor-pointer opacity-0"
-        />
-        <div className="flex flex-col items-center">
-          {file ? (
-            <>
-              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600">
-                <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <p className="break-all text-sm font-semibold text-slate-900">{file.name}</p>
-              <p className="mt-1 text-xs text-slate-400">{(file.size / 1024).toFixed(1)} КБ</p>
-            </>
-          ) : (
-            <>
-              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
-                <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-                </svg>
-              </div>
-              <p className="text-sm font-semibold text-slate-900">
-                Перетащите файл сюда
-              </p>
-              <p className="mt-1 text-xs text-slate-400">
-                или нажмите для выбора файла
-              </p>
-              <p className="mt-3 text-xs text-slate-400">
-                Поддерживаются форматы .xlsx, .xls, .csv
-              </p>
-            </>
-          )}
-        </div>
-      </div>
-
-      {file && (
-        <div className="flex justify-stretch sm:justify-end">
-          <Button onClick={handleUpload} loading={uploading} className="w-full sm:w-auto">
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-            </svg>
-            Загрузить
-          </Button>
-        </div>
-      )}
-
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
-        <h2 className="mb-3 text-sm font-bold text-slate-900">Статус синхронизации</h2>
-        <SyncStatus />
-      </div>
-    </div>
-  );
-}
-
-function SyncStatus() {
-  const [status, setStatus] = useState<{ lastSync?: string; inProgress?: boolean } | null>(null);
-
-  useState(() => {
-    apiFetch<{ lastSync?: string; inProgress?: boolean }>('/admin/schedule/sync-status')
-      .then(setStatus)
-      .catch(() => {});
-  });
-
-  if (!status) {
-    return <div className="h-4 w-48 animate-pulse rounded bg-slate-200" />;
-  }
-
-  return (
-    <div className="flex items-center gap-3">
-      <div className={`h-2.5 w-2.5 rounded-full ${status.inProgress ? 'animate-pulse bg-amber-400' : 'bg-emerald-400'}`} />
-      <span className="text-sm text-slate-600">
-        {status.inProgress
-          ? 'Синхронизация...'
-          : status.lastSync
-            ? `Последняя синхронизация: ${new Date(status.lastSync).toLocaleString('ru-RU')}`
-            : 'Синхронизация ещё не выполнялась'}
-      </span>
-    </div>
-  );
+  return <div className="mx-auto max-w-[1200px] space-y-6"><div className="flex items-center gap-2 text-sm text-slate-500"><span>Admin</span><span>/</span><span>Schedule</span><span>/</span><span className="text-slate-900">Import</span></div><div><h1 className="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Импорт расписания</h1><p className="mt-1 text-sm text-slate-500">Загрузите файл и проверьте данные перед импортом</p></div><div className="grid grid-cols-5 gap-1 sm:gap-3">{steps.map((label, index) => { const number = index + 1; return <div key={label} className={`border-t-2 px-1 pt-2 sm:px-0 ${step >= number ? 'border-slate-900' : 'border-slate-200'}`}><p className={`text-[10px] font-bold uppercase tracking-wide sm:text-xs ${step >= number ? 'text-slate-900' : 'text-slate-400'}`}>{number} <span className="hidden sm:inline">{label}</span></p></div>; })}</div>{error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}{step === 1 && <Card className="border-dashed border-2 px-5 py-10 text-center sm:px-10"><div onDragOver={(event) => { event.preventDefault(); setDragOver(true); }} onDragLeave={() => setDragOver(false)} onDrop={onDrop} className={`rounded-xl border-2 border-dashed px-4 py-12 transition-colors ${dragOver ? 'border-slate-900 bg-slate-50' : 'border-slate-300'}`}><input id="schedule-file" type="file" accept=".csv,.xlsx,.xls,.json" onChange={(event) => { const selected = event.target.files?.[0]; if (selected) chooseFile(selected); }} className="sr-only" /><label htmlFor="schedule-file" className="cursor-pointer"><p className="text-base font-semibold text-slate-900">Перетащите файл сюда</p><p className="mt-2 text-sm text-slate-500">или выберите файл с компьютера</p><p className="mt-5 text-xs font-semibold uppercase tracking-wider text-slate-400">CSV · Excel · JSON</p></label></div></Card>}{step === 2 && <Card padding="sm"><div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center"><div><p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Выбранный файл</p><p className="mt-1 break-all font-semibold text-slate-900">{file?.name}</p><p className="mt-1 text-xs text-slate-500">{format} · {file ? (file.size / 1024).toFixed(1) : 0} KB</p></div><Button onClick={runValidation}>Проверить файл</Button></div></Card>}{step === 3 && <div className="space-y-6"><Card padding="sm"><h2 className="text-base font-bold text-slate-950">Validation</h2><div className="mt-4 grid gap-3 sm:grid-cols-3"><div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3"><p className="text-xs font-semibold uppercase text-emerald-700">Success</p>{validation.success.map((item) => <p key={item} className="mt-2 text-sm text-emerald-800">{item}</p>)}</div><div className="rounded-lg border border-amber-200 bg-amber-50 p-3"><p className="text-xs font-semibold uppercase text-amber-700">Warnings</p>{validation.warnings.length ? validation.warnings.map((item) => <p key={item} className="mt-2 text-sm text-amber-800">{item}</p>) : <p className="mt-2 text-sm text-amber-800">Нет предупреждений</p>}</div><div className="rounded-lg border border-red-200 bg-red-50 p-3"><p className="text-xs font-semibold uppercase text-red-700">Errors</p>{validation.errors.length ? validation.errors.map((item) => <p key={item} className="mt-2 text-sm text-red-800">{item}</p>) : <p className="mt-2 text-sm text-red-800">Ошибок не найдено</p>}</div></div><div className="mt-5 flex justify-end"><Button disabled={validation.errors.length > 0} onClick={() => setStep(3)}>Перейти к preview</Button></div></Card></div>}{step === 3 && validation.errors.length === 0 && <Card padding="sm"><div className="flex items-center justify-between border-b border-slate-200 pb-3"><h2 className="text-base font-bold text-slate-950">Preview</h2><span className="text-xs text-slate-500">{rows.length ? `${rows.length} строк` : 'Ожидает серверной проверки'}</span></div>{rows.length ? <div className="mt-3 overflow-x-auto"><table className="min-w-[760px] w-full text-left text-sm"><thead className="text-xs uppercase tracking-wide text-slate-500"><tr>{fields.map((field) => <th key={field} className="border-b border-slate-200 px-3 py-3 font-semibold">{field}</th>)}</tr></thead><tbody>{rows.map((row, index) => <tr key={index} className="border-b border-slate-100"><td className="px-3 py-3">{row.date}</td><td className="px-3 py-3">{row.time}</td><td className="px-3 py-3 font-medium">{row.subject}</td><td className="px-3 py-3">{row.teacher}</td><td className="px-3 py-3">{row.group}</td><td className="px-3 py-3">{row.room}</td></tr>)}</tbody></table></div> : <p className="mt-4 text-sm text-slate-500">Для этого формата preview будет сформирован сервером во время импорта.</p>}<div className="mt-5 flex justify-end"><Button onClick={startImport}>Импортировать</Button></div></Card>}{step === 4 && <Card padding="sm"><h2 className="text-base font-bold text-slate-950">Import</h2><p className="mt-2 text-sm text-slate-500">Выполняется импорт {file?.name}</p><div className="mt-5 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full bg-slate-900 transition-all" style={{ width: `${progress}%` }} /></div><p className="mt-2 text-right text-xs font-semibold text-slate-500">{progress}%</p>{loading && <div className="mt-4"><Skeleton className="h-4 w-48" /></div>}</Card>}{step === 5 && result && <Card padding="sm"><div className="flex items-center justify-between"><div><h2 className="text-base font-bold text-slate-950">Result</h2><p className="mt-1 text-sm text-slate-500">{result.message || 'Импорт завершён'}</p></div><Badge variant={result.errors ? 'red' : 'green'}>{result.errors ? 'Ошибка' : 'Завершён'}</Badge></div><div className="mt-5 grid grid-cols-3 gap-3"><div><p className="text-2xl font-bold text-slate-900">{result.imported}</p><p className="text-xs text-slate-500">Imported</p></div><div><p className="text-2xl font-bold text-slate-900">{result.skipped}</p><p className="text-xs text-slate-500">Skipped</p></div><div><p className="text-2xl font-bold text-slate-900">{result.errors}</p><p className="text-xs text-slate-500">Errors</p></div></div><Button variant="secondary" className="mt-5" onClick={reset}>Новый импорт</Button></Card>}<Card padding="sm"><div className="flex items-center justify-between border-b border-slate-200 pb-3"><h2 className="text-sm font-bold uppercase tracking-wider text-slate-700">Import History</h2><span className="text-xs text-slate-400">Local history</span></div>{history.length ? <div className="mt-2 overflow-x-auto"><table className="min-w-[620px] w-full text-left text-sm"><thead className="text-xs uppercase tracking-wide text-slate-500"><tr><th className="px-3 py-3">Дата</th><th className="px-3 py-3">Файл</th><th className="px-3 py-3">Пользователь</th><th className="px-3 py-3">Status</th></tr></thead><tbody>{history.map((item) => <tr key={item.id} className="border-t border-slate-100"><td className="px-3 py-3 text-slate-500">{new Date(item.date).toLocaleString('ru-RU')}</td><td className="px-3 py-3 font-medium text-slate-800">{item.file} <span className="ml-1 text-xs text-slate-400">{item.format}</span></td><td className="px-3 py-3 text-slate-500">Текущий администратор</td><td className="px-3 py-3"><Badge variant={item.status === 'Завершён' ? 'green' : 'red'}>{item.status}</Badge></td></tr>)}</tbody></table></div> : <p className="mt-4 text-sm text-slate-500">История импорта пока пуста.</p>}</Card></div>;
 }

@@ -1,155 +1,61 @@
-import Card from '@/components/ui/Card';
+'use client';
+
+import { useState } from 'react';
+
+type NodeId = 'student' | 'staff' | 'admin' | 'developer' | 'backend' | 'database' | 'services' | 'integrations';
+
+const nodes: Record<NodeId, { label: string; detail: string; tone: string }> = {
+  student: { label: 'web-student', detail: 'Next.js App Router · порт 3001', tone: 'sky' },
+  staff: { label: 'web-staff', detail: 'Next.js App Router · порт 3002', tone: 'sky' },
+  admin: { label: 'web-admin', detail: 'Next.js App Router · порт 3003', tone: 'sky' },
+  developer: { label: 'web-developer', detail: 'Next.js App Router · порт 3004', tone: 'violet' },
+  backend: { label: 'backend', detail: 'NestJS модульный монолит · REST /api/v1', tone: 'emerald' },
+  database: { label: 'database', detail: 'PostgreSQL 16 · primary storage', tone: 'indigo' },
+  services: { label: 'services', detail: 'Redis 7 · cache, sessions, queues', tone: 'amber' },
+  integrations: { label: 'integrations', detail: 'S3 / MinIO · files and connectors', tone: 'cyan' },
+};
+
+const layers: Array<{ title: string; ids: NodeId[] }> = [
+  { title: 'Web applications', ids: ['student', 'staff', 'admin', 'developer'] },
+  { title: 'Application layer', ids: ['backend'] },
+  { title: 'Data & infrastructure', ids: ['database', 'services', 'integrations'] },
+];
+
+const toneClasses: Record<string, string> = {
+  sky: 'border-sky-400/30 bg-sky-400/[0.08] text-sky-200',
+  violet: 'border-violet-400/30 bg-violet-400/[0.08] text-violet-200',
+  emerald: 'border-emerald-400/30 bg-emerald-400/[0.08] text-emerald-200',
+  indigo: 'border-indigo-400/30 bg-indigo-400/[0.08] text-indigo-200',
+  amber: 'border-amber-400/30 bg-amber-400/[0.08] text-amber-200',
+  cyan: 'border-cyan-400/30 bg-cyan-400/[0.08] text-cyan-200',
+};
+
+function NodeCard({ id, active, onSelect }: { id: NodeId; active: boolean; onSelect: (id: NodeId) => void }) {
+  const node = nodes[id];
+  return <button type="button" onClick={() => onSelect(id)} className={`group w-full rounded-xl border px-4 py-3 text-left transition-all hover:-translate-y-0.5 hover:border-sky-300/60 ${toneClasses[node.tone]} ${active ? 'ring-2 ring-sky-300/50 ring-offset-2 ring-offset-[#0b0e14]' : ''}`}><span className="flex items-center justify-between gap-3"><span className="font-mono text-sm font-semibold">{node.label}</span><span className="h-2 w-2 rounded-full bg-current opacity-70 shadow-[0_0_12px_currentColor]" /></span><span className="mt-1 block text-[11px] text-white/40 group-hover:text-white/60">{node.detail}</span></button>;
+}
+
+function DownConnector() {
+  return <div className="flex h-10 items-center justify-center"><svg className="h-10 w-5 text-white/20" viewBox="0 0 20 40" fill="none" aria-hidden="true"><path d="M10 0v31M4 26l6 8 6-8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg></div>;
+}
 
 export default function ArchitecturePage() {
-  return (
-    <div className="p-4 sm:p-6 lg:p-8">
-      <div className="mx-auto max-w-5xl">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-slate-900">Архитектура системы</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Визуальная схема инфраструктуры НаПаре
-          </p>
-        </div>
+  const [selected, setSelected] = useState<NodeId>('backend');
+  const selectedNode = nodes[selected];
 
-        {/* Architecture diagram */}
-        <Card className="mb-6 overflow-hidden p-0">
-          <div className="border-b border-slate-100 px-4 py-4 sm:px-6">
-            <h2 className="text-sm font-bold text-slate-900">Инфраструктура</h2>
-          </div>
-          <div className="p-4 sm:p-8">
-            <div className="flex flex-col items-center gap-0">
-              {/* Nginx */}
-              <div className="relative">
-                <div className="rounded-xl border-2 border-amber-300 bg-amber-50 px-6 py-3 text-center">
-                  <p className="text-xs font-bold text-amber-700">NGINX</p>
-                  <p className="text-[10px] text-amber-500">Reverse Proxy</p>
-                </div>
-              </div>
+  return <div className="min-h-full bg-[#0b0e14] px-4 py-6 text-white sm:px-6 lg:px-8 lg:py-8"><div className="mx-auto max-w-7xl space-y-7">
+    <div className="flex items-center gap-2 text-xs text-white/40">Developer <span>/</span> <span className="text-white/80">Architecture</span></div>
+    <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end"><div><h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Architecture</h1><p className="mt-1 text-sm text-white/45">How NaPare products, APIs, data, and integrations connect</p></div><span className="inline-flex w-fit items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/[0.07] px-3 py-1.5 text-xs text-emerald-300"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />System map</span></div>
 
-              {/* Connector down */}
-              <div className="relative h-6 w-0.5 bg-slate-200" />
+    <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 shadow-2xl shadow-black/10 sm:p-7"><div className="mb-6 flex flex-col justify-between gap-2 sm:flex-row sm:items-center"><div><h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-white/70">Visual system</h2><p className="mt-1 text-xs text-white/35">Select a node to inspect its responsibility</p></div><div className="font-mono text-[11px] text-white/30">request flow ↓</div></div><div className="mx-auto max-w-5xl">
+      <div className="rounded-xl border border-white/10 bg-black/10 p-4"><p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-white/30">{layers[0].title}</p><div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">{layers[0].ids.map((id) => <NodeCard key={id} id={id} active={selected === id} onSelect={setSelected} />)}</div></div>
+      <DownConnector />
+      <div className="mx-auto max-w-sm"><p className="mb-3 text-center text-[10px] font-semibold uppercase tracking-wider text-white/30">{layers[1].title}</p><NodeCard id="backend" active={selected === 'backend'} onSelect={setSelected} /></div>
+      <DownConnector />
+      <div className="rounded-xl border border-white/10 bg-black/10 p-4"><p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-white/30">{layers[2].title}</p><div className="grid gap-2 md:grid-cols-3">{layers[2].ids.map((id) => <NodeCard key={id} id={id} active={selected === id} onSelect={setSelected} />)}</div></div>
+    </div><div className="mt-6 flex flex-col gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 sm:flex-row sm:items-center sm:justify-between"><span className="text-xs text-white/40">Selected component</span><span className="font-mono text-xs text-sky-200">{selectedNode.label} <span className="text-white/30">·</span> {selectedNode.detail}</span></div></section>
 
-              {/* 4 Frontends */}
-              <div className="relative">
-                <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-0">
-                  <div className="rounded-xl border-2 border-sky-300 bg-sky-50 px-4 py-3 text-center">
-                    <p className="text-[10px] font-bold text-sky-700">Web-Front</p>
-                    <p className="text-[9px] text-sky-500">:3000</p>
-                  </div>
-                  <div className="rounded-xl border-2 border-sky-300 bg-sky-50 px-4 py-3 text-center">
-                    <p className="text-[10px] font-bold text-sky-700">Student</p>
-                    <p className="text-[9px] text-sky-500">:3001</p>
-                  </div>
-                  <div className="rounded-xl border-2 border-sky-300 bg-sky-50 px-4 py-3 text-center">
-                    <p className="text-[10px] font-bold text-sky-700">Teacher</p>
-                    <p className="text-[9px] text-sky-500">:3002</p>
-                  </div>
-                  <div className="rounded-xl border-2 border-violet-300 bg-violet-50 px-4 py-3 text-center">
-                    <p className="text-[10px] font-bold text-violet-700">Developer</p>
-                    <p className="text-[9px] text-violet-500">:3004</p>
-                  </div>
-                </div>
-
-                {/* Horizontal connectors above frontends */}
-                <div className="absolute top-0 left-1/2 hidden h-0.5 w-[calc(100%-32px)] -translate-x-1/2 -translate-y-0 bg-sky-200 sm:block" />
-              </div>
-
-              {/* Connectors down */}
-              <div className="relative hidden items-start gap-0 sm:flex">
-                <div className="h-6 w-0.5 bg-sky-200" />
-                <div className="w-40" />
-                <div className="h-6 w-0.5 bg-sky-200" />
-              </div>
-
-              {/* Horizontal line between connectors */}
-              <div className="hidden h-0.5 w-[calc(100%-40px)] bg-slate-200 sm:block" />
-
-              {/* Single connector to backend */}
-              <div className="hidden h-6 w-0.5 bg-slate-200 sm:block" />
-
-              {/* Backend */}
-              <div className="rounded-xl border-2 border-emerald-300 bg-emerald-50 px-8 py-4 text-center">
-                <p className="text-sm font-bold text-emerald-700">Backend API</p>
-                <p className="text-[10px] text-emerald-500">Node.js + Express</p>
-                <p className="mt-1 text-[9px] font-medium text-emerald-600">:8080</p>
-              </div>
-
-              {/* Connectors to storage */}
-              <div className="relative hidden items-start sm:flex">
-                <div className="h-6 w-0.5 bg-slate-200" />
-              </div>
-
-              {/* Horizontal line */}
-              <div className="hidden h-0.5 w-[calc(100%-40px)] bg-slate-200 sm:block" />
-
-              {/* Storage connectors */}
-              <div className="relative hidden items-start gap-0 sm:flex">
-                <div className="h-6 w-0.5 bg-slate-200" />
-                <div className="w-20" />
-                <div className="h-6 w-0.5 bg-slate-200" />
-                <div className="w-20" />
-                <div className="h-6 w-0.5 bg-slate-200" />
-              </div>
-
-              {/* Storage layer */}
-              <div className="grid grid-cols-3 gap-2 sm:flex sm:items-center sm:gap-3">
-                <div className="rounded-xl border-2 border-indigo-300 bg-indigo-50 px-4 py-3 text-center">
-                  <p className="text-[10px] font-bold text-indigo-700">PostgreSQL</p>
-                  <p className="text-[9px] text-indigo-500">:5432</p>
-                </div>
-                <div className="rounded-xl border-2 border-red-300 bg-red-50 px-4 py-3 text-center">
-                  <p className="text-[10px] font-bold text-red-700">Redis</p>
-                  <p className="text-[9px] text-red-500">:6379</p>
-                </div>
-                <div className="rounded-xl border-2 border-cyan-300 bg-cyan-50 px-4 py-3 text-center">
-                  <p className="text-[10px] font-bold text-cyan-700">MinIO</p>
-                  <p className="text-[9px] text-cyan-500">:9000</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </Card>
-
-        {/* Description cards */}
-        <div className="grid gap-4 sm:grid-cols-2">
-          {[
-            {
-              title: 'Nginx',
-              desc: 'Обратный прокси, балансировка нагрузки, SSL-терминация. Маршрутизирует запросы по сервисам.',
-              color: 'border-amber-200 bg-amber-50',
-              dot: 'bg-amber-500',
-            },
-            {
-              title: 'Фронтенды',
-              desc: 'Четыре независимых Next.js приложения: основной сайт, кабинет студента, кабинет преподавателя, консоль разработчика.',
-              color: 'border-sky-200 bg-sky-50',
-              dot: 'bg-sky-500',
-            },
-            {
-              title: 'Backend API',
-              desc: 'Node.js + Express сервер. Общая бизнес-логика, аутентификация, авторизация, CRUD-операции.',
-              color: 'border-emerald-200 bg-emerald-50',
-              dot: 'bg-emerald-500',
-            },
-            {
-              title: 'Хранилища данных',
-              desc: 'PostgreSQL — основная БД. Redis — кэширование и сессии. MinIO — объектное хранилище файлов.',
-              color: 'border-indigo-200 bg-indigo-50',
-              dot: 'bg-indigo-500',
-            },
-          ].map((item) => (
-            <Card key={item.title} variant="bordered" className={`border ${item.color}`}>
-              <div className="flex items-start gap-3">
-                <span className={`mt-1 h-2.5 w-2.5 rounded-full ${item.dot}`} />
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900">{item.title}</h3>
-                  <p className="mt-1 text-xs leading-relaxed text-slate-500">{item.desc}</p>
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
+    <div className="grid gap-4 lg:grid-cols-2"><section className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 sm:p-6"><h2 className="text-base font-semibold">Tech Stack</h2><div className="mt-5 grid grid-cols-2 gap-x-6 gap-y-4 text-sm"><div><p className="text-xs text-white/35">Frontend</p><p className="mt-1 text-white/75">Next.js 14 · React 18</p></div><div><p className="text-xs text-white/35">Backend</p><p className="mt-1 text-white/75">NestJS 10 · TypeORM</p></div><div><p className="text-xs text-white/35">Database</p><p className="mt-1 text-white/75">PostgreSQL 16</p></div><div><p className="text-xs text-white/35">Runtime</p><p className="mt-1 text-white/75">Node.js · pnpm · Turborepo</p></div></div></section><section className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 sm:p-6"><h2 className="text-base font-semibold">Infrastructure</h2><div className="mt-5 flex flex-wrap gap-2">{['Docker Compose', 'Nginx', 'Redis 7', 'MinIO / S3', 'OpenAPI'].map((item) => <span key={item} className="rounded-lg border border-white/10 px-3 py-2 text-xs text-white/60">{item}</span>)}</div><p className="mt-4 text-sm leading-6 text-white/45">Контейнеры объединены общей сетью, а API выступает единым шлюзом для всех клиентских приложений.</p></section><section className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 sm:p-6"><h2 className="text-base font-semibold">Authentication</h2><p className="mt-3 text-sm leading-6 text-white/45">JWT access и refresh tokens, Passport strategy и role-based guards защищают API и разделяют доступ студента, преподавателя, администратора и developer portal.</p><div className="mt-4 rounded-lg bg-black/20 px-3 py-2 font-mono text-xs text-violet-200">Authorization: Bearer &lt;access_token&gt;</div></section><section className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 sm:p-6"><h2 className="text-base font-semibold">Data Flow</h2><ol className="mt-4 space-y-3 text-sm text-white/55"><li className="flex gap-3"><span className="font-mono text-xs text-sky-300">01</span><span>Client sends a request to the versioned NestJS API.</span></li><li className="flex gap-3"><span className="font-mono text-xs text-sky-300">02</span><span>Guards validate identity and permissions.</span></li><li className="flex gap-3"><span className="font-mono text-xs text-sky-300">03</span><span>Modules read/write PostgreSQL and use Redis or S3 services.</span></li></ol></section></div>
+    <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 sm:p-6"><div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center"><div><h2 className="text-base font-semibold">Deployment</h2><p className="mt-1 text-sm text-white/45">Production topology is defined by Docker Compose and routed through Nginx.</p></div><div className="flex items-center gap-3 text-xs text-white/40"><span className="h-2 w-2 rounded-full bg-emerald-400" />Containerized delivery</div></div></section>
+  </div></div>;
 }

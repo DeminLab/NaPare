@@ -1,21 +1,26 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { apiFetch } from '@/lib/api';
-import { Input } from '@/components/ui/Input';
-import { Button } from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
-import { RequestState } from '@/components/ui/RequestState';
+import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { apiFetch, apiFetchList } from '@/lib/api';
+import { Badge, Button, Card, EmptyState, Input, RequestState, Skeleton } from '@/components/ui';
 
-interface University {
-  id: string;
-  name: string;
-  city: string;
-  isActive: boolean;
-}
+interface University { id: string; name: string; city: string; status: 'active' | 'inactive' | 'pending'; connectorType?: string; }
+interface Faculty { id: string; name: string; }
+interface Group { id: string; name: string; facultyId: string; }
+interface User { id: string; role: string; groupId?: string; }
+type Section = 'overview' | 'structure' | 'academic' | 'schedule' | 'notifications' | 'integrations';
+
+const sections: Array<{ id: Section; label: string }> = [{ id: 'overview', label: 'Основная информация' }, { id: 'structure', label: 'Структура' }, { id: 'academic', label: 'Academic' }, { id: 'schedule', label: 'Расписание' }, { id: 'notifications', label: 'Уведомления' }, { id: 'integrations', label: 'Интеграции' }];
+const statusLabels = { active: 'Активен', inactive: 'Неактивен', pending: 'Ожидает активации' };
 
 export default function UniversityPage() {
-  const [uni, setUni] = useState<University | null>(null);
+  const [university, setUniversity] = useState<University | null>(null);
+  const [faculties, setFaculties] = useState<Faculty[]>([]);
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [section, setSection] = useState<Section>('overview');
+  const [editing, setEditing] = useState(false);
   const [name, setName] = useState('');
   const [city, setCity] = useState('');
   const [loading, setLoading] = useState(true);
@@ -23,107 +28,18 @@ export default function UniversityPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  const load = () => {
-    setLoading(true);
-    setError('');
-    apiFetch<University>('/admin/university')
-      .then((data) => {
-        setUni(data);
-        setName(data.name || '');
-        setCity(data.city || '');
-      })
-      .catch((err) => setError(err instanceof Error ? err.message : 'Ошибка загрузки'))
-      .finally(() => setLoading(false));
-  };
-
+  const load = () => { setLoading(true); setError(''); Promise.all([apiFetch<University>('/admin/university'), apiFetchList<Faculty>('/admin/faculties').catch(() => []), apiFetchList<Group>('/admin/groups').catch(() => []), apiFetchList<User>('/admin/users').catch(() => [])]).then(([data, facultyItems, groupItems, userItems]) => { setUniversity(data); setName(data.name || ''); setCity(data.city || ''); setFaculties(facultyItems); setGroups(groupItems); setUsers(userItems); }).catch((err) => setError(err instanceof Error ? err.message : 'Не удалось загрузить университет.')).finally(() => setLoading(false)); };
   useEffect(() => { load(); }, []);
 
-  const handleSave = async () => {
-    setSaving(true);
-    setError('');
-    setSuccess('');
-    try {
-      const updated = await apiFetch<University>('/admin/university', {
-        method: 'PATCH',
-        body: JSON.stringify({ name, city }),
-      });
-      setUni(updated);
-      setSuccess('Информация сохранена');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка сохранения');
-    } finally {
-      setSaving(false);
-    }
-  };
+  const students = users.filter((user) => user.role === 'student').length;
+  const teachers = users.filter((user) => user.role === 'teacher').length;
+  const completenessFields = [university?.name, university?.city, university?.status, university?.connectorType, faculties.length > 0, groups.length > 0];
+  const completeness = Math.round((completenessFields.filter(Boolean).length / completenessFields.length) * 100);
+  const save = async () => { setSaving(true); setError(''); setSuccess(''); try { const updated = await apiFetch<University>('/admin/university', { method: 'PATCH', body: JSON.stringify({ name: name.trim(), city: city.trim() }) }); setUniversity(updated); setName(updated.name); setCity(updated.city); setEditing(false); setSuccess('Данные университета сохранены.'); } catch (err) { setError(err instanceof Error ? err.message : 'Не удалось сохранить данные.'); } finally { setSaving(false); } };
+  const facultyGroups = useMemo(() => faculties.map((faculty) => ({ ...faculty, count: groups.filter((group) => group.facultyId === faculty.id).length })), [faculties, groups]);
 
-  if (loading) {
-    return (
-      <div className="space-y-4">
-        <div className="h-8 w-48 animate-pulse rounded-lg bg-slate-200" />
-        <div className="h-64 animate-pulse rounded-2xl bg-slate-200" />
-      </div>
-    );
-  }
+  if (loading) return <div className="space-y-4"><Skeleton className="h-24" /><Skeleton className="h-48" /><Skeleton className="h-64" /></div>;
+  if (!university) return <RequestState title="Не удалось загрузить университет" description={error || 'Данные недоступны.'} onRetry={load} />;
 
-  if (error && !uni) {
-    return <RequestState title="Не удалось загрузить университет" description={error} onRetry={load} />;
-  }
-
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-extrabold text-slate-900">Университет</h1>
-        <p className="mt-1 text-sm text-slate-500">Основная информация об университете</p>
-      </div>
-
-      {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
-          {error}
-        </div>
-      )}
-
-      {success && (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-600">
-          {success}
-        </div>
-      )}
-
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="mb-6 flex items-center gap-4">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-800 to-sky-600 text-xl font-bold text-white">
-            {(name || 'У')[0]}
-          </div>
-          <div>
-            <h2 className="text-lg font-bold text-slate-900">{name || 'Без названия'}</h2>
-            <div className="mt-1 flex items-center gap-2">
-              <Badge variant={uni?.isActive ? 'green' : 'slate'} dot>
-                {uni?.isActive ? 'Активен' : 'Неактивен'}
-              </Badge>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Input
-            label="Название"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Название университета"
-          />
-          <Input
-            label="Город"
-            value={city}
-            onChange={(e) => setCity(e.target.value)}
-            placeholder="Город"
-          />
-        </div>
-
-        <div className="mt-6 flex justify-end">
-          <Button onClick={handleSave} loading={saving}>
-            Сохранить
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
+  return <div className="space-y-6"><div className="flex items-center gap-2 text-sm text-slate-500"><Link href="/dashboard" className="hover:text-slate-900">Admin</Link><span>/</span><span className="text-slate-900">University</span></div><div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end"><div><h1 className="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Мой университет</h1><p className="mt-1 text-sm text-slate-500">Управление профилем и структурой организации</p></div>{!editing && <Button variant="secondary" onClick={() => setEditing(true)}>Редактировать</Button>}</div>{error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}{success && <p role="status" className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{success}</p>}<Card className="px-5 py-6 sm:px-7"><div className="flex flex-col gap-5 sm:flex-row sm:items-center"><div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-slate-950 text-2xl font-bold text-white">{(university.name || 'У')[0]}</div>{editing ? <div className="grid flex-1 gap-4 sm:grid-cols-2"><Input label="Название" value={name} onChange={(event) => setName(event.target.value)} /><Input label="Город" value={city} onChange={(event) => setCity(event.target.value)} /></div> : <div className="min-w-0 flex-1"><h2 className="text-xl font-bold text-slate-950">{university.name}</h2><p className="mt-1 text-sm text-slate-500">{university.city || 'Город не указан'}</p><div className="mt-3"><Badge variant={university.status === 'active' ? 'green' : university.status === 'inactive' ? 'red' : 'amber'} dot>{statusLabels[university.status]}</Badge></div></div>}{editing && <div className="flex gap-2 sm:self-end"><Button variant="secondary" onClick={() => { setEditing(false); setName(university.name); setCity(university.city); }}>Отмена</Button><Button loading={saving} disabled={!name.trim() || !city.trim()} onClick={save}>Сохранить</Button></div>}</div></Card><div className="grid grid-cols-2 gap-3 sm:grid-cols-4">{[{ label: 'Факультеты', value: faculties.length, href: '/faculties' }, { label: 'Группы', value: groups.length, href: '/groups' }, { label: 'Студенты', value: students, href: '/users?role=student' }, { label: 'Преподаватели', value: teachers, href: '/users?role=teacher' }].map((item) => <Link key={item.label} href={item.href}><Card className="h-full transition-shadow hover:shadow-md" padding="sm"><p className="text-xs font-semibold uppercase tracking-wider text-slate-500">{item.label}</p><p className="mt-2 text-2xl font-bold text-slate-950">{item.value}</p><p className="mt-1 text-xs text-slate-400">Открыть →</p></Card></Link>)}</div><div className="grid gap-6 lg:grid-cols-[230px_minmax(0,1fr)]"><nav className="flex gap-1 overflow-x-auto lg:block lg:space-y-1" aria-label="Настройки университета">{sections.map((item) => <button key={item.id} type="button" onClick={() => setSection(item.id)} className={`shrink-0 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors lg:block lg:w-full ${section === item.id ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950'}`}>{item.label}</button>)}</nav><div className="min-w-0">{section === 'overview' && <Card padding="sm"><h2 className="text-base font-bold text-slate-950">Основная информация</h2><dl className="mt-4 divide-y divide-slate-100"><div className="flex justify-between gap-4 py-3"><dt className="text-sm text-slate-500">Название</dt><dd className="text-right text-sm font-medium text-slate-900">{university.name}</dd></div><div className="flex justify-between gap-4 py-3"><dt className="text-sm text-slate-500">Город</dt><dd className="text-right text-sm font-medium text-slate-900">{university.city || '—'}</dd></div><div className="flex justify-between gap-4 py-3"><dt className="text-sm text-slate-500">Статус</dt><dd><Badge variant={university.status === 'active' ? 'green' : university.status === 'inactive' ? 'red' : 'amber'}>{statusLabels[university.status]}</Badge></dd></div></dl></Card>}{section === 'structure' && <Card padding="sm"><h2 className="text-base font-bold text-slate-950">Структура</h2><div className="mt-4 divide-y divide-slate-100">{facultyGroups.length ? facultyGroups.map((faculty) => <Link key={faculty.id} href={`/faculties?faculty=${faculty.id}`} className="flex items-center justify-between py-3 hover:text-sky-700"><span className="text-sm font-semibold">{faculty.name}</span><span className="text-xs text-slate-500">{faculty.count} групп →</span></Link>) : <EmptyState title="Факультеты не созданы" description="Добавьте факультет, чтобы описать структуру университета." />}</div></Card>}{section === 'academic' && <Card padding="sm"><h2 className="text-base font-bold text-slate-950">Academic</h2><p className="mt-2 text-sm leading-6 text-slate-500">{groups.length} учебных групп и {students} студентов синхронизированы с текущим университетом.</p><Link href="/groups" className="mt-4 inline-flex text-sm font-semibold text-slate-800 hover:text-slate-950">Открыть академическую структуру →</Link></Card>}{section === 'schedule' && <Card padding="sm"><h2 className="text-base font-bold text-slate-950">Расписание</h2><p className="mt-2 text-sm leading-6 text-slate-500">Управление импортом и синхронизацией расписания находится в отдельном разделе.</p><Link href="/schedule-import" className="mt-4 inline-flex text-sm font-semibold text-slate-800 hover:text-slate-950">Открыть импорт расписания →</Link></Card>}{section === 'notifications' && <Card padding="sm"><h2 className="text-base font-bold text-slate-950">Уведомления</h2><p className="mt-2 text-sm leading-6 text-slate-500">Центр системных уведомлений и журнал событий доступны в верхней панели.</p><Link href="/dashboard" className="mt-4 inline-flex text-sm font-semibold text-slate-800 hover:text-slate-950">Вернуться на dashboard →</Link></Card>}{section === 'integrations' && <Card padding="sm"><h2 className="text-base font-bold text-slate-950">Интеграции</h2><p className="mt-2 text-sm leading-6 text-slate-500">{university.connectorType ? `Подключён коннектор: ${university.connectorType}` : 'Коннектор пока не настроен.'}</p><Link href="/connectors" className="mt-4 inline-flex text-sm font-semibold text-slate-800 hover:text-slate-950">Управлять интеграциями →</Link></Card>}</div></div><Card padding="sm"><div className="flex items-center justify-between gap-4"><div><h2 className="text-base font-bold text-slate-950">Profile completeness</h2><p className="mt-1 text-sm text-slate-500">Заполненность профиля организации</p></div><span className="text-2xl font-bold text-slate-950">{completeness}%</span></div><div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-slate-900 transition-all" style={{ width: `${completeness}%` }} /></div></Card></div>;
 }

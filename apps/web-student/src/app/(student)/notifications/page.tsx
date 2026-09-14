@@ -1,56 +1,27 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { apiFetchList, markNotificationRead, markAllRead } from '@/lib/api';
-import { Card, Button, EmptyState, Icon, IconName, Badge, RequestState, Skeleton } from '@/components/ui';
+import { apiFetchList, markAllRead, markNotificationRead } from '@/lib/api';
+import { Badge, Button, EmptyState, Icon, IconName, RequestState, Skeleton } from '@/components/ui';
 
-interface Notification { id: string; title: string; body: string; type: string; isRead: boolean; createdAt: string; deepLink?: string; }
-
-const typeIcons: Record<string, IconName> = { schedule_change: 'CalendarDays', new_announcement: 'Megaphone', new_homework: 'FileText', new_file: 'Paperclip', deadline: 'Clock', absence_decision: 'ClipboardCheck', new_absence: 'XCircle', system: 'Settings', other: 'Bell' };
-const importantTypes = new Set(['schedule_change', 'deadline', 'new_absence', 'system']);
-
-function timeAgo(dateStr: string): string {
-  const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
-  if (diff < 60) return 'только что';
-  if (diff < 3600) return `${Math.floor(diff / 60)} мин назад`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)} ч назад`;
-  if (diff < 604800) return `${Math.floor(diff / 86400)} дн назад`;
-  return new Date(dateStr).toLocaleDateString('ru-RU');
-}
-const isToday = (dateStr: string) => new Date(dateStr).toDateString() === new Date().toDateString();
+type Notification = { id: string; title: string; body: string; type: string; isRead: boolean; createdAt: string; deepLink?: string; };
+const icons: Record<string, IconName> = { schedule_change: 'CalendarDays', new_announcement: 'Megaphone', new_homework: 'FileText', new_file: 'Paperclip', deadline: 'Clock', absence_decision: 'ClipboardCheck', new_absence: 'XCircle', system: 'Settings', other: 'Bell' };
+const tabs = [['all', 'Все'], ['unread', 'Непрочитанные'], ['schedule', 'Расписание'], ['homework', 'Задания'], ['messages', 'Сообщения'], ['system', 'Система']];
+const tabTypes: Record<string, string[]> = { schedule: ['schedule_change'], homework: ['new_homework', 'deadline'], messages: ['new_announcement', 'new_file'], system: ['system'] };
+const ago = (value: string) => { const seconds = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 1000)); if (seconds < 60) return 'только что'; if (seconds < 3600) return `${Math.floor(seconds / 60)} мин назад`; if (seconds < 86400) return `${Math.floor(seconds / 3600)} ч назад`; return new Date(value).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }); };
+const groupName = (value: string) => { const date = new Date(value); const today = new Date(); const yesterday = new Date(); yesterday.setDate(today.getDate() - 1); if (date.toDateString() === today.toDateString()) return 'Сегодня'; if (date.toDateString() === yesterday.toDateString()) return 'Вчера'; return 'Ранее'; };
+const ctaLabel = (notification: Notification) => notification.type === 'schedule_change' ? 'Открыть расписание' : notification.deepLink?.startsWith('/') ? 'Открыть' : '';
 
 export default function NotificationsPage() {
-  const router = useRouter();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-
-  const loadNotifications = () => { setLoading(true); setError(''); apiFetchList<Notification>('/notifications').then(data => setNotifications(data.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()))).catch(err => setError(err instanceof Error ? err.message : 'Не удалось загрузить уведомления.')).finally(() => setLoading(false)); };
-  useEffect(() => { loadNotifications(); }, []);
-
-  const handleNotification = async (notification: Notification) => {
-    if (!notification.isRead) await handleMarkRead(notification.id);
-    if (notification.deepLink?.startsWith('/')) router.push(notification.deepLink);
-  };
-  const handleMarkRead = async (id: string) => { await markNotificationRead(id); setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n)); };
-  const handleMarkAllRead = async () => { await markAllRead(); setNotifications(prev => prev.map(n => ({ ...n, isRead: true }))); };
-  const unread = notifications.filter(n => !n.isRead);
-  const today = notifications.filter(n => isToday(n.createdAt));
-  const earlier = notifications.filter(n => !isToday(n.createdAt));
-
-  const renderNotification = (n: Notification) => {
-    const important = importantTypes.has(n.type);
-    return <Card key={n.id} hover padding="sm" onClick={() => void handleNotification(n)} className={`${!n.isRead ? 'border-indigo-200 bg-indigo-50/40' : ''} ${important ? 'border-l-4 border-l-amber-400' : ''} ${n.deepLink?.startsWith('/') ? 'cursor-pointer' : ''}`}>
-      <div className="flex items-start gap-3"><div className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${important ? 'bg-amber-50 text-amber-600' : 'bg-slate-100 text-slate-400'}`}><Icon name={typeIcons[n.type] || 'Bell'} className="h-5 w-5" /></div><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><h3 className="font-semibold text-slate-900">{n.title}</h3>{important && <Badge variant="warning" size="sm">Важно</Badge>}{!n.isRead && <span className="h-2 w-2 rounded-full bg-indigo-500" />}</div><p className="mt-1 text-sm leading-relaxed text-slate-600">{n.body}</p><div className="mt-2 flex items-center justify-between gap-3"><p className="text-xs text-slate-400">{timeAgo(n.createdAt)}</p>{n.deepLink?.startsWith('/') && <span className="text-xs font-semibold text-indigo-600">Открыть →</span>}</div></div></div>
-    </Card>;
-  };
-
-  return <div className="mx-auto max-w-3xl space-y-8">
-    <div className="flex items-center justify-between"><div><h1 className="ds-page-title text-slate-900">Уведомления</h1>{unread.length > 0 && <p className="ds-body mt-1 text-slate-500">{unread.length} непрочитанных</p>}</div>{unread.length > 0 && <Button variant="ghost" size="sm" onClick={handleMarkAllRead}>Прочитать все</Button>}</div>
-    {loading ? <div className="space-y-3">{[1, 2, 3].map(i => <Card key={i}><Skeleton className="h-16" /></Card>)}</div> : error ? <RequestState title="Не удалось загрузить уведомления" description={error} onRetry={loadNotifications} /> : notifications.length === 0 ? <EmptyState icon={<Icon name="Bell" className="h-8 w-8" />} title="Нет уведомлений" description="Здесь будут появляться изменения расписания и важные новости" /> : <div className="space-y-8">
-      {today.length > 0 && <section><h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-400">Сегодня</h2><div className="space-y-2">{today.map(renderNotification)}</div></section>}
-      {earlier.length > 0 && <section><div className="mb-3 flex items-center gap-3"><h2 className="text-sm font-bold uppercase tracking-wide text-slate-400">Ранее</h2><div className="h-px flex-1 bg-slate-200" /></div><div className="space-y-2">{earlier.map(renderNotification)}</div></section>}
-    </div>}
-  </div>;
+  const router = useRouter(); const [notifications, setNotifications] = useState<Notification[]>([]); const [loading, setLoading] = useState(true); const [error, setError] = useState(''); const [tab, setTab] = useState('all'); const [busy, setBusy] = useState(false);
+  const load = () => { setLoading(true); setError(''); apiFetchList<Notification>('/notifications').then(data => setNotifications(data.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()))).catch(err => setError(err instanceof Error ? err.message : 'Не удалось загрузить уведомления.')).finally(() => setLoading(false)); };
+  useEffect(() => { load(); }, []);
+  const filtered = useMemo(() => notifications.filter(notification => tab === 'all' ? true : tab === 'unread' ? !notification.isRead : tabTypes[tab]?.includes(notification.type)), [notifications, tab]);
+  const grouped = useMemo(() => ['Сегодня', 'Вчера', 'Ранее'].map(label => ({ label, items: filtered.filter(item => groupName(item.createdAt) === label) })).filter(group => group.items.length), [filtered]);
+  const unread = notifications.filter(item => !item.isRead).length; const typeStats = notifications.reduce<Record<string, number>>((result, item) => { result[item.type] = (result[item.type] || 0) + 1; return result; }, {});
+  const openNotification = async (notification: Notification) => { if (!notification.isRead) { await markNotificationRead(notification.id); setNotifications(current => current.map(item => item.id === notification.id ? { ...item, isRead: true } : item)); } if (notification.deepLink?.startsWith('/')) router.push(notification.deepLink); };
+  const markEverythingRead = async () => { setBusy(true); try { await markAllRead(); setNotifications(current => current.map(item => ({ ...item, isRead: true }))); } catch (err) { setError(err instanceof Error ? err.message : 'Не удалось обновить уведомления.'); } finally { setBusy(false); } };
+  const item = (notification: Notification) => <article key={notification.id} onClick={() => void openNotification(notification)} className={`group cursor-pointer rounded-2xl border p-4 transition hover:border-indigo-300 hover:shadow-sm ${notification.isRead ? 'border-slate-200 bg-white' : 'border-indigo-200 bg-indigo-50/30'}`}><div className="flex items-start gap-3"><div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${notification.isRead ? 'bg-slate-100 text-slate-500' : 'bg-indigo-100 text-indigo-600'}`}><Icon name={icons[notification.type] || 'Bell'} className="h-5 w-5"/></div><div className="min-w-0 flex-1"><div className="flex items-start justify-between gap-3"><div className="flex min-w-0 items-center gap-2"><h2 className="truncate text-sm font-semibold text-slate-900">{notification.title}</h2>{!notification.isRead && <span className="h-2 w-2 shrink-0 rounded-full bg-indigo-600" aria-label="Непрочитано"/>}</div><time className="shrink-0 text-xs text-slate-400">{ago(notification.createdAt)}</time></div><p className="mt-1 text-sm leading-6 text-slate-600">{notification.body}</p>{ctaLabel(notification) && <span className="mt-3 inline-flex text-xs font-semibold text-indigo-600 group-hover:text-indigo-700">{ctaLabel(notification)} →</span>}</div></div></article>;
+  return <div className="mx-auto max-w-[1400px] space-y-6"><header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-medium text-slate-400">НаПаре / Уведомления</p><h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">Уведомления</h1><p className="mt-2 text-sm text-slate-500">{unread ? `${unread} непрочитанных` : 'Все уведомления прочитаны'}</p></div>{unread > 0 && <Button variant="ghost" size="sm" loading={busy} onClick={() => void markEverythingRead()}>Отметить все прочитанными</Button>}</header><div className="flex gap-1 overflow-x-auto rounded-2xl border border-slate-200 bg-white p-1" role="tablist" aria-label="Фильтр уведомлений">{tabs.map(([id, label]) => <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)} className={`min-h-10 shrink-0 rounded-xl px-3 text-sm font-semibold transition ${tab === id ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`}>{label}{id === 'unread' && unread > 0 && <span className={`ml-2 rounded-full px-1.5 py-0.5 text-[10px] ${tab === id ? 'bg-white/20' : 'bg-indigo-50 text-indigo-600'}`}>{unread}</span>}</button>)}</div>{loading ? <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_300px]"><div className="space-y-3">{[1,2,3].map(i => <Skeleton key={i} className="h-28 rounded-2xl"/>)}</div></div> : error ? <RequestState title="Не удалось загрузить уведомления" description={error} onRetry={load}/> : <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_300px]"><section className="space-y-7">{grouped.length ? grouped.map(group => <div key={group.label}><h2 className="mb-3 text-xs font-bold uppercase tracking-widest text-slate-400">{group.label}</h2><div className="space-y-3">{group.items.map(item)}</div></div>) : <EmptyState icon={<Icon name="Bell" className="h-8 w-8"/>} title="Уведомлений не найдено" description="Попробуйте выбрать другой фильтр."/>}</section><aside className="hidden space-y-4 xl:block"><section className="student-panel p-5"><h2 className="text-base font-bold text-slate-950">Статистика</h2><div className="mt-4 grid gap-3"><div className="rounded-xl bg-slate-50 p-3"><p className="text-2xl font-bold text-slate-900">{notifications.length}</p><p className="text-xs text-slate-500">Всего уведомлений</p></div><div className="rounded-xl bg-indigo-50 p-3"><p className="text-2xl font-bold text-indigo-700">{unread}</p><p className="text-xs text-slate-500">Непрочитанных</p></div></div></section><section className="student-panel p-5"><h2 className="text-base font-bold text-slate-950">Последняя активность</h2><div className="mt-3 space-y-3">{notifications.slice(0, 4).map(notification => <div key={notification.id} className="flex gap-2 text-xs"><span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-indigo-400"/><p className="line-clamp-2 text-slate-600">{notification.title}</p></div>)}</div></section><div className="text-xs text-slate-400">Расписание: {typeStats.schedule_change || 0} · Задания: {typeStats.new_homework || 0} · Система: {typeStats.system || 0}</div></aside></div>}</div>;
 }

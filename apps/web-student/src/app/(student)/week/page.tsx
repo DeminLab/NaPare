@@ -3,112 +3,24 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { apiFetchList } from '@/lib/api';
-import { Card, Badge, RequestState, Skeleton } from '@/components/ui';
+import { EmptyState, RequestState, Skeleton } from '@/components/ui';
 
-interface Lesson { id: string; subject: string; subjectType: string; teacherName: string; room: string; startTime: string; endTime: string; pairNumber: number; isChanged: boolean; groupName: string; }
+interface Lesson { id: string; date?: string; subject: string; subjectType?: string; teacherName?: string; room?: string; startTime: string; endTime: string; pairNumber?: number; isChanged: boolean; changeDescription?: string; }
 interface DaySchedule { date: string; dayName: string; lessons: Lesson[]; }
-
 const typeLabels: Record<string, string> = { lecture: 'Лекция', practice: 'Практика', lab: 'Лабораторная', exam: 'Экзамен', consultation: 'Консультация', coursework: 'Курсовая', test: 'Зачёт' };
-const time = (value: string) => value?.includes('T') ? value.slice(11, 16) : value || '—';
+const time = (value?: string) => value?.includes('T') ? value.slice(11, 16) : value || '—';
+const dateIso = (date: Date) => { const local = new Date(date); local.setHours(12, 0, 0, 0); return local.toISOString().split('T')[0]; };
+const weekStart = (base: Date) => { const date = new Date(base); const day = date.getDay(); date.setDate(date.getDate() - day + (day === 0 ? -6 : 1)); return date; };
+const rangeLabel = (start: Date, end: Date) => `${start.toLocaleDateString('ru-RU', { day: 'numeric' })}–${end.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}`;
+const isCancelled = (lesson: Lesson) => lesson.changeDescription?.toLowerCase().includes('отмен') || false;
 
-function getWeekDates(baseDate: Date): { start: Date; end: Date } {
-  const d = new Date(baseDate);
-  const day = d.getDay();
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-  const start = new Date(d.setDate(diff));
-  const end = new Date(start);
-  end.setDate(end.getDate() + 5);
-  return { start, end };
-}
-function formatMonth(date: Date): string {
-  return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
-}
-
-function formatDateShort(dateStr: string): string {
-  const d = new Date(dateStr);
-  return d.toLocaleDateString('ru-RU', { weekday: 'short', day: 'numeric' });
-}
+function LessonCard({ lesson, compact = false }: { lesson: Lesson; compact?: boolean }) { const cancelled = isCancelled(lesson); return <Link href={`/pair-space/${lesson.id}`} className={`group block rounded-xl border bg-white transition hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-md ${cancelled ? 'border-rose-200 opacity-70' : lesson.isChanged ? 'border-amber-200' : 'border-slate-200'} ${compact ? 'p-2.5' : 'p-4'}`}><div className="flex items-start justify-between gap-2"><span className="font-mono text-xs font-semibold text-slate-500">{time(lesson.startTime)}–{time(lesson.endTime)}</span><span className="text-slate-300 transition group-hover:text-indigo-500">↗</span></div><p className={`mt-2 truncate font-semibold text-slate-900 ${compact ? 'text-xs' : 'text-sm'}`}>{lesson.subject}</p><div className="mt-2 space-y-1 text-[11px] text-slate-500"><p className="truncate">{lesson.teacherName || 'Преподаватель не указан'}</p><p>{lesson.room ? `Аудитория ${lesson.room}` : 'Аудитория не указана'}</p></div><div className="mt-3 flex flex-wrap gap-1.5">{lesson.subjectType && <span className="rounded-md bg-slate-100 px-2 py-1 text-[10px] font-medium text-slate-600">{typeLabels[lesson.subjectType] || lesson.subjectType}</span>}{lesson.isChanged && <span className={`rounded-md px-2 py-1 text-[10px] font-semibold ${cancelled ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700'}`}>{cancelled ? 'Отменено' : 'Изменено'}</span>}</div></Link>; }
 
 export default function WeekPage() {
-  const [weekStart, setWeekStart] = useState(() => getWeekDates(new Date()).start);
-  const [schedule, setSchedule] = useState<DaySchedule[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [view, setView] = useState<'list' | 'grid'>('list');
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    const end = new Date(weekStart); end.setDate(end.getDate() + 5);
-    const startDate = weekStart.toISOString().split('T')[0];
-    const endDate = end.toISOString().split('T')[0];
-    setLoading(true); setError('');
-    apiFetchList<Lesson>(`/schedule/range?startDate=${startDate}&endDate=${endDate}`)
-      .then(lessons => {
-        const days: DaySchedule[] = [];
-        for (let i = 0; i < 6; i++) {
-          const d = new Date(weekStart); d.setDate(d.getDate() + i);
-          const dateStr = d.toISOString().split('T')[0];
-          const dayNames = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
-          days.push({ date: dateStr, dayName: dayNames[d.getDay()], lessons: lessons.filter(l => l.startTime?.startsWith(dateStr)) });
-        }
-        setSchedule(days);
-      })
-      .catch(err => setError(err instanceof Error ? err.message : 'Не удалось загрузить расписание.'))
-      .finally(() => setLoading(false));
-  }, [weekStart]);
-
-  const weekEnd = new Date(weekStart);
-  weekEnd.setDate(weekEnd.getDate() + 5);
-  const timeSlots = useMemo(() => Array.from(new Set(schedule.flatMap(day => day.lessons.map(lesson => time(lesson.startTime))))).sort(), [schedule]);
-
-  const lessonCard = (lesson: Lesson, compact = false) => (
-    <Link key={lesson.id} href={`/pair-space/${lesson.id}`}>
-      <Card hover padding="sm" className={`h-full ${lesson.isChanged ? 'border-amber-300 bg-amber-50/50' : ''}`}>
-        <div className={compact ? 'space-y-1' : 'flex items-center gap-3'}>
-          <p className={`font-semibold text-slate-900 ${compact ? 'text-xs' : 'w-14 shrink-0 text-sm'}`}>{time(lesson.startTime)}</p>
-          <div className="min-w-0 flex-1">
-            <div className={`flex ${compact ? 'flex-col gap-1' : 'items-center gap-2'}`}>
-              <span className={`truncate font-medium text-slate-900 ${compact ? 'text-xs' : ''}`}>{lesson.subject}</span>
-              <Badge variant="subject" size="sm">{typeLabels[lesson.subjectType] || lesson.subjectType}</Badge>
-            </div>
-            {!compact && <div className="mt-0.5 flex gap-3 text-xs text-slate-500">{lesson.teacherName && <span>{lesson.teacherName}</span>}{lesson.room && <span>а. {lesson.room}</span>}</div>}
-          </div>
-        </div>
-      </Card>
-    </Link>
-  );
-
-  const lessonRow = (lesson: Lesson) => (
-    <Link key={lesson.id} href={`/pair-space/${lesson.id}`} className="group grid grid-cols-[64px_1fr_auto] items-center gap-4 border-b border-slate-200 px-2 py-3.5 last:border-0 hover:bg-slate-50 sm:grid-cols-[76px_1fr_auto] sm:gap-6">
-      <span className="font-mono text-sm font-semibold text-slate-600">{time(lesson.startTime)}</span>
-      <div className="min-w-0">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="truncate text-sm font-semibold text-slate-900">{lesson.subject}</span>
-          <Badge variant="subject" size="sm">{typeLabels[lesson.subjectType] || lesson.subjectType}</Badge>
-        </div>
-        <p className="mt-1 truncate text-xs text-slate-500">{lesson.teacherName || 'Преподаватель не указан'}{lesson.room ? ` · ${lesson.room}` : ''}</p>
-      </div>
-      <span className="text-lg font-medium text-indigo-600 opacity-0 transition-opacity group-hover:opacity-100" aria-hidden="true">→</span>
-    </Link>
-  );
-
-  return (
-    <div className="mx-auto max-w-6xl space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <button onClick={() => { const d = new Date(weekStart); d.setDate(d.getDate() - 7); setWeekStart(d); }} className="rounded-xl p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700" aria-label="Предыдущая неделя">←</button>
-        <div className="text-center"><h1 className="ds-section-title text-slate-900">{formatMonth(weekStart)} — {formatMonth(weekEnd)}</h1><p className="ds-meta mt-1 text-slate-500">Расписание на неделю</p></div>
-        <button onClick={() => { const d = new Date(weekStart); d.setDate(d.getDate() + 7); setWeekStart(d); }} className="rounded-xl p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700" aria-label="Следующая неделя">→</button>
-      </div>
-
-      <div className="flex justify-end"><div className="flex gap-1 rounded-xl bg-slate-100 p-1" role="group" aria-label="Вид расписания">
-        <button onClick={() => setView('list')} className={`rounded-lg px-3 py-2 text-sm font-medium transition-all ${view === 'list' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Список</button>
-        <button onClick={() => setView('grid')} className={`rounded-lg px-3 py-2 text-sm font-medium transition-all ${view === 'grid' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Расписание</button>
-      </div></div>
-
-      {loading ? <div className="space-y-4">{[1, 2, 3].map(i => <Card key={i}><Skeleton className="h-20" /></Card>)}</div> : error ? <RequestState title="Не удалось загрузить расписание" description={error} onRetry={() => setWeekStart(new Date(weekStart))} /> : view === 'list' ? (
-        <div className="space-y-8">{schedule.map(day => <section key={day.date}><div className="mb-1 flex items-baseline gap-3 border-b border-slate-300 pb-3"><h2 className="text-sm font-bold text-slate-900">{day.dayName}</h2><span className="text-sm text-slate-400">{formatDateShort(day.date)}</span>{day.lessons.length > 0 && <span className="text-xs text-slate-400">{day.lessons.length} пар</span>}</div>{day.lessons.length === 0 ? <div className="border-b border-dashed border-slate-200 px-2 py-5 text-sm text-slate-400">Нет пар</div> : <div>{day.lessons.map(lesson => lessonRow(lesson))}</div>}</section>)}</div>
-      ) : (
-        <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm"><div className="min-w-[920px]"><div className="grid grid-cols-[72px_repeat(6,minmax(0,1fr))] border-b border-slate-200 bg-slate-50"><div className="p-3" />{schedule.map(day => <div key={day.date} className="border-l border-slate-200 p-3 text-center"><p className="text-xs font-bold uppercase tracking-wide text-slate-700">{day.dayName.slice(0, 2)}</p><p className="mt-1 text-xs text-slate-400">{new Date(day.date).getDate()}</p></div>)}</div>{timeSlots.length === 0 ? <div className="p-12 text-center text-sm text-slate-400">На этой неделе пар нет</div> : timeSlots.map(slot => <div key={slot} className="grid grid-cols-[72px_repeat(6,minmax(0,1fr))] border-b border-slate-100 last:border-0"><div className="p-3 text-right text-xs font-semibold text-slate-400">{slot}</div>{schedule.map(day => <div key={day.date} className="min-h-24 border-l border-slate-100 p-2">{day.lessons.filter(lesson => time(lesson.startTime) === slot).map(lesson => lessonCard(lesson, true))}</div>)}</div>)}</div></div>
-      )}
-    </div>
-  );
+  const [start, setStart] = useState(() => weekStart(new Date())); const [schedule, setSchedule] = useState<DaySchedule[]>([]); const [loading, setLoading] = useState(true); const [error, setError] = useState(''); const [view, setView] = useState<'week' | 'list'>('week'); const [filter, setFilter] = useState('all'); const [search, setSearch] = useState('');
+  const end = new Date(start); end.setDate(end.getDate() + 5); const today = dateIso(new Date());
+  useEffect(() => { const endDate = new Date(start); endDate.setDate(endDate.getDate() + 5); setLoading(true); setError(''); apiFetchList<Lesson>(`/schedule/range?startDate=${dateIso(start)}&endDate=${dateIso(endDate)}`).then(lessons => { const names = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота']; setSchedule(Array.from({ length: 6 }, (_, index) => { const day = new Date(start); day.setDate(day.getDate() + index); const iso = dateIso(day); return { date: iso, dayName: names[day.getDay()], lessons: lessons.filter(lesson => lesson.startTime?.startsWith(iso) || lesson.date === iso).sort((a, b) => time(a.startTime).localeCompare(time(b.startTime))) }; })); }).catch(err => setError(err instanceof Error ? err.message : 'Не удалось загрузить расписание.')).finally(() => setLoading(false)); }, [start]);
+  const filtered = useMemo(() => schedule.map(day => ({ ...day, lessons: day.lessons.filter(lesson => (filter === 'all' || lesson.subjectType === filter) && (!search || `${lesson.subject} ${lesson.teacherName || ''} ${lesson.room || ''}`.toLowerCase().includes(search.toLowerCase()))) })), [schedule, filter, search]);
+  const resetToday = () => setStart(weekStart(new Date()));
+  return <div className="mx-auto max-w-[1400px] space-y-6"><header><p className="text-xs font-medium text-slate-400">НаПаре / Расписание</p><div className="mt-2 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"><div><h1 className="text-3xl font-bold tracking-tight text-slate-950">Расписание</h1><p className="mt-2 text-sm capitalize text-slate-500">{rangeLabel(start, end)}</p></div><div className="flex items-center gap-2"><button onClick={() => { const next = new Date(start); next.setDate(next.getDate() - 7); setStart(next); }} className="h-11 w-11 rounded-xl border border-slate-200 bg-white text-lg text-slate-600 hover:bg-slate-50" aria-label="Предыдущая неделя">‹</button><button onClick={resetToday} className="h-11 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50">Сегодня</button><button onClick={() => { const next = new Date(start); next.setDate(next.getDate() + 7); setStart(next); }} className="h-11 w-11 rounded-xl border border-slate-200 bg-white text-lg text-slate-600 hover:bg-slate-50" aria-label="Следующая неделя">›</button></div></div></header><section className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-3 sm:p-4 lg:flex-row lg:items-center"><div className="flex gap-1 rounded-xl bg-slate-100 p-1" role="group" aria-label="Вид расписания"><button onClick={() => setView('week')} className={`rounded-lg px-4 py-2 text-sm font-semibold ${view === 'week' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>Неделя</button><button onClick={() => setView('list')} className={`rounded-lg px-4 py-2 text-sm font-semibold ${view === 'list' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>Список</button></div><div className="flex flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:justify-end"><label className="relative flex-1 sm:max-w-xs"><span className="sr-only">Поиск</span><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Поиск по предметам…" className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm outline-none focus:border-indigo-400 focus:bg-white focus:ring-4 focus:ring-indigo-100"/></label><select value={filter} onChange={event => setFilter(event.target.value)} className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-indigo-400" aria-label="Фильтр по типу занятия"><option value="all">Все</option><option value="lecture">Лекции</option><option value="practice">Практика</option><option value="lab">Лабораторные</option></select><label className="flex h-11 items-center rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-600"><span className="mr-2 text-xs text-slate-400">Дата</span><input type="date" value={dateIso(start)} onChange={event => { const value = event.target.value; if (value) setStart(weekStart(new Date(`${value}T12:00:00`))); }} className="bg-transparent text-sm outline-none" aria-label="Выбрать дату недели"/></label></div></section>{loading ? <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">{Array.from({ length: 6 }, (_, i) => <div key={i} className="rounded-2xl border border-slate-200 bg-white p-4"><Skeleton className="h-5 w-24"/><Skeleton className="mt-5 h-28"/><Skeleton className="mt-3 h-24"/></div>)}</div> : error ? <RequestState title="Не удалось загрузить расписание" description={error} onRetry={() => setStart(new Date(start))}/> : view === 'list' ? <div className="space-y-6">{filtered.map(day => <section key={day.date} className={`rounded-2xl border bg-white ${day.date === today ? 'border-indigo-300 ring-2 ring-indigo-50' : 'border-slate-200'}`}><div className="flex items-center justify-between border-b border-slate-100 px-5 py-4"><div><h2 className="font-bold text-slate-900">{day.dayName}</h2><p className="mt-1 text-xs text-slate-500">{new Date(`${day.date}T12:00:00`).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}</p></div><span className="text-xs text-slate-400">{day.lessons.length} пар</span></div><div className="p-4">{day.lessons.length ? <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{day.lessons.map(lesson => <LessonCard key={lesson.id} lesson={lesson}/>)}</div> : <p className="py-4 text-sm text-slate-400">Нет пар</p>}</div></section>)}</div> : <><div className="hidden overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm lg:block"><div className="grid min-w-[980px] grid-cols-[72px_repeat(6,minmax(145px,1fr))]"><div className="border-b border-slate-100 bg-slate-50 p-3"/>{filtered.map(day => <div key={day.date} className={`border-b border-l border-slate-200 p-3 text-center ${day.date === today ? 'bg-indigo-50' : 'bg-slate-50'}`}><p className="text-xs font-bold uppercase tracking-wide text-slate-700">{day.dayName.slice(0, 2)}</p><p className={`mt-1 text-sm font-semibold ${day.date === today ? 'text-indigo-600' : 'text-slate-500'}`}>{new Date(`${day.date}T12:00:00`).getDate()}</p></div>)}{Array.from(new Set(filtered.flatMap(day => day.lessons.map(lesson => time(lesson.startTime))))).sort().map(slot => <div key={slot} className="contents"><div className="border-b border-slate-100 p-3 text-right font-mono text-xs text-slate-400">{slot}</div>{filtered.map(day => <div key={`${day.date}-${slot}`} className={`min-h-32 border-b border-l border-slate-100 p-2 ${day.date === today ? 'bg-indigo-50/30' : ''}`}>{day.lessons.filter(lesson => time(lesson.startTime) === slot).map(lesson => <LessonCard key={lesson.id} lesson={lesson} compact/>)}</div>)}</div>)}</div></div><div className="space-y-5 lg:hidden">{filtered.map(day => <section key={day.date} className={`rounded-2xl border bg-white ${day.date === today ? 'border-indigo-300 ring-2 ring-indigo-50' : 'border-slate-200'}`}><div className={`flex items-center justify-between px-4 py-3 ${day.date === today ? 'bg-indigo-50' : 'bg-slate-50'}`}><div><h2 className="font-bold text-slate-900">{day.dayName}</h2><p className="text-xs text-slate-500">{new Date(`${day.date}T12:00:00`).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}</p></div><span className="text-xs text-slate-400">{day.lessons.length} пар</span></div><div className="relative space-y-3 p-4 before:absolute before:bottom-5 before:left-[4.75rem] before:top-5 before:w-px before:bg-slate-200">{day.lessons.length ? day.lessons.map(lesson => <div key={lesson.id} className="relative grid grid-cols-[55px_1fr] gap-3"><div className="pt-3 text-right font-mono text-xs font-semibold text-slate-500">{time(lesson.startTime)}</div><div><LessonCard lesson={lesson}/></div></div>) : <p className="py-4 text-sm text-slate-400">Нет пар</p>}</div></section>)}</div></>}</div>;
 }

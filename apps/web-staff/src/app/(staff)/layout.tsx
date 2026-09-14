@@ -1,114 +1,66 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { isLoggedIn, getUser, logout, getUnreadCount } from '@/lib/api';
-import { Avatar } from '@/components/ui';
+import { usePathname, useRouter } from 'next/navigation';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { getNotifications, getUnreadCount, getUser, isLoggedIn, logout } from '@/lib/api';
+import { Avatar, Button } from '@/components/ui';
 
-const navItems = [
-  { href: '/today', label: 'Сегодня', icon: '📅' },
-  { href: '/week', label: 'Неделя', icon: '📆' },
-  { href: '/groups', label: 'Группы', icon: '👥' },
-  { href: '/attendance', label: 'Посещаемость', icon: '✅' },
-  { href: '/notifications', label: 'Уведомления', icon: '🔔' },
-  { href: '/profile', label: 'Профиль', icon: '👤' },
+type NavItem = { href: string; label: string; icon: string; badge?: boolean };
+type NavGroup = { label: string; items: NavItem[] };
+
+const groups: NavGroup[] = [
+  { label: 'Главное', items: [{ href: '/today', label: 'Сегодня', icon: '◷' }, { href: '/week', label: 'Расписание', icon: '▦' }] },
+  { label: 'Учёба', items: [{ href: '/groups', label: 'Группы', icon: '♧' }, { href: '/attendance', label: 'Посещаемость', icon: '✓' }, { href: '/pair-space', label: 'Пространства пар', icon: '□' }] },
+  { label: 'Общение', items: [{ href: '/notifications', label: 'Уведомления', icon: '◉', badge: true }] },
+  { label: 'Аккаунт', items: [{ href: '/profile', label: 'Профиль', icon: '○' }, { href: '/settings', label: 'Настройки', icon: '⚙' }] },
 ];
 
-export default function StaffLayout({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
+const mobileItems = [groups[0].items[0], groups[0].items[1], groups[1].items[0], groups[2].items[0], groups[3].items[0]];
+
+const pageTitles: Record<string, string> = Object.fromEntries(groups.flatMap((group) => group.items.map((item) => [item.href, item.label])));
+
+function NavGlyph({ symbol }: { symbol: string }) {
+  return <span aria-hidden="true" className="flex h-5 w-5 items-center justify-center text-[17px] leading-none">{symbol}</span>;
+}
+
+export default function StaffLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const [user, setUser] = useState<any>(null);
+  const router = useRouter();
+  const [user, setUser] = useState<{ firstName: string; lastName: string } | null>(null);
   const [unread, setUnread] = useState(0);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [notifications, setNotifications] = useState<Array<{ id?: string; title?: string; message?: string; createdAt?: string }>>([]);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [query, setQuery] = useState('');
 
   useEffect(() => {
     if (!isLoggedIn()) { router.push('/login'); return; }
-    getUser().then(u => { setUser(u); }).catch(() => { router.push('/login'); });
-    getUnreadCount().then(c => setUnread(c)).catch(() => {});
+    getUser().then(setUser).catch(() => router.push('/login'));
+    getUnreadCount().then(setUnread).catch(() => undefined);
+    getNotifications().then((items) => setNotifications(items.slice(0, 3))).catch(() => undefined);
   }, [router]);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      getUnreadCount().then(c => setUnread(c)).catch(() => {});
-    }, 30000);
-    return () => clearInterval(interval);
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); setPaletteOpen(true); }
+      if (event.key === 'Escape') { setPaletteOpen(false); setNotificationsOpen(false); setProfileOpen(false); }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  if (!user) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-purple-500 border-t-transparent" />
-      </div>
-    );
-  }
+  const title = pageTitles[pathname] || (pathname.startsWith('/pair-space') ? 'Пространство пары' : 'Сегодня');
+  const allItems = useMemo(() => groups.flatMap((group) => group.items), []);
+  const filteredItems = allItems.filter((item) => item.label.toLowerCase().includes(query.toLowerCase()));
+  const fullName = user ? `${user.firstName} ${user.lastName}` : '';
 
-  return (
-    <div className="flex min-h-screen bg-slate-50">
-      {sidebarOpen && (
-        <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setSidebarOpen(false)} />
-      )}
+  const isActive = (item: NavItem) => pathname === item.href || (item.href === '/pair-space' && pathname.startsWith('/pair-space/'));
+  const renderLink = (item: NavItem, mobile = false) => <Link href={item.href} onClick={() => setDrawerOpen(false)} title={mobile ? undefined : item.label} className={`group flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${mobile ? 'justify-center px-1 text-[10px] leading-4' : ''} ${isActive(item) ? 'bg-sky-50 text-sky-700' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}><NavGlyph symbol={item.icon} /><span className={mobile ? 'truncate' : ''}>{item.label}</span>{item.badge && unread > 0 && <span className={`${mobile ? 'absolute right-2 top-0' : 'ml-auto'} rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold text-white`}>{unread > 99 ? '99+' : unread}</span>}</Link>;
 
-      <aside className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-slate-200 bg-white transition-transform lg:translate-x-0 lg:static ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="flex h-16 items-center gap-3 border-b border-slate-100 px-6">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500 to-sky-600 text-xs font-bold text-white">НП</div>
-          <span className="text-lg font-bold text-slate-900">НаПаре</span>
-        </div>
-        <nav className="flex-1 space-y-1 p-3">
-          {navItems.map((item) => {
-            const active = pathname === item.href;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setSidebarOpen(false)}
-                className={`flex min-h-11 items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium transition-all ${
-                  active ? 'bg-purple-50 text-purple-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                }`}
-              >
-                <span className="text-base">{item.icon}</span>
-                {item.label}
-                {item.href === '/notifications' && unread > 0 && (
-                  <span className="ml-auto rounded-full bg-red-500 px-2 py-0.5 text-xs font-semibold text-white">{unread}</span>
-                )}
-              </Link>
-            );
-          })}
-        </nav>
-        <div className="border-t border-slate-100 p-3">
-          <button onClick={logout} className="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium text-slate-500 hover:bg-red-50 hover:text-red-600 transition-all">
-            <span className="text-base">🚪</span>
-            Выйти
-          </button>
-        </div>
-      </aside>
+  if (!user) return <div className="flex min-h-screen items-center justify-center bg-slate-50 text-sm text-slate-500">Загрузка…</div>;
 
-      <div className="flex flex-1 flex-col">
-        <header className="flex h-16 items-center justify-between border-b border-slate-200 bg-white px-4 lg:px-6">
-          <button onClick={() => setSidebarOpen(true)} className="flex h-11 w-11 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 lg:hidden" aria-label="Открыть меню">
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-            </svg>
-          </button>
-          <div className="hidden lg:block" />
-          <div className="flex items-center gap-3">
-            <Link href="/notifications" className="relative flex h-11 w-11 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100" aria-label="Уведомления">
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
-              </svg>
-              {unread > 0 && (
-                <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">{unread > 9 ? '9+' : unread}</span>
-              )}
-            </Link>
-            <Link href="/profile" className="flex items-center gap-2">
-              <Avatar name={`${user.firstName} ${user.lastName}`} size="sm" />
-              <span className="hidden text-sm font-medium text-slate-700 lg:block">{user.firstName}</span>
-            </Link>
-          </div>
-        </header>
-
-        <main className="flex-1 p-4 lg:p-6">{children}</main>
-      </div>
-    </div>
-  );
+  return <div className="flex min-h-screen bg-slate-50"><div className={`fixed inset-0 z-40 bg-slate-950/40 backdrop-blur-sm lg:hidden ${drawerOpen ? 'block' : 'hidden'}`} onClick={() => setDrawerOpen(false)} /><aside className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-slate-200 bg-white transition-transform duration-200 lg:static lg:w-64 lg:translate-x-0 ${drawerOpen ? 'translate-x-0' : '-translate-x-full'}`}><div className="flex h-16 items-center border-b border-slate-100 px-4"><Link href="/today" className="flex items-center gap-2.5 rounded-lg font-bold text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-600 text-sm text-white">Н</span><span>НаПаре</span></Link></div><nav className="flex-1 space-y-5 overflow-y-auto p-3" aria-label="Основная навигация">{groups.map((group) => <div key={group.label}><p className="mb-1 px-3 text-[10px] font-bold uppercase tracking-widest text-slate-400">{group.label}</p><div className="space-y-1">{group.items.map((item) => <div key={item.href}>{renderLink(item)}</div>)}</div></div>)}</nav><div className="relative border-t border-slate-100 p-3"><button type="button" onClick={() => setProfileOpen((value) => !value)} aria-expanded={profileOpen} className="flex w-full items-center gap-3 rounded-xl p-2 text-left transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"><Avatar name={fullName} size="sm" /><span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold text-slate-800">{fullName}</span><span className="block text-xs text-slate-400">Преподаватель</span></span><span aria-hidden="true" className="text-slate-400">⌄</span></button>{profileOpen && <div className="absolute bottom-20 left-3 right-3 z-50 rounded-xl border border-slate-200 bg-white p-1 shadow-xl"><Link href="/profile" className="block rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-100">Профиль</Link><Link href="/settings" className="block rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-100">Настройки</Link><a href="mailto:support@napare.ru" className="block rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-100">Помощь</a><button type="button" onClick={logout} className="block w-full rounded-lg px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50">Выйти</button></div>}</div></aside><div className="min-w-0 flex-1"><header className="sticky top-0 z-30 flex min-h-16 items-center gap-3 border-b border-slate-200 bg-white/90 px-4 py-2 backdrop-blur lg:px-7"><button type="button" onClick={() => setDrawerOpen(true)} className="h-11 w-11 rounded-lg text-xl text-slate-500 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 lg:hidden" aria-label="Открыть меню">☰</button><div className="min-w-0 shrink-0"><div className="text-xs text-slate-400">НаПаре <span aria-hidden="true">/</span></div><h1 className="truncate text-base font-bold text-slate-900">{title}</h1></div><button type="button" onClick={() => setPaletteOpen(true)} className="ml-auto hidden h-10 min-w-0 max-w-xl flex-1 items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 text-left text-sm text-slate-400 hover:border-sky-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 lg:flex" aria-label="Открыть глобальный поиск"><span className="truncate">Поиск по расписанию, группам и заданиям</span><kbd className="ml-3 rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[10px]">Ctrl/⌘ K</kbd></button><span className="hidden text-sm text-slate-500 xl:block">{new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}</span><div className="relative"><button type="button" onClick={() => setNotificationsOpen((value) => !value)} className="relative flex h-11 w-11 items-center justify-center rounded-xl text-lg text-slate-500 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500" aria-label="Открыть уведомления" aria-expanded={notificationsOpen}>♧{unread > 0 && <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-red-500" />}</button>{notificationsOpen && <div className="absolute right-0 top-12 z-50 w-[min(22rem,calc(100vw-2rem))] rounded-2xl border border-slate-200 bg-white p-4 shadow-xl"><div className="flex items-center justify-between"><p className="font-semibold text-slate-900">Последние уведомления</p><span className="text-xs text-slate-400">{unread} непрочитанных</span></div>{notifications.length ? <div className="mt-3 divide-y divide-slate-100">{notifications.map((notification, index) => <div key={notification.id || index} className="py-3 first:pt-1"><p className="text-sm font-medium text-slate-800">{notification.title || notification.message || 'Новое уведомление'}</p>{notification.createdAt && <p className="mt-1 text-xs text-slate-400">{new Date(notification.createdAt).toLocaleDateString('ru-RU')}</p>}</div>)}</div> : <p className="mt-3 text-sm text-slate-500">Новых уведомлений нет.</p>}<Link href="/notifications" className="mt-3 block text-sm font-semibold text-sky-600 hover:text-sky-700">Открыть все уведомления →</Link></div>}</div><Link href="/profile" className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500" aria-label="Открыть профиль"><Avatar name={fullName} size="sm" /></Link></header><main className="ds-page-enter mx-auto min-h-[calc(100vh-4rem)] w-full max-w-[1400px] p-4 pb-24 sm:p-6 lg:p-7 lg:pb-7">{children}</main></div><nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-slate-200 bg-white/95 px-1 py-1.5 backdrop-blur lg:hidden" aria-label="Мобильная навигация">{mobileItems.map((item) => <div key={item.href} className="relative">{renderLink(item, true)}</div>)}</nav>{paletteOpen && <div className="fixed inset-0 z-[60] bg-slate-950/40 p-4 pt-[12vh]" onClick={() => setPaletteOpen(false)}><div role="dialog" aria-modal="true" aria-label="Command Palette" className="mx-auto max-w-lg overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl" onClick={(event) => event.stopPropagation()}><div className="flex items-center gap-2 border-b border-slate-100 px-4"><span className="text-lg text-slate-400">⌕</span><input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} className="h-14 w-full text-sm outline-none" placeholder="Перейти к разделу…" aria-label="Поиск раздела" /></div><div className="max-h-80 overflow-y-auto p-2">{filteredItems.map((item) => <Link key={item.href} href={item.href} onClick={() => { setPaletteOpen(false); setQuery(''); }} className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-slate-700 hover:bg-slate-100"><NavGlyph symbol={item.icon} />{item.label}<span className="ml-auto text-xs text-slate-400">Перейти</span></Link>)}{!filteredItems.length && <p className="px-3 py-5 text-center text-sm text-slate-500">Ничего не найдено</p>}</div><div className="border-t border-slate-100 px-4 py-3 text-xs text-slate-400">Ctrl/⌘ K — открыть · Esc — закрыть</div></div></div>}</div>;
 }

@@ -1,175 +1,48 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useEffect, useMemo, useState } from 'react';
 import { apiFetchList } from '@/lib/api';
-import { Card, Badge, Skeleton, RequestState } from '@/components/ui';
+import { Badge, Button, Card, EmptyState, RequestState, Skeleton } from '@/components/ui';
 
-interface Lesson {
-  id: string;
-  subject: string;
-  subjectType: string;
-  room: string;
-  startTime: string;
-  endTime: string;
-  pairNumber: number;
-  isChanged: boolean;
-  groupName: string;
+interface Lesson { id: string; subject: string; subjectType: string; room: string; startTime: string; endTime: string; groupName: string; isChanged: boolean; }
+interface DaySchedule { date: string; dayName: string; lessons: Lesson[]; }
+
+const typeLabels: Record<string, string> = { lecture: 'Лекция', practice: 'Практика', lab: 'Лабораторная', exam: 'Экзамен', consultation: 'Консультация', coursework: 'Курсовая', test: 'Зачёт' };
+const typeVariants: Record<string, 'sky' | 'green' | 'amber' | 'pink' | 'purple' | 'indigo' | 'teal'> = { lecture: 'sky', practice: 'green', lab: 'amber', exam: 'pink', consultation: 'purple', coursework: 'indigo', test: 'teal' };
+const weekDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+
+function getWeekStart(date: Date) {
+  const start = new Date(date); const day = start.getDay();
+  start.setDate(start.getDate() - (day === 0 ? 6 : day - 1)); start.setHours(0, 0, 0, 0); return start;
 }
 
-interface DaySchedule {
-  date: string;
-  dayName: string;
-  lessons: Lesson[];
-}
-
-const typeLabels: Record<string, string> = {
-  lecture: 'Лекция', practice: 'Практика', lab: 'Лабораторная',
-  exam: 'Экзамен', consultation: 'Консультация', coursework: 'Курсовая', test: 'Зачёт',
-};
-
-const typeBadgeVariant: Record<string, 'sky' | 'green' | 'amber' | 'pink' | 'purple' | 'indigo' | 'teal'> = {
-  lecture: 'sky', practice: 'green', lab: 'amber', exam: 'pink',
-  consultation: 'purple', coursework: 'indigo', test: 'teal',
-};
-
-function getWeekDates(baseDate: Date): { start: Date; end: Date } {
-  const d = new Date(baseDate);
-  const day = d.getDay();
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-  const start = new Date(d.setDate(diff));
-  const end = new Date(start);
-  end.setDate(end.getDate() + 5);
-  return { start, end };
-}
-
-function formatMonth(date: Date): string {
-  const months = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
-  return `${date.getDate()} ${months[date.getMonth()]}`;
-}
-
-function formatDateShort(dateStr: string): string {
-  const d = new Date(dateStr);
-  const days = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
-  return `${days[d.getDay()]} ${d.getDate()}`;
-}
+function dateKey(date: Date) { return date.toISOString().split('T')[0]; }
+function formatRange(start: Date, end: Date) { return `${start.getDate()} ${start.toLocaleDateString('ru-RU', { month: 'long' })} — ${end.getDate()} ${end.toLocaleDateString('ru-RU', { month: 'long' })}`; }
 
 export default function WeekPage() {
-  const [weekStart, setWeekStart] = useState(() => getWeekDates(new Date()).start);
-  const [schedule, setSchedule] = useState<DaySchedule[]>([]);
+  const [weekStart, setWeekStart] = useState(() => getWeekStart(new Date()));
+  const [lessons, setLessons] = useState<Lesson[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [groupFilter, setGroupFilter] = useState('all');
+  const [subjectFilter, setSubjectFilter] = useState('all');
+  const [typeFilter, setTypeFilter] = useState('all');
 
-  useEffect(() => {
+  const loadWeek = () => {
     const end = new Date(weekStart); end.setDate(end.getDate() + 5);
-    const start = weekStart;
-    const startDate = start.toISOString().split('T')[0];
-    const endDate = end.toISOString().split('T')[0];
-
-    setLoading(true);
-    setError('');
-    apiFetchList<Lesson>(`/schedule/range?startDate=${startDate}&endDate=${endDate}`)
-      .then(lessons => {
-        const days: DaySchedule[] = [];
-        for (let i = 0; i < 6; i++) {
-          const d = new Date(start);
-          d.setDate(d.getDate() + i);
-          const dateStr = d.toISOString().split('T')[0];
-          const dayNames = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
-          days.push({
-            date: dateStr,
-            dayName: dayNames[d.getDay()],
-            lessons: lessons.filter(l => l.startTime?.startsWith(dateStr)),
-          });
-        }
-        setSchedule(days);
-      })
-      .catch((err) => setError(err instanceof Error ? err.message : 'Не удалось загрузить расписание.'))
-      .finally(() => setLoading(false));
-  }, [weekStart]);
-
-  const navigateWeek = (offset: number) => {
-    const d = new Date(weekStart);
-    d.setDate(d.getDate() + offset * 7);
-    setWeekStart(d);
+    setLoading(true); setError('');
+    apiFetchList<Lesson>(`/schedule/range?startDate=${dateKey(weekStart)}&endDate=${dateKey(end)}`)
+      .then(setLessons).catch((err) => setError(err instanceof Error ? err.message : 'Не удалось загрузить расписание.')).finally(() => setLoading(false));
   };
+  useEffect(() => { loadWeek(); }, [weekStart]);
 
-  const weekEnd = new Date(weekStart);
-  weekEnd.setDate(weekEnd.getDate() + 5);
+  const groups = [...new Set(lessons.map((lesson) => lesson.groupName).filter(Boolean))].sort();
+  const subjects = [...new Set(lessons.map((lesson) => lesson.subject).filter(Boolean))].sort();
+  const filtered = lessons.filter((lesson) => (groupFilter === 'all' || lesson.groupName === groupFilter) && (subjectFilter === 'all' || lesson.subject === subjectFilter) && (typeFilter === 'all' || lesson.subjectType === typeFilter));
+  const schedule = useMemo<DaySchedule[]>(() => Array.from({ length: 6 }, (_, index) => { const date = new Date(weekStart); date.setDate(date.getDate() + index); const key = dateKey(date); return { date: key, dayName: weekDays[index], lessons: filtered.filter((lesson) => lesson.startTime?.startsWith(key)).sort((a, b) => a.startTime.localeCompare(b.startTime)) }; }), [filtered, weekStart]);
+  const weekEnd = new Date(weekStart); weekEnd.setDate(weekEnd.getDate() + 5);
+  const todayKey = dateKey(new Date());
 
-  return (
-    <div className="mx-auto max-w-2xl space-y-6">
-      <div className="flex items-center justify-between">
-        <button onClick={() => navigateWeek(-1)} className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 transition-colors">
-          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
-        <div className="text-center">
-          <h1 className="text-lg font-bold text-slate-900">{formatMonth(weekStart)} — {formatMonth(weekEnd)}</h1>
-          <p className="text-sm text-slate-500">Расписание на неделю</p>
-        </div>
-        <button onClick={() => navigateWeek(1)} className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 transition-colors">
-          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        </button>
-      </div>
-
-      {loading ? (
-        <div className="space-y-4">
-          {[1, 2, 3].map(i => <Card key={i}><Skeleton className="h-20" /></Card>)}
-        </div>
-      ) : error ? (
-        <RequestState
-          title="Не удалось загрузить расписание"
-          description={error}
-          onRetry={() => setWeekStart(new Date(weekStart))}
-        />
-      ) : (
-        <div className="space-y-6">
-          {schedule.map((day) => (
-            <div key={day.date}>
-              <div className="mb-3 flex items-center gap-3">
-                <h2 className="text-sm font-bold text-slate-900">{day.dayName}</h2>
-                <span className="text-sm text-slate-400">{formatDateShort(day.date)}</span>
-                {day.lessons.length > 0 && (
-                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">{day.lessons.length} пар</span>
-                )}
-              </div>
-              {day.lessons.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/50 px-4 py-6 text-center text-sm text-slate-400">Нет пар</div>
-              ) : (
-                <div className="space-y-2">
-                  {day.lessons.map((lesson) => (
-                    <Link key={lesson.id} href={`/pair-space/${lesson.id}`}>
-                      <Card hover padding="sm" className={`mb-2 ${lesson.isChanged ? 'border-amber-300 bg-amber-50/50' : ''}`}>
-                        <div className="flex items-center gap-3">
-                          <div className="flex-shrink-0 text-center w-14">
-                            <p className="text-sm font-bold text-slate-900">{lesson.startTime?.slice(11, 16)}</p>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-slate-900 truncate">{lesson.subject}</span>
-                              <Badge variant={typeBadgeVariant[lesson.subjectType] || 'slate'} size="sm">
-                                {typeLabels[lesson.subjectType] || lesson.subjectType}
-                              </Badge>
-                            </div>
-                            <div className="mt-0.5 flex items-center gap-3 text-xs text-slate-500">
-                              {lesson.groupName && <span>{lesson.groupName}</span>}
-                              {lesson.room && <span>а. {lesson.room}</span>}
-                            </div>
-                          </div>
-                        </div>
-                      </Card>
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+  return <div className="mx-auto max-w-[1400px] space-y-6"><div className="flex items-center gap-2 text-sm text-slate-500"><Link href="/today" className="hover:text-sky-600">НаПаре</Link><span>/</span><span className="text-slate-900">Расписание</span></div><div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-sm text-slate-500">Неделя:</p><div className="mt-1 flex items-center gap-3"><button type="button" onClick={() => { const date = new Date(weekStart); date.setDate(date.getDate() - 7); setWeekStart(date); }} className="rounded-xl border border-slate-200 bg-white p-2 text-slate-500 hover:border-sky-300 hover:text-sky-600" aria-label="Предыдущая неделя">‹</button><h1 className="min-w-[205px] text-xl font-bold text-slate-900 sm:text-2xl">{formatRange(weekStart, weekEnd)}</h1><button type="button" onClick={() => { const date = new Date(weekStart); date.setDate(date.getDate() + 7); setWeekStart(date); }} className="rounded-xl border border-slate-200 bg-white p-2 text-slate-500 hover:border-sky-300 hover:text-sky-600" aria-label="Следующая неделя">›</button></div></div><Button variant="secondary" onClick={() => setWeekStart(getWeekStart(new Date()))}>Сегодня</Button></div><Card padding="sm"><div className="grid gap-3 md:grid-cols-3"><label className="text-xs font-semibold text-slate-500">Группа<select value={groupFilter} onChange={(event) => setGroupFilter(event.target.value)} className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-800 outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100"><option value="all">Все группы</option>{groups.map((group) => <option key={group} value={group}>{group}</option>)}</select></label><label className="text-xs font-semibold text-slate-500">Предмет<select value={subjectFilter} onChange={(event) => setSubjectFilter(event.target.value)} className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-800 outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100"><option value="all">Все предметы</option>{subjects.map((subject) => <option key={subject} value={subject}>{subject}</option>)}</select></label><label className="text-xs font-semibold text-slate-500">Тип занятия<select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)} className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-800 outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100"><option value="all">Все типы</option>{Object.entries(typeLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label></div></Card>{loading ? <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-6">{Array.from({ length: 6 }, (_, index) => <Card key={index}><Skeleton className="h-48" /></Card>)}</div> : error ? <RequestState title="Не удалось загрузить расписание" description={error} onRetry={loadWeek} /> : <div className="overflow-x-auto pb-2"><div className="grid min-w-[1060px] grid-cols-6 gap-3">{schedule.map((day) => <section key={day.date} className="min-w-0"><div className={`mb-3 rounded-xl border px-3 py-3 ${day.date === todayKey ? 'border-sky-200 bg-sky-50' : 'border-slate-200 bg-white'}`}><p className={`text-sm font-bold ${day.date === todayKey ? 'text-sky-700' : 'text-slate-800'}`}>{day.dayName}</p><p className="mt-1 text-xs text-slate-500">{new Date(`${day.date}T12:00:00`).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}</p></div><div className="space-y-3">{day.lessons.length ? day.lessons.map((lesson) => <Card key={lesson.id} className={`border-l-4 px-3 py-3 ${lesson.isChanged ? 'border-amber-300 bg-amber-50/40' : 'border-l-sky-400'}`}><div className="flex items-start justify-between gap-2"><span className="text-xs font-bold text-slate-500">{lesson.startTime.slice(11, 16)}–{lesson.endTime.slice(11, 16)}</span>{lesson.isChanged && <Badge size="sm" variant="amber">Изменено</Badge>}</div><h3 className="mt-2 text-sm font-bold leading-5 text-slate-900">{lesson.subject}</h3><p className="mt-1 text-xs font-medium text-sky-700">{lesson.groupName || 'Группа не указана'}</p><p className="mt-1 text-xs text-slate-500">Кабинет {lesson.room || '—'}</p><Badge size="sm" variant={typeVariants[lesson.subjectType] || 'slate'}>{typeLabels[lesson.subjectType] || lesson.subjectType}</Badge><div className="mt-3 flex flex-wrap gap-1.5 border-t border-slate-100 pt-3"><Link href={`/pair-space/${lesson.id}`} className="rounded-lg px-2 py-1 text-xs font-semibold text-sky-700 hover:bg-sky-50">Открыть</Link><Link href={`/attendance?lesson=${lesson.id}`} className="rounded-lg px-2 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-100">Посещаемость</Link><Link href={`/pair-space/${lesson.id}`} className="rounded-lg px-2 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-100">Пространство</Link></div></Card>) : <div className="rounded-xl border border-dashed border-slate-200 px-3 py-8 text-center text-xs text-slate-400">Нет занятий</div>}</div></section>)}</div></div>}</div>;
 }

@@ -1,92 +1,18 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { login } from '@/lib/api';
 
+function Brand() { return <Link href="/" className="inline-flex items-center gap-2.5 rounded-lg text-lg font-bold tracking-tight text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-600 text-sm font-bold text-white">Н</span>НаПаре</Link>; }
+
+function SchedulePreview() { return <div className="mt-10 overflow-hidden rounded-2xl border border-white/15 bg-white/10 shadow-2xl shadow-indigo-950/20 backdrop-blur-sm"><div className="flex h-9 items-center gap-1.5 border-b border-white/10 px-3"><i className="h-2 w-2 rounded-full bg-red-300/80"/><i className="h-2 w-2 rounded-full bg-amber-300/80"/><i className="h-2 w-2 rounded-full bg-emerald-300/80"/></div><div className="grid grid-cols-[108px_1fr] text-white"><aside className="bg-slate-950/35 p-3"><div className="mb-5 text-[10px] font-semibold text-white/80">НаПаре</div><div className="space-y-1 text-[9px] text-white/55"><div className="rounded-md bg-white/15 px-2 py-2 text-white">⌂ &nbsp; Сегодня</div><div className="px-2 py-2">▦ &nbsp; Расписание</div><div className="px-2 py-2">✓ &nbsp; Задания</div><div className="px-2 py-2">◉ &nbsp; Уведомления</div></div></aside><div className="p-4"><div className="flex justify-between"><div><p className="text-[9px] text-indigo-100/70">НаПаре /</p><p className="mt-1 text-base font-bold">Сегодня</p></div><span className="text-[9px] text-indigo-100/70">14 мая, вт</span></div><div className="mt-4 grid gap-2"><div className="rounded-lg border border-emerald-300/40 bg-white/10 p-3"><p className="text-[9px] font-semibold text-emerald-200">ТЕКУЩАЯ ПАРА · 09:00</p><p className="mt-1 text-xs font-semibold">Математический анализ</p><p className="mt-1 text-[9px] text-indigo-100/70">Ауд. 301 · Открыто сейчас</p></div><div className="rounded-lg border border-white/10 bg-white/5 p-3"><p className="text-[9px] text-indigo-100/70">СЛЕДУЮЩАЯ · 10:45</p><p className="mt-1 text-xs font-semibold">Программирование</p><p className="mt-1 text-[9px] text-indigo-100/70">Ауд. 412</p></div></div><div className="mt-2 grid grid-cols-2 gap-2"><div className="rounded-lg bg-red-300/10 p-2"><p className="text-[8px] text-red-200">УВЕДОМЛЕНИЕ</p><p className="mt-1 text-[9px]">Время пары изменилось</p></div><div className="rounded-lg bg-amber-300/10 p-2"><p className="text-[8px] text-amber-200">ЗАДАНИЕ</p><p className="mt-1 text-[9px]">Сдать до сегодня</p></div></div></div></div></div>; }
+
 export default function LoginPage() {
-  const router = useRouter();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    try {
-      await login(email, password);
-      router.push('/today');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка входа');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-8 sm:px-6">
-      <div className="grid w-full max-w-5xl overflow-hidden rounded-3xl bg-white shadow-xl shadow-slate-200/60 lg:grid-cols-[0.9fr_1.1fr]">
-        <div className="hidden flex-col justify-between bg-indigo-700 p-10 text-white lg:flex">
-          <div><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-lg font-bold text-indigo-700">Н</div><p className="mt-8 text-sm font-medium text-indigo-200">Университетская платформа</p><h2 className="mt-3 text-3xl font-bold leading-tight">Учебный день<br />в одном месте.</h2><p className="mt-4 max-w-xs text-sm leading-relaxed text-indigo-100">Расписание, пропуски и уведомления — спокойно и понятно.</p></div>
-          <div className="space-y-3 text-sm text-indigo-100"><p>Расписание на каждый день</p><p>Актуальные изменения</p><p>Пространство пары</p></div>
-        </div>
-        <div className="p-8 sm:p-12">
-          <div className="mb-8 text-center">
-            <div className="mx-auto mb-5 flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 text-sm font-bold text-white lg:hidden">Н</div>
-            <h1 className="text-2xl font-bold text-slate-900">Вход в НаПаре</h1>
-            <p className="mt-2 text-sm text-slate-400">Войдите, чтобы увидеть своё расписание</p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {error && (
-              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">{error}</div>
-            )}
-            <div>
-              <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-slate-700">Email</label>
-              <input
-                id="email" type="email" required value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="student@university.ru"
-                className="block w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 placeholder-slate-400 transition-colors focus:border-indigo-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-indigo-100"
-              />
-            </div>
-            <div>
-              <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-slate-700">Пароль</label>
-              <input
-                id="password" type="password" required value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;"
-                className="block w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 placeholder-slate-400 transition-colors focus:border-indigo-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-indigo-100"
-              />
-            </div>
-            <button
-              type="submit" disabled={loading}
-              className="w-full rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 transition-all hover:bg-indigo-700 hover:shadow-xl disabled:opacity-50"
-            >
-              {loading ? (
-                <span className="inline-flex items-center gap-2">
-                  <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                  Вход...
-                </span>
-              ) : 'Войти'}
-            </button>
-          </form>
-
-          <div className="mt-6 flex items-center justify-between gap-3 text-sm text-slate-500">
-            <span>Забыли пароль?</span>
-            <span>
-            Нет аккаунта?{' '}
-            <Link href="/register" className="font-semibold text-indigo-600 hover:text-indigo-700">Зарегистрироваться</Link>
-            </span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+  const router = useRouter(); const [email,setEmail]=useState(''); const [password,setPassword]=useState(''); const [remember,setRemember]=useState(false); const [showPassword,setShowPassword]=useState(false); const [loading,setLoading]=useState(false); const [error,setError]=useState(''); const [success,setSuccess]=useState(false); const [fieldErrors,setFieldErrors]=useState({email:'',password:''});
+  useEffect(()=>{const saved=window.localStorage.getItem('napare.rememberedEmail');if(saved){setEmail(saved);setRemember(true)}},[]);
+  const validate=()=>{const next={email:'',password:''};if(!email.trim())next.email='Введите email';else if(!/^\S+@\S+\.\S+$/.test(email))next.email='Введите корректный email';if(!password)next.password='Введите пароль';setFieldErrors(next);return !next.email&&!next.password;};
+  const handleSubmit=async(e:React.FormEvent)=>{e.preventDefault();setError('');setSuccess(false);if(!validate())return;setLoading(true);try{if(remember)window.localStorage.setItem('napare.rememberedEmail',email);else window.localStorage.removeItem('napare.rememberedEmail');await login(email,password);setSuccess(true);router.push('/today')}catch(err){setError(err instanceof Error?err.message:'Не удалось войти. Проверьте email и пароль.')}finally{setLoading(false)}};
+  return <main className="min-h-screen bg-white lg:grid lg:grid-cols-2"><section className="hidden min-h-screen flex-col justify-between bg-gradient-to-br from-indigo-700 via-indigo-600 to-blue-600 p-8 text-white lg:flex lg:p-12 xl:p-16"><div><Brand/><div className="mt-20 max-w-md"><p className="text-sm font-medium text-indigo-200">Цифровая платформа университета</p><h1 className="mt-4 text-4xl font-extrabold leading-tight tracking-[-0.04em] xl:text-5xl">Всё обучение<br/>в одном месте</h1><p className="mt-5 max-w-sm leading-7 text-indigo-100">Утро начинается спокойно, когда расписание, задания и связь с группой находятся рядом.</p><div className="mt-8 grid gap-3 text-sm text-indigo-50"><p>✓ &nbsp;Актуальное расписание</p><p>✓ &nbsp;Уведомления об изменениях</p><p>✓ &nbsp;Пространство каждой пары</p></div><SchedulePreview/></div></div><p className="text-xs text-indigo-200/70">NaPare · учебный день без лишних сервисов</p></section><section className="flex min-h-screen items-center justify-center px-5 py-8 sm:px-8 lg:px-12 xl:px-20"><div className="w-full max-w-md"><div className="mb-10 lg:hidden"><Brand/></div><div className="mb-8"><h2 className="text-3xl font-bold tracking-tight text-slate-950">С возвращением</h2><p className="mt-2 text-sm text-slate-500">Войдите, чтобы продолжить учебный день.</p></div><form onSubmit={handleSubmit} noValidate className="space-y-5" aria-label="Форма входа">{error&&<div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}{success&&<div role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">Вход выполнен. Открываем расписание…</div>}<div><label htmlFor="email" className="mb-2 block text-sm font-medium text-slate-700">Email</label><input id="email" name="email" type="email" autoComplete="email" value={email} onChange={e=>{setEmail(e.target.value);setFieldErrors({...fieldErrors,email:''})}} aria-invalid={!!fieldErrors.email} aria-describedby={fieldErrors.email?'email-error':undefined} className={`min-h-12 w-full rounded-xl border bg-slate-50 px-4 text-sm outline-none transition focus:bg-white focus:ring-4 focus:ring-indigo-100 ${fieldErrors.email?'border-red-400':'border-slate-200 focus:border-indigo-400'}`} placeholder="you@university.ru" />{fieldErrors.email&&<p id="email-error" className="mt-1.5 text-xs text-red-600">{fieldErrors.email}</p>}</div><div><label htmlFor="password" className="mb-2 block text-sm font-medium text-slate-700">Пароль</label><div className="relative"><input id="password" name="password" type={showPassword?'text':'password'} autoComplete="current-password" value={password} onChange={e=>{setPassword(e.target.value);setFieldErrors({...fieldErrors,password:''})}} aria-invalid={!!fieldErrors.password} aria-describedby={fieldErrors.password?'password-error':undefined} className={`min-h-12 w-full rounded-xl border bg-slate-50 px-4 pr-12 text-sm outline-none transition focus:bg-white focus:ring-4 focus:ring-indigo-100 ${fieldErrors.password?'border-red-400':'border-slate-200 focus:border-indigo-400'}`} placeholder="Введите пароль"/><button type="button" onClick={()=>setShowPassword(!showPassword)} className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg px-2 py-2 text-xs font-medium text-slate-500 hover:bg-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" aria-label={showPassword?'Скрыть пароль':'Показать пароль'}>{showPassword?'Скрыть':'Показать'}</button></div>{fieldErrors.password&&<p id="password-error" className="mt-1.5 text-xs text-red-600">{fieldErrors.password}</p>}</div><div className="flex items-center justify-between gap-3"><label className="flex cursor-pointer items-center gap-2 text-sm text-slate-600"><input type="checkbox" checked={remember} onChange={e=>setRemember(e.target.checked)} className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"/>Запомнить меня</label><a href="mailto:support@napare.ru?subject=Восстановление%20пароля" className="text-sm font-semibold text-indigo-600 hover:text-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">Забыли пароль?</a></div><button type="submit" disabled={loading} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 text-sm font-semibold text-white shadow-lg shadow-indigo-200 transition hover:bg-indigo-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-200 disabled:cursor-wait disabled:opacity-60">{loading&&<span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"/>}{loading?'Входим…':'Войти'}</button></form><p className="mt-7 text-center text-sm text-slate-500">Нет аккаунта? <Link href="/register" className="font-semibold text-indigo-600 hover:text-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">Зарегистрироваться</Link></p><p className="mt-12 text-center text-xs leading-5 text-slate-400">Продолжая, вы соглашаетесь с <a href="#terms" className="underline underline-offset-2 hover:text-slate-600">условиями использования</a>.</p></div></section></main>;
 }
