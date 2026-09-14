@@ -5,6 +5,7 @@ import { NetworkStatus } from '@/components/ui';
 export const metadata: Metadata = {
   title: 'НаПаре — Студент',
   description: 'Расписание занятий, уведомления и общение — всё в одном месте',
+  icons: { icon: '/icon.svg', shortcut: '/icon.svg' },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

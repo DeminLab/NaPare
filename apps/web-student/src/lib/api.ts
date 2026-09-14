@@ -146,7 +146,8 @@ export async function register(payload: {
   });
   if (!response.ok) {
     const data = await response.json().catch(() => null);
-    throw new Error(data?.message || 'Ошибка регистрации');
+    const message = Array.isArray(data?.message) ? data.message.join(', ') : data?.message;
+    throw new Error(message || 'Ошибка регистрации');
   }
   const data = await response.json();
   saveTokens(data.accessToken, data.refreshToken);
