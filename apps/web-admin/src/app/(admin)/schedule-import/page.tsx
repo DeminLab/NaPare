@@ -73,7 +73,7 @@ export default function ScheduleImportPage() {
         onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
         onDragLeave={() => setDragOver(false)}
         onDrop={handleDrop}
-        className={`relative rounded-2xl border-2 border-dashed p-12 text-center transition-colors ${
+        className={`relative rounded-2xl border-2 border-dashed p-6 text-center transition-colors sm:p-12 ${
           dragOver
             ? 'border-sky-400 bg-sky-50'
             : file
@@ -95,7 +95,7 @@ export default function ScheduleImportPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <p className="text-sm font-semibold text-slate-900">{file.name}</p>
+              <p className="break-all text-sm font-semibold text-slate-900">{file.name}</p>
               <p className="mt-1 text-xs text-slate-400">{(file.size / 1024).toFixed(1)} КБ</p>
             </>
           ) : (
@@ -120,8 +120,8 @@ export default function ScheduleImportPage() {
       </div>
 
       {file && (
-        <div className="flex justify-end">
-          <Button onClick={handleUpload} loading={uploading}>
+        <div className="flex justify-stretch sm:justify-end">
+          <Button onClick={handleUpload} loading={uploading} className="w-full sm:w-auto">
             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
             </svg>
@@ -130,7 +130,7 @@ export default function ScheduleImportPage() {
         </div>
       )}
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
         <h2 className="mb-3 text-sm font-bold text-slate-900">Статус синхронизации</h2>
         <SyncStatus />
       </div>

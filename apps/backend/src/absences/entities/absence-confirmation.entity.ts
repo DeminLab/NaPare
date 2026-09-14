@@ -6,11 +6,13 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  Index,
 } from 'typeorm';
 
 import { Absence } from './absence.entity';
 
 @Entity('absence_confirmations')
+@Index('IDX_absence_confirmations_absence_id', ['absenceId'])
 export class AbsenceConfirmation {
   @PrimaryGeneratedColumn('uuid')
   id: string;

@@ -10,48 +10,56 @@ import {
   Request,
   Delete,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery, ApiResponse } from '@nestjs/swagger';
+import { ApiOkResponse, ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 
 import { AbsencesService } from './absences.service';
 import { CreateAbsenceDto } from './dto/create-absence.dto';
 import { UpdateAbsenceDto } from './dto/update-absence.dto';
+import { RejectAbsenceDto } from './dto/reject-absence.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { Roles } from '../common/decorators/roles.decorator';
+import { UserRole } from '../auth/interfaces/user-role';
+import { PaginatedResponseDto, PaginationQueryDto } from '../common/dto/pagination-query.dto';
 
 @ApiTags('absences')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('absences')
 export class AbsencesController {
   constructor(private readonly absencesService: AbsencesService) {}
 
   @Get('my')
   @ApiOperation({ summary: 'Получить мои пропуски' })
-  @ApiResponse({ status: 200, description: 'Пропуски получены' })
+  @ApiOkResponse({ description: 'Пропуски получены', type: PaginatedResponseDto })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async findMy(@Request() req) {
-    return this.absencesService.findByStudent(req.user.id);
+  async findMy(@Request() req, @Query() pagination: PaginationQueryDto) {
+    return this.absencesService.findByStudent(req.user.id, pagination);
   }
 
   @Get('student/:studentId')
   @ApiOperation({ summary: 'Получить пропуски студента' })
-  @ApiResponse({ status: 200, description: 'Пропуски получены' })
+  @Roles(UserRole.TEACHER, UserRole.CURATOR, UserRole.DEPARTMENT_HEAD, UserRole.FACULTY_DEAN, UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @ApiOkResponse({ description: 'Пропуски получены', type: PaginatedResponseDto })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Not found' })
-  async findByStudent(@Param('studentId') studentId: string) {
-    return this.absencesService.findByStudent(studentId);
+  async findByStudent(@Param('studentId') studentId: string, @Query() pagination: PaginationQueryDto) {
+    return this.absencesService.findByStudent(studentId, pagination);
   }
 
   @Get('lesson/:lessonId')
   @ApiOperation({ summary: 'Получить пропуски на уроке' })
-  @ApiResponse({ status: 200, description: 'Пропуски получены' })
+  @Roles(UserRole.TEACHER, UserRole.CURATOR, UserRole.DEPARTMENT_HEAD, UserRole.FACULTY_DEAN, UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @ApiOkResponse({ description: 'Пропуски получены', type: PaginatedResponseDto })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Not found' })
-  async findByLesson(@Param('lessonId') lessonId: string) {
-    return this.absencesService.findByLesson(lessonId);
+  async findByLesson(@Param('lessonId') lessonId: string, @Query() pagination: PaginationQueryDto) {
+    return this.absencesService.findByLesson(lessonId, pagination);
   }
 
   @Get('stats/:studentId')
   @ApiOperation({ summary: 'Получить статистику пропусков' })
+  @Roles(UserRole.TEACHER, UserRole.CURATOR, UserRole.DEPARTMENT_HEAD, UserRole.FACULTY_DEAN, UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
   @ApiResponse({ status: 200, description: 'Статистика получена' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Not found' })
@@ -66,8 +74,8 @@ export class AbsencesController {
   @ApiOperation({ summary: 'Создать пропуск' })
   @ApiResponse({ status: 201, description: 'Пропуск создан' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async create(@Body() createAbsenceDto: CreateAbsenceDto) {
-    return this.absencesService.create(createAbsenceDto);
+  async create(@Request() req, @Body() createAbsenceDto: CreateAbsenceDto) {
+    return this.absencesService.create(createAbsenceDto, req.user.universityId);
   }
 
   @Patch(':id')
@@ -104,8 +112,8 @@ export class AbsencesController {
   async excuse(
     @Param('id') id: string,
     @Request() req,
-    @Body('reason') reason: string,
+    @Body() rejectAbsenceDto: RejectAbsenceDto,
   ) {
-    return this.absencesService.reject(id, req.user.id, reason);
+    return this.absencesService.reject(id, req.user.id, rejectAbsenceDto.reason);
   }
 }

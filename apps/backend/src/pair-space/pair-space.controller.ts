@@ -5,10 +5,11 @@ import {
   Patch,
   Body,
   Param,
+  Query,
   UseGuards,
   Request,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
+import { ApiOkResponse, ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 
 import { PairSpaceService } from './pair-space.service';
 import { CreateAnnouncementDto } from './dto/create-announcement.dto';
@@ -17,6 +18,7 @@ import { SubmitHomeworkDto } from './dto/submit-homework.dto';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { CreateFileDto } from './dto/create-file.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { PaginatedResponseDto, PaginationQueryDto } from '../common/dto/pagination-query.dto';
 
 @ApiTags('pair-spaces')
 @ApiBearerAuth()
@@ -30,8 +32,8 @@ export class PairSpaceController {
   @ApiResponse({ status: 200, description: 'PairSpace найден' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Not found' })
-  async findByLesson(@Param('lessonId') lessonId: string) {
-    return this.pairSpaceService.findByLesson(lessonId);
+  async findByLesson(@Param('lessonId') lessonId: string, @Request() req) {
+    return this.pairSpaceService.findByLesson(lessonId, req.user.universityId);
   }
 
   @Post(':lessonId/announcements')
@@ -43,7 +45,7 @@ export class PairSpaceController {
     @Request() req,
     @Body() createAnnouncementDto: CreateAnnouncementDto,
   ) {
-    const pairSpace = await this.pairSpaceService.findByLesson(lessonId);
+    const pairSpace = await this.pairSpaceService.findByLesson(lessonId, req.user.universityId);
     return this.pairSpaceService.createAnnouncement(
       pairSpace.id,
       req.user.id,
@@ -60,7 +62,7 @@ export class PairSpaceController {
     @Request() req,
     @Body() createHomeworkDto: CreateHomeworkDto,
   ) {
-    const pairSpace = await this.pairSpaceService.findByLesson(lessonId);
+    const pairSpace = await this.pairSpaceService.findByLesson(lessonId, req.user.universityId);
     return this.pairSpaceService.createHomework(
       pairSpace.id,
       req.user.id,
@@ -77,7 +79,7 @@ export class PairSpaceController {
     @Request() req,
     @Body() createFileDto: CreateFileDto,
   ) {
-    const pairSpace = await this.pairSpaceService.findByLesson(lessonId);
+    const pairSpace = await this.pairSpaceService.findByLesson(lessonId, req.user.universityId);
     return this.pairSpaceService.uploadFile(
       pairSpace.id,
       req.user.id,
@@ -87,11 +89,15 @@ export class PairSpaceController {
 
   @Get(':lessonId/messages')
   @ApiOperation({ summary: 'Получить сообщения обсуждения' })
-  @ApiResponse({ status: 200, description: 'Сообщения получены' })
+  @ApiOkResponse({ description: 'Сообщения получены', type: PaginatedResponseDto })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async getMessages(@Param('lessonId') lessonId: string) {
-    const pairSpace = await this.pairSpaceService.findByLesson(lessonId);
-    return this.pairSpaceService.getMessages(pairSpace.id);
+  async getMessages(
+    @Param('lessonId') lessonId: string,
+    @Request() req,
+    @Query() pagination: PaginationQueryDto,
+  ) {
+    const pairSpace = await this.pairSpaceService.findByLesson(lessonId, req.user.universityId);
+    return this.pairSpaceService.getMessages(pairSpace.id, pagination);
   }
 
   @Post(':lessonId/messages')
@@ -103,7 +109,7 @@ export class PairSpaceController {
     @Request() req,
     @Body() createMessageDto: CreateMessageDto,
   ) {
-    const pairSpace = await this.pairSpaceService.findByLesson(lessonId);
+    const pairSpace = await this.pairSpaceService.findByLesson(lessonId, req.user.universityId);
     return this.pairSpaceService.createMessage(
       pairSpace.id,
       req.user.id,

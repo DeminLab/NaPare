@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { apiFetch } from '@/lib/api';
-import { Card, Badge, Skeleton } from '@/components/ui';
+import { apiFetchList } from '@/lib/api';
+import { Card, Badge, RequestState, Skeleton } from '@/components/ui';
 
 interface Lesson { id: string; subject: string; subjectType: string; teacherName: string; room: string; startTime: string; endTime: string; pairNumber: number; isChanged: boolean; groupName: string; }
 interface DaySchedule { date: string; dayName: string; lessons: Lesson[]; }
@@ -34,13 +34,14 @@ export default function WeekPage() {
   const [schedule, setSchedule] = useState<DaySchedule[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<'list' | 'grid'>('list');
+  const [error, setError] = useState('');
 
   useEffect(() => {
     const end = new Date(weekStart); end.setDate(end.getDate() + 5);
     const startDate = weekStart.toISOString().split('T')[0];
     const endDate = end.toISOString().split('T')[0];
-    setLoading(true);
-    apiFetch<Lesson[]>(`/schedule/range?startDate=${startDate}&endDate=${endDate}`)
+    setLoading(true); setError('');
+    apiFetchList<Lesson>(`/schedule/range?startDate=${startDate}&endDate=${endDate}`)
       .then(lessons => {
         const days: DaySchedule[] = [];
         for (let i = 0; i < 6; i++) {
@@ -51,7 +52,7 @@ export default function WeekPage() {
         }
         setSchedule(days);
       })
-      .catch(() => setSchedule([]))
+      .catch(err => setError(err instanceof Error ? err.message : 'Не удалось загрузить расписание.'))
       .finally(() => setLoading(false));
   }, [weekStart]);
 
@@ -103,7 +104,7 @@ export default function WeekPage() {
         <button onClick={() => setView('grid')} className={`rounded-lg px-3 py-2 text-sm font-medium transition-all ${view === 'grid' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Расписание</button>
       </div></div>
 
-      {loading ? <div className="space-y-4">{[1, 2, 3].map(i => <Card key={i}><Skeleton className="h-20" /></Card>)}</div> : view === 'list' ? (
+      {loading ? <div className="space-y-4">{[1, 2, 3].map(i => <Card key={i}><Skeleton className="h-20" /></Card>)}</div> : error ? <RequestState title="Не удалось загрузить расписание" description={error} onRetry={() => setWeekStart(new Date(weekStart))} /> : view === 'list' ? (
         <div className="space-y-8">{schedule.map(day => <section key={day.date}><div className="mb-1 flex items-baseline gap-3 border-b border-slate-300 pb-3"><h2 className="text-sm font-bold text-slate-900">{day.dayName}</h2><span className="text-sm text-slate-400">{formatDateShort(day.date)}</span>{day.lessons.length > 0 && <span className="text-xs text-slate-400">{day.lessons.length} пар</span>}</div>{day.lessons.length === 0 ? <div className="border-b border-dashed border-slate-200 px-2 py-5 text-sm text-slate-400">Нет пар</div> : <div>{day.lessons.map(lesson => lessonRow(lesson))}</div>}</section>)}</div>
       ) : (
         <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm"><div className="min-w-[920px]"><div className="grid grid-cols-[72px_repeat(6,minmax(0,1fr))] border-b border-slate-200 bg-slate-50"><div className="p-3" />{schedule.map(day => <div key={day.date} className="border-l border-slate-200 p-3 text-center"><p className="text-xs font-bold uppercase tracking-wide text-slate-700">{day.dayName.slice(0, 2)}</p><p className="mt-1 text-xs text-slate-400">{new Date(day.date).getDate()}</p></div>)}</div>{timeSlots.length === 0 ? <div className="p-12 text-center text-sm text-slate-400">На этой неделе пар нет</div> : timeSlots.map(slot => <div key={slot} className="grid grid-cols-[72px_repeat(6,minmax(0,1fr))] border-b border-slate-100 last:border-0"><div className="p-3 text-right text-xs font-semibold text-slate-400">{slot}</div>{schedule.map(day => <div key={day.date} className="min-h-24 border-l border-slate-100 p-2">{day.lessons.filter(lesson => time(lesson.startTime) === slot).map(lesson => lessonCard(lesson, true))}</div>)}</div>)}</div></div>

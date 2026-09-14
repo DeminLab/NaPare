@@ -4,9 +4,32 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  Index,
 } from 'typeorm';
+import { JsonObject } from '../../common/types/json-value.type';
+
+export const NOTIFICATION_TYPES = [
+  'schedule_change',
+  'new_announcement',
+  'new_homework',
+  'new_file',
+  'deadline',
+  'absence_decision',
+  'new_absence',
+  'system',
+  'other',
+] as const;
+export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
 @Entity('notifications')
+@Index('IDX_notifications_user_university_created_at', [
+  'userId',
+  'universityId',
+  'createdAt',
+])
+@Index('IDX_notifications_user_university_unread', ['userId', 'universityId'], {
+  where: '"isRead" = false',
+})
 export class Notification {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -19,20 +42,10 @@ export class Notification {
 
   @Column({
     type: 'enum',
-    enum: [
-      'schedule_change',
-      'new_announcement',
-      'new_homework',
-      'new_file',
-      'deadline',
-      'absence_decision',
-      'new_absence',
-      'system',
-      'other',
-    ],
+    enum: NOTIFICATION_TYPES,
     default: 'other',
   })
-  type: string;
+  type: NotificationType;
 
   @Column()
   title: string;
@@ -50,7 +63,7 @@ export class Notification {
   readAt: Date;
 
   @Column({ type: 'jsonb', nullable: true })
-  data: Record<string, any>;
+  data: JsonObject;
 
   @CreateDateColumn()
   createdAt: Date;

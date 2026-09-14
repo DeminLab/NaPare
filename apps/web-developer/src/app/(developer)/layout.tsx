@@ -51,15 +51,17 @@ export default function DeveloperLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [user, setUser] = useState<UserInfo | null>(null);
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
     getUser().then(setUser).catch(() => {});
   }, []);
 
   return (
-    <div className="developer-shell flex h-screen overflow-hidden bg-[var(--color-background)]">
+    <div className="developer-shell flex min-h-screen bg-[var(--color-background)] lg:h-screen lg:overflow-hidden">
+      {mobileOpen && <div className="fixed inset-0 z-40 bg-black/60 lg:hidden" onClick={() => setMobileOpen(false)} />}
       {/* Sidebar */}
-      <aside className={`flex flex-col border-r border-slate-200 bg-[var(--color-sidebar)] transition-all duration-[var(--motion-sidebar)] ${collapsed ? 'w-[68px]' : 'w-64'}`}>
+      <aside className={`fixed inset-y-0 left-0 z-50 flex w-72 -translate-x-full flex-col border-r border-slate-200 bg-[var(--color-sidebar)] transition-transform duration-[var(--motion-sidebar)] ${mobileOpen ? 'translate-x-0' : ''} lg:static lg:z-auto lg:translate-x-0 ${collapsed ? 'lg:w-[68px]' : 'lg:w-64'}`}>
         {/* Header */}
         <div className="flex h-16 items-center justify-between border-b border-white/10 px-4">
           {!collapsed && (
@@ -74,8 +76,15 @@ export default function DeveloperLayout({ children }: { children: ReactNode }) {
             </div>
           )}
           <button
+            onClick={() => setMobileOpen(false)}
+            className="flex h-11 w-11 items-center justify-center rounded-lg text-white/70 hover:bg-white/10 lg:hidden"
+            aria-label="Закрыть меню"
+          >
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+          <button
             onClick={() => setCollapsed(!collapsed)}
-            className="rounded-lg p-1.5 text-white/40 hover:bg-white/10 hover:text-white/70"
+            className="hidden h-11 w-11 items-center justify-center rounded-lg text-white/40 hover:bg-white/10 hover:text-white/70 lg:flex"
           >
             <svg className={`h-4 w-4 transition-transform ${collapsed ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.75 19.5L8.25 12l7.5-7.5" />
@@ -91,6 +100,7 @@ export default function DeveloperLayout({ children }: { children: ReactNode }) {
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={() => setMobileOpen(false)}
                 className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
                   active
                     ? 'bg-cyan-400 text-slate-950 shadow-sm shadow-cyan-400/25'
@@ -130,7 +140,13 @@ export default function DeveloperLayout({ children }: { children: ReactNode }) {
       </aside>
 
       {/* Main content */}
-      <main className="ds-page-enter flex-1 overflow-y-auto bg-[var(--color-background)]">
+      <main className="ds-page-enter min-w-0 flex-1 bg-[var(--color-background)] lg:overflow-y-auto">
+        <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-white/10 bg-slate-950/90 px-4 backdrop-blur lg:hidden">
+          <button onClick={() => setMobileOpen(true)} className="flex h-11 w-11 items-center justify-center rounded-xl text-cyan-200 hover:bg-white/10" aria-label="Открыть меню">
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" /></svg>
+          </button>
+          <span className="min-w-0 truncate text-sm font-semibold text-white">НаПаре · Developer</span>
+        </header>
         {children}
       </main>
     </div>

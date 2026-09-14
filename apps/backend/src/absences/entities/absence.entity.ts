@@ -4,9 +4,17 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  Index,
 } from 'typeorm';
 
 @Entity('absences')
+@Index('IDX_absences_university_student_created_at', [
+  'universityId',
+  'studentId',
+  'createdAt',
+])
+@Index('IDX_absences_university_start_date', ['universityId', 'startDate'])
+@Index('IDX_absences_university_created_at', ['universityId', 'createdAt'])
 export class Absence {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -39,7 +47,7 @@ export class Absence {
   @Column({ default: true })
   confirmationRequired: boolean;
 
-  @Column({ type: 'simple-array', nullable: true })
+  @Column('uuid', { array: true, nullable: true })
   affectedLessonIds: string[];
 
   @Column({ type: 'int', default: 0 })

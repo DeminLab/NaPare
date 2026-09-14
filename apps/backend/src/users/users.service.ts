@@ -4,29 +4,64 @@ import { Repository } from 'typeorm';
 
 import { User } from './entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
+import { TenantContext } from '../common/tenant/tenant-context';
+import {
+  PaginatedResponse,
+  PaginationQueryDto,
+  toPaginatedResponse,
+} from '../common/dto/pagination-query.dto';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
+    private readonly tenantContext: TenantContext,
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<User> {
+    this.tenantContext.assertAccess(createUserDto.universityId);
     const user = this.usersRepository.create(createUserDto);
     return this.usersRepository.save(user);
   }
 
   async findById(id: string): Promise<User | null> {
-    return this.usersRepository.findOne({ where: { id } });
+    const user = await this.usersRepository.findOne({ where: { id } });
+    if (user) this.tenantContext.assertAccess(user.universityId);
+    return user;
   }
 
   async findByEmail(email: string): Promise<User | null> {
     return this.usersRepository.findOne({ where: { email } });
   }
 
-  async findByUniversityId(universityId: string): Promise<User[]> {
-    return this.usersRepository.find({ where: { universityId } });
+  async findByUniversityId(
+    universityId: string,
+    pagination: PaginationQueryDto = new PaginationQueryDto(),
+  ): Promise<PaginatedResponse<User>> {
+    this.tenantContext.assertAccess(universityId);
+    const [data, total] = await this.usersRepository.findAndCount({
+      where: { universityId },
+      order: { createdAt: 'DESC' },
+      skip: (pagination.page - 1) * pagination.limit,
+      take: pagination.limit,
+    });
+    return toPaginatedResponse(data, total, pagination);
+  }
+
+  async findByGroupId(
+    groupId: string,
+    universityId: string,
+    pagination: PaginationQueryDto,
+  ): Promise<PaginatedResponse<User>> {
+    this.tenantContext.assertAccess(universityId);
+    const [data, total] = await this.usersRepository.findAndCount({
+      where: { groupId, universityId },
+      order: { lastName: 'ASC', firstName: 'ASC' },
+      skip: (pagination.page - 1) * pagination.limit,
+      take: pagination.limit,
+    });
+    return toPaginatedResponse(data, total, pagination);
   }
 
   async update(id: string, updateData: Partial<User>): Promise<User> {
@@ -40,11 +75,19 @@ export class UsersService {
     return this.usersRepository.save(user);
   }
 
+  async bindGroup(id: string, groupId: string): Promise<User> {
+    return this.update(id, { groupId });
+  }
+
   async updateLastLogin(id: string): Promise<void> {
-    await this.usersRepository.update(id, { lastLoginAt: new Date() });
+    const user = await this.findById(id);
+    if (!user) return;
+    await this.usersRepository.update(user.id, { lastLoginAt: new Date() });
   }
 
   async deactivate(id: string): Promise<void> {
-    await this.usersRepository.update(id, { isActive: false });
+    const user = await this.findById(id);
+    if (!user) throw new NotFoundException(`User with id ${id} not found`);
+    await this.usersRepository.update(user.id, { isActive: false });
   }
 }

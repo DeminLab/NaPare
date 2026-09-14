@@ -7,12 +7,14 @@ import {
   ManyToOne,
   OneToMany,
   JoinColumn,
+  Index,
 } from 'typeorm';
 
 import { University } from './university.entity';
 import { Group } from './group.entity';
 
 @Entity('faculties')
+@Index('IDX_faculties_university_name', ['universityId', 'name'])
 export class Faculty {
   @PrimaryGeneratedColumn('uuid')
   id: string;

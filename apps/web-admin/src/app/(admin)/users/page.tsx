@@ -1,11 +1,13 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { apiFetch } from '@/lib/api';
+import { apiFetch, apiFetchList } from '@/lib/api';
 import { SearchInput } from '@/components/ui/SearchInput';
 import { Badge } from '@/components/ui/Badge';
 import { Avatar } from '@/components/ui/Avatar';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { Skeleton } from '@/components/ui/Skeleton';
+import { RequestState } from '@/components/ui/RequestState';
 
 interface AdminUser {
   id: string;
@@ -56,15 +58,20 @@ export default function UsersPage() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [error, setError] = useState('');
   const [savingId, setSavingId] = useState('');
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [page, setPage] = useState(1);
 
   const loadUsers = async () => {
+    setLoading(true);
+    setError('');
     try {
-      setUsers(await apiFetch<AdminUser[]>('/admin/users'));
+      setUsers(await apiFetchList<AdminUser>('/admin/users'));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка загрузки');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -95,6 +102,14 @@ export default function UsersPage() {
   useEffect(() => {
     setPage(1);
   }, [search, roleFilter]);
+
+  if (loading) {
+    return <div className="space-y-4"><Skeleton className="h-8 w-48" />{[1, 2, 3].map((item) => <Skeleton key={item} className="h-20" />)}</div>;
+  }
+
+  if (error && users.length === 0) {
+    return <RequestState title="Не удалось загрузить пользователей" description={error} onRetry={loadUsers} />;
+  }
 
   const changeRole = async (userId: string, role: string) => {
     setSavingId(userId);
@@ -156,18 +171,19 @@ export default function UsersPage() {
           return (
             <div
               key={user.id}
-              className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:shadow-md sm:p-5"
+              className="flex flex-col items-stretch gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:shadow-md sm:flex-row sm:items-center sm:gap-4 sm:p-5"
             >
-              <Avatar name={`${user.firstName} ${user.lastName}`} size="md" />
-
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-bold text-slate-900">
-                  {user.firstName} {user.lastName}
-                </p>
-                <p className="text-xs text-slate-400">{user.email}</p>
+              <div className="flex min-w-0 items-center gap-3 sm:contents">
+                <Avatar name={`${user.firstName} ${user.lastName}`} size="md" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-bold text-slate-900">
+                    {user.firstName} {user.lastName}
+                  </p>
+                  <p className="truncate text-xs text-slate-400">{user.email}</p>
+                </div>
               </div>
 
-              <div className="flex flex-shrink-0 items-center gap-3">
+              <div className="flex flex-wrap items-center gap-2 sm:flex-shrink-0 sm:flex-nowrap sm:gap-3">
                 <Badge variant={ROLE_BADGE[role] || 'slate'} size="md">
                   {ROLE_LABELS[role] || role}
                 </Badge>
@@ -176,7 +192,7 @@ export default function UsersPage() {
                   value={role}
                   disabled={savingId === user.id}
                   onChange={(e) => changeRole(user.id, e.target.value)}
-                  className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-700 transition-colors focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100 disabled:opacity-50"
+                  className="min-h-11 min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-700 transition-colors focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100 disabled:opacity-50 sm:flex-none"
                 >
                   {Array.from(new Set([role, ...ASSIGNABLE_ROLES])).map((r) => (
                     <option key={r} value={r}>

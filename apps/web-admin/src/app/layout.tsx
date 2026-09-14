@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { NetworkStatus } from '@/components/ui';
 
 export const metadata: Metadata = {
   title: 'НаПаре — Администрирование',
@@ -15,6 +16,7 @@ export default function RootLayout({
     <html lang="ru">
       <body className="min-h-screen bg-slate-50 text-slate-900 antialiased">
         {children}
+        <NetworkStatus />
       </body>
     </html>
   );

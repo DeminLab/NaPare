@@ -61,7 +61,8 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
           ...init.headers,
         },
       });
-      if (!retryResponse.ok) throw new Error('Сессия истекла. Войдите снова.');
+      if (!retryResponse.ok) throw await toApiError(retryResponse);
+      if (retryResponse.status === 204) return undefined as T;
       return (await retryResponse.json()) as T;
     }
     clearTokens();
@@ -71,10 +72,30 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
 
   if (!response.ok) {
     const data = await response.json().catch(() => null);
-    throw new Error(data?.message || `Ошибка ${response.status}`);
+    const fallback = response.status === 403
+      ? 'У вас нет доступа к этому разделу.'
+      : response.status === 404
+        ? 'Запрошенные данные не найдены или больше недоступны.'
+        : `Не удалось выполнить запрос (${response.status}).`;
+    throw new Error(data?.message || fallback);
   }
 
+  if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  meta: { page: number; limit: number; total: number; totalPages: number };
+}
+
+export async function apiFetchList<T>(path: string, init: RequestInit = {}): Promise<T[]> {
+  return (await apiFetch<PaginatedResponse<T>>(path, init)).data;
+}
+
+async function toApiError(response: Response): Promise<Error> {
+  const data = await response.json().catch(() => null);
+  return new Error(data?.message || `Не удалось выполнить запрос (${response.status}).`);
 }
 
 async function tryRefresh(): Promise<boolean> {
@@ -115,7 +136,7 @@ export function logout(): void {
 }
 
 export async function getNotifications(): Promise<any[]> {
-  return apiFetch<any[]>('/notifications');
+  return apiFetchList('/notifications');
 }
 
 export async function getUnreadCount(): Promise<number> {

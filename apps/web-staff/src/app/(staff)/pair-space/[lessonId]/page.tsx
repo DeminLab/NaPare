@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { apiFetch, getUser } from '@/lib/api';
-import { Card, Badge, Button, Input, TabBar, EmptyState, Avatar, Skeleton, Modal } from '@/components/ui';
+import { Card, Badge, Button, Input, TabBar, EmptyState, Avatar, Skeleton, Modal, RequestState } from '@/components/ui';
 
 interface Announcement {
   id: string;
@@ -75,15 +75,18 @@ export default function PairSpacePage() {
   const [homeworkDescription, setHomeworkDescription] = useState('');
   const [homeworkDeadline, setHomeworkDeadline] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   useEffect(() => {
+    setError('');
     Promise.all([
       apiFetch<PairSpace>(`/pair-spaces/${lessonId}`),
       apiFetch<Lesson>(`/schedule/lessons/${lessonId}`),
     ]).then(([ps, l]) => {
       setPairSpace(ps);
       setLesson(l);
-    }).catch(() => {}).finally(() => setLoading(false));
+    }).catch((err) => setError(err instanceof Error ? err.message : 'Не удалось загрузить пространство пары.')).finally(() => setLoading(false));
   }, [lessonId]);
 
   const handleSendMessage = async () => {
@@ -95,7 +98,9 @@ export default function PairSpacePage() {
       });
       setPairSpace(prev => prev ? { ...prev, messages: [...prev.messages, msg] } : prev);
       setNewMessage('');
-    } catch {}
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Не удалось отправить сообщение.');
+    }
   };
 
   const handleCreateAnnouncement = async () => {
@@ -109,8 +114,12 @@ export default function PairSpacePage() {
       setPairSpace(prev => prev ? { ...prev, announcements: [...prev.announcements, a] } : prev);
       setAnnouncementText('');
       setShowAnnouncementModal(false);
-    } catch {}
-    setSubmitting(false);
+      setSuccess('Объявление опубликовано.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Не удалось опубликовать объявление.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleCreateHomework = async () => {
@@ -126,8 +135,12 @@ export default function PairSpacePage() {
       setHomeworkDescription('');
       setHomeworkDeadline('');
       setShowHomeworkModal(false);
-    } catch {}
-    setSubmitting(false);
+      setSuccess('Домашнее задание создано.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Не удалось создать домашнее задание.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (loading) {
@@ -137,6 +150,10 @@ export default function PairSpacePage() {
         <Skeleton className="h-48" />
       </div>
     );
+  }
+
+  if (error && !pairSpace) {
+    return <div className="mx-auto max-w-2xl"><RequestState title="Не удалось открыть PairSpace" description={error} onRetry={() => window.location.reload()} /></div>;
   }
 
   const tabs = [
@@ -167,6 +184,8 @@ export default function PairSpacePage() {
       </div>
 
       <TabBar tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
+      {error && <RequestState title="Не удалось выполнить действие" description={error} onRetry={() => setError('')} />}
+      {success && <p role="status" className="text-sm font-medium text-emerald-700">{success}</p>}
 
       {activeTab === 'announcements' && (
         <div className="space-y-3">

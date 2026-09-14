@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { apiFetch } from '@/lib/api';
+import { apiFetch, apiFetchList } from '@/lib/api';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { RequestState } from '@/components/ui/RequestState';
 
 interface Faculty {
   id: string;
@@ -25,8 +26,10 @@ export default function FacultiesPage() {
   const [saving, setSaving] = useState(false);
 
   const load = async () => {
+    setLoading(true);
+    setError('');
     try {
-      setFaculties(await apiFetch<Faculty[]>('/admin/faculties'));
+      setFaculties(await apiFetchList<Faculty>('/admin/faculties'));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка загрузки');
     } finally {
@@ -85,6 +88,10 @@ export default function FacultiesPage() {
         ))}
       </div>
     );
+  }
+
+  if (error && faculties.length === 0) {
+    return <RequestState title="Не удалось загрузить факультеты" description={error} onRetry={load} />;
   }
 
   return (
@@ -155,6 +162,7 @@ export default function FacultiesPage() {
             value={formName}
             onChange={(e) => setFormName(e.target.value)}
             placeholder="Факультет информатики"
+            error={modalOpen && !formName.trim() ? 'Укажите название факультета' : undefined}
           />
           <Input
             label="Аббревиатура"
@@ -166,7 +174,7 @@ export default function FacultiesPage() {
             <Button variant="secondary" onClick={() => setModalOpen(false)}>
               Отмена
             </Button>
-            <Button onClick={handleSave} loading={saving}>
+            <Button onClick={handleSave} loading={saving} disabled={!formName.trim()}>
               {editing ? 'Сохранить' : 'Создать'}
             </Button>
           </div>

@@ -27,7 +27,7 @@ export function Button({ children, variant = 'primary', size = 'md', loading = f
   return (
     <button
       disabled={disabled || loading}
-      className={`inline-flex items-center justify-center gap-2 font-semibold transition-all disabled:opacity-50 disabled:shadow-none ${variants[variant]} ${sizes[size]} ${fullWidth ? 'w-full' : ''} ${className}`}
+      className={`inline-flex min-h-11 items-center justify-center gap-2 font-semibold transition-all disabled:opacity-50 disabled:shadow-none ${variants[variant]} ${sizes[size]} ${fullWidth ? 'w-full' : ''} ${className}`}
       {...props}
     >
       {loading && (

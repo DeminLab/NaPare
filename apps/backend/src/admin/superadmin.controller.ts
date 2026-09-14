@@ -6,10 +6,11 @@ import {
   Delete,
   Body,
   Param,
+  Query,
   UseGuards,
   Request,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
+import { ApiOkResponse, ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
@@ -18,6 +19,8 @@ import { SuperadminService } from './superadmin.service';
 import { CreateUniversityDto } from './dto/create-university.dto';
 import { UpdateUniversityDto } from './dto/update-university.dto';
 import { UpdateConnectorDto } from './dto/update-connector.dto';
+import { UserRole } from '../auth/interfaces/user-role';
+import { PaginatedResponseDto, PaginationQueryDto } from '../common/dto/pagination-query.dto';
 
 @ApiTags('superadmin')
 @ApiBearerAuth()
@@ -27,16 +30,16 @@ export class SuperadminController {
   constructor(private readonly superadminService: SuperadminService) {}
 
   @Get('universities')
-  @Roles('superadmin')
+  @Roles(UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Получить список университетов' })
-  @ApiResponse({ status: 200, description: 'Университеты получены' })
+  @ApiOkResponse({ description: 'Университеты получены', type: PaginatedResponseDto })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async getUniversities() {
-    return this.superadminService.getUniversities();
+  async getUniversities(@Query() pagination: PaginationQueryDto) {
+    return this.superadminService.getUniversities(pagination);
   }
 
   @Post('universities')
-  @Roles('superadmin')
+  @Roles(UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Создать университет' })
   @ApiResponse({ status: 201, description: 'Университет создан' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -45,7 +48,7 @@ export class SuperadminController {
   }
 
   @Patch('universities/:id')
-  @Roles('superadmin')
+  @Roles(UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Обновить университет' })
   @ApiResponse({ status: 200, description: 'Университет обновлён' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -57,7 +60,7 @@ export class SuperadminController {
   }
 
   @Delete('universities/:id')
-  @Roles('superadmin')
+  @Roles(UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Удалить университет' })
   @ApiResponse({ status: 200, description: 'Университет удалён' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -66,16 +69,16 @@ export class SuperadminController {
   }
 
   @Get('connectors')
-  @Roles('superadmin')
+  @Roles(UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Получить список коннекторов' })
-  @ApiResponse({ status: 200, description: 'Коннекторы получены' })
+  @ApiOkResponse({ description: 'Коннекторы получены', type: PaginatedResponseDto })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async getConnectors() {
-    return this.superadminService.getConnectors();
+  async getConnectors(@Query() pagination: PaginationQueryDto) {
+    return this.superadminService.getConnectors(pagination);
   }
 
   @Patch('connectors/:id')
-  @Roles('superadmin')
+  @Roles(UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Обновить коннектор' })
   @ApiResponse({ status: 200, description: 'Коннектор обновлён' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })

@@ -3,16 +3,18 @@ node_modules/
 .pnpm-store/
 
 # Build output
+.turbo/
 dist/
 build/
 .next/
 *.tsbuildinfo
 out/
+.eslintcache
 
 # Environment files
-.env
-.env.local
-.env.*.local
+.env*
+!.env.example
+!.env.*.example
 
 # IDE
 .vscode/
@@ -32,6 +34,9 @@ pnpm-debug.log*
 # Testing
 coverage/
 .nyc_output/
+test-results/
+playwright-report/
+*.lcov
 
 # Flutter
 .flutter-plugins
@@ -41,6 +46,7 @@ pubspec.lock
 
 # Docker
 docker-compose.override.yml
+infrastructure/nginx/ssl/*.pem
 
 # Terraform
 *.tfstate

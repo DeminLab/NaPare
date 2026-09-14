@@ -82,8 +82,13 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
   }
 
   if (!response.ok) {
-    const body = await response.text().catch(() => '');
-    throw new Error(body || `Ошибка ${response.status}`);
+    const body = await response.json().catch(() => null);
+    const fallback = response.status === 403
+      ? 'У вас нет доступа к этому разделу.'
+      : response.status === 404
+        ? 'Запрошенные данные не найдены или больше недоступны.'
+        : `Не удалось выполнить запрос (${response.status}).`;
+    throw new Error(body?.message || fallback);
   }
 
   if (response.status === 204) return undefined as T;

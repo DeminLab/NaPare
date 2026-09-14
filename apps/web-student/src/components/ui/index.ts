@@ -10,5 +10,8 @@ export { StatCard } from './StatCard';
 export { TabBar } from './TabBar';
 export { SearchInput } from './SearchInput';
 export { ToastProvider, useToast } from './Toast';
+export { RequestState } from './RequestState';
+export { NetworkStatus } from './NetworkStatus';
+export { ConfirmDialog } from './ConfirmDialog';
 export { Icon } from './Icons';
 export type { IconName } from './Icons';

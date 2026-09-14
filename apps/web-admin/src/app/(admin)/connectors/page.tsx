@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { apiFetch } from '@/lib/api';
+import { apiFetch, apiFetchList } from '@/lib/api';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { RequestState } from '@/components/ui/RequestState';
 
 interface Connector {
   id: string;
@@ -29,8 +30,10 @@ export default function ConnectorsPage() {
   const [togglingId, setTogglingId] = useState('');
 
   const load = async () => {
+    setLoading(true);
+    setError('');
     try {
-      setConnectors(await apiFetch<Connector[]>('/superadmin/connectors'));
+      setConnectors(await apiFetchList<Connector>('/superadmin/connectors'));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка загрузки');
     } finally {
@@ -66,6 +69,10 @@ export default function ConnectorsPage() {
         ))}
       </div>
     );
+  }
+
+  if (error && connectors.length === 0) {
+    return <RequestState title="Не удалось загрузить коннекторы" description={error} onRetry={load} />;
   }
 
   return (

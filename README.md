@@ -1,223 +1,159 @@
-# NaPare — Операционная система учебного дня
+# NaPare
 
-**B2B2C SaaS-платформа** для университетов, которая собирает расписание, задания, материалы, общение и посещаемость в одном месте — вокруг каждой пары.
+## What is NaPare
 
-## Идея
+NaPare is a university learning-day platform. It brings schedules, PairSpace content, homework, absence tracking and notifications into role-specific web applications backed by one API.
 
-Студентская учебная жизнь размазана по десяткам мест: расписание на сайте вуза, изменения в Telegram, домашки в чатах, файлы в облаке, пропуски — устно куратору. **NaPare** объединяет всё это в единой точке входа — экране «Мой день» — без ИИ, на чистой агрегации данных.
+## Product architecture
 
-## Ключевые понятия
-
-| Термин | Описание |
-|--------|----------|
-| **Пара** | Конкретное занятие — центральная сущность системы |
-| **PairSpace** | Страница пары: объявления, домашки, файлы, обсуждения |
-| **Мой день** | Главный экран студента — персональная сводка на день |
-| **Коннектор** | Модуль загрузки расписания из внешних источников (парсеры, Excel, iCal) |
-| **LessonChange** | Запись об изменении расписания (отмена, перенос, замена аудитории/преподавателя) |
-
-## Как работает
-
-```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│  Мобильное  │     │   Веб-прил. │     │ MAX Мини-   │
-│  приложение │     │  (Next.js)  │     │   приложение│
-│  (Flutter)  │     │             │     │ (React/Vite)│
-└──────┬──────┘     └──────┬──────┘     └──────┬──────┘
-       │                   │                   │
-       └───────────────────┼───────────────────┘
-                           │
-                    ┌──────▼──────┐
-                    │  REST API   │
-                    │  (NestJS)   │
-                    │  /api/docs  │
-                    └──────┬──────┘
-                           │
-              ┌────────────┼────────────┐
-              │            │            │
-        ┌─────▼─────┐ ┌───▼───┐ ┌─────▼─────┐
-        │PostgreSQL │ │ Redis │ │   Sentry  │
-        │    16     │ │   7   │ │ PostHog   │
-        └───────────┘ └───────┘ └───────────┘
+```text
+web-student ─┐
+web-staff ───┼──> NestJS API (/api/v1) ──> PostgreSQL
+web-admin ───┤              │
+web-developer┘              ├────────────> Redis
+                             └────────────> S3-compatible file storage
 ```
 
-### Поток данных
+The backend is a modular monolith. Auth, users, schedule, PairSpace, absences, notifications, admin and My Day are NestJS modules. Tenant-scoped data is associated with a university; the authenticated tenant context is used for authorization and data access.
 
-1. **Коннектор** загружает расписание из источника вуза (Excel, iCal, парсер сайта)
-2. **Schedule Module** обрабатывает данные, определяет изменения (аналог diff)
-3. **LessonChange** генерируется при любом отличии от предыдущего состояния
-4. **Notifications Module** отправляет push по FCM/APNs и внутри приложения
-5. **My Day** агрегирует пары, объявления, домашки и статусы пропусков на экране
+## Repository structure
 
-### Аутентификация
-
-- Регистрация через email/пароль (bcrypt)
-- JWT access-токен (15–30 мин) + refresh-токен (7 дней)
-- 8 ролей: `student`, `teacher`, `curator`, `faculty_dean`, `department_head`, `university_admin`, `superadmin`, `developer`
-- Multi-tenancy: каждый запрос фильтруется по `universityId`
-
-## Технологии
-
-| Слой | Технологии |
-|------|-----------|
-| **Backend** | NestJS 10+, TypeScript 5.3+, TypeORM 0.3+, PostgreSQL 16, Redis 7 |
-| **Web** | Next.js 14+ (App Router), TanStack Query 5+, Tailwind CSS 3+ |
-| **Mobile** | Flutter 3.x, Riverpod 2+, go_router, dio |
-| **MAX Mini-App** | React + Vite |
-| **Monorepo** | pnpm 9+, Turborepo 2+ |
-| **Инфраструктура** | Docker, Kubernetes, Terraform, Helm, Yandex Cloud |
-| **CI/CD** | GitHub Actions |
-| **Мониторинг** | Sentry, PostHog, Prometheus, Grafana |
-| **API** | OpenAPI (генерируется из декораторов NestJS) |
-
-## Структура проекта
-
-```
-NaPare/
-├── apps/
-│   ├── backend/          # NestJS API-сервер
-│   │   └── src/
-│   │       ├── auth/          # Аутентификация (логин, регистрация, JWT)
-│   │       ├── users/         # Пользователи (CRUD, профиль)
-│   │       ├── schedule/      # Расписание (пары, изменения, коннекторы)
-│   │       ├── pair-space/    # PairSpace (объявления, ДЗ, файлы, обсуждения)
-│   │       ├── absences/      # Пропуски (статусы, подтверждения)
-│   │       ├── notifications/ # Уведомления (push, in-app)
-│   │       ├── admin/         # Администрирование
-│   │       └── common/        # Guards, filters, interceptors, decorators
-│   ├── web/              # Next.js веб-приложение
-│   └── mobile/           # Flutter мобильное приложение
-├── packages/
-│   ├── api-client/       # Автогенерируемый клиент (из OpenAPI)
-│   └── shared/           # Общие типы, константы, валидаторы
-├── docs/                 # Документация (160+ файлов)
-├── infrastructure/       # Конфигурации инфраструктуры
-└── scripts/              # Утилиты
+```text
+apps/
+  backend/          NestJS API and TypeORM migrations
+  web-student/      Next.js application for students
+  web-staff/        Next.js application for staff and curators
+  web-admin/        Next.js university administration application
+  web-developer/    Next.js developer console
+packages/
+  api-client/       TypeScript API client
+  shared/           Shared types, constants and validators
+infrastructure/     Docker and nginx configuration
+docs/               Product, architecture, operational and security docs
 ```
 
-## Быстрый старт
+## Applications
 
-```bash
-# 1. Клонировать и запустить зависимые сервисы
-git clone https://github.com/napare/napare.git
-cd napare
-docker compose up -d
+| Package | Purpose | Development URL |
+| --- | --- | --- |
+| `@napare/backend` | REST API, Swagger and migrations | `http://localhost:3000` |
+| `@napare/web-student` | Student workspace | `http://localhost:3001` |
+| `@napare/web-staff` | Staff and curator workspace | `http://localhost:3002` |
+| `@napare/web-admin` | University administration | `http://localhost:3003` |
+| `@napare/web-developer` | Developer console | `http://localhost:3004` |
+| `@napare/api-client` | Shared TypeScript API client | — |
+| `@napare/shared` | Shared domain types and constants | — |
 
-# 2. Backend
-cd apps/backend
-cp .env.example .env
+## Tech stack
+
+- Node.js 20, pnpm 9 and Turborepo 2
+- NestJS 10, TypeORM and PostgreSQL 16
+- Next.js 14 and React 18
+- Redis 7 and S3-compatible object storage (MinIO in local development)
+- Docker Compose, nginx and GitHub Actions
+
+## Local development
+
+Prerequisites: Node.js 20+, pnpm 9+, Docker Desktop with Docker Compose v2.
+
+```powershell
 pnpm install
-pnpm dev                  # http://localhost:3000
-
-# 3. Web
-cd ../web
-pnpm install
-pnpm dev                  # http://localhost:3001
-
-# 4. Mobile
-cd ../mobile
-flutter pub get
-flutter run
+Copy-Item apps/backend/.env.example apps/backend/.env
+docker compose -f docker-compose.dev.yml up -d
+pnpm dev
 ```
 
-### Команды
+Run one application when needed:
 
-```bash
-# Корневой уровень (Turborepo)
-pnpm dev          # Запустить все приложения
-pnpm build        # Собрать все
-pnpm lint         # Линтер
-pnpm test         # Тесты
-
-# Backend
-pnpm dev                          # Разработка с hot-reload
-pnpm test                         # Jest
-pnpm test:e2e                     # E2E тесты
-pnpm typeorm:migration:generate   # Генерация миграции
-pnpm typeorm:migration:run        # Применение миграций
+```powershell
+pnpm --filter @napare/backend dev
+pnpm dev:student
+pnpm dev:staff
+pnpm dev:admin
+pnpm dev:developer
 ```
 
-### Полезные ссылки
+The development Compose file exposes PostgreSQL on `5432`, Redis on `6379`, and MinIO on `9000`/`9001` for local use only.
 
-| Ресурс | URL |
-|--------|-----|
-| API документация | http://localhost:3000/api/docs |
-| Staging API | https://staging.napare.ru/api/docs |
-| Staging Web | https://staging.napare.ru |
+## Environment variables
 
----
+Copy `apps/backend/.env.example` to `apps/backend/.env`. Never commit a populated environment file.
 
-## Информация для команды
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `NODE_ENV` | Yes | `development`, `test` or `production` |
+| `PORT` | No | API port; defaults to `3000` |
+| `DATABASE_URL` | No | Full PostgreSQL connection URL; use instead of individual DB fields |
+| `DB_HOST`, `DB_PORT`, `DB_USERNAME`, `DB_PASSWORD`, `DB_NAME` | When `DATABASE_URL` is absent | PostgreSQL connection fields |
+| `JWT_SECRET` | Yes | Access-token signing secret |
+| `JWT_REFRESH_SECRET` | Yes | Refresh-token signing secret |
+| `JWT_ACCESS_EXPIRATION`, `JWT_REFRESH_EXPIRATION` | Yes | JWT lifetimes, for example `15m` and `30d` |
+| `REDIS_HOST`, `REDIS_PORT` or `REDIS_URL` | Deployment-dependent | Redis connection |
+| `CORS_ORIGIN` | Production | Allowed web origin |
+| `SENTRY_DSN` | No | Sentry DSN |
+| `STORAGE_ENDPOINT`, `STORAGE_BUCKET`, `STORAGE_ACCESS_KEY`, `STORAGE_SECRET_KEY`, `STORAGE_USE_SSL` | For file storage | S3-compatible storage configuration |
 
-### Для разработчиков (Backend)
+Production Compose additionally requires `REDIS_PASSWORD`; it refuses to start when required database, Redis, JWT or CORS values are missing.
 
-- **Вход в проект**: `docs/01_ONBOARDING.md`
-- **Архитектура**: `docs/architecture/system-overview.md`
-- **Модульная спецификация**: `docs/modules/` — каждый модуль описан по шаблону (цели, сущности, эндпоинты, права, UX, бизнес-правила, события, NFR)
-- **Решения (ADR)**: `docs/decisions/` — 7 архитектурных решений
-- **Миграции**: `pnpm typeorm:migration:generate -- src/database/migrations/НазваниеМиграции`
-- **Контрибьютинг**: `docs/process/contributing.md`
+## Database
 
-**Ключевые принципы:**
-- Модульный монолит на NestJS, не микросервисы
-- Каждая сущность имеет `universityId` — multi-tenancy на уровне данных
-- OpenAPI — источник правды для API (генерируется из декораторов)
-- class-validator + DTO для валидации
-- Roles Guard + University Guard на защищённых маршрутах
+PostgreSQL is the system of record. TypeORM entities and migrations live in `apps/backend/src`; migrations are run with the backend package:
 
-### Для разработчиков (Web)
+```powershell
+pnpm --filter @napare/backend typeorm:migration:run
+pnpm --filter @napare/backend typeorm:migration:revert
+```
 
-- **Стек**: Next.js 14+ (App Router), TanStack Query, Tailwind CSS
-- **Четыре приложения**: `apps/web-student` (студент), `apps/web-staff` (преподаватель и куратор), `apps/web-admin` (администратор), `apps/web-developer` (консоль разработки)
-- **Общий код**: `packages/shared-ui`, `packages/shared-api`, `packages/shared-types`
-- **Структура**: `apps/web-*/src/app/` — роуты по сценариям, `src/components/` — layout/, ui/, `src/lib/` — hooks/, queries/
-- **Запуск**: `pnpm dev:student`, `pnpm dev:staff`, `pnpm dev:admin`, `pnpm dev:developer` — порты 3001–3004
+For local development, start the Compose services before the API. Do not use `synchronize` or development credentials in production.
 
-### Для мобильного разработчика (Flutter)
+## API
 
-- **Стек**: Flutter 3.x, Riverpod, go_router, dio
-- **Архитектура**: Clean Architecture — `core/`, `features/`, `shared/`
-- **Фичи**: `lib/features/{auth,my_day,schedule}/` — data/, presentation/, providers/
-- **API клиент**: `lib/core/api/`
+The API base path is `/api/v1`. Swagger is available at `http://localhost:3000/api/v1/docs` while the backend is running. Controllers validate request DTOs and use JWT authentication and role/tenant guards where required.
 
-### Для дизайнера
+## Testing
 
-- **Дизайн-система**: `docs/ui/` — спецификации экранов и компонентов
-- **Глоссарий**: `docs/02_GLOSSARY.md` — единая терминология (50+ определений)
-- **Персоны**: `docs/product/` — описания пользователей
-- **Видение продукта**: `docs/strategy/vision.md`
+```powershell
+pnpm lint
+pnpm typecheck
+pnpm test:unit
+pnpm test:e2e
+pnpm build
+pnpm security:audit
+```
 
-**Экраны:**
-- «Мой день» — главный экран студента (агрегация без ИИ)
-- PairSpace — страница пары (объявления, ДЗ, файлы)
-- Расписание — список пар с фильтрами
-- Профиль — настройки, роль, уведомления
+E2E tests require PostgreSQL and Redis. GitHub Actions provides isolated service containers; local runs should use a dedicated test database rather than a shared development database.
 
-### Для DevOps / SRE
+## Docker
 
-- **Деплой**: `docs/ops/deployment.md`
-- **Инфраструктура**: `docs/ops/infrastructure.md` — полная настройка K8s, Terraform, Helm для Yandex Cloud
-- **CI/CD**: `docs/ops/cicd.md` — GitHub Actions пайплайн
-- **Мониторинг**: `docs/ops/monitoring.md` — Prometheus, Grafana, Sentry
+Use `docker-compose.dev.yml` for local infrastructure. `docker-compose.prod.yml` runs the production topology: nginx, backend, four web applications, PostgreSQL and Redis. PostgreSQL and Redis are internal-only in the production network.
 
-### Для менеджера / продакта
+Validate a production Compose configuration after supplying a secure external environment file:
 
-- **Видение**: `docs/strategy/vision.md`
-- **Монетизация**: `docs/strategy/monetization.md` — B2B2C SaaS с тарифами
-- **Роадмап**: `docs/strategy/roadmap.md` — 4 фазы (0–24+ мес)
-- **Метрики**: `docs/product/`
+```powershell
+docker compose --env-file <secure-env-file> -f docker-compose.prod.yml config
+```
 
-### Безопасность
+## Deployment
 
-- **152-ФЗ**: `docs/security/152-fz.md` — чеклист соответствия закону о защите персональных данных
-- **Угрозы**: `docs/security/threat-model.md`
+The `CI` GitHub Actions workflow runs lint, typecheck, unit tests with coverage, backend E2E tests, production builds and a production dependency audit for pull requests and pushes to `main`.
 
----
+After a successful push to `main`, the staging workflow builds immutable GHCR images tagged with the commit SHA, deploys through the protected `staging` GitHub Environment, then checks `/api/v1/health`. Staging connection details are GitHub Environment secrets. No production deployment runs automatically; production promotion must be a separate reviewer-gated manual flow.
 
-## Лицензия
+## Security
 
-См. [LICENSE](./LICENSE).
+- JWT access and refresh secrets are validated at startup; no fallback signing secrets are used.
+- Authentication roles are typed and tenant-scoped requests are checked against university access.
+- Do not place credentials in source files, Docker Compose defaults for production, or GitHub Actions YAML.
+- Run `pnpm security:audit` before merging dependency changes.
 
----
+## Documentation
 
-*NaPare — потому что «на паре» всё и начинается.*
+- [Documentation entry point](docs/00_START_HERE.md)
+- [Architecture](docs/architecture/README.md)
+- [API contracts](docs/api/README.md)
+- [CI/CD and branch protection](docs/ops/cicd.md)
+- [Security notes](docs/security/threat-model.md)
+
+## Contributing
+
+Read [the contribution guide](docs/process/contributing.md), keep changes scoped to a module, and run the relevant lint, typecheck and test commands before opening a pull request. `main` should be protected by required CI checks and review.

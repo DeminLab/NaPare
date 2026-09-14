@@ -5,11 +5,13 @@ import {
   CreateDateColumn,
   ManyToOne,
   JoinColumn,
+  Index,
 } from 'typeorm';
 
 import { PairSpace } from './pair-space.entity';
 
 @Entity('file_attachments')
+@Index('IDX_file_attachments_pair_space_id', ['pairSpaceId'])
 export class FileAttachment {
   @PrimaryGeneratedColumn('uuid')
   id: string;

@@ -4,6 +4,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { Lesson } from './entities/lesson.entity';
 import { LessonChange } from './entities/lesson-change.entity';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { TenantContext } from '../common/tenant/tenant-context';
 
 describe('ScheduleService', () => {
   let service: ScheduleService;
@@ -29,6 +30,7 @@ describe('ScheduleService', () => {
         { provide: getRepositoryToken(Lesson), useValue: mockLessonRepo },
         { provide: getRepositoryToken(LessonChange), useValue: mockChangeRepo },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        { provide: TenantContext, useValue: { assertAccess: jest.fn(), getUser: jest.fn() } },
       ],
     }).compile();
 
@@ -42,7 +44,7 @@ describe('ScheduleService', () => {
   describe('findById', () => {
     it('should throw if lesson not found', async () => {
       mockLessonRepo.findOne.mockResolvedValue(null);
-      await expect(service.findById('nonexistent')).rejects.toThrow('Lesson not found');
+      await expect(service.findById('nonexistent')).rejects.toThrow('Lesson with id nonexistent not found');
     });
 
     it('should return lesson if found', async () => {

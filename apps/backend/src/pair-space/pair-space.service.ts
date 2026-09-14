@@ -12,6 +12,13 @@ import { CreateAnnouncementDto } from './dto/create-announcement.dto';
 import { CreateHomeworkDto } from './dto/create-homework.dto';
 import { SubmitHomeworkDto } from './dto/submit-homework.dto';
 import { CreateMessageDto } from './dto/create-message.dto';
+import { CreateFileDto } from './dto/create-file.dto';
+import { TenantContext } from '../common/tenant/tenant-context';
+import {
+  PaginatedResponse,
+  PaginationQueryDto,
+  toPaginatedResponse,
+} from '../common/dto/pagination-query.dto';
 
 @Injectable()
 export class PairSpaceService {
@@ -28,6 +35,7 @@ export class PairSpaceService {
     private readonly messageRepository: Repository<DiscussionMessage>,
     @InjectRepository(HomeworkSubmission)
     private readonly submissionRepository: Repository<HomeworkSubmission>,
+    private readonly tenantContext: TenantContext,
   ) {}
 
   async findById(id: string): Promise<PairSpace> {
@@ -39,19 +47,21 @@ export class PairSpaceService {
     if (!pairSpace) {
       throw new NotFoundException(`PairSpace with id ${id} not found`);
     }
+    this.tenantContext.assertAccess(pairSpace.universityId);
 
     return pairSpace;
   }
 
-  async findByLesson(lessonId: string): Promise<PairSpace> {
+  async findByLesson(lessonId: string, universityId?: string): Promise<PairSpace> {
     const pairSpace = await this.pairSpaceRepository.findOne({
-      where: { lessonId },
+      where: universityId ? { lessonId, universityId } : { lessonId },
       relations: ['announcements', 'homeworks', 'files', 'messages'],
     });
 
     if (!pairSpace) {
       throw new NotFoundException(`PairSpace for lesson ${lessonId} not found`);
     }
+    this.tenantContext.assertAccess(pairSpace.universityId);
 
     return pairSpace;
   }
@@ -61,6 +71,7 @@ export class PairSpaceService {
     authorId: string,
     createAnnouncementDto: CreateAnnouncementDto,
   ): Promise<Announcement> {
+    await this.assertPairSpaceAccess(pairSpaceId);
     const announcement = this.announcementRepository.create({
       ...createAnnouncementDto,
       pairSpaceId,
@@ -71,6 +82,7 @@ export class PairSpaceService {
   }
 
   async getAnnouncements(pairSpaceId: string): Promise<Announcement[]> {
+    await this.assertPairSpaceAccess(pairSpaceId);
     return this.announcementRepository.find({
       where: { pairSpaceId },
       order: { isPinned: 'DESC', createdAt: 'DESC' },
@@ -82,6 +94,7 @@ export class PairSpaceService {
     authorId: string,
     createHomeworkDto: CreateHomeworkDto,
   ): Promise<Homework> {
+    await this.assertPairSpaceAccess(pairSpaceId);
     const homework = this.homeworkRepository.create({
       ...createHomeworkDto,
       pairSpaceId,
@@ -92,6 +105,7 @@ export class PairSpaceService {
   }
 
   async getHomeworks(pairSpaceId: string): Promise<Homework[]> {
+    await this.assertPairSpaceAccess(pairSpaceId);
     return this.homeworkRepository.find({
       where: { pairSpaceId },
       order: { deadline: 'ASC' },
@@ -101,8 +115,9 @@ export class PairSpaceService {
   async uploadFile(
     pairSpaceId: string,
     uploadedBy: string,
-    fileData: any,
+    fileData: CreateFileDto,
   ): Promise<FileAttachment> {
+    await this.assertPairSpaceAccess(pairSpaceId);
     const file = this.fileAttachmentRepository.create({
       pairSpaceId,
       uploadedBy,
@@ -115,11 +130,18 @@ export class PairSpaceService {
     return this.fileAttachmentRepository.save(file);
   }
 
-  async getMessages(pairSpaceId: string): Promise<DiscussionMessage[]> {
-    return this.messageRepository.find({
+  async getMessages(
+    pairSpaceId: string,
+    pagination: PaginationQueryDto = new PaginationQueryDto(),
+  ): Promise<PaginatedResponse<DiscussionMessage>> {
+    await this.assertPairSpaceAccess(pairSpaceId);
+    const [data, total] = await this.messageRepository.findAndCount({
       where: { pairSpaceId },
       order: { createdAt: 'ASC' },
+      skip: (pagination.page - 1) * pagination.limit,
+      take: pagination.limit,
     });
+    return toPaginatedResponse(data, total, pagination);
   }
 
   async createMessage(
@@ -127,6 +149,7 @@ export class PairSpaceService {
     userId: string,
     createMessageDto: CreateMessageDto,
   ): Promise<DiscussionMessage> {
+    await this.assertPairSpaceAccess(pairSpaceId);
     const message = this.messageRepository.create({
       pairSpaceId,
       userId,
@@ -142,6 +165,15 @@ export class PairSpaceService {
     studentId: string,
     submitHomeworkDto: SubmitHomeworkDto,
   ): Promise<HomeworkSubmission> {
+    const homework = await this.homeworkRepository.findOne({
+      where: { id: homeworkId },
+      relations: ['pairSpace'],
+    });
+    if (!homework) {
+      throw new NotFoundException(`Homework with id ${homeworkId} not found`);
+    }
+    this.tenantContext.assertAccess(homework.pairSpace.universityId);
+
     const existing = await this.submissionRepository.findOne({
       where: { homeworkId, studentId },
     });
@@ -173,13 +205,24 @@ export class PairSpaceService {
   async completeHomework(homeworkId: string): Promise<Homework> {
     const homework = await this.homeworkRepository.findOne({
       where: { id: homeworkId },
+      relations: ['pairSpace'],
     });
 
     if (!homework) {
       throw new NotFoundException(`Homework with id ${homeworkId} not found`);
     }
+    this.tenantContext.assertAccess(homework.pairSpace.universityId);
 
     homework.isCompleted = true;
     return this.homeworkRepository.save(homework);
+  }
+
+  private async assertPairSpaceAccess(pairSpaceId: string): Promise<PairSpace> {
+    const pairSpace = await this.pairSpaceRepository.findOne({ where: { id: pairSpaceId } });
+    if (!pairSpace) {
+      throw new NotFoundException(`PairSpace with id ${pairSpaceId} not found`);
+    }
+    this.tenantContext.assertAccess(pairSpace.universityId);
+    return pairSpace;
   }
 }

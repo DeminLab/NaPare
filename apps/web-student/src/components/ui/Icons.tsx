@@ -2,7 +2,7 @@
 
 import { SVGProps } from 'react';
 
-export type IconName = 'CalendarDays' | 'CalendarRange' | 'ClipboardCheck' | 'Bell' | 'User' | 'Settings' | 'LogOut' | 'Megaphone' | 'FileText' | 'Paperclip' | 'Clock' | 'XCircle' | 'Pin' | 'MessageCircle' | 'Send' | 'BookOpen';
+export type IconName = 'CalendarDays' | 'CalendarRange' | 'ClipboardCheck' | 'Bell' | 'User' | 'Settings' | 'LogOut' | 'Megaphone' | 'FileText' | 'Paperclip' | 'Clock' | 'XCircle' | 'Pin' | 'MessageCircle' | 'Send' | 'BookOpen' | 'ChevronRight' | 'MapPin';
 
 const paths: Record<IconName, string> = {
   CalendarDays: 'M6.75 3v2.25M17.25 3v2.25M3 8.25h18M5.25 5.25h13.5A2.25 2.25 0 0121 7.5v11.25A2.25 2.25 0 0118.75 21H5.25A2.25 2.25 0 013 18.75V7.5a2.25 2.25 0 012.25-2.25zM7.5 12h.008v.008H7.5V12zm4.5 0h.008v.008H12V12zm4.5 0h.008v.008H16.5V12zM7.5 16.5h.008v.008H7.5V16.5zm4.5 0h.008v.008H12V16.5zM16.5 16.5h.008v.008H16.5V16.5z',
@@ -21,6 +21,8 @@ const paths: Record<IconName, string> = {
   MessageCircle: 'M7.5 18.75a9 9 0 101.26-14.49L3 6l1.74 5.76A8.96 8.96 0 007.5 18.75z',
   Send: 'M6 12l-3 9 18-9L3 3l3 9zm0 0h7.5',
   BookOpen: 'M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25',
+  ChevronRight: 'M9 18l6-6-6-6',
+  MapPin: 'M12 21s6-4.35 6-10a6 6 0 10-12 0c0 5.65 6 10 6 10zm0-7.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z',
 };
 
 export function Icon({ name, ...props }: SVGProps<SVGSVGElement> & { name: IconName }) {

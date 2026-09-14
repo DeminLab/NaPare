@@ -4,6 +4,7 @@ import {
   Column,
   CreateDateColumn,
 } from 'typeorm';
+import { JsonObject } from '../types/json-value.type';
 
 @Entity('audit_logs')
 export class AuditLog {
@@ -23,10 +24,10 @@ export class AuditLog {
   entityId: string;
 
   @Column({ type: 'jsonb', nullable: true })
-  oldValues: Record<string, any>;
+  oldValues: JsonObject;
 
   @Column({ type: 'jsonb', nullable: true })
-  newValues: Record<string, any>;
+  newValues: JsonObject;
 
   @Column({ nullable: true })
   ip: string;

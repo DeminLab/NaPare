@@ -12,7 +12,7 @@ import { tap } from 'rxjs/operators';
 export class TransformInterceptor implements NestInterceptor {
   private readonly logger = new Logger('HTTP');
 
-  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+  intercept<T>(context: ExecutionContext, next: CallHandler<T>): Observable<T> {
     const request = context.switchToHttp().getRequest();
     const { method, url } = request;
     const now = Date.now();

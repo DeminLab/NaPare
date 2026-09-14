@@ -1,5 +1,6 @@
 import {
   Controller,
+  Delete,
   Post,
   Body,
   UseGuards,
@@ -9,6 +10,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagg
 
 import { NotificationsService } from '../notifications/notifications.service';
 import { RegisterDeviceTokenDto } from '../notifications/dto/register-device-token.dto';
+import { RemoveDeviceTokenDto } from '../notifications/dto/remove-device-token.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 
 @ApiTags('devices')
@@ -32,5 +34,13 @@ export class DevicesController {
       registerDeviceTokenDto.platform,
       registerDeviceTokenDto.deviceName,
     );
+  }
+
+  @Delete('token')
+  @ApiOperation({ summary: 'Удалить токен текущего устройства' })
+  @ApiResponse({ status: 200, description: 'Токен удалён' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async removeToken(@Body() removeDeviceTokenDto: RemoveDeviceTokenDto) {
+    return this.notificationsService.removeDeviceToken(removeDeviceTokenDto.token);
   }
 }

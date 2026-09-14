@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { apiFetch } from '@/lib/api';
+import { apiFetch, apiFetchList } from '@/lib/api';
+import { RequestState } from '@/components/ui/RequestState';
 
 interface AdminStats {
   totalUsers?: number;
@@ -104,7 +105,7 @@ export default function DashboardPage() {
     const date = todayIso();
     Promise.allSettled([
       apiFetch<AdminStats>('/admin/stats'),
-      apiFetch<ChangedLesson[]>(`/schedule/changes?date=${date}`),
+      apiFetchList<ChangedLesson>(`/schedule/changes?date=${date}`),
       apiFetch<SyncStatus>('/admin/schedule/sync-status'),
     ]).then(([statsResult, changesResult, syncResult]) => {
       if (statsResult.status === 'fulfilled') setStats(statsResult.value);
@@ -128,7 +129,7 @@ export default function DashboardPage() {
   const syncFailed = sync?.status === 'error';
 
   if (statsError && !stats) {
-    return <div className="rounded-xl border border-red-200 bg-red-50 px-5 py-4 text-sm font-medium text-red-700">{statsError}</div>;
+    return <RequestState title="Не удалось загрузить dashboard" description={statsError} onRetry={() => window.location.reload()} />;
   }
 
   return (

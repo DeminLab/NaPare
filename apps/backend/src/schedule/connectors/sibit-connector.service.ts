@@ -4,6 +4,28 @@ import { firstValueFrom } from 'rxjs';
 
 import { CreateLessonDto } from '../dto/create-lesson.dto';
 
+interface SibitLesson {
+  id?: string | number;
+  groupId?: string;
+  group?: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  pairNumber: number;
+  subject: string;
+  subjectType?: string;
+  teacher?: string;
+  teacherId?: string;
+  room?: string;
+  building?: string;
+  subgroup?: string;
+  department?: string;
+  faculty?: string;
+}
+
+interface SibitGroup { name: string; }
+interface SibitTeacher { id: string; name: string; }
+
 @Injectable()
 export class SibitConnectorService {
   private readonly logger = new Logger(SibitConnectorService.name);
@@ -18,7 +40,7 @@ export class SibitConnectorService {
   ): Promise<CreateLessonDto[]> {
     try {
       const response = await firstValueFrom(
-        this.httpService.get(`${this.baseUrl}/schedule`, {
+        this.httpService.get<SibitLesson[]>(`${this.baseUrl}/schedule`, {
           params: {
             group,
             start: startDate,
@@ -29,7 +51,7 @@ export class SibitConnectorService {
 
       return this.mapToLessons(response.data, startDate, endDate);
     } catch (error) {
-      this.logger.error(`Failed to fetch schedule from Sibit: ${error.message}`);
+      this.logger.error(`Failed to fetch schedule from Sibit: ${errorMessage(error)}`);
       throw error;
     }
   }
@@ -37,30 +59,30 @@ export class SibitConnectorService {
   async getGroups(): Promise<string[]> {
     try {
       const response = await firstValueFrom(
-        this.httpService.get(`${this.baseUrl}/groups`),
+        this.httpService.get<SibitGroup[]>(`${this.baseUrl}/groups`),
       );
 
-      return response.data.map((group: any) => group.name);
+      return response.data.map((group) => group.name);
     } catch (error) {
-      this.logger.error(`Failed to fetch groups from Sibit: ${error.message}`);
+      this.logger.error(`Failed to fetch groups from Sibit: ${errorMessage(error)}`);
       throw error;
     }
   }
 
-  async getTeachers(): Promise<any[]> {
+  async getTeachers(): Promise<SibitTeacher[]> {
     try {
       const response = await firstValueFrom(
-        this.httpService.get(`${this.baseUrl}/teachers`),
+        this.httpService.get<SibitTeacher[]>(`${this.baseUrl}/teachers`),
       );
 
       return response.data;
     } catch (error) {
-      this.logger.error(`Failed to fetch teachers from Sibit: ${error.message}`);
+      this.logger.error(`Failed to fetch teachers from Sibit: ${errorMessage(error)}`);
       throw error;
     }
   }
 
-  private mapToLessons(data: any[], startDate: string, endDate: string): CreateLessonDto[] {
+  private mapToLessons(data: SibitLesson[], startDate: string, endDate: string): CreateLessonDto[] {
     return data.map((item) => ({
       groupId: item.groupId || item.group || '',
       dayOfWeek: new Date(item.date).getDay(),
@@ -83,4 +105,8 @@ export class SibitConnectorService {
       source: 'sibit',
     }));
   }
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }

@@ -14,14 +14,20 @@
     "build:staff": "turbo run build --filter=@napare/web-staff",
     "build:admin": "turbo run build --filter=@napare/web-admin",
     "build:developer": "turbo run build --filter=@napare/web-developer",
-    "lint": "turbo run lint",
+    "lint": "eslint \"apps/**/*.{ts,tsx}\" \"packages/**/*.{ts,tsx}\"",
+    "typecheck": "pnpm --filter @napare/backend exec tsc --noEmit && pnpm --filter @napare/web-student exec tsc --noEmit && pnpm --filter @napare/web-staff exec tsc --noEmit && pnpm --filter @napare/web-admin exec tsc --noEmit && pnpm --filter @napare/web-developer exec tsc --noEmit",
     "test": "turbo run test",
+    "test:unit": "pnpm --filter @napare/backend exec jest --ci --runInBand",
+    "test:e2e": "pnpm --filter @napare/backend exec jest --config ./test/jest-e2e.json --runInBand",
+    "security:audit": "pnpm audit --prod --audit-level=high",
     "test:coverage": "turbo run test:coverage",
     "clean": "turbo run clean"
   },
   "devDependencies": {
     "turbo": "^2.0.0",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "eslint": "^8.57.1",
+    "@typescript-eslint/parser": "^7.18.0"
   },
   "packageManager": "pnpm@9.0.0"
 }

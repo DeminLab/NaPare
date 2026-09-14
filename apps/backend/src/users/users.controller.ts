@@ -15,6 +15,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagg
 
 import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { BindGroupDto } from './dto/bind-group.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 
 @ApiTags('users')
@@ -56,9 +57,9 @@ export class UsersController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async bindGroup(
     @Request() req,
-    @Body('groupId') groupId: string,
+    @Body() bindGroupDto: BindGroupDto,
   ) {
-    return this.usersService.update(req.user.id, { groupId } as any);
+    return this.usersService.bindGroup(req.user.id, bindGroupDto.groupId);
   }
 
   @Get(':id')

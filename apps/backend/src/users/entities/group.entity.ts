@@ -6,12 +6,15 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  Index,
 } from 'typeorm';
 
 import { University } from './university.entity';
 import { Faculty } from './faculty.entity';
 
 @Entity('groups')
+@Index('IDX_groups_university_name', ['universityId', 'name'])
+@Index('IDX_groups_faculty_id', ['facultyId'])
 export class Group {
   @PrimaryGeneratedColumn('uuid')
   id: string;

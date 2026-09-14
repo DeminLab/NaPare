@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { apiFetch, getUser } from '@/lib/api';
-import { Card, Badge, Button, Input, TabBar, EmptyState, Avatar, Skeleton, Icon } from '@/components/ui';
+import { Card, Badge, Button, Input, TabBar, EmptyState, Avatar, Skeleton, Icon, RequestState } from '@/components/ui';
 
 interface Announcement {
   id: string;
@@ -70,15 +70,18 @@ export default function PairSpacePage() {
   const [loading, setLoading] = useState(true);
   const [newMessage, setNewMessage] = useState('');
   const [notes, setNotes] = useState('');
+  const [error, setError] = useState('');
+  const [messageSaving, setMessageSaving] = useState(false);
 
   useEffect(() => {
+    setError('');
     Promise.all([
       apiFetch<PairSpace>(`/pair-spaces/${lessonId}`),
       apiFetch<Lesson>(`/schedule/lessons/${lessonId}`),
     ]).then(([ps, l]) => {
       setPairSpace(ps);
       setLesson(l);
-    }).catch(() => {}).finally(() => setLoading(false));
+    }).catch((err) => setError(err instanceof Error ? err.message : 'Не удалось загрузить пространство пары.')).finally(() => setLoading(false));
   }, [lessonId]);
 
   useEffect(() => {
@@ -93,6 +96,8 @@ export default function PairSpacePage() {
 
   const handleSendMessage = async () => {
     if (!newMessage.trim()) return;
+    setMessageSaving(true);
+    setError('');
     try {
       const msg = await apiFetch<Message>(`/pair-spaces/${lessonId}/messages`, {
         method: 'POST',
@@ -100,7 +105,11 @@ export default function PairSpacePage() {
       });
       setPairSpace(prev => prev ? { ...prev, messages: [...prev.messages, msg] } : prev);
       setNewMessage('');
-    } catch {}
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Не удалось отправить сообщение.');
+    } finally {
+      setMessageSaving(false);
+    }
   };
 
   if (loading) {
@@ -110,6 +119,10 @@ export default function PairSpacePage() {
         <Skeleton className="h-48" />
       </div>
     );
+  }
+
+  if (error && !pairSpace) {
+    return <div className="mx-auto max-w-3xl"><RequestState title="Не удалось открыть PairSpace" description={error} onRetry={() => window.location.reload()} /></div>;
   }
 
   const tabs = [
@@ -130,11 +143,12 @@ export default function PairSpacePage() {
           Назад к расписанию
         </button>
         {lesson && (
-          <div><h1 className="text-3xl font-bold tracking-tight text-slate-900">{lesson.subject}</h1><p className="mt-2 text-sm text-slate-500">{typeLabels[lesson.subjectType] || lesson.subjectType} · {lesson.startTime?.slice(11, 16)}–{lesson.endTime?.slice(11, 16)}</p><div className="mt-5 grid gap-3 sm:grid-cols-2"><Card padding="sm" className="bg-slate-50"><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Аудитория</p><p className="mt-1 font-semibold text-slate-900">{lesson.room || 'Не указана'}</p></Card><Card padding="sm" className="bg-slate-50"><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Преподаватель</p><p className="mt-1 font-semibold text-slate-900">{lesson.teacherName || 'Не указан'}</p></Card></div></div>
+          <div><h1 className="break-words text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">{lesson.subject}</h1><p className="mt-2 text-sm text-slate-500">{typeLabels[lesson.subjectType] || lesson.subjectType} · {lesson.startTime?.slice(11, 16)}–{lesson.endTime?.slice(11, 16)}</p><div className="mt-5 grid gap-3 sm:grid-cols-2"><Card padding="sm" className="bg-slate-50"><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Аудитория</p><p className="mt-1 break-words font-semibold text-slate-900">{lesson.room || 'Не указана'}</p></Card><Card padding="sm" className="bg-slate-50"><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Преподаватель</p><p className="mt-1 break-words font-semibold text-slate-900">{lesson.teacherName || 'Не указан'}</p></Card></div></div>
         )}
       </div>
 
       <TabBar tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
+      {error && <RequestState title="Не удалось выполнить действие" description={error} onRetry={() => setError('')} />}
 
       {/* Announcements */}
       {activeTab === 'announcements' && (
@@ -221,7 +235,7 @@ export default function PairSpacePage() {
               placeholder="Сообщение..."
               onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
             />
-            <Button onClick={handleSendMessage} aria-label="Отправить сообщение"><Icon name="Send" className="h-4 w-4" /></Button>
+            <Button loading={messageSaving} onClick={handleSendMessage} aria-label="Отправить сообщение"><Icon name="Send" className="h-4 w-4" /></Button>
           </div>
         </div>
       )}

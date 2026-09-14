@@ -7,6 +7,7 @@ import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import Avatar from '@/components/ui/Avatar';
 import Skeleton from '@/components/ui/Skeleton';
+import { RequestState } from '@/components/ui/RequestState';
 
 export default function SessionPage() {
   const [user, setUser] = useState<UserInfo | null>(null);
@@ -14,12 +15,16 @@ export default function SessionPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
+  const loadSession = () => {
+    setLoading(true);
+    setError('');
     Promise.allSettled([
-      getUser().then(setUser).catch((e) => setError(e instanceof Error ? e.message : 'Ошибка')),
+      getUser().then(setUser).catch((e) => setError(e instanceof Error ? e.message : 'Не удалось загрузить сессию.')),
       getHealth().then(setHealth).catch(() => {}),
     ]).finally(() => setLoading(false));
-  }, []);
+  };
+
+  useEffect(() => { loadSession(); }, []);
 
   const accessToken = typeof window !== 'undefined' ? getToken() : null;
   const refreshToken = typeof window !== 'undefined' ? getRefreshToken() : null;
@@ -32,7 +37,7 @@ export default function SessionPage() {
   };
 
   return (
-    <div className="p-6 lg:p-8">
+    <div className="p-4 sm:p-6 lg:p-8">
       <div className="mx-auto max-w-3xl">
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-slate-900">Текущая сессия</h1>
@@ -41,11 +46,7 @@ export default function SessionPage() {
           </p>
         </div>
 
-        {error && (
-          <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-5 py-3 text-sm font-medium text-red-600">
-            {error}
-          </div>
-        )}
+        {error && <div className="mb-6"><RequestState title="Не удалось загрузить сессию" description={error} onRetry={loadSession} /></div>}
 
         {/* User card */}
         <Card className="mb-6">
@@ -71,7 +72,7 @@ export default function SessionPage() {
                   <p className="text-sm text-slate-500">{user.email}</p>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid gap-3 sm:grid-cols-2">
                 <div className="rounded-xl bg-slate-50 px-4 py-3">
                   <p className="text-xs font-medium text-slate-500">ID</p>
                   <p className="mt-0.5 truncate text-sm font-semibold text-slate-900 font-mono">{user.id}</p>
@@ -140,7 +141,7 @@ export default function SessionPage() {
           {loading ? (
             <Skeleton className="h-24" />
           ) : (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-3 sm:grid-cols-2">
               <div className="rounded-xl bg-slate-50 px-4 py-3">
                 <p className="text-xs font-medium text-slate-500">Статус</p>
                 <div className="mt-1">

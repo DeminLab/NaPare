@@ -1,92 +1,44 @@
 # CI/CD
 
-## Pipeline
+## Workflows
 
-```mermaid
-graph LR
-    A[push/PR] --> B[Lint]
-    B --> C[Test]
-    C --> D[Build]
-    D --> E{Branch?}
-    E -->|develop| F[Deploy Staging]
-    E -->|main| G[Deploy Production]
-```
+`CI` runs for every pull request to `main` and every push to `main`. Its independent required checks are:
 
-## GitHub Actions
+- lint;
+- TypeScript typecheck;
+- backend unit tests and coverage;
+- backend E2E tests against ephemeral PostgreSQL and Redis;
+- production application build;
+- production dependency audit.
 
-```yaml
-# .github/workflows/ci-cd.yml (упрощённо)
-name: CI/CD
-on:
-  push:
-    branches: [main, develop]
-  pull_request:
-    branches: [main, develop]
+Test output, coverage, and audit JSON are uploaded as GitHub Actions artifacts even when a job fails. pnpm's store and Turbo outputs are cached per lockfile.
 
-jobs:
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm run lint
+After a successful push to `main`, `Build images and deploy staging` builds immutable GHCR images tagged with the commit SHA, deploys them to the protected `staging` environment, then checks `/api/v1/health`.
 
-  test:
-    needs: lint
-    services:
-      postgres: { image: postgres:16 }
-      redis: { image: redis:7 }
-    steps:
-      - uses: actions/checkout@v4
-      - run: pnpm run test:coverage
+## Required staging secrets
 
-  build:
-    needs: test
-    steps:
-      - uses: docker/build-push-action@v5
+Configure these as **GitHub Environment secrets** for `staging`, never as committed `.env` files:
 
-  deploy-staging:
-    needs: build
-    if: github.ref == 'refs/heads/develop'
-    runs-on: ubuntu-latest
-    environment: staging
+- `STAGING_HOST`
+- `STAGING_USER`
+- `STAGING_SSH_KEY`
+- `STAGING_KNOWN_HOSTS`
+- `STAGING_DEPLOY_COMMAND`
+- `STAGING_URL`
 
-  deploy-production:
-    needs: build
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    environment: production
-```
+`STAGING_DEPLOY_COMMAND` runs on the staging host with `NAPARE_IMAGE_PREFIX` and `NAPARE_IMAGE_TAG` set to the immutable images built by CI. It must pull those exact image tags and perform the host-specific rollout. The workflow fails clearly if any required secret is missing.
 
-## Стратегия веток
+## Production safety
 
-```
-main (production)
-  ↑ merge (≥1 approval)
-develop (staging)
-  ↑ merge (автоматически)
-feature/xxx (от develop)
-  ↑ rebase перед PR
-```
+There is deliberately no production deployment workflow. Production promotion must be a separate manually-dispatched workflow protected by a GitHub Environment with required reviewers, a verified staging release, and an approved rollback plan.
 
-## Правила веток
+## Branch protection recommendations
 
-| Правило | main | develop |
-|---------|------|---------|
-| Require PR | ✅ | ✅ |
-| Required reviews | ≥ 1 | ≥ 1 |
-| CI must pass | ✅ | ✅ |
-| Force push | ❌ | ❌ |
+Protect `main` with the following GitHub rules:
 
-## Среды
-
-| Среда | URL | Деплой |
-|-------|-----|--------|
-| Local | localhost | `docker compose up` |
-| Staging | staging.napare.ru | Авто при push в develop |
-| Production | napare.ru | Ручной при merge в main |
-
-## См. также
-
-- [ops/runbooks.md](runbooks.md) — runbook'и
-- [ops/monitoring.md](monitoring.md) — мониторинг
+1. Require pull requests before merging and at least one approving review.
+2. Require the `Lint`, `Typecheck`, `Unit tests and coverage`, `Backend E2E`, `Production application build`, and `Dependency security audit` checks.
+3. Require branches to be up to date before merging and resolve all review conversations.
+4. Restrict force pushes and branch deletion.
+5. Restrict who can push directly to `main`.
+6. Require the `staging` Environment to have deployment reviewers; keep any future `production` Environment reviewer-gated.

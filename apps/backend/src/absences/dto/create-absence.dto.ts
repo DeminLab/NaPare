@@ -4,10 +4,6 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 export class CreateAbsenceDto {
   @ApiProperty()
   @IsUUID()
-  universityId: string;
-
-  @ApiProperty()
-  @IsUUID()
   studentId: string;
 
   @ApiPropertyOptional()

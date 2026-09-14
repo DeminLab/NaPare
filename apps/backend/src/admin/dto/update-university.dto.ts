@@ -20,7 +20,7 @@ export class UpdateUniversityDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsObject()
-  connectorConfig?: Record<string, any>;
+  connectorConfig?: Record<string, unknown>;
 
   @ApiPropertyOptional()
   @IsOptional()

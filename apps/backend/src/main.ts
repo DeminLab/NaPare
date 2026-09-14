@@ -7,19 +7,21 @@ import * as Sentry from '@sentry/node';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
+import { ApiErrorResponseDto } from './common/dto/api-error-response.dto';
+import { PaginatedResponseDto } from './common/dto/pagination-query.dto';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
   const app = await NestFactory.create(AppModule);
 
-  const configService = app.get(ConfigService);
+  const configService = app.get<ConfigService>(ConfigService);
 
   // Sentry
   const sentryDsn = configService.get('SENTRY_DSN');
   if (sentryDsn) {
     Sentry.init({
       dsn: sentryDsn,
-      environment: configService.get('NODE_ENV'),
+      environment: configService.getOrThrow('nodeEnv'),
       tracesSampleRate: configService.get<number>('SENTRY_TRACES_SAMPLE_RATE', 0.1),
     });
   }
@@ -60,12 +62,14 @@ async function bootstrap() {
   // Swagger
   const config = new DocumentBuilder()
     .setTitle('НаПаре API')
-    .setDescription('API для приложения НаПаре')
+    .setDescription('Версионированный API НаПаре. Коллекции возвращают { data, meta }; ошибки возвращают statusCode, code, message, details, timestamp и path.')
     .setVersion('1.0')
     .addBearerAuth()
     .build();
 
-  const document = SwaggerModule.createDocument(app, config);
+  const document = SwaggerModule.createDocument(app, config, {
+    extraModels: [ApiErrorResponseDto, PaginatedResponseDto],
+  });
   SwaggerModule.setup('api/v1/docs', app, document);
 
   // Start

@@ -9,16 +9,36 @@ import { Faculty } from '../users/entities/faculty.entity';
 import { Group } from '../users/entities/group.entity';
 import { UpdateUserRoleDto } from './dto/update-user-role.dto';
 import { ImportScheduleDto } from './dto/import-schedule.dto';
+import { UserRole } from '../auth/interfaces/user-role';
+import { TenantContext } from '../common/tenant/tenant-context';
+import { User } from '../users/entities/user.entity';
+import { CreateFacultyDto } from './dto/create-faculty.dto';
+import { UpdateFacultyDto } from './dto/update-faculty.dto';
+import { CreateGroupDto } from './dto/create-group.dto';
+import { UpdateGroupDto } from './dto/update-group.dto';
+import { UpdateUniversityDto } from './dto/update-university.dto';
+import {
+  PaginatedResponse,
+  PaginationQueryDto,
+  toPaginatedResponse,
+} from '../common/dto/pagination-query.dto';
 
-const ROLE_HIERARCHY: Record<string, number> = {
-  developer: 0,
-  student: 1,
-  teacher: 2,
-  curator: 3,
-  department_head: 4,
-  faculty_dean: 5,
-  university_admin: 6,
-  superadmin: 7,
+export interface UniversityStats {
+  totalUsers: number;
+  totalStudents: number;
+  totalTeachers: number;
+  totalLessons: number;
+}
+
+const ROLE_HIERARCHY: Record<UserRole, number> = {
+  [UserRole.DEVELOPER]: 0,
+  [UserRole.STUDENT]: 1,
+  [UserRole.TEACHER]: 2,
+  [UserRole.CURATOR]: 3,
+  [UserRole.DEPARTMENT_HEAD]: 4,
+  [UserRole.FACULTY_DEAN]: 5,
+  [UserRole.UNIVERSITY_ADMIN]: 6,
+  [UserRole.SUPERADMIN]: 7,
 };
 
 @Injectable()
@@ -32,18 +52,31 @@ export class AdminService {
     private readonly facultyRepository: Repository<Faculty>,
     @InjectRepository(Group)
     private readonly groupRepository: Repository<Group>,
+    private readonly tenantContext: TenantContext,
   ) {}
 
-  async getUniversityUsers(universityId: string): Promise<any[]> {
-    return this.usersService.findByUniversityId(universityId);
+  async getUniversityUsers(
+    universityId: string,
+    pagination: PaginationQueryDto,
+  ): Promise<PaginatedResponse<User>> {
+    this.tenantContext.assertAccess(universityId);
+    return this.usersService.findByUniversityId(universityId, pagination);
+  }
+
+  async getGroupStudents(
+    universityId: string,
+    groupId: string,
+    pagination: PaginationQueryDto,
+  ): Promise<PaginatedResponse<User>> {
+    return this.usersService.findByGroupId(groupId, universityId, pagination);
   }
 
   async updateUserRole(
     universityId: string,
     userId: string,
     updateUserRoleDto: UpdateUserRoleDto,
-    requesterRole: string,
-  ): Promise<any> {
+    requesterRole: UserRole,
+  ): Promise<User> {
     if (!this.canManageRole(requesterRole, updateUserRoleDto.role)) {
       throw new ForbiddenException('Insufficient permissions to assign this role');
     }
@@ -54,7 +87,7 @@ export class AdminService {
       throw new ForbiddenException('User not found in this university');
     }
 
-    return this.usersService.update(userId, { roles: [updateUserRoleDto.role] });
+    return this.usersService.update(userId, { role: updateUserRoleDto.role });
   }
 
   async importSchedule(
@@ -64,7 +97,7 @@ export class AdminService {
     return this.scheduleService.importLessons(universityId, []);
   }
 
-  async getUniversityStats(universityId: string): Promise<any> {
+  async getUniversityStats(_universityId: string): Promise<UniversityStats> {
     return {
       totalUsers: 0,
       totalStudents: 0,
@@ -74,6 +107,7 @@ export class AdminService {
   }
 
   async getUniversity(universityId: string): Promise<University> {
+    this.tenantContext.assertAccess(universityId);
     const university = await this.universityRepository.findOne({
       where: { id: universityId },
     });
@@ -85,67 +119,89 @@ export class AdminService {
     return university;
   }
 
-  async updateUniversity(universityId: string, updateData: any): Promise<University> {
+  async updateUniversity(universityId: string, updateData: UpdateUniversityDto): Promise<University> {
     const university = await this.getUniversity(universityId);
     Object.assign(university, updateData);
     return this.universityRepository.save(university);
   }
 
-  async getFaculties(universityId: string): Promise<Faculty[]> {
-    return this.facultyRepository.find({
+  async getFaculties(
+    universityId: string,
+    pagination: PaginationQueryDto,
+  ): Promise<PaginatedResponse<Faculty>> {
+    this.tenantContext.assertAccess(universityId);
+    const [data, total] = await this.facultyRepository.findAndCount({
       where: { universityId },
       order: { name: 'ASC' },
+      skip: (pagination.page - 1) * pagination.limit,
+      take: pagination.limit,
     });
+    return toPaginatedResponse(data, total, pagination);
   }
 
-  async createFaculty(universityId: string, data: any): Promise<Faculty> {
+  async createFaculty(universityId: string, data: CreateFacultyDto): Promise<Faculty> {
+    this.tenantContext.assertAccess(universityId);
     const faculty = this.facultyRepository.create({
       ...data,
       universityId,
     });
-    return this.facultyRepository.save(faculty as any) as Promise<Faculty>;
+    return this.facultyRepository.save(faculty);
   }
 
-  async updateFaculty(id: string, data: any): Promise<Faculty> {
+  async updateFaculty(id: string, data: UpdateFacultyDto): Promise<Faculty> {
     const faculty = await this.facultyRepository.findOne({ where: { id } });
 
     if (!faculty) {
       throw new NotFoundException(`Faculty with id ${id} not found`);
     }
+    this.tenantContext.assertAccess(faculty.universityId);
 
     Object.assign(faculty, data);
     return this.facultyRepository.save(faculty) as Promise<Faculty>;
   }
 
-  async getGroups(universityId: string): Promise<Group[]> {
-    return this.groupRepository.find({
+  async getGroups(
+    universityId: string,
+    pagination: PaginationQueryDto,
+  ): Promise<PaginatedResponse<Group>> {
+    this.tenantContext.assertAccess(universityId);
+    const [data, total] = await this.groupRepository.findAndCount({
       where: { universityId },
       order: { name: 'ASC' },
+      skip: (pagination.page - 1) * pagination.limit,
+      take: pagination.limit,
     });
+    return toPaginatedResponse(data, total, pagination);
   }
 
-  async createGroup(universityId: string, data: any): Promise<Group> {
+  async createGroup(universityId: string, data: CreateGroupDto): Promise<Group> {
+    this.tenantContext.assertAccess(universityId);
     const group = this.groupRepository.create({
-      ...data,
+      name: data.name,
+      specialization: data.specialization,
+      facultyId: data.facultyId,
+      curatorId: data.curatorId,
       universityId,
+      curriculumYear: Number(data.curriculumYear),
     });
-    return this.groupRepository.save(group as any) as Promise<Group>;
+    return this.groupRepository.save(group);
   }
 
-  async updateGroup(id: string, data: any): Promise<Group> {
+  async updateGroup(id: string, data: UpdateGroupDto): Promise<Group> {
     const group = await this.groupRepository.findOne({ where: { id } });
 
     if (!group) {
       throw new NotFoundException(`Group with id ${id} not found`);
     }
+    this.tenantContext.assertAccess(group.universityId);
 
     Object.assign(group, data);
     return this.groupRepository.save(group) as Promise<Group>;
   }
 
-  private canManageRole(requesterRole: string, targetRole: string): boolean {
-    const requesterLevel = ROLE_HIERARCHY[requesterRole] || 0;
-    const targetLevel = ROLE_HIERARCHY[targetRole] || 0;
+  private canManageRole(requesterRole: UserRole, targetRole: UserRole): boolean {
+    const requesterLevel = ROLE_HIERARCHY[requesterRole] ?? -1;
+    const targetLevel = ROLE_HIERARCHY[targetRole] ?? -1;
     return requesterLevel > targetLevel;
   }
 }

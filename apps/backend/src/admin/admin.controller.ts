@@ -5,10 +5,11 @@ import {
   Post,
   Body,
   Param,
+  Query,
   UseGuards,
   Request,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
+import { ApiOkResponse, ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 
 import { AdminService } from './admin.service';
 import { UpdateUserRoleDto } from './dto/update-user-role.dto';
@@ -20,6 +21,8 @@ import { UpdateGroupDto } from './dto/update-group.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
+import { UserRole } from '../auth/interfaces/user-role';
+import { PaginatedResponseDto, PaginationQueryDto } from '../common/dto/pagination-query.dto';
 
 @ApiTags('admin')
 @ApiBearerAuth()
@@ -29,16 +32,16 @@ export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
   @Get('users')
-  @Roles('university_admin', 'superadmin')
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Получить пользователей университета' })
-  @ApiResponse({ status: 200, description: 'Пользователи получены' })
+  @ApiOkResponse({ description: 'Пользователи получены', type: PaginatedResponseDto })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async getUsers(@Request() req) {
-    return this.adminService.getUniversityUsers(req.user.universityId);
+  async getUsers(@Request() req, @Query() pagination: PaginationQueryDto) {
+    return this.adminService.getUniversityUsers(req.user.universityId, pagination);
   }
 
   @Patch('users/:id/roles')
-  @Roles('university_admin', 'superadmin')
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Изменить роль пользователя' })
   @ApiResponse({ status: 200, description: 'Роль обновлена' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -56,7 +59,7 @@ export class AdminController {
   }
 
   @Post('schedule/upload')
-  @Roles('university_admin', 'superadmin')
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Загрузить расписание' })
   @ApiResponse({ status: 201, description: 'Расписание загружено' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -68,7 +71,7 @@ export class AdminController {
   }
 
   @Post('schedule/sync')
-  @Roles('university_admin', 'superadmin')
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Синхронизировать расписание' })
   @ApiResponse({ status: 200, description: 'Синхронизация запущена' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -77,7 +80,7 @@ export class AdminController {
   }
 
   @Get('schedule/sync-status')
-  @Roles('university_admin', 'superadmin')
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Получить статус синхронизации' })
   @ApiResponse({ status: 200, description: 'Статус получен' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -86,7 +89,7 @@ export class AdminController {
   }
 
   @Get('university')
-  @Roles('university_admin', 'superadmin')
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Получить информацию об университете' })
   @ApiResponse({ status: 200, description: 'Информация получена' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -95,7 +98,7 @@ export class AdminController {
   }
 
   @Patch('university')
-  @Roles('university_admin', 'superadmin')
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Обновить информацию об университете' })
   @ApiResponse({ status: 200, description: 'Информация обновлена' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -107,16 +110,16 @@ export class AdminController {
   }
 
   @Get('faculties')
-  @Roles('university_admin', 'superadmin')
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Получить список факультетов' })
-  @ApiResponse({ status: 200, description: 'Факультеты получены' })
+  @ApiOkResponse({ description: 'Факультеты получены', type: PaginatedResponseDto })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async getFaculties(@Request() req) {
-    return this.adminService.getFaculties(req.user.universityId);
+  async getFaculties(@Request() req, @Query() pagination: PaginationQueryDto) {
+    return this.adminService.getFaculties(req.user.universityId, pagination);
   }
 
   @Post('faculties')
-  @Roles('university_admin', 'superadmin')
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Создать факультет' })
   @ApiResponse({ status: 201, description: 'Факультет создан' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -128,7 +131,7 @@ export class AdminController {
   }
 
   @Patch('faculties/:id')
-  @Roles('university_admin', 'superadmin')
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Обновить факультет' })
   @ApiResponse({ status: 200, description: 'Факультет обновлён' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -140,16 +143,30 @@ export class AdminController {
   }
 
   @Get('groups')
-  @Roles('university_admin', 'superadmin')
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Получить список групп' })
-  @ApiResponse({ status: 200, description: 'Группы получены' })
+  @ApiOkResponse({ description: 'Группы получены', type: PaginatedResponseDto })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async getGroups(@Request() req) {
-    return this.adminService.getGroups(req.user.universityId);
+  async getGroups(@Request() req, @Query() pagination: PaginationQueryDto) {
+    return this.adminService.getGroups(req.user.universityId, pagination);
+  }
+
+  @Get('groups/:id/students')
+  @Roles(UserRole.TEACHER, UserRole.CURATOR, UserRole.DEPARTMENT_HEAD, UserRole.FACULTY_DEAN, UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @ApiOperation({ summary: 'Получить студентов группы своего университета' })
+  @ApiOkResponse({ description: 'Студенты получены', type: PaginatedResponseDto })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  async getGroupStudents(
+    @Request() req,
+    @Param('id') id: string,
+    @Query() pagination: PaginationQueryDto,
+  ) {
+    return this.adminService.getGroupStudents(req.user.universityId, id, pagination);
   }
 
   @Post('groups')
-  @Roles('university_admin', 'superadmin')
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Создать группу' })
   @ApiResponse({ status: 201, description: 'Группа создана' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -161,7 +178,7 @@ export class AdminController {
   }
 
   @Patch('groups/:id')
-  @Roles('university_admin', 'superadmin')
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Обновить группу' })
   @ApiResponse({ status: 200, description: 'Группа обновлена' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -173,7 +190,7 @@ export class AdminController {
   }
 
   @Get('stats')
-  @Roles('university_admin', 'superadmin')
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Получить статистику университета' })
   @ApiResponse({ status: 200, description: 'Статистика получена' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })

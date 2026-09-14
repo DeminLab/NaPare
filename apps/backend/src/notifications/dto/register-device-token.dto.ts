@@ -1,5 +1,6 @@
 import { IsString, IsOptional, IsEnum } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { DEVICE_PLATFORMS, DevicePlatform } from '../entities/device-token.entity';
 
 export class RegisterDeviceTokenDto {
   @ApiProperty()
@@ -7,8 +8,8 @@ export class RegisterDeviceTokenDto {
   token: string;
 
   @ApiProperty()
-  @IsEnum(['ios', 'android', 'web'])
-  platform: string;
+  @IsEnum(DEVICE_PLATFORMS)
+  platform: DevicePlatform;
 
   @ApiPropertyOptional()
   @IsOptional()

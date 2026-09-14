@@ -5,11 +5,14 @@ import {
   CreateDateColumn,
   ManyToOne,
   JoinColumn,
+  Index,
 } from 'typeorm';
 
 import { Lesson } from './lesson.entity';
+import { JsonObject } from '../../common/types/json-value.type';
 
 @Entity('lesson_changes')
+@Index('IDX_lesson_changes_lesson_created_at', ['lessonId', 'createdAt'])
 export class LessonChange {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -28,10 +31,10 @@ export class LessonChange {
   changeType: string;
 
   @Column({ type: 'jsonb' })
-  oldValues: Record<string, any>;
+  oldValues: JsonObject;
 
   @Column({ type: 'jsonb' })
-  newValues: Record<string, any>;
+  newValues: JsonObject;
 
   @Column({ type: 'uuid', nullable: true })
   changedBy: string;

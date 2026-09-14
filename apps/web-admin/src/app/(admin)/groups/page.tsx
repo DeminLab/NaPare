@@ -1,12 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { apiFetch } from '@/lib/api';
+import { apiFetch, apiFetchList } from '@/lib/api';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Badge } from '@/components/ui/Badge';
+import { RequestState } from '@/components/ui/RequestState';
 
 interface Faculty {
   id: string;
@@ -36,10 +37,12 @@ export default function GroupsPage() {
   const [saving, setSaving] = useState(false);
 
   const load = async () => {
+    setLoading(true);
+    setError('');
     try {
       const [g, f] = await Promise.all([
-        apiFetch<Group[]>('/admin/groups'),
-        apiFetch<Faculty[]>('/admin/faculties'),
+        apiFetchList<Group>('/admin/groups'),
+        apiFetchList<Faculty>('/admin/faculties'),
       ]);
       setGroups(g);
       setFaculties(f);
@@ -106,9 +109,13 @@ export default function GroupsPage() {
     );
   }
 
+  if (error && groups.length === 0) {
+    return <RequestState title="Не удалось загрузить группы" description={error} onRetry={load} />;
+  }
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900">Группы</h1>
           <p className="mt-1 text-sm text-slate-500">{filtered.length} из {groups.length} групп</p>
@@ -127,10 +134,10 @@ export default function GroupsPage() {
         </div>
       )}
 
-      <div className="flex gap-1.5">
+      <div className="flex flex-wrap gap-1.5">
         <button
           onClick={() => setFacultyFilter('all')}
-          className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+          className={`min-h-11 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
             facultyFilter === 'all' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
           }`}
         >
@@ -140,7 +147,7 @@ export default function GroupsPage() {
           <button
             key={f.id}
             onClick={() => setFacultyFilter(f.id)}
-            className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+            className={`min-h-11 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
               facultyFilter === f.id ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             }`}
           >
@@ -153,7 +160,7 @@ export default function GroupsPage() {
         {filtered.map((g) => (
           <div
             key={g.id}
-            className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:shadow-md sm:p-5"
+            className="flex flex-col items-stretch gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:shadow-md sm:flex-row sm:items-center sm:justify-between sm:p-5"
           >
             <div className="flex items-center gap-4">
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 text-sm font-bold text-slate-600">
@@ -166,11 +173,11 @@ export default function GroupsPage() {
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <Badge variant="sky" size="sm">{g.course} курс</Badge>
               <button
                 onClick={() => openEdit(g)}
-                className="rounded-lg px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100"
+                className="min-h-11 rounded-lg px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100"
               >
                 Редактировать
               </button>
@@ -199,6 +206,7 @@ export default function GroupsPage() {
             value={formName}
             onChange={(e) => setFormName(e.target.value)}
             placeholder="ИТ-21-1"
+            error={modalOpen && !formName.trim() ? 'Укажите название группы' : undefined}
           />
           <Input
             label="Курс"
@@ -213,7 +221,7 @@ export default function GroupsPage() {
             <select
               value={formFacultyId}
               onChange={(e) => setFormFacultyId(e.target.value)}
-              className="block w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 transition-colors focus:border-sky-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-sky-100"
+              className="block min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 transition-colors focus:border-sky-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-sky-100"
             >
               {faculties.map((f) => (
                 <option key={f.id} value={f.id}>
@@ -226,7 +234,7 @@ export default function GroupsPage() {
             <Button variant="secondary" onClick={() => setModalOpen(false)}>
               Отмена
             </Button>
-            <Button onClick={handleSave} loading={saving}>
+            <Button onClick={handleSave} loading={saving} disabled={!formName.trim() || !formFacultyId}>
               {editing ? 'Сохранить' : 'Создать'}
             </Button>
           </div>

@@ -5,6 +5,8 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 
 import { Lesson } from './entities/lesson.entity';
 import { LessonChange } from './entities/lesson-change.entity';
+import { CreateLessonDto } from './dto/create-lesson.dto';
+import { JsonObject } from '../common/types/json-value.type';
 
 @Injectable()
 export class ChangeDetectorService {
@@ -20,7 +22,7 @@ export class ChangeDetectorService {
 
   async detectChanges(
     universityId: string,
-    newLessons: any[],
+    newLessons: CreateLessonDto[],
   ): Promise<LessonChange[]> {
     const changes: LessonChange[] = [];
 
@@ -75,17 +77,23 @@ export class ChangeDetectorService {
     return changes;
   }
 
-  private compareLessons(oldLesson: Lesson, newLesson: any) {
+  private compareLessons(oldLesson: Lesson, newLesson: CreateLessonDto): {
+    hasChanges: boolean;
+    changeType: LessonChange['changeType'];
+    changeDescription: string;
+    oldValues: JsonObject;
+    newValues: JsonObject;
+  } {
     const changes: string[] = [];
-    const oldValues: any = {};
-    const newValues: any = {};
-    let changeType = 'moved';
+    const oldValues: JsonObject = {};
+    const newValues: JsonObject = {};
+    let changeType: LessonChange['changeType'] = 'moved';
 
     // Check room change
     if (oldLesson.room !== newLesson.room) {
       changes.push('аудитория');
       oldValues.room = oldLesson.room;
-      newValues.room = newLesson.room;
+      newValues.room = newLesson.room ?? null;
       changeType = 'room_changed';
     }
 
@@ -93,14 +101,14 @@ export class ChangeDetectorService {
     if (oldLesson.building !== newLesson.building) {
       changes.push('корпус');
       oldValues.building = oldLesson.building;
-      newValues.building = newLesson.building;
+      newValues.building = newLesson.building ?? null;
     }
 
     // Check teacher change
     if (oldLesson.teacherName !== newLesson.teacherName) {
       changes.push('преподаватель');
       oldValues.teacherName = oldLesson.teacherName;
-      newValues.teacherName = newLesson.teacherName;
+      newValues.teacherName = newLesson.teacherName ?? null;
       changeType = 'teacher_changed';
     }
 

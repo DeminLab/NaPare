@@ -3,6 +3,9 @@ import * as XLSX from 'xlsx';
 
 import { CreateLessonDto } from '../dto/create-lesson.dto';
 
+type SpreadsheetCell = string | number | Date | undefined;
+type SpreadsheetRow = Record<string, SpreadsheetCell>;
+
 @Injectable()
 export class ExcelConnectorService {
   private readonly logger = new Logger(ExcelConnectorService.name);
@@ -12,28 +15,28 @@ export class ExcelConnectorService {
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
 
-    const data = XLSX.utils.sheet_to_json(worksheet);
+    const data = XLSX.utils.sheet_to_json<SpreadsheetRow>(worksheet);
 
     return this.mapToLessons(data);
   }
 
-  private mapToLessons(data: any[]): CreateLessonDto[] {
+  private mapToLessons(data: SpreadsheetRow[]): CreateLessonDto[] {
     return data.map((row) => {
       const date = this.parseDate(row['Дата'] || row['date']);
       return {
-        groupId: row['Группа'] || row['group'] || '',
+        groupId: stringCell(row['Группа'] ?? row['group']),
         dayOfWeek: date.getDay(),
-        startTime: row['Начало'] || row['startTime'] || '09:00',
-        endTime: row['Конец'] || row['endTime'] || '10:30',
-        pairNumber: parseInt(row['Пара'] || row['pairNumber'], 10),
-        subject: row['Предмет'] || row['subject'] || '',
-        subjectType: row['Тип'] || row['subjectType'] || '',
-        teacherName: row['Преподаватель'] || row['teacherName'] || '',
-        room: row['Аудитория'] || row['room'] || '',
-        building: row['Корпус'] || row['building'] || '',
-        subgroup: row['Подгруппа'] || row['subgroup'] || '',
-        department: row['Кафедра'] || row['department'] || '',
-        faculty: row['Факультет'] || row['faculty'] || '',
+        startTime: stringCell(row['Начало'] ?? row['startTime'], '09:00'),
+        endTime: stringCell(row['Конец'] ?? row['endTime'], '10:30'),
+        pairNumber: Number.parseInt(stringCell(row['Пара'] ?? row['pairNumber']), 10),
+        subject: stringCell(row['Предмет'] ?? row['subject']),
+        subjectType: stringCell(row['Тип'] ?? row['subjectType']),
+        teacherName: stringCell(row['Преподаватель'] ?? row['teacherName']),
+        room: stringCell(row['Аудитория'] ?? row['room']),
+        building: stringCell(row['Корпус'] ?? row['building']),
+        subgroup: stringCell(row['Подгруппа'] ?? row['subgroup']),
+        department: stringCell(row['Кафедра'] ?? row['department']),
+        faculty: stringCell(row['Факультет'] ?? row['faculty']),
         weekType: 'both',
         startDate: date,
         endDate: date,
@@ -41,9 +44,11 @@ export class ExcelConnectorService {
     });
   }
 
-  private parseDate(dateStr: string): Date {
-    if (!dateStr) return new Date();
+  private parseDate(value: SpreadsheetCell): Date {
+    if (!value) return new Date();
+    if (value instanceof Date) return value;
 
+    const dateStr = String(value);
     const date = new Date(dateStr);
     if (!isNaN(date.getTime())) {
       return date;
@@ -56,4 +61,8 @@ export class ExcelConnectorService {
 
     return new Date();
   }
+}
+
+function stringCell(value: SpreadsheetCell, fallback = ''): string {
+  return value === undefined ? fallback : String(value);
 }

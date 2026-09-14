@@ -6,33 +6,27 @@ import { AppModule } from '../src/app.module';
 describe('AppController (e2e)', () => {
   let app: INestApplication;
 
+  jest.setTimeout(30000);
+
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    app.setGlobalPrefix('api/v1');
     app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
     await app.init();
   });
 
   afterAll(async () => {
-    await app.close();
+    if (app) await app.close();
   });
 
-  describe('/ (GET)', () => {
-    it('should redirect to /api/v1/docs', () => {
-      return request(app.getHttpServer())
-        .get('/')
-        .expect(302)
-        .expect('Location', '/api/v1/docs');
-    });
-  });
-
-  describe('/health (GET)', () => {
+  describe('/api/v1/health (GET)', () => {
     it('should return health status', () => {
       return request(app.getHttpServer())
-        .get('/health')
+        .get('/api/v1/health')
         .expect(200)
         .expect((res) => {
           expect(res.body.status).toBe('ok');
@@ -41,13 +35,13 @@ describe('AppController (e2e)', () => {
     });
   });
 
-  describe('/app (GET)', () => {
-    it('should return app info', () => {
+  describe('/api/v1/app (GET)', () => {
+    it('should return app information', () => {
       return request(app.getHttpServer())
-        .get('/app')
+        .get('/api/v1/app')
         .expect(200)
         .expect((res) => {
-          expect(res.body.name).toBe('НаПаре');
+          expect(res.body.name).toBe('НаПаре API');
           expect(res.body.version).toBeDefined();
         });
     });

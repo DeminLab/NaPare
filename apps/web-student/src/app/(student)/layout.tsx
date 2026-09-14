@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { isLoggedIn, getUser, logout, getUnreadCount } from '@/lib/api';
+import { isLoggedIn, getUser, logout, getUnreadCount, StudentUser } from '@/lib/api';
 import { Avatar, Icon, IconName } from '@/components/ui';
 
 const navigationItems = [
@@ -30,7 +30,7 @@ const pageTitles: Record<string, string> = {
 export default function StudentLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<StudentUser | null>(null);
   const [unread, setUnread] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -58,7 +58,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
   const renderNavItem = (item: { href: string; label: string; icon: IconName }) => {
     const active = pathname === item.href;
     return (
-      <Link key={item.href} href={item.href} onClick={() => setSidebarOpen(false)} className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${active ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}>
+      <Link key={item.href} href={item.href} onClick={() => setSidebarOpen(false)} className={`flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${active ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}>
         <Icon name={item.icon} className="h-5 w-5" />
         <span>{item.label}</span>
         {item.href === '/notifications' && unread > 0 && <span className="ml-auto rounded-full bg-red-500 px-2 py-0.5 text-xs font-semibold text-white">{unread}</span>}
@@ -69,6 +69,10 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
   const contextDate = pathname === '/today'
     ? new Date().toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' })
     : null;
+  const affiliation = [
+    user.universityName || 'Вуз не указан',
+    user.groupName || 'Группа не указана',
+  ].join(' · ');
 
   return (
     <div className="flex min-h-screen bg-slate-50">
@@ -98,23 +102,24 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
       </aside>
 
       {/* Main content */}
-      <div className="flex flex-1 flex-col">
+      <div className="min-w-0 flex flex-1 flex-col">
         {/* TopBar */}
-        <header className="flex h-16 items-center justify-between border-b border-slate-200 bg-white px-4 lg:px-6">
+        <header className="flex min-h-16 items-center justify-between border-b border-slate-200 bg-white px-4 py-3 lg:px-7">
           <div className="flex items-center gap-3 lg:hidden">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-xs font-bold text-white">НП</div>
             <span className="text-lg font-bold text-slate-900">НаПаре</span>
           </div>
-          <button onClick={() => setSidebarOpen(true)} className="order-first rounded-lg p-2 text-slate-500 hover:bg-slate-100 lg:hidden" aria-label="Открыть меню">
+          <button onClick={() => setSidebarOpen(true)} className="order-first flex h-11 w-11 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 lg:hidden" aria-label="Открыть меню">
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
             </svg>
           </button>
           <div className="hidden min-w-0 flex-1 lg:block">
-            <h1 className="truncate text-sm font-semibold text-slate-900">{pageTitle}{contextDate && <span className="font-normal text-slate-400"> · {contextDate}</span>}</h1>
+            <h1 className="truncate text-base font-bold capitalize tracking-[-0.015em] text-slate-900">{contextDate || pageTitle}</h1>
+            <p className="mt-0.5 truncate text-xs text-slate-500">{affiliation}</p>
           </div>
           <div className="flex items-center gap-3">
-            <Link href="/notifications" className="relative rounded-lg p-2 text-slate-500 hover:bg-slate-100">
+            <Link href="/notifications" className="relative flex h-11 w-11 items-center justify-center rounded-xl text-slate-500 transition-colors hover:bg-slate-100" aria-label="Уведомления">
               <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
               </svg>
@@ -122,7 +127,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
                 <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">{unread > 9 ? '9+' : unread}</span>
               )}
             </Link>
-            <Link href="/profile" className="flex items-center gap-2">
+            <Link href="/profile" className="flex items-center gap-2 rounded-xl p-1 transition-colors hover:bg-slate-50">
               <Avatar name={`${user.firstName} ${user.lastName}`} size="sm" />
               <span className="hidden text-sm font-medium text-slate-700 lg:block">{user.firstName} {user.lastName}</span>
               <svg className="hidden h-4 w-4 text-slate-400 lg:block" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M6 9l6 6 6-6" /></svg>
@@ -131,7 +136,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
         </header>
 
         {/* Page content */}
-        <main className="ds-page-enter flex-1 p-4 lg:p-6">{children}</main>
+        <main className="ds-page-enter flex-1 p-4 lg:p-7">{children}</main>
       </div>
     </div>
   );

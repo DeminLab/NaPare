@@ -4,10 +4,13 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  Index,
 } from 'typeorm';
 import { Exclude } from 'class-transformer';
+import { UserRole } from '../../auth/interfaces/user-role';
 
 @Entity('users')
+@Index('IDX_users_university_id', ['universityId'])
 export class User {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -32,10 +35,11 @@ export class User {
   avatarUrl: string;
 
   @Column({
-    type: 'simple-array',
-    default: 'student',
+    type: 'enum',
+    enum: UserRole,
+    default: UserRole.STUDENT,
   })
-  roles: string[];
+  role: UserRole;
 
   @Column({ type: 'uuid' })
   universityId: string;

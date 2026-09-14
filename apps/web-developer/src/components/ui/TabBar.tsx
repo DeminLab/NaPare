@@ -16,12 +16,13 @@ interface TabBarProps {
 
 export default function TabBar({ tabs, active, onChange }: TabBarProps) {
   return (
-    <div className="flex gap-1 rounded-xl bg-slate-100 p-1">
+    <div className="overflow-x-auto rounded-xl bg-slate-100 p-1" aria-label="Вкладки">
+      <div className="flex min-w-max gap-1">
       {tabs.map((tab) => (
         <button
           key={tab.id}
           onClick={() => onChange(tab.id)}
-          className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all ${
+          className={`flex min-h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg px-4 py-2 text-sm font-medium transition-all ${
             active === tab.id
               ? 'bg-white text-slate-900 shadow-sm'
               : 'text-slate-500 hover:text-slate-700'
@@ -31,6 +32,7 @@ export default function TabBar({ tabs, active, onChange }: TabBarProps) {
           {tab.label}
         </button>
       ))}
+      </div>
     </div>
   );
 }

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { apiFetch } from '@/lib/api';
-import { Card, Badge, StatCard, EmptyState, Skeleton } from '@/components/ui';
+import { Card, Badge, StatCard, EmptyState, Skeleton, RequestState } from '@/components/ui';
 
 interface Lesson {
   id: string;
@@ -67,13 +67,18 @@ function formatDate(date: Date): string {
 export default function TodayPage() {
   const [day, setDay] = useState<MyDayResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  useEffect(() => {
+  const loadDay = () => {
+    setLoading(true);
+    setError('');
     apiFetch<MyDayResponse>('/my-day')
       .then(setDay)
-      .catch(() => {})
+      .catch((err) => setError(err instanceof Error ? err.message : 'Не удалось загрузить данные на сегодня.'))
       .finally(() => setLoading(false));
-  }, []);
+  };
+
+  useEffect(() => { loadDay(); }, []);
 
   const today = new Date();
 
@@ -117,7 +122,9 @@ export default function TodayPage() {
         />
       </div>
 
-      {lessons.length === 0 ? (
+      {error ? (
+        <RequestState title="Не удалось загрузить расписание" description={error} onRetry={loadDay} />
+      ) : lessons.length === 0 ? (
         <EmptyState
           icon={<svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" /></svg>}
           title="Нет пар"

@@ -25,7 +25,7 @@ export class University {
   connectorType: string;
 
   @Column({ type: 'jsonb', nullable: true })
-  connectorConfig: Record<string, any>;
+  connectorConfig: Record<string, unknown>;
 
   @Column({
     type: 'enum',

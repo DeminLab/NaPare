@@ -10,6 +10,23 @@ import {
 @Entity('lessons')
 @Index(['universityId', 'groupId', 'dayOfWeek'])
 @Index(['universityId', 'teacherId', 'dayOfWeek'])
+@Index('IDX_lessons_university_start_date_pair_number', [
+  'universityId',
+  'startDate',
+  'pairNumber',
+])
+@Index('IDX_lessons_university_group_start_date_pair_number', [
+  'universityId',
+  'groupId',
+  'startDate',
+  'pairNumber',
+])
+@Index('IDX_lessons_university_teacher_start_date_pair_number', [
+  'universityId',
+  'teacherId',
+  'startDate',
+  'pairNumber',
+])
 export class Lesson {
   @PrimaryGeneratedColumn('uuid')
   id: string;

@@ -15,17 +15,24 @@ import { MyDayModule } from './my-day/my-day.module';
 import { DatabaseModule } from './database/database.module';
 import { HealthController } from './health.controller';
 import { AppController } from './app.controller';
+import configuration from './config/configuration';
+import { validateEnvironment } from './config/validate-environment';
+import { AppConfig } from './config/configuration';
+import { TenantContextModule } from './common/tenant/tenant-context.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: ['.env.local', '.env'],
+      load: [configuration],
+      validate: validateEnvironment,
+      cache: true,
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => {
+      useFactory: (configService: ConfigService<AppConfig & Record<string, unknown>>) => {
         // Support both DATABASE_URL and individual DB_* vars
         const databaseUrl = configService.get<string>('DATABASE_URL');
         if (databaseUrl) {
@@ -33,7 +40,7 @@ import { AppController } from './app.controller';
             type: 'postgres' as const,
             url: databaseUrl,
             autoLoadEntities: true,
-            synchronize: configService.get<string>('NODE_ENV') !== 'production',
+            synchronize: configService.getOrThrow('nodeEnv') !== 'production',
           };
         }
         return {
@@ -44,7 +51,7 @@ import { AppController } from './app.controller';
           password: configService.get<string>('DB_PASSWORD', 'postgres'),
           database: configService.get<string>('DB_NAME', 'napare'),
           autoLoadEntities: true,
-          synchronize: configService.get<string>('NODE_ENV') !== 'production',
+          synchronize: configService.getOrThrow('nodeEnv') !== 'production',
         };
       },
     }),
@@ -62,6 +69,7 @@ import { AppController } from './app.controller';
     AdminModule,
     MyDayModule,
     DatabaseModule,
+    TenantContextModule,
   ],
   controllers: [AppController, HealthController],
 })

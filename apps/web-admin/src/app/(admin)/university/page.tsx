@@ -5,6 +5,7 @@ import { apiFetch } from '@/lib/api';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { RequestState } from '@/components/ui/RequestState';
 
 interface University {
   id: string;
@@ -22,7 +23,9 @@ export default function UniversityPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  useEffect(() => {
+  const load = () => {
+    setLoading(true);
+    setError('');
     apiFetch<University>('/admin/university')
       .then((data) => {
         setUni(data);
@@ -31,7 +34,9 @@ export default function UniversityPage() {
       })
       .catch((err) => setError(err instanceof Error ? err.message : 'Ошибка загрузки'))
       .finally(() => setLoading(false));
-  }, []);
+  };
+
+  useEffect(() => { load(); }, []);
 
   const handleSave = async () => {
     setSaving(true);
@@ -58,6 +63,10 @@ export default function UniversityPage() {
         <div className="h-64 animate-pulse rounded-2xl bg-slate-200" />
       </div>
     );
+  }
+
+  if (error && !uni) {
+    return <RequestState title="Не удалось загрузить университет" description={error} onRetry={load} />;
   }
 
   return (

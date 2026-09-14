@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { apiFetch } from '@/lib/api';
-import { Card, Badge, Skeleton } from '@/components/ui';
+import { apiFetchList } from '@/lib/api';
+import { Card, Badge, Skeleton, RequestState } from '@/components/ui';
 
 interface Lesson {
   id: string;
@@ -58,6 +58,7 @@ export default function WeekPage() {
   const [weekStart, setWeekStart] = useState(() => getWeekDates(new Date()).start);
   const [schedule, setSchedule] = useState<DaySchedule[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     const end = new Date(weekStart); end.setDate(end.getDate() + 5);
@@ -66,7 +67,8 @@ export default function WeekPage() {
     const endDate = end.toISOString().split('T')[0];
 
     setLoading(true);
-    apiFetch<Lesson[]>(`/schedule/range?startDate=${startDate}&endDate=${endDate}`)
+    setError('');
+    apiFetchList<Lesson>(`/schedule/range?startDate=${startDate}&endDate=${endDate}`)
       .then(lessons => {
         const days: DaySchedule[] = [];
         for (let i = 0; i < 6; i++) {
@@ -82,7 +84,7 @@ export default function WeekPage() {
         }
         setSchedule(days);
       })
-      .catch(() => setSchedule([]))
+      .catch((err) => setError(err instanceof Error ? err.message : 'Не удалось загрузить расписание.'))
       .finally(() => setLoading(false));
   }, [weekStart]);
 
@@ -118,6 +120,12 @@ export default function WeekPage() {
         <div className="space-y-4">
           {[1, 2, 3].map(i => <Card key={i}><Skeleton className="h-20" /></Card>)}
         </div>
+      ) : error ? (
+        <RequestState
+          title="Не удалось загрузить расписание"
+          description={error}
+          onRetry={() => setWeekStart(new Date(weekStart))}
+        />
       ) : (
         <div className="space-y-6">
           {schedule.map((day) => (

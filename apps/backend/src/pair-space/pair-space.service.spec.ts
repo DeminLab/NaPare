@@ -8,6 +8,7 @@ import { FileAttachment } from './entities/file-attachment.entity';
 import { DiscussionMessage } from './entities/discussion-message.entity';
 import { HomeworkSubmission } from './entities/homework-submission.entity';
 import { NotFoundException } from '@nestjs/common';
+import { TenantContext } from '../common/tenant/tenant-context';
 
 describe('PairSpaceService', () => {
   let service: PairSpaceService;
@@ -29,6 +30,7 @@ describe('PairSpaceService', () => {
         { provide: getRepositoryToken(FileAttachment), useValue: mockRepo('FileAttachment') },
         { provide: getRepositoryToken(DiscussionMessage), useValue: mockRepo('DiscussionMessage') },
         { provide: getRepositoryToken(HomeworkSubmission), useValue: mockRepo('HomeworkSubmission') },
+        { provide: TenantContext, useValue: { assertAccess: jest.fn(), getUser: jest.fn() } },
       ],
     }).compile();
 
@@ -59,6 +61,7 @@ describe('PairSpaceService', () => {
           { provide: getRepositoryToken(FileAttachment), useValue: mockRepo('FileAttachment') },
           { provide: getRepositoryToken(DiscussionMessage), useValue: mockRepo('DiscussionMessage') },
           { provide: getRepositoryToken(HomeworkSubmission), useValue: mockRepo('HomeworkSubmission') },
+          { provide: TenantContext, useValue: { assertAccess: jest.fn(), getUser: jest.fn() } },
         ],
       }).compile();
 

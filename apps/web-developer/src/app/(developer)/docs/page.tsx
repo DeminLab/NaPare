@@ -7,7 +7,7 @@ export default function DocsPage() {
   const [loading, setLoading] = useState(true);
 
   return (
-    <div className="p-6 lg:p-8">
+    <div className="p-4 sm:p-6 lg:p-8">
       <div className="mx-auto max-w-7xl">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-slate-900">Документация API</h1>

@@ -70,9 +70,10 @@ export default function RegisterPage() {
                 className="block w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 transition-colors focus:border-indigo-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-indigo-100" />
             </div>
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-slate-700">ID университета</label>
-              <input type="text" required value={form.universityId} onChange={e => update('universityId', e.target.value)} placeholder="UUID университета"
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">Код университета</label>
+              <input type="text" required value={form.universityId} onChange={e => update('universityId', e.target.value)} placeholder="Код из приглашения вуза" aria-describedby="university-code-help"
                 className="block w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 transition-colors focus:border-indigo-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-indigo-100" />
+              <p id="university-code-help" className="mt-1.5 text-xs leading-5 text-slate-500">Его выдаёт университет или куратор. Если кода нет, обратитесь в учебную часть.</p>
             </div>
             <div>
               <label className="mb-1.5 block text-sm font-medium text-slate-700">Пароль</label>

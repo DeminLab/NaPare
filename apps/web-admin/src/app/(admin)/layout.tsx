@@ -111,7 +111,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   key={item.href}
                   href={item.href}
                   onClick={() => setSidebarOpen(false)}
-                  className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
+                  className={`flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
                     active
                       ? 'bg-indigo-50 text-indigo-700'
                       : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
@@ -153,7 +153,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <header className="sticky top-0 z-20 flex h-16 items-center gap-4 border-b border-slate-200 bg-white/80 px-4 backdrop-blur-md lg:px-6">
           <button
             onClick={() => setSidebarOpen(true)}
-            className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 lg:hidden"
+            className="flex h-11 w-11 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 lg:hidden"
+            aria-label="Открыть меню"
           >
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />

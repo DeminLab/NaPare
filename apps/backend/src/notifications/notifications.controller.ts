@@ -3,17 +3,16 @@ import {
   Get,
   Post,
   Patch,
-  Body,
   Param,
   Query,
   UseGuards,
   Request,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery, ApiResponse } from '@nestjs/swagger';
+import { ApiOkResponse, ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 
 import { NotificationsService } from './notifications.service';
-import { RegisterDeviceTokenDto } from './dto/register-device-token.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { PaginatedResponseDto, PaginationQueryDto } from '../common/dto/pagination-query.dto';
 
 @ApiTags('notifications')
 @ApiBearerAuth()
@@ -24,10 +23,10 @@ export class NotificationsController {
 
   @Get()
   @ApiOperation({ summary: 'Получить уведомления пользователя' })
-  @ApiResponse({ status: 200, description: 'Уведомления получены' })
+  @ApiOkResponse({ description: 'Уведомления получены', type: PaginatedResponseDto })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async findAll(@Request() req) {
-    return this.notificationsService.findByUser(req.user.id);
+  async findAll(@Request() req, @Query() pagination: PaginationQueryDto) {
+    return this.notificationsService.findByUser(req.user.id, pagination);
   }
 
   @Get('unread-count')
@@ -54,27 +53,4 @@ export class NotificationsController {
     return this.notificationsService.markAllAsRead(req.user.id);
   }
 
-  @Post('device-token')
-  @ApiOperation({ summary: 'Зарегистрировать токен устройства' })
-  @ApiResponse({ status: 201, description: 'Токен зарегистрирован' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async registerDeviceToken(
-    @Request() req,
-    @Body() registerDeviceTokenDto: RegisterDeviceTokenDto,
-  ) {
-    return this.notificationsService.registerDeviceToken(
-      req.user.id,
-      registerDeviceTokenDto.token,
-      registerDeviceTokenDto.platform,
-      registerDeviceTokenDto.deviceName,
-    );
-  }
-
-  @Post('device-token/remove')
-  @ApiOperation({ summary: 'Удалить токен устройства' })
-  @ApiResponse({ status: 200, description: 'Токен удалён' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async removeDeviceToken(@Body('token') token: string) {
-    return this.notificationsService.removeDeviceToken(token);
-  }
 }

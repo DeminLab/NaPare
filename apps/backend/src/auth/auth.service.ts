@@ -8,13 +8,16 @@ import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { AuthResponse } from './interfaces/auth-response.interface';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
+import { AppConfig } from '../config/configuration';
+import { UserRole } from './interfaces/user-role';
+import { User } from '../users/entities/user.entity';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
-    private readonly configService: ConfigService,
+    private readonly configService: ConfigService<AppConfig & Record<string, unknown>>,
   ) {}
 
   async login(loginDto: LoginDto): Promise<AuthResponse> {
@@ -50,7 +53,7 @@ export class AuthService {
       passwordHash,
       firstName: registerDto.firstName,
       lastName: registerDto.lastName,
-      role: 'student',
+      role: UserRole.STUDENT,
       universityId: registerDto.universityId,
     });
 
@@ -60,12 +63,12 @@ export class AuthService {
   async refreshToken(refreshToken: string): Promise<AuthResponse> {
     try {
       const payload = this.jwtService.verify<JwtPayload>(refreshToken, {
-        secret: this.configService.get('JWT_REFRESH_SECRET', 'napare-refresh-secret'),
+        secret: this.configService.getOrThrow<string>('auth.jwt.refreshSecret'),
       });
 
       const user = await this.usersService.findById(payload.sub);
 
-      if (!user) {
+      if (!user || user.role !== payload.role) {
         throw new UnauthorizedException('User not found');
       }
 
@@ -75,7 +78,7 @@ export class AuthService {
     }
   }
 
-  private generateTokens(user: any): AuthResponse {
+  private generateTokens(user: User): AuthResponse {
     const payload: JwtPayload = {
       sub: user.id,
       email: user.email,
@@ -85,8 +88,8 @@ export class AuthService {
 
     const accessToken = this.jwtService.sign(payload);
     const refreshToken = this.jwtService.sign(payload, {
-      secret: this.configService.get('JWT_REFRESH_SECRET', 'napare-refresh-secret'),
-      expiresIn: this.configService.get('JWT_REFRESH_EXPIRATION', '30d'),
+      secret: this.configService.getOrThrow<string>('auth.jwt.refreshSecret'),
+      expiresIn: this.configService.getOrThrow<string>('auth.jwt.refreshExpiration'),
     });
 
     return {

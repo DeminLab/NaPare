@@ -1,4 +1,5 @@
 import { IsEmail, IsString, IsOptional, IsUUID, IsEnum } from 'class-validator';
+import { UserRole } from '../../auth/interfaces/user-role';
 
 export class CreateUserDto {
   @IsEmail()
@@ -21,17 +22,8 @@ export class CreateUserDto {
   @IsString()
   avatarUrl?: string;
 
-  @IsEnum([
-    'student',
-    'teacher',
-    'curator',
-    'faculty_dean',
-    'department_head',
-    'university_admin',
-    'superadmin',
-    'developer',
-  ])
-  role: string;
+  @IsEnum(UserRole)
+  role: UserRole;
 
   @IsUUID()
   universityId: string;

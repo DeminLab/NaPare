@@ -5,6 +5,7 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   OneToMany,
+  Index,
 } from 'typeorm';
 
 import { Announcement } from './announcement.entity';
@@ -13,6 +14,7 @@ import { FileAttachment } from './file-attachment.entity';
 import { DiscussionMessage } from './discussion-message.entity';
 
 @Entity('pair_spaces')
+@Index('UQ_pair_spaces_lesson_id', ['lessonId'], { unique: true })
 export class PairSpace {
   @PrimaryGeneratedColumn('uuid')
   id: string;

@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { apiFetch } from '@/lib/api';
-import { Card, Button, EmptyState, Skeleton, Badge } from '@/components/ui';
+import { apiFetch, apiFetchList } from '@/lib/api';
+import { Card, Button, EmptyState, Skeleton, Badge, RequestState } from '@/components/ui';
 
 interface Student {
   id: string;
@@ -34,19 +34,22 @@ export default function AttendancePage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [checked, setChecked] = useState<Record<string, boolean>>({});
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   useEffect(() => {
     if (!groupId) {
       setLoading(false);
       return;
     }
+    setError('');
     Promise.all([
-      apiFetch<Student[]>(`/admin/groups/${groupId}/students`).catch(() => []),
-      apiFetch<Lesson[]>(`/schedule/range?startDate=${new Date().toISOString().split('T')[0]}&endDate=${new Date().toISOString().split('T')[0]}`).catch(() => []),
+      apiFetchList<Student>(`/admin/groups/${groupId}/students`),
+      apiFetchList<Lesson>(`/schedule/range?startDate=${new Date().toISOString().split('T')[0]}&endDate=${new Date().toISOString().split('T')[0]}`),
     ]).then(([s, l]) => {
       setStudents(s);
       setLessons(l);
-    }).finally(() => setLoading(false));
+    }).catch((err) => setError(err instanceof Error ? err.message : 'Не удалось загрузить студентов или пары.')).finally(() => setLoading(false));
   }, [groupId]);
 
   useEffect(() => {
@@ -54,9 +57,9 @@ export default function AttendancePage() {
       setAbsences([]);
       return;
     }
-    apiFetch<Absence[]>(`/absences/lesson/${selectedLesson}`)
+    apiFetchList<Absence>(`/absences/lesson/${selectedLesson}`)
       .then(setAbsences)
-      .catch(() => setAbsences([]));
+      .catch((err) => setError(err instanceof Error ? err.message : 'Не удалось загрузить отметки посещаемости.'));
   }, [selectedLesson]);
 
   useEffect(() => {
@@ -76,8 +79,12 @@ export default function AttendancePage() {
         method: 'POST',
         body: JSON.stringify({ lessonId: selectedLesson, studentIds: absentIds }),
       });
-    } catch {}
-    setSubmitting(false);
+      setSuccess('Посещаемость сохранена.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Не удалось сохранить посещаемость.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (!groupId) {
@@ -105,6 +112,8 @@ export default function AttendancePage() {
           <Skeleton className="h-10" />
           {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-14" />)}
         </div>
+      ) : error ? (
+        <RequestState title="Не удалось загрузить посещаемость" description={error} onRetry={() => window.location.reload()} />
       ) : (
         <>
           <div>
@@ -112,7 +121,7 @@ export default function AttendancePage() {
             <select
               value={selectedLesson}
               onChange={e => setSelectedLesson(e.target.value)}
-              className="block w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 transition-colors focus:border-purple-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-purple-100"
+              className="block min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 transition-colors focus:border-purple-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-purple-100"
             >
               <option value="">— Выберите пару —</option>
               {lessons.map(l => (
@@ -151,6 +160,7 @@ export default function AttendancePage() {
               <Button fullWidth loading={submitting} onClick={handleSubmit}>
                 Сохранить посещаемость
               </Button>
+              {success && <p role="status" className="text-center text-sm font-medium text-emerald-700">{success}</p>}
             </>
           )}
         </>

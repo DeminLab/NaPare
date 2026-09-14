@@ -3,6 +3,7 @@ import { OnEvent } from '@nestjs/event-emitter';
 
 import { NotificationsService } from '../notifications.service';
 import { CreateNotificationDto } from '../dto/create-notification.dto';
+import { JsonObject } from '../../common/types/json-value.type';
 
 @Injectable()
 export class NotificationEventHandler {
@@ -14,8 +15,8 @@ export class NotificationEventHandler {
   async handleLessonChanged(event: {
     universityId: string;
     lessonId: string;
-    oldValue: any;
-    newValue: any;
+    oldValue: JsonObject;
+    newValue: JsonObject;
     changeDescription: string;
   }) {
     this.logger.log(`Lesson changed: ${event.lessonId}`);

@@ -65,10 +65,25 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
 
   if (!res.ok) {
     const body = await res.json().catch(() => null);
-    throw new Error(body?.message || `Запрос не удался (${res.status})`);
+    const fallback = res.status === 403
+      ? 'У вас нет доступа к этому разделу.'
+      : res.status === 404
+        ? 'Запрошенные данные не найдены или больше недоступны.'
+        : `Не удалось выполнить запрос (${res.status}).`;
+    throw new Error(body?.message || fallback);
   }
 
+  if (res.status === 204) return undefined as T;
   return (await res.json()) as T;
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  meta: { page: number; limit: number; total: number; totalPages: number };
+}
+
+export async function apiFetchList<T>(path: string, init: RequestInit = {}): Promise<T[]> {
+  return (await apiFetch<PaginatedResponse<T>>(path, init)).data;
 }
 
 export async function login(email: string, password: string): Promise<{ accessToken: string; refreshToken: string }> {

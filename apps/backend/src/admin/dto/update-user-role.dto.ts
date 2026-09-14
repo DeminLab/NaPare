@@ -1,28 +1,11 @@
 import { IsEnum } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { UserRole } from '../../auth/interfaces/user-role';
 
 export class UpdateUserRoleDto {
   @ApiProperty({
-    enum: [
-      'student',
-      'teacher',
-      'curator',
-      'faculty_dean',
-      'department_head',
-      'university_admin',
-      'superadmin',
-      'developer',
-    ],
+    enum: UserRole,
   })
-  @IsEnum([
-    'student',
-    'teacher',
-    'curator',
-    'faculty_dean',
-    'department_head',
-    'university_admin',
-    'superadmin',
-    'developer',
-  ])
-  role: string;
+  @IsEnum(UserRole)
+  role: UserRole;
 }

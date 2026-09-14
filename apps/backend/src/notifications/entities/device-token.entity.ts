@@ -4,9 +4,15 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  Index,
 } from 'typeorm';
 
+export const DEVICE_PLATFORMS = ['ios', 'android', 'web'] as const;
+export type DevicePlatform = (typeof DEVICE_PLATFORMS)[number];
+
 @Entity('device_tokens')
+@Index('UQ_device_tokens_token', ['token'], { unique: true })
+@Index('IDX_device_tokens_user_active', ['userId', 'isActive'])
 export class DeviceToken {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -19,9 +25,9 @@ export class DeviceToken {
 
   @Column({
     type: 'enum',
-    enum: ['ios', 'android', 'web'],
+    enum: DEVICE_PLATFORMS,
   })
-  platform: string;
+  platform: DevicePlatform;
 
   @Column({ nullable: true })
   deviceName?: string;

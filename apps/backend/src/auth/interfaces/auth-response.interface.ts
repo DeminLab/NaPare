@@ -6,6 +6,7 @@ export interface AuthResponse {
     email: string;
     firstName: string;
     lastName: string;
-    role: string;
+    role: UserRole;
   };
 }
+import { UserRole } from './user-role';

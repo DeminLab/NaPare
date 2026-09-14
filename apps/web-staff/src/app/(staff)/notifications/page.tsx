@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { apiFetch, markNotificationRead, markAllRead } from '@/lib/api';
-import { Card, Button, EmptyState } from '@/components/ui';
+import { apiFetchList, markNotificationRead, markAllRead } from '@/lib/api';
+import { Card, Button, EmptyState, RequestState, Skeleton } from '@/components/ui';
 
 interface Notification {
   id: string;
@@ -39,12 +39,14 @@ function timeAgo(dateStr: string): string {
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   const fetchNotifications = () => {
     setLoading(true);
-    apiFetch<Notification[]>('/notifications')
+    setError('');
+    apiFetchList<Notification>('/notifications')
       .then(data => setNotifications(data))
-      .catch(() => setNotifications([]))
+      .catch((err) => setError(err instanceof Error ? err.message : 'Не удалось загрузить уведомления.'))
       .finally(() => setLoading(false));
   };
 
@@ -76,8 +78,10 @@ export default function NotificationsPage() {
 
       {loading ? (
         <div className="space-y-3">
-          {[1, 2, 3].map(i => <Card key={i} className="h-20 animate-pulse bg-slate-100">&nbsp;</Card>)}
+          {[1, 2, 3].map(i => <Card key={i}><Skeleton className="h-20" /></Card>)}
         </div>
+      ) : error ? (
+        <RequestState title="Не удалось загрузить уведомления" description={error} onRetry={fetchNotifications} />
       ) : notifications.length === 0 ? (
         <EmptyState
           icon={<svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" /></svg>}

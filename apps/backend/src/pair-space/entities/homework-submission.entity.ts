@@ -6,11 +6,15 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  Index,
 } from 'typeorm';
 
 import { Homework } from './homework.entity';
 
 @Entity('homework_submissions')
+@Index('UQ_homework_submissions_homework_student', ['homeworkId', 'studentId'], {
+  unique: true,
+})
 export class HomeworkSubmission {
   @PrimaryGeneratedColumn('uuid')
   id: string;

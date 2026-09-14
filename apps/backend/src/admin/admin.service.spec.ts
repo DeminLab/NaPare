@@ -7,6 +7,8 @@ import { University } from '../users/entities/university.entity';
 import { Faculty } from '../users/entities/faculty.entity';
 import { Group } from '../users/entities/group.entity';
 import { ForbiddenException } from '@nestjs/common';
+import { UserRole } from '../auth/interfaces/user-role';
+import { TenantContext } from '../common/tenant/tenant-context';
 
 describe('AdminService', () => {
   let service: AdminService;
@@ -38,6 +40,7 @@ describe('AdminService', () => {
         { provide: getRepositoryToken(University), useValue: mockRepo({ findOne: { id: 'uni-1', name: 'Test Uni' } }) },
         { provide: getRepositoryToken(Faculty), useValue: mockRepo() },
         { provide: getRepositoryToken(Group), useValue: mockRepo() },
+        { provide: TenantContext, useValue: { assertAccess: jest.fn(), getUser: jest.fn() } },
       ],
     }).compile();
 
@@ -52,15 +55,20 @@ describe('AdminService', () => {
     it('should throw ForbiddenException if requester cannot assign role', async () => {
       mockUsersService.findById.mockResolvedValue({ id: 'u1', universityId: 'uni-1' });
       await expect(
-        service.updateUserRole('uni-1', 'u1', { role: 'superadmin' }, 'student'),
+        service.updateUserRole('uni-1', 'u1', { role: UserRole.SUPERADMIN }, UserRole.STUDENT),
       ).rejects.toThrow(ForbiddenException);
     });
 
     it('should update role if requester has permission', async () => {
       mockUsersService.findById.mockResolvedValue({ id: 'u1', universityId: 'uni-1' });
-      mockUsersService.update.mockResolvedValue({ id: 'u1', roles: ['teacher'] });
-      const result = await service.updateUserRole('uni-1', 'u1', { role: 'teacher' }, 'university_admin');
-      expect(result.roles).toContain('teacher');
+      mockUsersService.update.mockResolvedValue({ id: 'u1', role: UserRole.TEACHER });
+      const result = await service.updateUserRole(
+        'uni-1',
+        'u1',
+        { role: UserRole.TEACHER },
+        UserRole.UNIVERSITY_ADMIN,
+      );
+      expect(result.role).toBe(UserRole.TEACHER);
     });
   });
 

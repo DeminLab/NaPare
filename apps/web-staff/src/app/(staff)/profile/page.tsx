@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { getUser, logout } from '@/lib/api';
-import { Card, Avatar, Badge, Button, Skeleton } from '@/components/ui';
+import { Card, Avatar, Badge, Button, Skeleton, RequestState } from '@/components/ui';
 
 interface User {
   id: string;
@@ -17,11 +17,12 @@ interface User {
 export default function ProfilePage() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     getUser()
       .then(setUser)
-      .catch(() => {})
+      .catch((err) => setError(err instanceof Error ? err.message : 'Не удалось загрузить профиль.'))
       .finally(() => setLoading(false));
   }, []);
 
@@ -34,7 +35,7 @@ export default function ProfilePage() {
     );
   }
 
-  if (!user) return null;
+  if (!user) return <div className="mx-auto max-w-2xl"><RequestState title="Не удалось загрузить профиль" description={error || 'Данные профиля недоступны.'} onRetry={() => window.location.reload()} /></div>;
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">

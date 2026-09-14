@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { NetworkStatus } from '@/components/ui';
 
 export const metadata: Metadata = {
   title: 'НаПаре — Консоль разработчика',
@@ -11,6 +12,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="ru">
       <body className="min-h-screen bg-[var(--color-background)] text-slate-900 antialiased">
         {children}
+        <NetworkStatus />
       </body>
     </html>
   );

@@ -22,8 +22,8 @@
   --radius-xl: 20px;
   --shadow-sm: 0 1px 2px rgb(16 24 40 / 0.04);
   --shadow-md: 0 8px 24px rgb(16 24 40 / 0.08);
-  --type-page-size: 30px;
-  --type-section-size: 19px;
+  --type-page-size: clamp(1.75rem, 2.3vw, 2rem);
+  --type-section-size: clamp(1.125rem, 1.6vw, 1.25rem);
   --type-card-size: 16px;
   --type-body-size: 15px;
   --type-meta-size: 13px;

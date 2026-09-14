@@ -5,7 +5,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 :root {
-  --color-background: #f7f8fa;
+  --color-background: #f8fafc;
   --color-surface: #ffffff;
   --color-surface-secondary: #f1f3f5;
   --color-text: #111827;
@@ -22,8 +22,8 @@
   --radius-xl: 20px;
   --shadow-sm: 0 1px 2px rgb(16 24 40 / 0.04);
   --shadow-md: 0 8px 24px rgb(16 24 40 / 0.08);
-  --type-page-size: 30px;
-  --type-section-size: 19px;
+  --type-page-size: clamp(1.75rem, 2.3vw, 2rem);
+  --type-section-size: clamp(1.125rem, 1.6vw, 1.25rem);
   --type-card-size: 16px;
   --type-body-size: 15px;
   --type-meta-size: 13px;
@@ -36,6 +36,9 @@
   --primary: #4f46e5;
   --primary-dark: #4338ca;
   --accent: #6366f1;
+  --color-ink: #17203a;
+  --color-rail: #f3f6fc;
+  --color-brand-strong: #2563eb;
 }
 
 html {
@@ -57,6 +60,9 @@ body {
   .ds-body { font-size: var(--type-body-size); line-height: 1.55; font-weight: 400; }
   .ds-meta { font-size: var(--type-meta-size); line-height: 1.4; font-weight: 500; }
   .ds-card { border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: var(--shadow-sm); transition: border-color var(--motion-hover) var(--motion-ease), box-shadow var(--motion-hover) var(--motion-ease), background-color var(--motion-hover) var(--motion-ease); }
+  .student-panel { border: 1px solid #e7ebf3; border-radius: 18px; background: #ffffff; box-shadow: 0 10px 30px rgb(31 41 55 / 0.035); }
+  .student-action { border: 1px solid #e7ebf3; border-radius: 14px; background: #ffffff; transition: transform var(--motion-hover) var(--motion-ease), border-color var(--motion-hover) var(--motion-ease), box-shadow var(--motion-hover) var(--motion-ease); }
+  .student-action:hover { border-color: #c7d2fe; box-shadow: 0 8px 20px rgb(79 70 229 / 0.08); transform: translateY(-1px); }
   .ds-input { border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface-secondary); color: var(--color-text); }
   .ds-input:focus { border-color: var(--color-brand); outline: none; box-shadow: 0 0 0 4px var(--color-brand-soft); }
 }

@@ -5,31 +5,33 @@ import { ConfigService } from '@nestjs/config';
 
 import { UsersService } from '../../users/users.service';
 import { JwtPayload } from '../interfaces/jwt-payload.interface';
+import { AppConfig } from '../../config/configuration';
+import { isUserRole } from '../interfaces/user-role';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
-    private readonly configService: ConfigService,
+    private readonly configService: ConfigService<AppConfig & Record<string, unknown>>,
     private readonly usersService: UsersService,
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: configService.get('JWT_SECRET', 'napare-secret'),
+      secretOrKey: configService.getOrThrow<string>('auth.jwt.secret'),
     });
   }
 
   async validate(payload: JwtPayload) {
     const user = await this.usersService.findById(payload.sub);
 
-    if (!user) {
+    if (!user || !isUserRole(payload.role) || user.role !== payload.role) {
       throw new UnauthorizedException();
     }
 
     return {
       id: user.id,
       email: user.email,
-      roles: user.roles,
+      role: user.role,
       universityId: user.universityId,
     };
   }

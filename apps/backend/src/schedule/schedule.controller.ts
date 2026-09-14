@@ -2,7 +2,7 @@ import {
   Controller,
   Get,
   Post,
-  Put,
+  Patch,
   Delete,
   Body,
   Param,
@@ -10,12 +10,15 @@ import {
   UseGuards,
   Request,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery, ApiResponse } from '@nestjs/swagger';
+import { ApiOkResponse, ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 
 import { ScheduleService } from './schedule.service';
 import { CreateLessonDto } from './dto/create-lesson.dto';
 import { UpdateLessonDto } from './dto/update-lesson.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { DateRangeQueryDto } from '../common/dto/date-range-query.dto';
+import { PaginatedResponseDto, PaginationQueryDto } from '../common/dto/pagination-query.dto';
+import { ScheduleQueryDto } from './dto/schedule-query.dto';
 
 @ApiTags('schedule')
 @ApiBearerAuth()
@@ -26,46 +29,39 @@ export class ScheduleController {
 
   @Get('my')
   @ApiOperation({ summary: 'Получить моё расписание' })
-  @ApiResponse({ status: 200, description: 'Расписание получено' })
+  @ApiOkResponse({ description: 'Расписание получено', type: PaginatedResponseDto })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiQuery({ name: 'startDate', required: true })
-  @ApiQuery({ name: 'endDate', required: true })
   async findMy(
     @Request() req,
-    @Query('startDate') startDate: string,
-    @Query('endDate') endDate: string,
+    @Query() query: DateRangeQueryDto,
   ) {
     return this.scheduleService.findByDateRange(
       req.user.universityId,
-      startDate,
-      endDate,
+      query.startDate,
+      query.endDate,
+      query,
     );
   }
 
   @Get()
   @ApiOperation({ summary: 'Получить расписание на дату' })
-  @ApiResponse({ status: 200, description: 'Расписание получено' })
+  @ApiOkResponse({ description: 'Расписание получено', type: PaginatedResponseDto })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiQuery({ name: 'date', required: true })
-  @ApiQuery({ name: 'group', required: false })
-  @ApiQuery({ name: 'teacherId', required: false })
   async findAll(
     @Request() req,
-    @Query('date') date: string,
-    @Query('group') group?: string,
-    @Query('teacherId') teacherId?: string,
+    @Query() query: ScheduleQueryDto,
   ) {
     const universityId = req.user.universityId;
 
-    if (group) {
-      return this.scheduleService.findByGroup(universityId, group, date);
+    if (query.groupId) {
+      return this.scheduleService.findByGroup(universityId, query.groupId, query.date, query);
     }
 
-    if (teacherId) {
-      return this.scheduleService.findByTeacher(universityId, teacherId, date);
+    if (query.teacherId) {
+      return this.scheduleService.findByTeacher(universityId, query.teacherId, query.date, query);
     }
 
-    return this.scheduleService.findByDate(universityId, date);
+    return this.scheduleService.findByDate(universityId, query.date, query);
   }
 
   @Get('lessons/:id')
@@ -79,38 +75,35 @@ export class ScheduleController {
 
   @Get('lessons/:id/changes')
   @ApiOperation({ summary: 'Получить изменения урока' })
-  @ApiResponse({ status: 200, description: 'Изменения получены' })
+  @ApiOkResponse({ description: 'Изменения получены', type: PaginatedResponseDto })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Not found' })
-  async getLessonChanges(@Param('id') id: string) {
-    return this.scheduleService.getLessonChanges(id);
+  async getLessonChanges(@Param('id') id: string, @Query() pagination: PaginationQueryDto) {
+    return this.scheduleService.getLessonChanges(id, pagination);
   }
 
   @Get('range')
   @ApiOperation({ summary: 'Получить расписание за период' })
-  @ApiResponse({ status: 200, description: 'Расписание получено' })
+  @ApiOkResponse({ description: 'Расписание получено', type: PaginatedResponseDto })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiQuery({ name: 'startDate', required: true })
-  @ApiQuery({ name: 'endDate', required: true })
   async findByDateRange(
     @Request() req,
-    @Query('startDate') startDate: string,
-    @Query('endDate') endDate: string,
+    @Query() query: DateRangeQueryDto,
   ) {
     return this.scheduleService.findByDateRange(
       req.user.universityId,
-      startDate,
-      endDate,
+      query.startDate,
+      query.endDate,
+      query,
     );
   }
 
   @Get('changes')
   @ApiOperation({ summary: 'Получить изменения в расписании' })
-  @ApiResponse({ status: 200, description: 'Изменения получены' })
+  @ApiOkResponse({ description: 'Изменения получены', type: PaginatedResponseDto })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiQuery({ name: 'date', required: true })
-  async getChanges(@Request() req, @Query('date') date: string) {
-    return this.scheduleService.getChangedLessons(req.user.universityId, date);
+  async getChanges(@Request() req, @Query() query: ScheduleQueryDto) {
+    return this.scheduleService.getChangedLessons(req.user.universityId, query.date, query);
   }
 
   @Post()
@@ -124,7 +117,7 @@ export class ScheduleController {
     });
   }
 
-  @Put(':id')
+  @Patch(':id')
   @ApiOperation({ summary: 'Обновить урок' })
   @ApiResponse({ status: 200, description: 'Урок обновлён' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })

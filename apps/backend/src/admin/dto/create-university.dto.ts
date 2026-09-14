@@ -18,7 +18,7 @@ export class CreateUniversityDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsObject()
-  connectorConfig?: Record<string, any>;
+  connectorConfig?: Record<string, unknown>;
 
   @ApiPropertyOptional()
   @IsOptional()

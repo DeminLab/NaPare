@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { apiFetch, getUser, logout } from '@/lib/api';
-import { Card, Avatar, Badge, Button, Skeleton } from '@/components/ui';
+import { Card, Avatar, Badge, Button, Skeleton, RequestState } from '@/components/ui';
 
 interface User {
   id: string; email: string; firstName: string; lastName: string; role: string; universityId: string; isActive: boolean;
@@ -17,14 +17,17 @@ export default function ProfilePage() {
   const [user, setUser] = useState<User | null>(null);
   const [stats, setStats] = useState<AbsenceStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     Promise.all([getUser(), apiFetch<AbsenceStats>('/absences/stats/me').catch(() => null)])
-      .then(([u, s]) => { setUser(u); setStats(s); }).finally(() => setLoading(false));
+      .then(([u, s]) => { setUser(u); setStats(s); })
+      .catch((err) => setError(err instanceof Error ? err.message : 'Не удалось загрузить профиль.'))
+      .finally(() => setLoading(false));
   }, []);
 
   if (loading) return <div className="mx-auto max-w-3xl space-y-6"><Skeleton className="h-64" /><Skeleton className="h-52" /></div>;
-  if (!user) return null;
+  if (!user) return <div className="mx-auto max-w-3xl"><RequestState title="Не удалось загрузить профиль" description={error || 'Данные профиля недоступны.'} onRetry={() => window.location.reload()} /></div>;
 
   const attendance = stats && stats.total > 0 ? Math.round(((stats.confirmed + stats.excused) / stats.total) * 100) : null;
 

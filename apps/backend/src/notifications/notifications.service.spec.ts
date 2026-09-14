@@ -3,12 +3,14 @@ import { NotificationsService } from './notifications.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Notification } from './entities/notification.entity';
 import { DeviceToken } from './entities/device-token.entity';
+import { TenantContext } from '../common/tenant/tenant-context';
 
 describe('NotificationsService', () => {
   let service: NotificationsService;
 
   const mockNotificationRepo = {
     find: jest.fn().mockResolvedValue([]),
+    findOne: jest.fn().mockResolvedValue({ id: 'notif-1', universityId: 'uni-1' }),
     count: jest.fn().mockResolvedValue(0),
     create: jest.fn().mockImplementation((dto) => ({ id: '1', ...dto })),
     save: jest.fn().mockImplementation((entity) => Promise.resolve(entity)),
@@ -29,6 +31,7 @@ describe('NotificationsService', () => {
         NotificationsService,
         { provide: getRepositoryToken(Notification), useValue: mockNotificationRepo },
         { provide: getRepositoryToken(DeviceToken), useValue: mockDeviceTokenRepo },
+        { provide: TenantContext, useValue: { assertAccess: jest.fn(), getUser: jest.fn() } },
       ],
     }).compile();
 

@@ -1,5 +1,7 @@
 import { IsString, IsOptional, IsEnum, IsUUID } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { JsonObject } from '../../common/types/json-value.type';
+import { NOTIFICATION_TYPES, NotificationType } from '../entities/notification.entity';
 
 export class CreateNotificationDto {
   @ApiProperty()
@@ -20,22 +22,12 @@ export class CreateNotificationDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  data?: any;
+  data?: JsonObject;
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsEnum([
-    'schedule_change',
-    'new_announcement',
-    'new_homework',
-    'new_file',
-    'deadline',
-    'absence_decision',
-    'new_absence',
-    'system',
-    'other',
-  ])
-  type?: string;
+  @IsEnum(NOTIFICATION_TYPES)
+  type?: NotificationType;
 
   @ApiPropertyOptional()
   @IsOptional()

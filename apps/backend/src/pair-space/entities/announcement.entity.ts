@@ -6,11 +6,17 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  Index,
 } from 'typeorm';
 
 import { PairSpace } from './pair-space.entity';
 
 @Entity('announcements')
+@Index('IDX_announcements_pair_space_pinned_created_at', [
+  'pairSpaceId',
+  'isPinned',
+  'createdAt',
+])
 export class Announcement {
   @PrimaryGeneratedColumn('uuid')
   id: string;
