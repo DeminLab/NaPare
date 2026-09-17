@@ -35,7 +35,7 @@ interface PairSpace {
   announcements: Announcement[];
   homeworks: Homework[];
   messages: Message[];
-  files?: { id: string; name?: string; fileName?: string; createdAt: string }[];
+  files?: { id: string; name?: string; fileName?: string; fileUrl?: string; createdAt: string }[];
 }
 
 interface Lesson {
@@ -188,7 +188,7 @@ export default function PairSpacePage() {
       )}
 
       {activeTab === 'materials' && (
-        <Card><div className="flex items-center gap-3"><Icon name="Paperclip" className="h-5 w-5 text-indigo-500" /><div><h3 className="font-semibold text-slate-900">Материалы</h3><p className="text-sm text-slate-500">Файлы, добавленные в пространство пары.</p></div></div>{pairSpace?.files?.length ? <div className="mt-5 divide-y divide-slate-100">{pairSpace.files.map(file => <div key={file.id} className="flex items-center justify-between py-3 text-sm"><span>{file.name || file.fileName || 'Файл'}</span><span className="text-xs text-slate-400">{timeAgo(file.createdAt)}</span></div>)}</div> : <EmptyState title="Материалов пока нет" description="Файлы от преподавателя появятся здесь." />}</Card>
+        <Card><div className="flex items-center gap-3"><Icon name="Paperclip" className="h-5 w-5 text-indigo-500" /><div><h3 className="font-semibold text-slate-900">Материалы</h3><p className="text-sm text-slate-500">Файлы, добавленные в пространство пары.</p></div></div>{pairSpace?.files?.length ? <div className="mt-5 divide-y divide-slate-100">{pairSpace.files.map(file => <div key={file.id} className="flex items-center justify-between gap-4 py-3 text-sm"><div><p className="font-medium text-slate-800">{file.name || file.fileName || 'Файл'}</p><p className="mt-1 text-xs text-slate-400">{timeAgo(file.createdAt)}</p></div>{file.fileUrl?.startsWith('https://') ? <a href={file.fileUrl} target="_blank" rel="noreferrer" className="shrink-0 rounded-lg px-3 py-2 text-sm font-semibold text-indigo-600 hover:bg-indigo-50">Открыть</a> : <span className="text-xs text-slate-400">Файл недоступен</span>}</div>)}</div> : <EmptyState title="Материалов пока нет" description="Файлы от преподавателя появятся здесь." />}</Card>
       )}
 
       {activeTab === 'participants' && (

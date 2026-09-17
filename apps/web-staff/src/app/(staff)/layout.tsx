@@ -10,10 +10,10 @@ type NavItem = { href: string; label: string; icon: string; badge?: boolean };
 type NavGroup = { label: string; items: NavItem[] };
 
 const groups: NavGroup[] = [
-  { label: 'Главное', items: [{ href: '/today', label: 'Сегодня', icon: '◷' }, { href: '/week', label: 'Расписание', icon: '▦' }] },
-  { label: 'Учёба', items: [{ href: '/groups', label: 'Группы', icon: '♧' }, { href: '/attendance', label: 'Посещаемость', icon: '✓' }, { href: '/pair-space', label: 'Пространства пар', icon: '□' }] },
-  { label: 'Общение', items: [{ href: '/notifications', label: 'Уведомления', icon: '◉', badge: true }] },
-  { label: 'Аккаунт', items: [{ href: '/profile', label: 'Профиль', icon: '○' }, { href: '/settings', label: 'Настройки', icon: '⚙' }] },
+  { label: 'Главное', items: [{ href: '/today', label: 'Сегодня', icon: 'calendar' }, { href: '/week', label: 'Расписание', icon: 'calendar-range' }] },
+  { label: 'Учёба', items: [{ href: '/groups', label: 'Группы', icon: 'users' }, { href: '/attendance', label: 'Посещаемость', icon: 'check' }, { href: '/pair-space', label: 'Пространства пар', icon: 'book' }] },
+  { label: 'Общение', items: [{ href: '/notifications', label: 'Уведомления', icon: 'bell', badge: true }] },
+  { label: 'Аккаунт', items: [{ href: '/profile', label: 'Профиль', icon: 'user' }, { href: '/settings', label: 'Настройки', icon: 'settings' }] },
 ];
 
 const mobileItems = [groups[0].items[0], groups[0].items[1], groups[1].items[0], groups[2].items[0], groups[3].items[0]];
@@ -21,7 +21,17 @@ const mobileItems = [groups[0].items[0], groups[0].items[1], groups[1].items[0],
 const pageTitles: Record<string, string> = Object.fromEntries(groups.flatMap((group) => group.items.map((item) => [item.href, item.label])));
 
 function NavGlyph({ symbol }: { symbol: string }) {
-  return <span aria-hidden="true" className="flex h-5 w-5 items-center justify-center text-[17px] leading-none">{symbol}</span>;
+  const paths: Record<string, string> = {
+    calendar: 'M7 3v3m10-3v3M4 9h16M5 5h14a1 1 0 011 1v13H4V6a1 1 0 011-1zm3 8h3m-3 3h5',
+    'calendar-range': 'M7 3v3m10-3v3M4 9h16M5 5h14a1 1 0 011 1v13H4V6a1 1 0 011-1zm3 7h3m-3 3h6',
+    users: 'M16 20v-1a4 4 0 00-4-4H7a4 4 0 00-4 4v1m6-9a4 4 0 100-8 4 4 0 000 8zm6-7a3 3 0 010 6m4 7v-1a4 4 0 00-3-3.87',
+    check: 'M5 12l4 4L19 6',
+    book: 'M5 4h10a4 4 0 014 4v12H9a4 4 0 00-4 0V4zm0 0v12a4 4 0 014 0h10',
+    bell: 'M18 8a6 6 0 00-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9m-8 13h4',
+    user: 'M20 21a8 8 0 00-16 0m8-10a4 4 0 100-8 4 4 0 000 8z',
+    settings: 'M12 15.5a3.5 3.5 0 100-7 3.5 3.5 0 000 7zM19.4 15a1.7 1.7 0 010 2.4l-.5.5-2-1.1a7.8 7.8 0 01-1.5.9L15 20h-3l-.4-2.3a7.8 7.8 0 01-1.5-.9l-2 1.1-.5-.5a1.7 1.7 0 010-2.4l1.1-2a7.8 7.8 0 01-.1-1.8l-1-1.9.5-.5a1.7 1.7 0 012.4 0l1.9 1a7.8 7.8 0 011.8-.1l1.9-1a1.7 1.7 0 012.4 0l.5.5-1 1.9c.1.6.1 1.2 0 1.8l1 2z',
+  };
+  return <span aria-hidden="true" className="flex h-5 w-5 items-center justify-center"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5"><path d={paths[symbol] || paths.calendar} /></svg></span>;
 }
 
 export default function StaffLayout({ children }: { children: ReactNode }) {

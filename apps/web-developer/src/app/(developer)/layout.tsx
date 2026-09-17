@@ -9,14 +9,26 @@ import Avatar from '@/components/ui/Avatar';
 
 type NavItem = { href: string; label: string; icon: string };
 const groups: Array<{ label: string; items: NavItem[] }> = [
-  { label: 'Overview', items: [{ href: '/overview', label: 'Overview', icon: '⌂' }] },
-  { label: 'API', items: [{ href: '/api', label: 'API Explorer', icon: '⌁' }, { href: '/api#endpoints', label: 'Endpoints', icon: '≡' }, { href: '/api#authentication', label: 'Authentication', icon: '⌑' }] },
-  { label: 'Documentation', items: [{ href: '/docs', label: 'Documentation', icon: '▤' }] },
-  { label: 'Architecture', items: [{ href: '/architecture', label: 'Architecture', icon: '◇' }] },
-  { label: 'Tools', items: [{ href: '/session', label: 'Sessions', icon: '◌' }, { href: '/notifications', label: 'Notifications', icon: '◉' }] },
+  { label: 'Overview', items: [{ href: '/overview', label: 'Overview', icon: 'home' }] },
+  { label: 'API', items: [{ href: '/api', label: 'API Explorer', icon: 'code' }, { href: '/api#endpoints', label: 'Endpoints', icon: 'list' }, { href: '/api#authentication', label: 'Authentication', icon: 'lock' }] },
+  { label: 'Documentation', items: [{ href: '/docs', label: 'Documentation', icon: 'book' }] },
+  { label: 'Architecture', items: [{ href: '/architecture', label: 'Architecture', icon: 'layers' }] },
+  { label: 'Tools', items: [{ href: '/session', label: 'Sessions', icon: 'users' }, { href: '/notifications', label: 'Notifications', icon: 'bell' }] },
 ];
 const allItems = groups.flatMap((group) => group.items);
-function Glyph({ icon }: { icon: string }) { return <span aria-hidden="true" className="flex h-5 w-5 items-center justify-center font-mono text-sm">{icon}</span>; }
+function Glyph({ icon }: { icon: string }) {
+  const paths: Record<string, string> = {
+    home: 'M4 11l8-7 8 7v9h-5v-5H9v5H4v-9z',
+    code: 'M8 9l-3 3 3 3m8-6l3 3-3 3m-3-8l-2 10',
+    list: 'M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01',
+    lock: 'M6 10V8a6 6 0 0112 0v2m-13 0h14v10H5V10z',
+    book: 'M5 4h10a4 4 0 014 4v12H9a4 4 0 00-4 0V4zm0 0v12a4 4 0 014 0h10',
+    layers: 'M12 3l9 5-9 5-9-5 9-5zm-9 9l9 5 9-5M3 17l9 5 9-5',
+    users: 'M16 20v-1a4 4 0 00-4-4H7a4 4 0 00-4 4v1m6-9a4 4 0 100-8 4 4 0 000 8zm6-7a3 3 0 010 6m4 7v-1a4 4 0 00-3-3.87',
+    bell: 'M18 8a6 6 0 00-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9m-8 13h4',
+  };
+  return <span aria-hidden="true" className="flex h-5 w-5 items-center justify-center"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5"><path d={paths[icon] || paths.home} /></svg></span>;
+}
 
 export default function DeveloperLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();

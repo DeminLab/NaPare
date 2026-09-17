@@ -4,6 +4,9 @@ import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { UnauthorizedException, ConflictException } from '@nestjs/common';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { University } from '../users/entities/university.entity';
+import { RaspScraperService } from './rasp-scraper.service';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -27,6 +30,8 @@ describe('AuthService', () => {
         { provide: UsersService, useValue: usersService },
         { provide: JwtService, useValue: jwtService },
         { provide: ConfigService, useValue: { get: jest.fn().mockReturnValue('15m') } },
+        { provide: getRepositoryToken(University), useValue: { findOne: jest.fn().mockResolvedValue({ id: 'uni-1', name: 'СИБИТ', city: 'Омск', status: 'active' }) } },
+        { provide: RaspScraperService, useValue: { isValidGroup: jest.fn() } },
       ],
     }).compile();
 

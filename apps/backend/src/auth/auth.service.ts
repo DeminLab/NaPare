@@ -1,6 +1,8 @@
-import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException, BadRequestException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 
 import { UsersService } from '../users/users.service';
@@ -11,6 +13,8 @@ import { JwtPayload } from './interfaces/jwt-payload.interface';
 import { AppConfig } from '../config/configuration';
 import { UserRole } from './interfaces/user-role';
 import { User } from '../users/entities/user.entity';
+import { University } from '../users/entities/university.entity';
+import { RaspScraperService, SIBIT_UNIVERSITY } from './rasp-scraper.service';
 
 @Injectable()
 export class AuthService {
@@ -18,6 +22,9 @@ export class AuthService {
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService<AppConfig & Record<string, unknown>>,
+    @InjectRepository(University)
+    private readonly universitiesRepository: Repository<University>,
+    private readonly raspScraperService: RaspScraperService,
   ) {}
 
   async login(loginDto: LoginDto): Promise<AuthResponse> {
@@ -40,6 +47,22 @@ export class AuthService {
   }
 
   async register(registerDto: RegisterDto): Promise<AuthResponse> {
+    const university = await this.universitiesRepository.findOne({
+      where: {
+        id: registerDto.universityId,
+        name: SIBIT_UNIVERSITY.name,
+        city: SIBIT_UNIVERSITY.city,
+        status: 'active',
+      },
+    });
+    if (!university) {
+      throw new BadRequestException('Регистрация доступна только для СИБИТа в Омске');
+    }
+
+    if (registerDto.groupId && !(await this.raspScraperService.isValidGroup(registerDto.groupId))) {
+      throw new BadRequestException('Выбранная группа отсутствует в актуальном расписании СИБИТа');
+    }
+
     const existingUser = await this.usersService.findByEmail(registerDto.email);
 
     if (existingUser) {
@@ -55,6 +78,7 @@ export class AuthService {
       lastName: registerDto.lastName,
       role: UserRole.STUDENT,
       universityId: registerDto.universityId,
+      groupId: registerDto.groupId,
     });
 
     return this.generateTokens(user);
@@ -84,6 +108,7 @@ export class AuthService {
       email: user.email,
       role: user.role,
       universityId: user.universityId,
+      groupId: user.groupId,
     };
 
     const accessToken = this.jwtService.sign(payload);

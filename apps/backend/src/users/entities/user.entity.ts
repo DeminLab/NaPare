@@ -44,7 +44,7 @@ export class User {
   @Column({ type: 'uuid' })
   universityId: string;
 
-  @Column({ type: 'uuid', nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   groupId: string;
 
   @Column({ default: true })

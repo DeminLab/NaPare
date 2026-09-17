@@ -1,4 +1,4 @@
-import { IsEmail, IsString, MinLength, IsUUID } from 'class-validator';
+import { IsEmail, IsString, MinLength, IsUUID, IsOptional } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class RegisterDto {
@@ -22,4 +22,9 @@ export class RegisterDto {
   @ApiProperty({ example: 'uuid-of-university' })
   @IsUUID()
   universityId: string;
+
+  @ApiProperty({ example: '12131', required: false })
+  @IsOptional()
+  @IsString()
+  groupId?: string;
 }

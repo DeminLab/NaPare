@@ -20,6 +20,7 @@ export class MyDayController {
       req.user.id,
       req.user.universityId,
       req.user.role,
+      req.user.groupId,
     );
   }
 }

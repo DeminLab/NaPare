@@ -12,7 +12,7 @@ import {
 } from '@nestjs/common';
 import { ApiOkResponse, ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 
-import { AbsencesService } from './absences.service';
+import { ABSENCE_STAFF_ROLES, AbsencesService } from './absences.service';
 import { CreateAbsenceDto } from './dto/create-absence.dto';
 import { UpdateAbsenceDto } from './dto/update-absence.dto';
 import { RejectAbsenceDto } from './dto/reject-absence.dto';
@@ -71,6 +71,7 @@ export class AbsencesController {
   }
 
   @Post()
+  @Roles(UserRole.STUDENT)
   @ApiOperation({ summary: 'Создать пропуск' })
   @ApiResponse({ status: 201, description: 'Пропуск создан' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -79,6 +80,7 @@ export class AbsencesController {
   }
 
   @Patch(':id')
+  @Roles(UserRole.STUDENT)
   @ApiOperation({ summary: 'Обновить пропуск' })
   @ApiResponse({ status: 200, description: 'Пропуск обновлён' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -90,6 +92,7 @@ export class AbsencesController {
   }
 
   @Delete(':id')
+  @Roles(UserRole.STUDENT)
   @ApiOperation({ summary: 'Удалить пропуск' })
   @ApiResponse({ status: 200, description: 'Пропуск удалён' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -98,6 +101,7 @@ export class AbsencesController {
   }
 
   @Post(':id/confirm')
+  @Roles(...ABSENCE_STAFF_ROLES)
   @ApiOperation({ summary: 'Подтвердить пропуск' })
   @ApiResponse({ status: 200, description: 'Пропуск подтверждён' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -106,6 +110,7 @@ export class AbsencesController {
   }
 
   @Post(':id/excuse')
+  @Roles(...ABSENCE_STAFF_ROLES)
   @ApiOperation({ summary: 'Освободить от пропуска' })
   @ApiResponse({ status: 200, description: 'Пропуск освобождён' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })

@@ -14,9 +14,9 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       lg: 'px-7 py-3 text-sm',
     };
     const variants = {
-      primary: 'bg-sky-600 text-white hover:bg-sky-700 shadow-sm shadow-sky-600/25',
-      secondary: 'bg-slate-100 text-slate-700 hover:bg-slate-200',
-      ghost: 'bg-transparent text-slate-600 hover:bg-slate-100',
+      primary: 'bg-cyan-400 text-slate-950 hover:bg-cyan-300 shadow-sm shadow-cyan-400/20',
+      secondary: 'border border-white/10 bg-white/5 text-white/80 hover:bg-white/10',
+      ghost: 'bg-transparent text-white/60 hover:bg-white/10 hover:text-white',
       danger: 'bg-red-600 text-white hover:bg-red-700 shadow-sm shadow-red-600/25',
     };
 

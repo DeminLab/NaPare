@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between, ArrayContains } from 'typeorm';
 
@@ -12,6 +12,15 @@ import {
   PaginationQueryDto,
   toPaginatedResponse,
 } from '../common/dto/pagination-query.dto';
+
+export const ABSENCE_STAFF_ROLES: UserRole[] = [
+  UserRole.TEACHER,
+  UserRole.CURATOR,
+  UserRole.DEPARTMENT_HEAD,
+  UserRole.FACULTY_DEAN,
+  UserRole.UNIVERSITY_ADMIN,
+  UserRole.SUPERADMIN,
+];
 
 @Injectable()
 export class AbsencesService {
@@ -76,8 +85,19 @@ export class AbsencesService {
   }
 
   async create(createAbsenceDto: CreateAbsenceDto, universityId: string): Promise<Absence> {
+    const user = this.tenantContext.getUser();
+    if (!user || user.role !== UserRole.STUDENT) {
+      throw new ForbiddenException('Only students can create absences');
+    }
     this.tenantContext.assertAccess(universityId);
-    const absence = this.absenceRepository.create({ ...createAbsenceDto, universityId });
+    const absence = this.absenceRepository.create({
+      universityId,
+      studentId: user.id,
+      type: createAbsenceDto.type,
+      startDate: new Date(createAbsenceDto.startDate),
+      endDate: new Date(createAbsenceDto.endDate),
+      comment: createAbsenceDto.comment,
+    });
     return this.absenceRepository.save(absence);
   }
 
@@ -87,9 +107,13 @@ export class AbsencesService {
     if (!absence) {
       throw new NotFoundException(`Absence with id ${id} not found`);
     }
-    this.tenantContext.assertAccess(absence.universityId);
+    this.assertCanMutate(absence);
 
-    Object.assign(absence, updateAbsenceDto);
+    Object.assign(absence, {
+      ...updateAbsenceDto,
+      ...(updateAbsenceDto.startDate && { startDate: new Date(updateAbsenceDto.startDate) }),
+      ...(updateAbsenceDto.endDate && { endDate: new Date(updateAbsenceDto.endDate) }),
+    });
     return this.absenceRepository.save(absence);
   }
 
@@ -118,7 +142,7 @@ export class AbsencesService {
     if (!absence) {
       throw new NotFoundException(`Absence with id ${id} not found`);
     }
-    this.tenantContext.assertAccess(absence.universityId);
+    this.assertStaffAccess(absence.universityId);
 
     absence.confirmationRequired = false;
     if (comment) {
@@ -137,7 +161,7 @@ export class AbsencesService {
     if (!absence) {
       throw new NotFoundException(`Absence with id ${id} not found`);
     }
-    this.tenantContext.assertAccess(absence.universityId);
+    this.assertStaffAccess(absence.universityId);
 
     absence.comment = reason;
     return this.absenceRepository.save(absence);
@@ -149,7 +173,7 @@ export class AbsencesService {
     if (!absence) {
       throw new NotFoundException(`Absence with id ${id} not found`);
     }
-    this.tenantContext.assertAccess(absence.universityId);
+    this.assertCanMutate(absence);
 
     await this.absenceRepository.delete(id);
   }
@@ -170,5 +194,24 @@ export class AbsencesService {
     }
 
     return { total, byType };
+  }
+
+  private assertCanMutate(absence: Absence): void {
+    const user = this.tenantContext.getUser();
+    if (!user) {
+      throw new ForbiddenException('User not authenticated');
+    }
+    this.tenantContext.assertAccess(absence.universityId);
+    if (user.role === UserRole.STUDENT && absence.studentId !== user.id) {
+      throw new ForbiddenException('Students can only mutate their own absences');
+    }
+  }
+
+  private assertStaffAccess(universityId: string): void {
+    const user = this.tenantContext.getUser();
+    if (!user || !ABSENCE_STAFF_ROLES.includes(user.role)) {
+      throw new ForbiddenException('Staff role required');
+    }
+    this.tenantContext.assertAccess(universityId);
   }
 }

@@ -16,14 +16,13 @@ export class MyDayService {
     private readonly notificationsService: NotificationsService,
   ) {}
 
-  async getMyDay(userId: string, universityId: string, role: UserRole) {
+  async getMyDay(userId: string, universityId: string, role: UserRole, groupId?: string | null) {
     const today = new Date().toISOString().split('T')[0];
 
     // Get today's schedule
     let lessons;
     if (role === UserRole.STUDENT) {
-      // TODO: Get student's group
-      lessons = (await this.scheduleService.findByDate(universityId, today)).data;
+      lessons = (await this.scheduleService.findForStudentDate(universityId, groupId, today)).data;
     } else if (role === UserRole.TEACHER) {
       lessons = (await this.scheduleService.findByTeacher(universityId, userId, today)).data;
     } else {

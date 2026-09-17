@@ -138,6 +138,7 @@ export async function register(payload: {
   firstName: string;
   lastName: string;
   universityId: string;
+  groupId: string;
 }): Promise<void> {
   const response = await fetch(`${API_BASE}/auth/register`, {
     method: 'POST',
@@ -151,6 +152,36 @@ export async function register(payload: {
   }
   const data = await response.json();
   saveTokens(data.accessToken, data.refreshToken);
+}
+
+export interface UniversityOption {
+  id: string;
+  name: string;
+  city: string;
+}
+
+export async function getUniversities(): Promise<UniversityOption[]> {
+  const response = await fetch(`${API_BASE}/auth/universities`);
+  if (!response.ok) throw new Error('Не удалось загрузить данные СИБИТа');
+  return response.json();
+}
+
+export interface RaspGroup {
+  groupId: string;
+  name: string;
+  faculty: string;
+  facultyId: number;
+  course: number;
+  academicYear: string;
+}
+
+export async function getRaspGroups(year?: string): Promise<RaspGroup[]> {
+  const query = year ? `?year=${encodeURIComponent(year)}` : '';
+  const response = await fetch(`${API_BASE}/auth/rasp-groups${query}`);
+  if (!response.ok) {
+    throw new Error('Не удалось загрузить группы с rasp.sano.ru');
+  }
+  return response.json();
 }
 
 export function logout(): void {

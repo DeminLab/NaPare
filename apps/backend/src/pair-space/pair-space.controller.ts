@@ -18,11 +18,14 @@ import { SubmitHomeworkDto } from './dto/submit-homework.dto';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { CreateFileDto } from './dto/create-file.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { Roles } from '../common/decorators/roles.decorator';
+import { UserRole } from '../auth/interfaces/user-role';
 import { PaginatedResponseDto, PaginationQueryDto } from '../common/dto/pagination-query.dto';
 
 @ApiTags('pair-spaces')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('pair-spaces')
 export class PairSpaceController {
   constructor(private readonly pairSpaceService: PairSpaceService) {}
@@ -37,6 +40,7 @@ export class PairSpaceController {
   }
 
   @Post(':lessonId/announcements')
+  @Roles(UserRole.TEACHER, UserRole.CURATOR, UserRole.DEPARTMENT_HEAD, UserRole.FACULTY_DEAN, UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Создать объявление' })
   @ApiResponse({ status: 201, description: 'Объявление создано' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -54,6 +58,7 @@ export class PairSpaceController {
   }
 
   @Post(':lessonId/homeworks')
+  @Roles(UserRole.TEACHER, UserRole.CURATOR, UserRole.DEPARTMENT_HEAD, UserRole.FACULTY_DEAN, UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Создать домашнее задание' })
   @ApiResponse({ status: 201, description: 'Домашнее задание создано' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -71,6 +76,7 @@ export class PairSpaceController {
   }
 
   @Post(':lessonId/files')
+  @Roles(UserRole.TEACHER, UserRole.CURATOR, UserRole.DEPARTMENT_HEAD, UserRole.FACULTY_DEAN, UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Загрузить файл' })
   @ApiResponse({ status: 201, description: 'Файл загружен' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
@@ -14,11 +14,21 @@ import { SubmitHomeworkDto } from './dto/submit-homework.dto';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { CreateFileDto } from './dto/create-file.dto';
 import { TenantContext } from '../common/tenant/tenant-context';
+import { UserRole } from '../auth/interfaces/user-role';
 import {
   PaginatedResponse,
   PaginationQueryDto,
   toPaginatedResponse,
 } from '../common/dto/pagination-query.dto';
+
+const CONTENT_AUTHOR_ROLES: UserRole[] = [
+  UserRole.TEACHER,
+  UserRole.CURATOR,
+  UserRole.DEPARTMENT_HEAD,
+  UserRole.FACULTY_DEAN,
+  UserRole.UNIVERSITY_ADMIN,
+  UserRole.SUPERADMIN,
+];
 
 @Injectable()
 export class PairSpaceService {
@@ -71,7 +81,7 @@ export class PairSpaceService {
     authorId: string,
     createAnnouncementDto: CreateAnnouncementDto,
   ): Promise<Announcement> {
-    await this.assertPairSpaceAccess(pairSpaceId);
+    await this.assertCanPublishContent(pairSpaceId, authorId);
     const announcement = this.announcementRepository.create({
       ...createAnnouncementDto,
       pairSpaceId,
@@ -94,7 +104,7 @@ export class PairSpaceService {
     authorId: string,
     createHomeworkDto: CreateHomeworkDto,
   ): Promise<Homework> {
-    await this.assertPairSpaceAccess(pairSpaceId);
+    await this.assertCanPublishContent(pairSpaceId, authorId);
     const homework = this.homeworkRepository.create({
       ...createHomeworkDto,
       pairSpaceId,
@@ -117,7 +127,7 @@ export class PairSpaceService {
     uploadedBy: string,
     fileData: CreateFileDto,
   ): Promise<FileAttachment> {
-    await this.assertPairSpaceAccess(pairSpaceId);
+    await this.assertCanPublishContent(pairSpaceId, uploadedBy);
     const file = this.fileAttachmentRepository.create({
       pairSpaceId,
       uploadedBy,
@@ -224,5 +234,16 @@ export class PairSpaceService {
     }
     this.tenantContext.assertAccess(pairSpace.universityId);
     return pairSpace;
+  }
+
+  private async assertCanPublishContent(pairSpaceId: string, actorId: string): Promise<PairSpace> {
+    const user = this.tenantContext.getUser();
+    if (!user || !CONTENT_AUTHOR_ROLES.includes(user.role)) {
+      throw new ForbiddenException('Staff role required to publish pair space content');
+    }
+    if (user.id !== actorId) {
+      throw new ForbiddenException('Users can only publish pair space content as themselves');
+    }
+    return this.assertPairSpaceAccess(pairSpaceId);
   }
 }

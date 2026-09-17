@@ -1,25 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { register } from '@/lib/api';
+import { register, getUniversities, getRaspGroups, type UniversityOption, type RaspGroup } from '@/lib/api';
 
-type Form = { firstName: string; lastName: string; email: string; password: string; confirmPassword: string; university: string; faculty: string; group: string };
-const initial: Form = { firstName: '', lastName: '', email: '', password: '', confirmPassword: '', university: '', faculty: '', group: '' };
-
-const OMSK_UNIVERSITIES = [
-  { id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', name: 'Омский государственный университет им. Ф.М. Достоевского (ОмГУ)', short: 'ОмГУ' },
-  { id: 'b1f0cd00-9d1c-4f09-bc7e-7cc0cd490b22', name: 'Омский государственный технический университет (ОмГТУ)', short: 'ОмГТУ' },
-  { id: 'c2g1de11-ae2d-5g1a-cd8f-8dd1de5a0c33', name: 'Омский государственный аграрный университет (ОмГАУ)', short: 'ОмГАУ' },
-  { id: 'd3h2ef22-bf3e-6h2b-de9g-9ee2ef6b1d44', name: 'Омский государственный педагогический университет (ОмГПУ)', short: 'ОмГПУ' },
-  { id: 'e4i3fg33-cg4f-7i3c-ef0h-0ff3fg7c2e55', name: 'Омская государственная медицинская академия (ОмГМА)', short: 'ОмГМА' },
-  { id: 'f5j4gh44-dh5g-8j4d-fg1i-1gg4gh8d3f66', name: 'Омский университет систем управления и радиоэлектроники (ОУСУР)', short: 'ОУСУР' },
-  { id: 'g6k5hi55-ei6h-9k5e-gh2j-2hh5hi9e4g77', name: 'Сибирский институт бизнеса, управления и психологии (СИБИТ)', short: 'СИБИТ' },
-  { id: 'h7l6ij66-fj7i-0l6f-hi3k-3ii6ij0f5h88', name: 'Омский финансово-экономический колледж (ОФЭК)', short: 'ОФЭК' },
-  { id: 'i8m7jk77-gk8j-1m7g-ij4l-4jj7jk1g6i99', name: 'Омский политехнический колледж (ОПК)', short: 'ОПК' },
-  { id: 'j9n8kl88-hl9k-2n8h-jk5m-5kk8kl2h7j00', name: 'Омский механико-технологический колледж (ОМТК)', short: 'ОМТК' },
-];
+type Form = { firstName: string; lastName: string; email: string; password: string; confirmPassword: string; university: string; groupId: string };
+const initial: Form = { firstName: '', lastName: '', email: '', password: '', confirmPassword: '', university: '', groupId: '' };
 
 function Brand() {
   return (
@@ -48,26 +35,57 @@ function Field({ id, label, value, onChange, type = 'text', placeholder, error, 
   );
 }
 
-function UniversitySelect({ value, onChange, error }: { value: string; onChange: (v: string) => void; error?: string }) {
+function GroupSelect({ value, onChange, error, groups, loading }: { value: string; onChange: (v: string) => void; error?: string; groups: RaspGroup[]; loading: boolean }) {
+  const [search, setSearch] = useState('');
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return groups;
+    const q = search.toLowerCase();
+    return groups.filter(g =>
+      g.name.toLowerCase().includes(q) ||
+      g.faculty.toLowerCase().includes(q)
+    );
+  }, [groups, search]);
+
+  const selected = groups.find(g => g.groupId === value);
+
   return (
     <div>
-      <label htmlFor="university" className="mb-2 block text-sm font-medium text-slate-700">Университет</label>
-      <select id="university" name="university" value={value}
+      <label htmlFor="group" className="mb-2 block text-sm font-medium text-slate-700">Группа</label>
+      {selected && (
+        <div className="mb-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm">
+          <span className="font-medium text-indigo-700">{selected.name}</span>
+          <span className="ml-2 text-indigo-500">· {selected.faculty}</span>
+          <span className="ml-2 text-indigo-400">· {selected.course} курс</span>
+        </div>
+      )}
+      <input
+        type="text"
+        value={search}
+        onChange={e => setSearch(e.target.value)}
+        placeholder={loading ? 'Загрузка групп...' : 'Поиск группы...'}
+        disabled={loading}
+        className="mb-2 min-h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 outline-none transition focus:bg-white focus:ring-4 focus:ring-indigo-100 focus:border-indigo-400"
+      />
+      <select id="group" name="group" value={value}
         onChange={event => onChange(event.target.value)}
-        aria-invalid={!!error} aria-describedby={error ? 'university-error' : undefined}
-        className={`min-h-11 w-full rounded-xl border bg-slate-50 px-4 text-sm text-slate-900 outline-none transition focus:bg-white focus:ring-4 focus:ring-indigo-100 ${error ? 'border-red-400' : 'border-slate-200 focus:border-indigo-400'}`}>
-        <option value="">Выберите университет</option>
-        {OMSK_UNIVERSITIES.map(u => (
-          <option key={u.id} value={u.id}>{u.name}</option>
+        size={8}
+        aria-invalid={!!error} aria-describedby={error ? 'group-error' : undefined}
+        className={`min-h-[180px] w-full rounded-xl border bg-slate-50 px-4 text-sm text-slate-900 outline-none transition focus:bg-white focus:ring-4 focus:ring-indigo-100 ${error ? 'border-red-400' : 'border-slate-200 focus:border-indigo-400'}`}>
+        {loading && <option value="" disabled>Загрузка...</option>}
+        {!loading && filtered.length === 0 && <option value="" disabled>Группы не найдены</option>}
+        {!loading && filtered.map(g => (
+          <option key={g.groupId} value={g.groupId}>{g.name} — {g.faculty} ({g.course} курс)</option>
         ))}
       </select>
-      {error && <p id="university-error" className="mt-1.5 text-xs text-red-600">{error}</p>}
+      {error && <p id="group-error" className="mt-1.5 text-xs text-red-600">{error}</p>}
     </div>
   );
 }
 
-function ProfilePreview({ form }: { form: Form }) {
-  const uniName = OMSK_UNIVERSITIES.find(u => u.id === form.university)?.short || '';
+function ProfilePreview({ form, groups, universities }: { form: Form; groups: RaspGroup[]; universities: UniversityOption[] }) {
+  const uni = universities.find(u => u.id === form.university);
+  const group = groups.find(g => g.groupId === form.groupId);
   return (
     <aside className="sticky top-8 rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_18px_50px_rgba(30,64,175,0.10)]">
       <div className="flex items-center justify-between border-b border-slate-100 pb-4">
@@ -89,13 +107,13 @@ function ProfilePreview({ form }: { form: Form }) {
           <p className="mt-1 truncate text-sm text-slate-700">{form.email || 'you@university.ru'}</p>
         </div>
         <div className="py-3">
-          <p className="text-[10px] uppercase tracking-wider text-slate-400">Учёба</p>
-          <p className="mt-1 text-sm text-slate-700">{form.group || 'Группа не выбрана'}</p>
-          <p className="mt-1 text-xs text-slate-400">{form.faculty || 'Факультет не выбран'}</p>
+          <p className="text-[10px] uppercase tracking-wider text-slate-400">Группа</p>
+          <p className="mt-1 text-sm text-slate-700">{group ? `${group.name} · ${group.faculty}` : 'Группа не выбрана'}</p>
+          {group && <p className="mt-1 text-xs text-slate-400">{group.course} курс</p>}
         </div>
         <div className="py-3">
           <p className="text-[10px] uppercase tracking-wider text-slate-400">Университет</p>
-          <p className="mt-1 truncate text-sm text-slate-700">{uniName || 'Университет не выбран'}</p>
+          <p className="mt-1 truncate text-sm text-slate-700">{uni?.name || 'СИБИТ'}</p>
         </div>
       </div>
       <div className="mt-5 flex gap-2 text-xs text-slate-500">
@@ -113,6 +131,20 @@ export default function RegisterPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [completed, setCompleted] = useState(false);
+  const [universities, setUniversities] = useState<UniversityOption[]>([]);
+  const [groups, setGroups] = useState<RaspGroup[]>([]);
+  const [groupsLoading, setGroupsLoading] = useState(true);
+  const [groupsError, setGroupsError] = useState('');
+
+  useEffect(() => {
+    getUniversities().then(unis => {
+      setUniversities(unis);
+      if (unis.length === 1) {
+        setForm(prev => ({ ...prev, university: unis[0].id }));
+      }
+    }).catch(() => {});
+    getRaspGroups().then(setGroups).catch(err => setGroupsError(err instanceof Error ? err.message : 'Не удалось загрузить группы')).finally(() => setGroupsLoading(false));
+  }, []);
 
   const update = (key: keyof Form, value: string) => {
     setForm(prev => ({ ...prev, [key]: value }));
@@ -130,9 +162,8 @@ export default function RegisterPage() {
       if (form.password !== form.confirmPassword) next.confirmPassword = 'Пароли не совпадают';
     }
     if (current === 2) {
-      if (!form.university) next.university = 'Выберите университет';
-      if (!form.faculty.trim()) next.faculty = 'Укажите факультет';
-      if (!form.group.trim()) next.group = 'Укажите учебную группу';
+      if (groupsError) next.groupId = 'Список групп временно недоступен. Повторите попытку позже';
+      else if (!form.groupId) next.groupId = 'Выберите группу';
     }
     setErrors(next);
     return Object.keys(next).length === 0;
@@ -151,7 +182,8 @@ export default function RegisterPage() {
     setLoading(true);
     setError('');
     try {
-      await register({ email: form.email, password: form.password, firstName: form.firstName, lastName: form.lastName, universityId: form.university });
+      const uniId = form.university || universities[0]?.id || '';
+      await register({ email: form.email, password: form.password, firstName: form.firstName, lastName: form.lastName, universityId: uniId, groupId: form.groupId });
       setCompleted(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Не удалось создать аккаунт');
@@ -205,7 +237,7 @@ export default function RegisterPage() {
             <div className={`h-px flex-1 ${step > 1 ? 'bg-indigo-400' : 'bg-slate-200'}`} />
             <div className="flex flex-1 items-center justify-center gap-2">
               <span className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold ${step >= 2 ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-500'}`}>2</span>
-              <span className="hidden text-sm font-semibold text-slate-700 sm:block">Учёба</span>
+              <span className="hidden text-sm font-semibold text-slate-700 sm:block">Группа</span>
             </div>
             <div className={`h-px flex-1 ${step > 2 ? 'bg-indigo-400' : 'bg-slate-200'}`} />
             <div className="flex flex-1 items-center justify-end gap-2">
@@ -220,7 +252,7 @@ export default function RegisterPage() {
             {step === 1 && (
               <>
                 <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">Создайте аккаунт</h1>
-                <p className="mt-2 text-sm text-slate-500">Основные данные для входа в NaPare.</p>
+                <p className="mt-2 text-sm text-slate-500">Основные данные для входа в НаПаре.</p>
                 <div className="mt-8 grid gap-5 sm:grid-cols-2">
                   <Field id="firstName" label="Имя" value={form.firstName} onChange={v => update('firstName', v)} placeholder="Иван" autoComplete="given-name" error={errors.firstName} />
                   <Field id="lastName" label="Фамилия" value={form.lastName} onChange={v => update('lastName', v)} placeholder="Иванов" autoComplete="family-name" error={errors.lastName} />
@@ -235,12 +267,15 @@ export default function RegisterPage() {
 
             {step === 2 && (
               <>
-                <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">Информация об учёбе</h1>
-                <p className="mt-2 text-sm text-slate-500">Выберите ваш университет, факультет и группу.</p>
+                <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">Выберите группу</h1>
+                <p className="mt-2 text-sm text-slate-500">Данные СИБИТа загружаются с сайта rasp.sano.ru</p>
                 <div className="mt-8 grid gap-5">
-                  <UniversitySelect value={form.university} onChange={v => update('university', v)} error={errors.university} />
-                  <Field id="faculty" label="Факультет" value={form.faculty} onChange={v => update('faculty', v)} placeholder="Например, ИНФАС" error={errors.faculty} />
-                  <Field id="group" label="Группа" value={form.group} onChange={v => update('group', v)} placeholder="Например, ИВТ-21" error={errors.group} />
+                  <div className="rounded-xl border border-indigo-100 bg-indigo-50/70 px-4 py-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-indigo-500">Вуз</p>
+                    <p className="mt-1 text-sm font-semibold text-indigo-900">СИБИТ · Омск</p>
+                  </div>
+                  <GroupSelect value={form.groupId} onChange={v => update('groupId', v)} error={errors.groupId} groups={groups} loading={groupsLoading} />
+                  {groupsError && <p className="-mt-3 text-xs text-red-600">{groupsError}</p>}
                 </div>
               </>
             )}
@@ -260,11 +295,15 @@ export default function RegisterPage() {
                   </div>
                   <div className="flex justify-between gap-5 py-4 text-sm">
                     <span className="text-slate-500">Университет</span>
-                    <b className="text-right">{OMSK_UNIVERSITIES.find(u => u.id === form.university)?.short || '—'}</b>
+                    <b className="text-right">СИБИТ</b>
                   </div>
                   <div className="flex justify-between gap-5 py-4 text-sm">
-                    <span className="text-slate-500">Учёба</span>
-                    <b className="text-right">{form.faculty} · {form.group}</b>
+                    <span className="text-slate-500">Группа</span>
+                    <b className="text-right">{groups.find(g => g.groupId === form.groupId)?.name || '—'}</b>
+                  </div>
+                  <div className="flex justify-between gap-5 py-4 text-sm">
+                    <span className="text-slate-500">Специальность</span>
+                    <b className="text-right">{groups.find(g => g.groupId === form.groupId)?.faculty || '—'}</b>
                   </div>
                 </div>
               </>
@@ -296,7 +335,7 @@ export default function RegisterPage() {
         </section>
 
         <div className="hidden lg:block">
-          <ProfilePreview form={form} />
+          <ProfilePreview form={form} groups={groups} universities={universities} />
         </div>
       </div>
     </main>

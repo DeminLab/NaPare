@@ -127,6 +127,7 @@ web-developer┘              ├────────────> Redis
 napare/
 ├── apps/
 │   ├── backend/          # NestJS API и TypeORM миграции
+│   ├── max-miniapp/      # React/Vite Mini App для MAX
 │   ├── web-student/      # Next.js для студентов
 │   ├── web-staff/        # Next.js для персонала и кураторов
 │   ├── web-admin/        # Next.js для администрации вуза
@@ -692,6 +693,7 @@ docker compose --env-file <secure-env-file> -f docker-compose.prod.yml up -d
 | Роль | Куда идти |
 |------|-----------|
 | Новый разработчик | [docs/01_ONBOARDING.md](docs/01_ONBOARDING.md) |
+| Команда разработки | [docs/DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md) |
 | AI-агент | [docs/01_ONBOARDING.md](docs/01_ONBOARDING.md) → нужный `docs/modules/*.md` |
 | Продукт / CEO | [docs/strategy/vision.md](docs/strategy/vision.md), [docs/product/overview.md](docs/product/overview.md) |
 | Новый участник | [docs/02_GLOSSARY.md](docs/02_GLOSSARY.md), [docs/architecture/README.md](docs/architecture/README.md) |

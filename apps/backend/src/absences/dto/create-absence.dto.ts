@@ -1,35 +1,22 @@
-import { IsString, IsNumber, IsOptional, IsDateString, IsEnum, IsUUID } from 'class-validator';
+import { IsString, IsOptional, IsDateString, IsEnum, MaxLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateAbsenceDto {
   @ApiProperty()
-  @IsUUID()
-  studentId: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsUUID()
-  lessonId?: string;
+  @IsEnum(['learning', 'sick', 'work', 'other_city', 'other'])
+  type: string;
 
   @ApiProperty()
   @IsDateString()
-  date: Date;
+  startDate: string;
 
   @ApiProperty()
-  @IsNumber()
-  pairNumber: number;
-
-  @ApiProperty()
-  @IsString()
-  subject: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsEnum(['absent', 'late', 'excused', 'pending'])
-  status?: string;
+  @IsDateString()
+  endDate: string;
 
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
-  reason?: string;
+  @MaxLength(500)
+  comment?: string;
 }

@@ -4,27 +4,27 @@ import { PublicNavigation, PublicFooter } from '@/components/navigation/PublicNa
 export default function Home() {
   return (
     <main className="min-h-screen"><PublicNavigation />
-      <section className="relative overflow-hidden bg-gradient-to-br from-purple-600 via-purple-500 to-sky-500 px-6 py-24 text-white sm:py-32">
+      <section className="relative overflow-hidden bg-gradient-to-b from-sky-50 to-white px-6 py-20 text-slate-900 sm:py-28">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2220%22%20height%3D%2220%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Ccircle%20cx%3D%221%22%20cy%3D%221%22%20r%3D%221%22%20fill%3D%22rgba(255,255,255,0.08)%22/%3E%3C/svg%3E')] opacity-40" />
         <div className="relative mx-auto max-w-4xl text-center">
-          <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1.5 text-sm font-medium backdrop-blur-sm">
-            <span className="flex h-2 w-2 rounded-full bg-green-400" />
+          <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-sky-100 px-4 py-1.5 text-sm font-medium text-sky-700">
+            <span className="flex h-2 w-2 rounded-full bg-sky-500" />
             Панель преподавателя
           </div>
-          <h1 className="text-4xl font-extrabold tracking-tight sm:text-6xl">
+          <h1 className="text-4xl font-extrabold tracking-tight text-slate-950 sm:text-6xl">
             Расписание
             <br />
-            <span className="bg-gradient-to-r from-white to-purple-200 bg-clip-text text-transparent">
+            <span className="text-sky-600">
               для преподавателей
             </span>
           </h1>
-          <p className="mx-auto mt-6 max-w-xl text-lg text-white/80">
+          <p className="mx-auto mt-6 max-w-xl text-lg text-slate-600">
             Управляйте расписанием, группами, посещаемостью и пространством пар — всё в одном месте
           </p>
           <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
             <Link
               href="/login"
-              className="inline-flex items-center gap-2 rounded-2xl bg-white px-8 py-3.5 text-sm font-semibold text-purple-600 shadow-lg shadow-purple-500/25 transition-all hover:bg-purple-50 hover:shadow-xl hover:shadow-purple-500/30"
+              className="inline-flex items-center gap-2 rounded-xl bg-sky-600 px-8 py-3.5 text-sm font-semibold text-white shadow-sm shadow-sky-200 transition-all hover:bg-sky-700 hover:shadow-md"
             >
               Войти
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

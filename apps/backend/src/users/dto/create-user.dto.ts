@@ -27,4 +27,8 @@ export class CreateUserDto {
 
   @IsUUID()
   universityId: string;
+
+  @IsOptional()
+  @IsString()
+  groupId?: string;
 }

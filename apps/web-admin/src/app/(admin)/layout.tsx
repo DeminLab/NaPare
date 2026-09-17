@@ -10,18 +10,33 @@ interface NavItem { href: string; label: string; icon: string; }
 interface NavGroup { label: string; items: NavItem[]; }
 
 const groups: NavGroup[] = [
-  { label: 'Dashboard', items: [{ href: '/dashboard', label: 'Dashboard', icon: '▦' }] },
-  { label: 'University', items: [{ href: '/university', label: 'Университет', icon: '▥' }, { href: '/faculties', label: 'Факультеты', icon: '≡' }, { href: '/groups', label: 'Группы', icon: '♧' }, { href: '/schedule-import', label: 'Расписание', icon: '◫' }] },
-  { label: 'Users', items: [{ href: '/users', label: 'Пользователи', icon: '○' }, { href: '/users?role=student', label: 'Студенты', icon: '◌' }, { href: '/users?role=teacher', label: 'Преподаватели', icon: '◍' }] },
-  { label: 'Integrations', items: [{ href: '/connectors', label: 'Connectors', icon: '↔' }, { href: '/schedule-import', label: 'Импорт расписания', icon: '⇧' }] },
-  { label: 'System', items: [{ href: '/dashboard?view=logs', label: 'Логи', icon: '≋' }, { href: '/dashboard?view=system', label: 'Состояние системы', icon: '◉' }] },
-  { label: 'Settings', items: [{ href: '/university', label: 'Настройки', icon: '⚙' }] },
+  { label: 'Dashboard', items: [{ href: '/dashboard', label: 'Dashboard', icon: 'dashboard' }] },
+  { label: 'University', items: [{ href: '/university', label: 'Университет', icon: 'building' }, { href: '/faculties', label: 'Факультеты', icon: 'layers' }, { href: '/groups', label: 'Группы', icon: 'users' }, { href: '/schedule-import', label: 'Расписание', icon: 'calendar' }] },
+  { label: 'Users', items: [{ href: '/users', label: 'Пользователи', icon: 'user' }, { href: '/users?role=student', label: 'Студенты', icon: 'user' }, { href: '/users?role=teacher', label: 'Преподаватели', icon: 'user' }] },
+  { label: 'Integrations', items: [{ href: '/connectors', label: 'Connectors', icon: 'plug' }, { href: '/schedule-import', label: 'Импорт расписания', icon: 'upload' }] },
+  { label: 'System', items: [{ href: '/dashboard?view=logs', label: 'Логи', icon: 'list' }, { href: '/dashboard?view=system', label: 'Состояние системы', icon: 'pulse' }] },
+  { label: 'Settings', items: [{ href: '/university', label: 'Настройки', icon: 'settings' }] },
 ];
 
 const pageTitles: Record<string, string> = { '/dashboard': 'Dashboard', '/university': 'Университет', '/faculties': 'Факультеты', '/groups': 'Группы', '/users': 'Пользователи', '/connectors': 'Connectors', '/schedule-import': 'Импорт расписания', '/notifications': 'Уведомления' };
 const flatItems = groups.flatMap((group) => group.items);
 
-function Glyph({ icon }: { icon: string }) { return <span aria-hidden="true" className="flex h-5 w-5 items-center justify-center text-[15px] leading-none">{icon}</span>; }
+function Glyph({ icon }: { icon: string }) {
+  const paths: Record<string, string> = {
+    dashboard: 'M4 4h6v6H4V4zm10 0h6v6h-6V4zM4 14h6v6H4v-6zm10 0h6v6h-6v-6z',
+    building: 'M4 20h16M6 20V5l6-2 6 2v15M9 8h1m4 0h1m-6 4h1m4 0h1m-5 4h1m4 0h1',
+    layers: 'M12 3l9 5-9 5-9-5 9-5zm-9 9l9 5 9-5M3 17l9 5 9-5',
+    users: 'M16 20v-1a4 4 0 00-4-4H7a4 4 0 00-4 4v1m6-9a4 4 0 100-8 4 4 0 000 8zm6-7a3 3 0 010 6m4 7v-1a4 4 0 00-3-3.87',
+    user: 'M20 21a8 8 0 00-16 0m8-10a4 4 0 100-8 4 4 0 000 8z',
+    calendar: 'M7 3v3m10-3v3M4 9h16M5 5h14a1 1 0 011 1v13H4V6a1 1 0 011-1z',
+    plug: 'M9 7V3m6 4V3M7 7h10v4a5 5 0 01-10 0V7zm5 9v5',
+    upload: 'M12 16V4m0 0L8 8m4-4l4 4M5 14v5h14v-5',
+    list: 'M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01',
+    pulse: 'M3 12h4l2-7 4 14 2-7h6',
+    settings: 'M12 15.5a3.5 3.5 0 100-7 3.5 3.5 0 000 7zM19.4 15a1.7 1.7 0 010 2.4l-.5.5-2-1.1a7.8 7.8 0 01-1.5.9L15 20h-3l-.4-2.3a7.8 7.8 0 01-1.5-.9l-2 1.1-.5-.5a1.7 1.7 0 010-2.4l1.1-2a7.8 7.8 0 01-.1-1.8l-1-1.9.5-.5a1.7 1.7 0 012.4 0l1.9 1a7.8 7.8 0 011.8-.1l1.9-1a1.7 1.7 0 012.4 0l.5.5-1 1.9c.1.6.1 1.2 0 1.8l1 2z',
+  };
+  return <span aria-hidden="true" className="flex h-5 w-5 items-center justify-center"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5"><path d={paths[icon] || paths.dashboard} /></svg></span>;
+}
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();

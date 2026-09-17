@@ -9,9 +9,10 @@ import { ScheduleController } from './schedule.controller';
 import { ChangeDetectorService } from './change-detector.service';
 import { ExcelConnectorService } from './connectors/excel-connector.service';
 import { SibitConnectorService } from './connectors/sibit-connector.service';
+import { RaspModule } from '../rasp/rasp.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Lesson, LessonChange]), HttpModule],
+  imports: [TypeOrmModule.forFeature([Lesson, LessonChange]), HttpModule, RaspModule],
   providers: [
     ScheduleService,
     ChangeDetectorService,

@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindManyOptions, Repository, Between } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -10,6 +10,7 @@ import { UpdateLessonDto } from './dto/update-lesson.dto';
 import { TenantContext } from '../common/tenant/tenant-context';
 import { getDayRange } from './utils/date-range';
 import { JsonObject } from '../common/types/json-value.type';
+import { RaspLesson, RaspScraperService } from '../auth/rasp-scraper.service';
 import {
   PaginatedResponse,
   PaginationQueryDto,
@@ -27,6 +28,7 @@ export class ScheduleService {
     private readonly lessonChangeRepository: Repository<LessonChange>,
     private readonly eventEmitter: EventEmitter2,
     private readonly tenantContext: TenantContext,
+    @Optional() private readonly raspScraperService?: RaspScraperService,
   ) {}
 
   async findById(id: string): Promise<Lesson> {
@@ -85,6 +87,73 @@ export class ScheduleService {
       },
       order: { startDate: 'ASC', pairNumber: 'ASC' },
     }, pagination);
+  }
+
+  async findForStudentDateRange(
+    universityId: string,
+    groupId: string | null | undefined,
+    startDate: string,
+    endDate: string,
+    pagination: PaginationQueryDto = new PaginationQueryDto(),
+  ): Promise<PaginatedResponse<Lesson>> {
+    if (groupId && /^\d+$/.test(groupId) && this.raspScraperService) {
+      const sourceLessons = await this.raspScraperService.getSchedule(groupId);
+      const lessons = sourceLessons
+        .filter((lesson) => lesson.date >= startDate && lesson.date <= endDate)
+        .map((lesson) => this.mapRaspLesson(lesson, universityId));
+      return toPaginatedResponse(lessons, lessons.length, pagination);
+    }
+    return this.findByDateRange(universityId, startDate, endDate, pagination);
+  }
+
+  async findForStudentDate(
+    universityId: string,
+    groupId: string | null | undefined,
+    date: string,
+    pagination: PaginationQueryDto = new PaginationQueryDto(),
+  ): Promise<PaginatedResponse<Lesson>> {
+    if (groupId && /^\d+$/.test(groupId) && this.raspScraperService) {
+      const sourceLessons = await this.raspScraperService.getSchedule(groupId);
+      const lessons = sourceLessons
+        .filter((lesson) => lesson.date === date)
+        .map((lesson) => this.mapRaspLesson(lesson, universityId));
+      return toPaginatedResponse(lessons, lessons.length, pagination);
+    }
+    return this.findByDate(universityId, date, pagination);
+  }
+
+  private mapRaspLesson(lesson: RaspLesson, universityId: string): Lesson {
+    const startDate = new Date(`${lesson.date}T${lesson.startTime}:00`);
+    const endDate = new Date(`${lesson.date}T${lesson.endTime}:00`);
+    return {
+      id: `rasp-${lesson.lessonId}-${lesson.groupId}`,
+      universityId,
+      groupId: lesson.groupId,
+      teacherId: lesson.teacherId || '',
+      subject: lesson.subject,
+      subjectType: lesson.subjectType || '',
+      room: lesson.room || '',
+      building: '',
+      dayOfWeek: lesson.dayOfWeek,
+      startTime: lesson.startTime,
+      endTime: lesson.endTime,
+      pairNumber: lesson.pairNumber,
+      weekType: lesson.weekType,
+      startDate,
+      endDate,
+      teacherName: lesson.teacher || '',
+      groupName: lesson.groupName,
+      subgroup: lesson.subgroup || '',
+      department: '',
+      faculty: '',
+      notes: lesson.isReplacement ? 'Замена' : '',
+      isChanged: lesson.isReplacement,
+      changeDescription: lesson.isReplacement ? 'Занятие изменено в источнике расписания' : '',
+      source: 'rasp.sano.ru',
+      externalId: lesson.lessonId,
+      createdAt: startDate,
+      updatedAt: startDate,
+    };
   }
 
   async findByGroup(

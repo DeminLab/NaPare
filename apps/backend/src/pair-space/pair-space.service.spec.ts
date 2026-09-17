@@ -7,8 +7,9 @@ import { Homework } from './entities/homework.entity';
 import { FileAttachment } from './entities/file-attachment.entity';
 import { DiscussionMessage } from './entities/discussion-message.entity';
 import { HomeworkSubmission } from './entities/homework-submission.entity';
-import { NotFoundException } from '@nestjs/common';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { TenantContext } from '../common/tenant/tenant-context';
+import { UserRole } from '../auth/interfaces/user-role';
 
 describe('PairSpaceService', () => {
   let service: PairSpaceService;
@@ -48,6 +49,35 @@ describe('PairSpaceService', () => {
   });
 
   describe('createAnnouncement', () => {
+    it('rejects a student even when the pair space belongs to their university', async () => {
+      const pairSpaceRepo = { findOne: jest.fn().mockResolvedValue({ id: 'ps-1', universityId: 'uni-1' }) };
+      const announcementRepo = { create: jest.fn(), save: jest.fn() };
+
+      const module2: TestingModule = await Test.createTestingModule({
+        providers: [
+          PairSpaceService,
+          { provide: getRepositoryToken(PairSpace), useValue: pairSpaceRepo },
+          { provide: getRepositoryToken(Announcement), useValue: announcementRepo },
+          { provide: getRepositoryToken(Homework), useValue: mockRepo('Homework') },
+          { provide: getRepositoryToken(FileAttachment), useValue: mockRepo('FileAttachment') },
+          { provide: getRepositoryToken(DiscussionMessage), useValue: mockRepo('DiscussionMessage') },
+          { provide: getRepositoryToken(HomeworkSubmission), useValue: mockRepo('HomeworkSubmission') },
+          {
+            provide: TenantContext,
+            useValue: {
+              assertAccess: jest.fn(),
+              getUser: jest.fn().mockReturnValue({ id: 'student-1', role: UserRole.STUDENT, universityId: 'uni-1' }),
+            },
+          },
+        ],
+      }).compile();
+
+      const svc = module2.get<PairSpaceService>(PairSpaceService);
+      await expect(svc.createAnnouncement('ps-1', 'student-1', { text: 'Hello' } as any))
+        .rejects.toThrow(ForbiddenException);
+      expect(announcementRepo.create).not.toHaveBeenCalled();
+    });
+
     it('should create announcement', async () => {
       const pairSpaceRepo = { findOne: jest.fn().mockResolvedValue({ id: 'ps-1' }) };
       const announcementRepo = { create: jest.fn().mockImplementation((dto) => ({ id: 'a1', ...dto })), save: jest.fn().mockImplementation((e) => Promise.resolve(e)) };
@@ -61,7 +91,13 @@ describe('PairSpaceService', () => {
           { provide: getRepositoryToken(FileAttachment), useValue: mockRepo('FileAttachment') },
           { provide: getRepositoryToken(DiscussionMessage), useValue: mockRepo('DiscussionMessage') },
           { provide: getRepositoryToken(HomeworkSubmission), useValue: mockRepo('HomeworkSubmission') },
-          { provide: TenantContext, useValue: { assertAccess: jest.fn(), getUser: jest.fn() } },
+          {
+            provide: TenantContext,
+            useValue: {
+              assertAccess: jest.fn(),
+              getUser: jest.fn().mockReturnValue({ id: 'author-1', role: UserRole.TEACHER, universityId: 'uni-1' }),
+            },
+          },
         ],
       }).compile();
 

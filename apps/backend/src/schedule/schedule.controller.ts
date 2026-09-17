@@ -16,13 +16,16 @@ import { ScheduleService } from './schedule.service';
 import { CreateLessonDto } from './dto/create-lesson.dto';
 import { UpdateLessonDto } from './dto/update-lesson.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { Roles } from '../common/decorators/roles.decorator';
+import { UserRole } from '../auth/interfaces/user-role';
 import { DateRangeQueryDto } from '../common/dto/date-range-query.dto';
 import { PaginatedResponseDto, PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import { ScheduleQueryDto } from './dto/schedule-query.dto';
 
 @ApiTags('schedule')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('schedule')
 export class ScheduleController {
   constructor(private readonly scheduleService: ScheduleService) {}
@@ -35,8 +38,9 @@ export class ScheduleController {
     @Request() req,
     @Query() query: DateRangeQueryDto,
   ) {
-    return this.scheduleService.findByDateRange(
+    return this.scheduleService.findForStudentDateRange(
       req.user.universityId,
+      req.user.groupId,
       query.startDate,
       query.endDate,
       query,
@@ -90,8 +94,9 @@ export class ScheduleController {
     @Request() req,
     @Query() query: DateRangeQueryDto,
   ) {
-    return this.scheduleService.findByDateRange(
+    return this.scheduleService.findForStudentDateRange(
       req.user.universityId,
+      req.user.groupId,
       query.startDate,
       query.endDate,
       query,
@@ -107,6 +112,7 @@ export class ScheduleController {
   }
 
   @Post()
+  @Roles(UserRole.TEACHER, UserRole.CURATOR, UserRole.DEPARTMENT_HEAD, UserRole.FACULTY_DEAN, UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Создать урок' })
   @ApiResponse({ status: 201, description: 'Урок создан' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -118,6 +124,7 @@ export class ScheduleController {
   }
 
   @Patch(':id')
+  @Roles(UserRole.TEACHER, UserRole.CURATOR, UserRole.DEPARTMENT_HEAD, UserRole.FACULTY_DEAN, UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Обновить урок' })
   @ApiResponse({ status: 200, description: 'Урок обновлён' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -129,6 +136,7 @@ export class ScheduleController {
   }
 
   @Delete(':id')
+  @Roles(UserRole.TEACHER, UserRole.CURATOR, UserRole.DEPARTMENT_HEAD, UserRole.FACULTY_DEAN, UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Удалить урок' })
   @ApiResponse({ status: 200, description: 'Урок удалён' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })

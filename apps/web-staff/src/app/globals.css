@@ -5,9 +5,31 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 :root {
+  --color-background: #f8fafc;
+  --color-surface: #ffffff;
+  --color-surface-secondary: #f1f3f5;
+  --color-text: #111827;
+  --color-text-secondary: #667085;
+  --color-border: #e4e7ec;
+  --color-brand: #0284c7;
+  --color-brand-soft: #e0f2fe;
+  --color-success: #16a34a;
+  --color-warning: #d97706;
+  --color-danger: #dc2626;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --shadow-sm: 0 1px 2px rgb(16 24 40 / 0.04);
+  --shadow-md: 0 8px 24px rgb(16 24 40 / 0.08);
+  --type-page-size: clamp(1.75rem, 2.3vw, 2rem);
+  --type-section-size: clamp(1.125rem, 1.6vw, 1.25rem);
+  --motion-page: 180ms;
+  --motion-hover: 150ms;
+  --motion-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   --primary: #0ea5e9;
   --primary-dark: #0284c7;
-  --accent: #8b5cf6;
+  --accent: #38bdf8;
 }
 
 html {
@@ -18,6 +40,16 @@ body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background: var(--color-background);
+  color: var(--color-text);
+}
+
+@layer components {
+  .ds-page-title { font-size: var(--type-page-size); line-height: 1.2; font-weight: 700; letter-spacing: -0.025em; }
+  .ds-section-title { font-size: var(--type-section-size); line-height: 1.4; font-weight: 650; letter-spacing: -0.01em; }
+  .ds-card { border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: var(--shadow-sm); transition: border-color var(--motion-hover) var(--motion-ease), box-shadow var(--motion-hover) var(--motion-ease), background-color var(--motion-hover) var(--motion-ease); }
+  .ds-input { border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface-secondary); color: var(--color-text); }
+  .ds-input:focus { border-color: var(--color-brand); outline: none; box-shadow: 0 0 0 4px var(--color-brand-soft); }
 }
 
 .badge-lecture { background: #dbeafe; color: #1d4ed8; }
@@ -35,6 +67,12 @@ body {
   .slide-in-from-right {
     animation-name: slideInFromRight;
   }
+}
+
+@keyframes ds-page-enter { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+.ds-page-enter { animation: ds-page-enter var(--motion-page) var(--motion-ease) both; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 1ms !important; transition-duration: 1ms !important; scroll-behavior: auto !important; }
 }
 
 @keyframes animateIn {
