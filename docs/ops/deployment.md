@@ -23,11 +23,19 @@ The local Compose stack contains PostgreSQL, Redis and MinIO. Its published port
 
 `docker-compose.prod.yml` runs nginx, the backend, `web-student`, `web-staff`, `web-admin`, `web-developer`, PostgreSQL and Redis. PostgreSQL and Redis have no host ports in this topology.
 
-Create production values outside the repository and supply them when validating or running Compose:
+Create a private `.env` file on the deployment host from the tracked template. Never commit the filled file:
 
-```powershell
-docker compose --env-file <secure-env-file> -f docker-compose.prod.yml config
-docker compose --env-file <secure-env-file> -f docker-compose.prod.yml up -d
+```bash
+cp .env.example .env
+# Edit .env and replace all replace-with-* values and your public CORS origin.
+```
+
+The root `docker-compose.yml` includes the production stack, so the following commands can be run directly from the repository root:
+
+```bash
+docker compose config
+docker compose up -d --build
+docker compose ps
 ```
 
 Required values include database credentials, `REDIS_PASSWORD`, `JWT_SECRET`, `JWT_REFRESH_SECRET` and `CORS_ORIGIN`. Do not use development defaults in a production environment.
