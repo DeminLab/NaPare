@@ -5,21 +5,41 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 :root {
-  --color-background: #f7f8fa;
-  --color-surface: #ffffff;
-  --color-surface-secondary: #f1f3f5;
-  --color-text: #111827;
-  --color-text-secondary: #667085;
-  --color-border: #e4e7ec;
-  --color-brand: #2563eb;
-  --color-brand-soft: #eff6ff;
-  --color-success: #16a34a;
-  --color-warning: #d97706;
-  --color-danger: #dc2626;
+  --workspace-canvas: #f7f7fb;
+  --workspace-paper: #ffffff;
+  --workspace-paper-muted: #f1f2fa;
+  --workspace-ink: #171a33;
+  --workspace-muted: #60657a;
+  --workspace-line: #e1e3f0;
+  --workspace-accent: #4f46e5;
+  --workspace-accent-hover: #4338ca;
+  --workspace-accent-soft: #eef2ff;
+  --workspace-focus-ring: rgb(99 102 241 / 0.32);
+  --workspace-success: #15803d;
+  --workspace-warning: #b45309;
+  --workspace-danger: #b91c1c;
+  --workspace-skeleton: #e1e3f0;
+  --color-background: var(--workspace-canvas);
+  --color-surface: var(--workspace-paper);
+  --color-surface-secondary: var(--workspace-paper-muted);
+  --color-text: var(--workspace-ink);
+  --color-text-secondary: var(--workspace-muted);
+  --color-border: var(--workspace-line);
+  --color-brand: var(--workspace-accent);
+  --color-brand-soft: var(--workspace-accent-soft);
+  --color-success: var(--workspace-success);
+  --color-warning: var(--workspace-warning);
+  --color-danger: var(--workspace-danger);
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
   --radius-xl: 20px;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-12: 3rem;
   --shadow-sm: 0 1px 2px rgb(16 24 40 / 0.04);
   --shadow-md: 0 8px 24px rgb(16 24 40 / 0.08);
   --type-page-size: clamp(1.75rem, 2.3vw, 2rem);
@@ -60,7 +80,25 @@ body {
   .ds-card { border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: var(--shadow-sm); transition: border-color var(--motion-hover) var(--motion-ease), box-shadow var(--motion-hover) var(--motion-ease), background-color var(--motion-hover) var(--motion-ease); }
   .ds-input { border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface-secondary); color: var(--color-text); }
   .ds-input:focus { border-color: var(--color-brand); outline: none; box-shadow: 0 0 0 4px var(--color-brand-soft); }
+  .workspace-hero { display: grid; gap: var(--space-4, 1rem); padding: clamp(1.5rem, 4vw, 2.5rem); border: 1px solid var(--workspace-line); border-radius: var(--radius-xl); background: linear-gradient(135deg, var(--workspace-paper) 0%, var(--workspace-accent-soft) 100%); box-shadow: var(--shadow-sm); }
+  .workspace-kicker { display: inline-flex; align-items: center; gap: var(--space-2, 0.5rem); color: var(--workspace-accent); font-size: var(--type-meta-size); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+  .metric-rail { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr)); gap: var(--space-3, 0.75rem); }
+  .action-card { padding: var(--space-6, 1.5rem); border: 1px solid var(--workspace-line); border-radius: var(--radius-lg); background: var(--workspace-paper); box-shadow: var(--shadow-sm); }
+  .table-shell { overflow-x: auto; border: 1px solid var(--workspace-line); border-radius: var(--radius-lg); background: var(--workspace-paper); -webkit-overflow-scrolling: touch; }
+  .table-shell > table { min-width: 42rem; width: 100%; }
+  .status-dot { display: inline-block; width: 0.5rem; height: 0.5rem; border-radius: 9999px; background: var(--workspace-muted); }
+  .status-dot--success { background: var(--workspace-success); }
+  .status-dot--warning { background: var(--workspace-warning); }
+  .status-dot--danger { background: var(--workspace-danger); }
 }
+
+:focus-visible { outline: 2px solid var(--workspace-accent); outline-offset: 2px; box-shadow: 0 0 0 4px var(--workspace-focus-ring); }
+
+/* Consistent command-center entry point for every administration page. */
+.ds-page-enter > div > div:has(> h1) { position: relative; overflow: hidden; padding: clamp(1.25rem, 3vw, 2rem); border: 1px solid var(--workspace-line); border-radius: var(--radius-xl); background: linear-gradient(135deg, var(--workspace-paper), var(--workspace-accent-soft)); box-shadow: var(--shadow-sm); }
+.ds-page-enter > div > div:has(> h1)::before { content: ''; position: absolute; inset: 0 auto 0 0; width: 0.3rem; background: var(--workspace-accent); }
+.ds-page-enter > div > div:has(> h1) h1 { letter-spacing: -0.035em; }
+.ds-page-enter > div > div:has(> h1) + div[class*="grid"] { gap: var(--space-3, 0.75rem); }
 
 @keyframes ds-page-enter { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes ds-modal-enter { from { opacity: 0; transform: translateY(6px) scale(0.985); } to { opacity: 1; transform: translateY(0) scale(1); } }

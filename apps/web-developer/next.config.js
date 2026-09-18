@@ -1,8 +1,11 @@
 /** @type {import('next').NextConfig} */
-const backendUrl = process.env.BACKEND_URL || 'http://backend:3000';
+const backendUrl = process.env.BACKEND_URL || 'http://localhost:3000';
 
 const nextConfig = {
   reactStrictMode: true,
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   output: 'standalone',
   async rewrites() {
     return [

@@ -9,7 +9,7 @@ export default function Skeleton({ className = '', count = 1 }: SkeletonProps) {
       {Array.from({ length: count }).map((_, i) => (
         <div
           key={i}
-          className={`animate-pulse rounded-xl bg-slate-200 ${className}`}
+          className={`animate-pulse rounded-xl bg-[var(--workspace-skeleton)] ${className}`}
         />
       ))}
     </>

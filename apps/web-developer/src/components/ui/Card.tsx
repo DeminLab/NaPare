@@ -11,7 +11,7 @@ const Card = forwardRef<HTMLDivElement, CardProps>(
     const base = 'ds-card p-6';
     const variants = {
       default: '',
-      hover: 'transition-all hover:shadow-md cursor-pointer',
+      hover: 'transition-all hover:border-[var(--workspace-accent)] hover:shadow-md cursor-pointer',
       bordered: '',
     };
 

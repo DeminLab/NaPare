@@ -10,10 +10,10 @@ export function Skeleton({ className = '', lines = 1 }: SkeletonProps) {
     return (
       <div className={`space-y-2 ${className}`}>
         {Array.from({ length: lines }).map((_, i) => (
-          <div key={i} className="h-4 animate-pulse rounded-lg bg-slate-200" style={{ width: `${70 + Math.random() * 30}%` }} />
+          <div key={i} className="h-4 animate-pulse rounded-lg bg-[var(--workspace-skeleton)]" style={{ width: `${70 + Math.random() * 30}%` }} />
         ))}
       </div>
     );
   }
-  return <div className={`animate-pulse rounded-xl bg-slate-200 ${className}`} />;
+  return <div className={`animate-pulse rounded-xl bg-[var(--workspace-skeleton)] ${className}`} />;
 }

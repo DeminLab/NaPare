@@ -1,16 +1,22 @@
 # Универсальный Dockerfile для всех веб-приложений (web-student, web-staff, web-admin, web-developer).
 # Путь к приложению передаётся как build-arg APP_DIR, поэтому сборка каждого фронтенда
 # тянет зависимости только этого приложения и кэшируется независимо.
+# BACKEND_URL нужен на этапе build: next.config.js резолвит rewrites для /api/*
+# во время next build и записывает их в routes-manifest, поэтому runtime-ENV
+# на них уже не влияет — без build-arg прокси указывает на сам контейнер.
 ARG APP_DIR
+ARG BACKEND_URL=http://localhost:3000
 
 FROM node:20-alpine AS builder
 ARG APP_DIR
+ARG BACKEND_URL
 WORKDIR /app
 
 COPY ${APP_DIR}/package.json ./package.json
 RUN --mount=type=cache,target=/root/.npm npm install --no-audit --no-fund
 
 COPY ${APP_DIR}/ ./
+ENV BACKEND_URL=${BACKEND_URL}
 RUN npm run build
 
 FROM node:20-alpine AS runner

@@ -6,11 +6,11 @@ interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
 }
 
 const variantClasses: Record<string, string> = {
-  default: 'bg-slate-100 text-slate-600',
-  success: 'bg-emerald-100 text-emerald-700',
-  warning: 'bg-amber-100 text-amber-700',
-  danger: 'bg-red-100 text-red-700',
-  info: 'bg-sky-100 text-sky-700',
+  default: 'bg-[var(--workspace-paper-muted)] text-[var(--workspace-muted)]',
+  success: 'bg-emerald-500/15 text-[var(--workspace-success)]',
+  warning: 'bg-amber-500/15 text-[var(--workspace-warning)]',
+  danger: 'bg-red-500/15 text-[var(--workspace-danger)]',
+  info: 'bg-[var(--workspace-accent-soft)] text-[var(--workspace-accent)]',
   purple: 'bg-violet-100 text-violet-700',
 };
 

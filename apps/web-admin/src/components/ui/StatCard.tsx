@@ -9,9 +9,9 @@ interface StatCardProps {
   gradient?: string;
 }
 
-export function StatCard({ label, value, icon, gradient = 'from-sky-500 to-sky-600' }: StatCardProps) {
+export function StatCard({ label, value, icon, gradient = 'from-[var(--workspace-accent)] to-[var(--workspace-accent-hover)]' }: StatCardProps) {
   return (
-    <div className={`rounded-2xl bg-gradient-to-br ${gradient} p-5 text-white shadow-lg`}>
+    <div className={`rounded-2xl bg-gradient-to-br ${gradient} p-5 text-white shadow-lg shadow-black/10`}>
       <div className="flex items-center justify-between">
         <div>
           <p className="text-2xl font-extrabold">{typeof value === 'number' ? value.toLocaleString('ru-RU') : value}</p>

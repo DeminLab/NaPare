@@ -5,21 +5,41 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 :root {
-  --color-background: #070b14;
-  --color-surface: #0f172a;
-  --color-surface-secondary: #0b1220;
-  --color-text: #f8fafc;
-  --color-text-secondary: #94a3b8;
-  --color-border: #243247;
-  --color-brand: #22d3ee;
-  --color-brand-soft: rgb(34 211 238 / 0.12);
-  --color-success: #34d399;
-  --color-warning: #fbbf24;
-  --color-danger: #f87171;
+  --workspace-canvas: #07111f;
+  --workspace-paper: #0f172a;
+  --workspace-paper-muted: #0b1220;
+  --workspace-ink: #e6edf7;
+  --workspace-muted: #94a3b8;
+  --workspace-line: #243247;
+  --workspace-accent: #22d3ee;
+  --workspace-accent-hover: #06b6d4;
+  --workspace-accent-soft: #083344;
+  --workspace-focus-ring: rgb(34 211 238 / 0.36);
+  --workspace-success: #34d399;
+  --workspace-warning: #fbbf24;
+  --workspace-danger: #f87171;
+  --workspace-skeleton: #243247;
+  --color-background: var(--workspace-canvas);
+  --color-surface: var(--workspace-paper);
+  --color-surface-secondary: var(--workspace-paper-muted);
+  --color-text: var(--workspace-ink);
+  --color-text-secondary: var(--workspace-muted);
+  --color-border: var(--workspace-line);
+  --color-brand: var(--workspace-accent);
+  --color-brand-soft: var(--workspace-accent-soft);
+  --color-success: var(--workspace-success);
+  --color-warning: var(--workspace-warning);
+  --color-danger: var(--workspace-danger);
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
   --radius-xl: 20px;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-12: 3rem;
   --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.2);
   --shadow-md: 0 8px 24px rgb(0 0 0 / 0.28);
   --type-page-size: clamp(1.75rem, 2.3vw, 2rem);
@@ -33,16 +53,16 @@
   --motion-sidebar: 220ms;
   --motion-notification: 250ms;
   --motion-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
-  --color-primary: #22d3ee;
-  --color-primary-dark: #06b6d4;
+  --color-primary: var(--workspace-accent);
+  --color-primary-dark: var(--workspace-accent-hover);
   --color-accent: #818cf8;
-  --color-surface: #0f172a;
-  --color-background: #070b14;
+  --color-surface: var(--workspace-paper);
+  --color-background: var(--workspace-canvas);
   --color-sidebar: #050811;
   --color-sidebar-hover: #111827;
-  --color-success: #10b981;
-  --color-warning: #f59e0b;
-  --color-danger: #ef4444;
+  --color-success: var(--workspace-success);
+  --color-warning: var(--workspace-warning);
+  --color-danger: var(--workspace-danger);
   --radius: 14px;
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
@@ -69,7 +89,25 @@ body {
   .ds-card { border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: var(--shadow-sm); transition: border-color var(--motion-hover) var(--motion-ease), box-shadow var(--motion-hover) var(--motion-ease), background-color var(--motion-hover) var(--motion-ease); }
   .ds-input { border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface-secondary); color: var(--color-text); }
   .ds-input:focus { border-color: var(--color-brand); outline: none; box-shadow: 0 0 0 4px var(--color-brand-soft); }
+  .workspace-hero { display: grid; gap: var(--space-4, 1rem); padding: clamp(1.5rem, 4vw, 2.5rem); border: 1px solid var(--workspace-line); border-radius: var(--radius-xl); background: linear-gradient(135deg, var(--workspace-paper) 0%, #102b3a 100%); box-shadow: var(--shadow-sm); }
+  .workspace-kicker { display: inline-flex; align-items: center; gap: var(--space-2, 0.5rem); color: var(--workspace-accent); font-family: var(--font-mono); font-size: var(--type-meta-size); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+  .metric-rail { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr)); gap: var(--space-3, 0.75rem); }
+  .action-card { padding: var(--space-6, 1.5rem); border: 1px solid var(--workspace-line); border-radius: var(--radius-lg); background: var(--workspace-paper); box-shadow: var(--shadow-sm); }
+  .table-shell { overflow-x: auto; border: 1px solid var(--workspace-line); border-radius: var(--radius-lg); background: var(--workspace-paper); -webkit-overflow-scrolling: touch; }
+  .table-shell > table { min-width: 42rem; width: 100%; }
+  .status-dot { display: inline-block; width: 0.5rem; height: 0.5rem; border-radius: 9999px; background: var(--workspace-muted); }
+  .status-dot--success { background: var(--workspace-success); }
+  .status-dot--warning { background: var(--workspace-warning); }
+  .status-dot--danger { background: var(--workspace-danger); }
 }
+
+:focus-visible { outline: 2px solid var(--workspace-accent); outline-offset: 2px; box-shadow: 0 0 0 4px var(--workspace-focus-ring); }
+
+/* Consistent command-center entry point for every developer workspace page. */
+.developer-shell main > div > div:has(> h1) { position: relative; overflow: hidden; padding: clamp(1.25rem, 3vw, 2rem); border: 1px solid var(--workspace-line); border-radius: var(--radius-xl); background: linear-gradient(135deg, var(--workspace-paper), #102b3a); box-shadow: var(--shadow-sm); }
+.developer-shell main > div > div:has(> h1)::before { content: ''; position: absolute; inset: 0 auto 0 0; width: 0.3rem; background: var(--workspace-accent); }
+.developer-shell main > div > div:has(> h1) h1 { letter-spacing: -0.035em; }
+.developer-shell main > div > div:has(> h1) + div[class*="grid"] { gap: var(--space-3, 0.75rem); }
 
 @keyframes ds-page-enter { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes ds-modal-enter { from { opacity: 0; transform: translateY(6px) scale(0.985); } to { opacity: 1; transform: translateY(0) scale(1); } }

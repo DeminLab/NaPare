@@ -10,12 +10,12 @@ interface StatCardProps {
 
 export default function StatCard({ label, value, icon, className = '' }: StatCardProps) {
   return (
-    <div className={`rounded-2xl bg-white p-5 ring-1 ring-slate-100 ${className}`}>
+    <div className={`rounded-2xl bg-[var(--workspace-paper)] p-5 ring-1 ring-[var(--workspace-line)] ${className}`}>
       <div className="flex items-center justify-between">
-        <p className="text-sm font-medium text-slate-500">{label}</p>
-        {icon && <div className="text-slate-400">{icon}</div>}
+        <p className="text-sm font-medium text-[var(--workspace-muted)]">{label}</p>
+        {icon && <div className="text-[var(--workspace-muted)]">{icon}</div>}
       </div>
-      <p className="mt-2 text-2xl font-bold text-slate-900">{value}</p>
+      <p className="mt-2 text-2xl font-bold text-[var(--workspace-ink)]">{value}</p>
     </div>
   );
 }

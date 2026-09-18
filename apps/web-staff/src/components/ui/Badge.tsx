@@ -12,22 +12,22 @@ interface BadgeProps {
 }
 
 const variants: Record<BadgeVariant, string> = {
-  sky: 'bg-sky-100 text-sky-700',
-  green: 'bg-emerald-100 text-emerald-700',
-  amber: 'bg-amber-100 text-amber-700',
-  red: 'bg-red-100 text-red-700',
+  sky: 'bg-[var(--workspace-accent-soft)] text-[var(--workspace-accent)]',
+  green: 'bg-emerald-100 text-[var(--workspace-success)]',
+  amber: 'bg-amber-100 text-[var(--workspace-warning)]',
+  red: 'bg-red-100 text-[var(--workspace-danger)]',
   purple: 'bg-purple-100 text-purple-700',
-  slate: 'bg-slate-100 text-slate-600',
+  slate: 'bg-[var(--workspace-paper-muted)] text-[var(--workspace-muted)]',
   pink: 'bg-pink-100 text-pink-700',
   teal: 'bg-teal-100 text-teal-700',
   indigo: 'bg-indigo-100 text-indigo-700',
 };
 
 const dotColors: Record<BadgeVariant, string> = {
-  sky: 'bg-sky-500',
-  green: 'bg-emerald-500',
-  amber: 'bg-amber-500',
-  red: 'bg-red-500',
+  sky: 'bg-[var(--workspace-accent)]',
+  green: 'bg-[var(--workspace-success)]',
+  amber: 'bg-[var(--workspace-warning)]',
+  red: 'bg-[var(--workspace-danger)]',
   purple: 'bg-purple-500',
   slate: 'bg-slate-500',
   pink: 'bg-pink-500',

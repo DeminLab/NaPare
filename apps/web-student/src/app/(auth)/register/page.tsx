@@ -23,14 +23,12 @@ function Field({ id, label, value, onChange, type = 'text', placeholder, error, 
 }) {
   return (
     <div>
-      <form onSubmit={event => { event.preventDefault(); window.dispatchEvent(new Event('register-next')); }}>
-        <label htmlFor={id} className="mb-2 block text-sm font-medium text-slate-700">{label}</label>
-        <input id={id} name={id} type={type} value={value} autoComplete={autoComplete}
-          onChange={event => onChange(event.target.value)} placeholder={placeholder}
-          aria-invalid={!!error} aria-describedby={error ? `${id}-error` : undefined}
-          className={`min-h-11 w-full rounded-xl border bg-slate-50 px-4 text-sm text-slate-900 outline-none transition focus:bg-white focus:ring-4 focus:ring-indigo-100 ${error ? 'border-red-400' : 'border-slate-200 focus:border-indigo-400'}`} />
-        {error && <p id={`${id}-error`} className="mt-1.5 text-xs text-red-600">{error}</p>}
-      </form>
+      <label htmlFor={id} className="mb-2 block text-sm font-medium text-slate-700">{label}</label>
+      <input id={id} name={id} type={type} value={value} autoComplete={autoComplete}
+        onChange={event => onChange(event.target.value)} placeholder={placeholder}
+        aria-invalid={!!error} aria-describedby={error ? `${id}-error` : undefined}
+        className={`min-h-11 w-full rounded-xl border bg-slate-50 px-4 text-sm text-slate-900 outline-none transition focus:bg-white focus:ring-4 focus:ring-indigo-100 ${error ? 'border-red-400' : 'border-slate-200 focus:border-indigo-400'}`} />
+      {error && <p id={`${id}-error`} className="mt-1.5 text-xs text-red-600">{error}</p>}
     </div>
   );
 }
@@ -170,12 +168,6 @@ export default function RegisterPage() {
   };
 
   const nextStep = () => { setError(''); if (validate(step)) setStep(step + 1); };
-
-  useEffect(() => {
-    const handler = () => nextStep();
-    window.addEventListener('register-next', handler);
-    return () => window.removeEventListener('register-next', handler);
-  });
 
   const submit = async () => {
     if (!validate(2)) return;

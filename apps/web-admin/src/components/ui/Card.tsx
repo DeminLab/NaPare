@@ -13,7 +13,7 @@ const paddings = { sm: 'p-4', md: 'p-6', lg: 'p-8' };
 
 export function Card({ children, className = '', hover = false, padding = 'md', ...props }: CardProps) {
   return (
-      <div className={`ds-card ${hover ? 'cursor-pointer hover:border-indigo-200 hover:shadow-md hover:shadow-indigo-100' : ''} ${paddings[padding]} ${className}`} {...props}>
+      <div className={`ds-card ${hover ? 'cursor-pointer hover:border-[var(--workspace-accent)] hover:shadow-md' : ''} ${paddings[padding]} ${className}`} {...props}>
       {children}
     </div>
   );
