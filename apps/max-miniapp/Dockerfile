@@ -9,8 +9,8 @@ RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/max-miniapp/package.json apps/max-miniapp/package.json
 RUN pnpm install --frozen-lockfile --filter @napare/max-miniapp --prod=false \
-    && test -x node_modules/.bin/tsc \
-    && test -x node_modules/.bin/vite
+    && test -x apps/max-miniapp/node_modules/.bin/tsc \
+    && test -x apps/max-miniapp/node_modules/.bin/vite
 
 COPY apps/max-miniapp/ ./apps/max-miniapp/
 RUN pnpm --filter @napare/max-miniapp build
