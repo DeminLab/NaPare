@@ -14,7 +14,7 @@ OpenAPI-спецификация **генерируется из кода** (Nes
 |-------|-----|
 | Local | `http://localhost:3000/api/v1/docs` |
 | Staging | `https://staging.napare.ru/api/v1/docs` |
-| Production | `https://api.napare.ru/api/v1/docs` |
+| Production | `https://napare.sano.ru/api/v1/docs` |
 
 ---
 

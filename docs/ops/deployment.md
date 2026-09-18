@@ -1,5 +1,7 @@
 # Deployment Guide
 
+The current production topology and the operator runbook are maintained in the repository root: [DEPLOY.md](../../DEPLOY.md). It covers the four frontend subdomains, the apex site, Cockpit under `/admin/`, system Nginx templates, DNS and TLS boundaries.
+
 ## Current delivery flow
 
 1. A pull request to `main` runs the `CI` workflow: lint, typecheck, unit coverage, backend E2E, production build and dependency audit.
@@ -21,7 +23,7 @@ The local Compose stack contains PostgreSQL, Redis and MinIO. Its published port
 
 ## Production Compose
 
-`docker-compose.prod.yml` runs nginx, the backend, `web-student`, `web-staff`, `web-admin`, `web-developer`, PostgreSQL and Redis. PostgreSQL and Redis have no host ports in this topology.
+`docker-compose.prod.yml` runs nginx, the backend, `web-student`, `web-staff`, `web-admin`, `web-developer`, PostgreSQL and Redis. PostgreSQL and Redis have no host ports, while Docker Nginx and the frontend ports bind to loopback only (`127.0.0.1:8080` and `127.0.0.1:3001`–`3004`). System Nginx templates in `deploy/nginx/` are configured separately on the host.
 
 Create a private `.env` file on the deployment host from the tracked template. Never commit the filled file:
 
@@ -34,11 +36,13 @@ The root `docker-compose.yml` includes the production stack, so the following co
 
 ```bash
 docker compose config
-docker compose up -d --build
+docker compose build
+docker compose up -d
 docker compose ps
+curl -fsS http://127.0.0.1:8080/api/v1/health
 ```
 
-Required values include database credentials, `REDIS_PASSWORD`, `JWT_SECRET`, `JWT_REFRESH_SECRET` and `CORS_ORIGIN`. Do not use development defaults in a production environment.
+Required values include database credentials, `REDIS_PASSWORD`, `JWT_SECRET`, `JWT_REFRESH_SECRET` and `CORS_ORIGIN`. The four `NEXT_PUBLIC_*_URL` values are public build-time configuration. Do not use development defaults in a production environment.
 
 ## Production promotion
 

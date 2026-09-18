@@ -14,7 +14,12 @@ const RASP_BASE_URL = 'https://rasp.sano.ru';
 const CACHE_TTL_MS = 15 * 60 * 1000;
 const REQUEST_TIMEOUT_MS = 15_000;
 
-interface RaspYearsResponse { data: { years: string[] } }
+interface RaspApiResponse<T> {
+  state?: number;
+  msg?: string;
+  data: T;
+}
+interface RaspYearsResponse extends RaspApiResponse<{ years: string[] }> {}
 interface RaspGroupRecord {
   name: string;
   id: number;
@@ -23,7 +28,7 @@ interface RaspGroupRecord {
   yearName: string;
   facultyID: number;
 }
-interface RaspGroupsResponse { data: RaspGroupRecord[] }
+interface RaspGroupsResponse extends RaspApiResponse<RaspGroupRecord[]> {}
 interface RaspLessonRecord {
   код: number;
   дата: string;
@@ -48,7 +53,7 @@ interface RaspInfo {
   year?: string;
   dateUploadingRasp?: string;
 }
-interface RaspScheduleResponse { data: { rasp: RaspLessonRecord[]; info?: RaspInfo } }
+interface RaspScheduleResponse extends RaspApiResponse<{ rasp: RaspLessonRecord[]; info?: RaspInfo }> {}
 
 export interface RaspAcademicYear { value: string; label: string }
 
@@ -123,6 +128,7 @@ export class RaspScraperService {
       const response = await this.fetchJson<RaspGroupsResponse>(
         `/api/raspGrouplist?year=${encodeURIComponent(academicYear)}`,
       );
+      this.assertSuccessfulResponse(response, 'группы');
       if (!Array.isArray(response.data)) throw new Error('Источник вернул группы в неожиданном формате');
       const groups = response.data
         .filter((group) => Number.isInteger(group.id) && Boolean(group.name))
@@ -157,6 +163,7 @@ export class RaspScraperService {
       const response = await this.fetchJson<RaspScheduleResponse>(
         `/api/Rasp?idGroup=${encodeURIComponent(groupId)}&year=${encodeURIComponent(academicYear)}`,
       );
+      this.assertSuccessfulResponse(response, 'расписание');
       if (!Array.isArray(response.data?.rasp)) throw new Error('Источник вернул расписание в неожиданном формате');
       const lessons = response.data.rasp
         .map((item) => this.normalizeLesson(item, group, academicYear))
@@ -200,6 +207,7 @@ export class RaspScraperService {
     if (this.yearsCache && this.yearsCache.expiresAt > Date.now()) return this.yearsCache.value;
     try {
       const response = await this.fetchJson<RaspYearsResponse>('/api/Rasp/ListYears');
+      this.assertSuccessfulResponse(response, 'учебные годы');
       const years = response.data?.years?.filter((year) => /^\d{4}-\d{4}$/.test(year)) ?? [];
       if (years.length === 0) throw new Error('Источник не вернул учебные годы');
       this.yearsCache = { value: years, expiresAt: Date.now() + CACHE_TTL_MS };
@@ -231,6 +239,12 @@ export class RaspScraperService {
       return (await response.json()) as T;
     } finally {
       clearTimeout(timeout);
+    }
+  }
+
+  private assertSuccessfulResponse(response: { state?: number; msg?: string }, resource: string): void {
+    if (response.state !== undefined && response.state !== 1) {
+      throw new Error(`Источник отклонил запрос «${resource}»: ${response.msg || 'неизвестная ошибка'}`);
     }
   }
 

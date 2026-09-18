@@ -28,9 +28,9 @@ export class AuthService {
   ) {}
 
   async login(loginDto: LoginDto): Promise<AuthResponse> {
-    const user = await this.usersService.findByEmail(loginDto.email);
+    const user = await this.usersService.findByEmail(loginDto.email.trim());
 
-    if (!user) {
+    if (!user || !user.isActive) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
@@ -63,7 +63,8 @@ export class AuthService {
       throw new BadRequestException('Выбранная группа отсутствует в актуальном расписании СИБИТа');
     }
 
-    const existingUser = await this.usersService.findByEmail(registerDto.email);
+    const email = registerDto.email.trim().toLowerCase();
+    const existingUser = await this.usersService.findByEmail(email);
 
     if (existingUser) {
       throw new ConflictException('User with this email already exists');
@@ -72,7 +73,7 @@ export class AuthService {
     const passwordHash = await bcrypt.hash(registerDto.password, 10);
 
     const user = await this.usersService.create({
-      email: registerDto.email,
+      email,
       passwordHash,
       firstName: registerDto.firstName,
       lastName: registerDto.lastName,

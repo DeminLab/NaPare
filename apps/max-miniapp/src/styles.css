@@ -24,3 +24,13 @@ button { cursor: pointer; }
 .secondary-screen { display: grid; gap: 24px; }.empty-state, .bridge-state { margin: 0; line-height: 1.55; }.bridge-state { font-size: 13px; }.lesson-space { padding: 22px; border: 1px solid #dfe6f3; border-radius: 20px; }.lesson-space h2 { margin-top: 0; }.lesson-space p { color: #607099; }.lesson-space a { color: #1665f5; font-weight: 700; }
 .dialog-backdrop { position: fixed; inset: 0; z-index: 10; display: grid; align-items: end; padding: 16px; background: rgb(16 27 60 / .4); }.absence-dialog { position: relative; max-width: 480px; width: 100%; margin: 0 auto; padding: 28px 20px; border-radius: 24px; background: #fff; }.absence-dialog h2 { margin: 0 0 20px; letter-spacing: -0.03em; }.absence-dialog form { display: grid; gap: 16px; }.absence-dialog label { display: grid; gap: 7px; color: #38496e; font-size: 14px; font-weight: 650; }.absence-dialog input, .absence-dialog select, .absence-dialog textarea { width: 100%; padding: 12px; border: 1px solid #cfd8e9; border-radius: 10px; color: #101b3c; background: #fff; }.absence-dialog textarea { min-height: 78px; resize: vertical; }.date-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }.close { position: absolute; top: 12px; right: 15px; border: 0; background: transparent; color: #586a94; font-size: 30px; }.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; } }
+
+html, body { overflow-x: hidden; }
+button, input, select, textarea { max-width: 100%; }
+@media (max-width: 380px) {
+  .app-shell { padding-inline: 16px; }
+  .next-lesson, .lesson-space { padding-inline: 18px; }
+  .lesson-row { gap: 10px; padding-inline: 12px; }
+  .lesson-row em { display: none; }
+  .date-grid { grid-template-columns: 1fr; }
+}

@@ -35,15 +35,15 @@ describe('RaspScraperService', () => {
     fetchMock.mockImplementation(async (input) => {
       const url = String(input);
       if (url.endsWith('/api/Rasp/ListYears')) {
-        return { ok: true, json: async () => ({ data: { years: ['2025-2026', '2026-2027'] } }) } as Response;
+        return { ok: true, json: async () => ({ state: 1, data: { years: ['2025-2026', '2026-2027'] } }) } as Response;
       }
       if (url.includes('/api/raspGrouplist?year=2026-2027')) {
-        return { ok: true, json: async () => ({ data: groups }) } as Response;
+        return { ok: true, json: async () => ({ state: 1, data: groups }) } as Response;
       }
       const groupId = url.includes('idGroup=12136') ? 12136 : 12134;
       return {
         ok: true,
-        json: async () => ({ data: { rasp: [sourceLesson(groupId, groupId)] } }),
+        json: async () => ({ state: 1, data: { rasp: [sourceLesson(groupId, groupId)] } }),
       } as Response;
     });
     global.fetch = fetchMock;
@@ -65,9 +65,9 @@ describe('RaspScraperService', () => {
     fetchMock.mockImplementation(async (input) => {
       const url = String(input);
       if (url.endsWith('/api/Rasp/ListYears')) {
-        return { ok: true, json: async () => ({ data: { years: ['2026-2027'] } }) } as Response;
+        return { ok: true, json: async () => ({ state: 1, data: { years: ['2026-2027'] } }) } as Response;
       }
-      return { ok: true, json: async () => ({ data: groups }) } as Response;
+      return { ok: true, json: async () => ({ state: 1, data: groups }) } as Response;
     });
     global.fetch = fetchMock;
 

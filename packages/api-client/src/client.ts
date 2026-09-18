@@ -18,7 +18,7 @@ export class ApiClient {
   private client: AxiosInstance;
   private accessToken: string | null = null;
 
-  constructor(baseUrl: string = 'http://localhost:3000/api') {
+  constructor(baseUrl: string = '/api/v1') {
     this.client = axios.create({
       baseURL: baseUrl,
       headers: {

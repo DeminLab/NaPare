@@ -1,0 +1,15 @@
+# Временный override: Windows (WinNAT) зарезервировал диапазон 2948-3047,
+# поэтому хостовые порты 3001-3005 недоступны для bind.
+# Использование:
+#   docker compose -f docker-compose.prod.yml -f tmp/docker-compose.ports.override.yml up -d
+services:
+  web-student:
+    ports: !override ['4001:3000']
+  web-staff:
+    ports: !override ['4002:3000']
+  web-admin:
+    ports: !override ['4003:3000']
+  web-developer:
+    ports: !override ['4004:3000']
+  max-miniapp:
+    ports: !override ['4005:8080']

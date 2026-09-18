@@ -42,8 +42,14 @@ async function bootstrap() {
   app.useGlobalInterceptors(new TransformInterceptor());
 
   // CORS
+  const corsOrigins = configService
+    .get<string>('CORS_ORIGIN', '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
   app.enableCors({
-    origin: configService.get('CORS_ORIGIN', 'http://localhost:3001'),
+    origin: corsOrigins,
     credentials: true,
   });
 

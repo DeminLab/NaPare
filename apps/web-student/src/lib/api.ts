@@ -125,8 +125,9 @@ export async function login(email: string, password: string): Promise<void> {
     body: JSON.stringify({ email, password }),
   });
   if (!response.ok) {
+    if (response.status === 401) throw new Error('Неверный email или пароль');
     const data = await response.json().catch(() => null);
-    throw new Error(data?.message || 'Неверные учетные данные');
+    throw new Error(data?.message || 'Не удалось выполнить вход');
   }
   const data = await response.json();
   saveTokens(data.accessToken, data.refreshToken);

@@ -250,7 +250,9 @@ CREATE INDEX IF NOT EXISTS idx_device_tokens_active ON device_tokens(is_active) 
 -- 3. Seed initial data (optional)
 -- ============================================================
 
--- Insert a default university if none exists
-INSERT INTO universities (id, name, city, country)
-SELECT uuid_generate_v4(), 'Тестовый университет', 'Москва', 'RU'
-WHERE NOT EXISTS (SELECT 1 FROM universities LIMIT 1);
+-- Register the pilot tenant required by public student registration.
+INSERT INTO universities (id, name, city, status)
+SELECT uuid_generate_v4(), 'СИБИТ', 'Омск', 'active'
+WHERE NOT EXISTS (
+    SELECT 1 FROM universities WHERE name = 'СИБИТ' AND city = 'Омск'
+);

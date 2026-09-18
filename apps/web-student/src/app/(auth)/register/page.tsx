@@ -130,6 +130,7 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [completed, setCompleted] = useState(false);
   const [universities, setUniversities] = useState<UniversityOption[]>([]);
+  const [universitiesError, setUniversitiesError] = useState('');
   const [groups, setGroups] = useState<RaspGroup[]>([]);
   const [groupsLoading, setGroupsLoading] = useState(true);
   const [groupsError, setGroupsError] = useState('');
@@ -140,7 +141,7 @@ export default function RegisterPage() {
       if (unis.length === 1) {
         setForm(prev => ({ ...prev, university: unis[0].id }));
       }
-    }).catch(() => {});
+    }).catch(err => setUniversitiesError(err instanceof Error ? err.message : 'Не удалось загрузить СИБИТ'));
     getRaspGroups().then(setGroups).catch(err => setGroupsError(err instanceof Error ? err.message : 'Не удалось загрузить группы')).finally(() => setGroupsLoading(false));
   }, []);
 
@@ -160,6 +161,7 @@ export default function RegisterPage() {
       if (form.password !== form.confirmPassword) next.confirmPassword = 'Пароли не совпадают';
     }
     if (current === 2) {
+      if (universitiesError || universities.length === 0) next.university = 'СИБИТ временно недоступен. Повторите попытку позже';
       if (groupsError) next.groupId = 'Список групп временно недоступен. Повторите попытку позже';
       else if (!form.groupId) next.groupId = 'Выберите группу';
     }
@@ -266,6 +268,7 @@ export default function RegisterPage() {
                     <p className="text-xs font-semibold uppercase tracking-wide text-indigo-500">Вуз</p>
                     <p className="mt-1 text-sm font-semibold text-indigo-900">СИБИТ · Омск</p>
                   </div>
+                  {errors.university && <p className="-mt-3 text-xs text-red-600">{errors.university}</p>}
                   <GroupSelect value={form.groupId} onChange={v => update('groupId', v)} error={errors.groupId} groups={groups} loading={groupsLoading} />
                   {groupsError && <p className="-mt-3 text-xs text-red-600">{groupsError}</p>}
                 </div>

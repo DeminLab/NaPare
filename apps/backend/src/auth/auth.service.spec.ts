@@ -7,11 +7,13 @@ import { UnauthorizedException, ConflictException } from '@nestjs/common';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { University } from '../users/entities/university.entity';
 import { RaspScraperService } from './rasp-scraper.service';
+import * as bcrypt from 'bcrypt';
 
 describe('AuthService', () => {
   let service: AuthService;
   let usersService: Partial<UsersService>;
   let jwtService: Partial<JwtService>;
+  let raspScraperService: { isValidGroup: jest.Mock };
 
   beforeEach(async () => {
     usersService = {
@@ -23,15 +25,22 @@ describe('AuthService', () => {
       sign: jest.fn().mockReturnValue('mock-token'),
       verify: jest.fn(),
     };
+    raspScraperService = { isValidGroup: jest.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
         { provide: UsersService, useValue: usersService },
         { provide: JwtService, useValue: jwtService },
-        { provide: ConfigService, useValue: { get: jest.fn().mockReturnValue('15m') } },
+        {
+          provide: ConfigService,
+          useValue: {
+            get: jest.fn().mockReturnValue('15m'),
+            getOrThrow: jest.fn((key: string) => key === 'auth.jwt.refreshSecret' ? 'test-refresh-secret' : '30d'),
+          },
+        },
         { provide: getRepositoryToken(University), useValue: { findOne: jest.fn().mockResolvedValue({ id: 'uni-1', name: 'СИБИТ', city: 'Омск', status: 'active' }) } },
-        { provide: RaspScraperService, useValue: { isValidGroup: jest.fn() } },
+        { provide: RaspScraperService, useValue: raspScraperService },
       ],
     }).compile();
 
@@ -49,6 +58,26 @@ describe('AuthService', () => {
         service.login({ email: 'test@test.com', password: 'pass' }),
       ).rejects.toThrow(UnauthorizedException);
     });
+
+    it('finds an account with an email entered in a different case', async () => {
+      const passwordHash = await bcrypt.hash('correct-password', 4);
+      (usersService.findByEmail as jest.Mock).mockResolvedValue({
+        id: 'user-1',
+        email: 'student@sibit.ru',
+        passwordHash,
+        isActive: true,
+        firstName: 'Тест',
+        lastName: 'Студент',
+        role: 'student',
+        universityId: 'uni-1',
+        groupId: '12136',
+      });
+
+      await service.login({ email: 'Student@SIBIT.RU', password: 'correct-password' });
+
+      expect(usersService.findByEmail).toHaveBeenCalledWith('Student@SIBIT.RU');
+      expect(jwtService.sign).toHaveBeenCalled();
+    });
   });
 
   describe('register', () => {
@@ -63,6 +92,26 @@ describe('AuthService', () => {
           universityId: 'uni-1',
         }),
       ).rejects.toThrow(ConflictException);
+    });
+
+    it('normalizes an email before creating a student account', async () => {
+      (usersService.findByEmail as jest.Mock).mockResolvedValue(null);
+      (usersService.create as jest.Mock).mockResolvedValue({
+        id: 'user-1',
+        email: 'student@sibit.ru',
+        firstName: 'Тест',
+        lastName: 'Студент',
+        role: 'student',
+        universityId: 'uni-1',
+        groupId: '12136',
+      });
+      raspScraperService.isValidGroup.mockResolvedValue(true);
+
+      await service.register({
+        email: ' Student@SIBIT.RU ', password: 'correct-password', firstName: 'Тест', lastName: 'Студент', universityId: 'uni-1', groupId: '12136',
+      });
+
+      expect(usersService.create).toHaveBeenCalledWith(expect.objectContaining({ email: 'student@sibit.ru' }));
     });
   });
 });

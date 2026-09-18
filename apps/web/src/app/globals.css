@@ -28,3 +28,11 @@ body {
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 1ms !important; }
 }
+
+html, body { min-width: 320px; overflow-x: hidden; }
+img, svg, video { max-width: 100%; }
+button, input, select, textarea { max-width: 100%; }
+@media (max-width: 639px) {
+  .grid.min-h-\[320px\] { grid-template-columns: minmax(0, 1fr); }
+  .grid-cols-3 { grid-template-columns: minmax(0, 1fr); }
+}
