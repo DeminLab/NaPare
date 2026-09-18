@@ -8,7 +8,7 @@ ENV NODE_ENV=development
 COPY apps/max-miniapp/package.json apps/max-miniapp/package-lock.json ./
 # The production image is assembled from the build stage, so TypeScript/Vite
 # devDependencies are required here even when the host exports NODE_ENV=production.
-RUN npm ci --include=dev --production=false --no-audit --no-fund \
+RUN npm install --include=dev --production=false --no-audit --no-fund \
     && test -x node_modules/.bin/tsc \
     && test -x node_modules/.bin/vite
 
