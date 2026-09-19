@@ -85,6 +85,7 @@ services:
       dockerfile: infrastructure/docker/web.Dockerfile
       args:
         APP_DIR: apps/web-portal
+        PACKAGE_NAME: '@napare/web-portal'
         BACKEND_URL: http://backend:3000
     restart: unless-stopped
     init: true
@@ -115,6 +116,7 @@ services:
       dockerfile: infrastructure/docker/web.Dockerfile
       args:
         APP_DIR: apps/web-student
+        PACKAGE_NAME: '@napare/web-student'
         BACKEND_URL: http://backend:3000
         NEXT_PUBLIC_STUDENT_URL: ${NEXT_PUBLIC_STUDENT_URL:-https://napare.sano.ru/student}
         NEXT_PUBLIC_TEACHER_URL: ${NEXT_PUBLIC_TEACHER_URL:-https://napare.sano.ru/staff}
@@ -149,6 +151,7 @@ services:
       dockerfile: infrastructure/docker/web.Dockerfile
       args:
         APP_DIR: apps/web-staff
+        PACKAGE_NAME: '@napare/web-staff'
         BACKEND_URL: http://backend:3000
         NEXT_PUBLIC_STUDENT_URL: ${NEXT_PUBLIC_STUDENT_URL:-https://napare.sano.ru/student}
         NEXT_PUBLIC_TEACHER_URL: ${NEXT_PUBLIC_TEACHER_URL:-https://napare.sano.ru/staff}
@@ -170,6 +173,7 @@ services:
       dockerfile: infrastructure/docker/web.Dockerfile
       args:
         APP_DIR: apps/web-admin
+        PACKAGE_NAME: '@napare/web-admin'
         BACKEND_URL: http://backend:3000
         NEXT_PUBLIC_STUDENT_URL: ${NEXT_PUBLIC_STUDENT_URL:-https://napare.sano.ru/student}
         NEXT_PUBLIC_TEACHER_URL: ${NEXT_PUBLIC_TEACHER_URL:-https://napare.sano.ru/staff}
@@ -191,6 +195,7 @@ services:
       dockerfile: infrastructure/docker/web.Dockerfile
       args:
         APP_DIR: apps/web-developer
+        PACKAGE_NAME: '@napare/web-developer'
         BACKEND_URL: http://backend:3000
         NEXT_PUBLIC_STUDENT_URL: ${NEXT_PUBLIC_STUDENT_URL:-https://napare.sano.ru/student}
         NEXT_PUBLIC_TEACHER_URL: ${NEXT_PUBLIC_TEACHER_URL:-https://napare.sano.ru/staff}
