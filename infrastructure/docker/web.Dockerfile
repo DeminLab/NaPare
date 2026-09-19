@@ -51,13 +51,14 @@ ENV NEXT_PUBLIC_DEVELOPER_URL=${NEXT_PUBLIC_DEVELOPER_URL}
 RUN pnpm --filter "${PACKAGE_NAME}" build
 
 FROM node:20-alpine AS runner
+ARG APP_DIR
 WORKDIR /app
 
 ENV NODE_ENV=production
 ENV PORT=3000
 
-COPY --chown=node:node --from=builder /app/.next/standalone ./
-COPY --chown=node:node --from=builder /app/.next/static ./.next/static
+COPY --chown=node:node --from=builder /app/${APP_DIR}/.next/standalone ./
+COPY --chown=node:node --from=builder /app/${APP_DIR}/.next/static ./.next/static
 
 EXPOSE 3000
 
