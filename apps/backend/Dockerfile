@@ -2,8 +2,10 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+RUN apk add --no-cache python3 make g++
+
 COPY apps/backend/package.json ./package.json
-RUN npm install --include=dev --no-audit --no-fund
+RUN npm_config_build_from_source=true npm install --include=dev --no-audit --no-fund
 
 COPY apps/backend/src ./src
 COPY apps/backend/nest-cli.json ./
