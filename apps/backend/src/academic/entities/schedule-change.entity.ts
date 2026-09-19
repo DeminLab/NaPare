@@ -30,7 +30,7 @@ export class ScheduleChange {
   @Column({ type: 'uuid', nullable: true })
   actorId: string | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   source: string | null;
 
   @Column({ type: 'timestamp' })

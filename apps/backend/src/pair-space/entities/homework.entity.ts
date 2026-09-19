@@ -45,7 +45,7 @@ export class Homework {
   @Column({ default: false })
   isCompleted: boolean;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   source: string | null;
 
   @Column({ type: 'timestamp', nullable: true })

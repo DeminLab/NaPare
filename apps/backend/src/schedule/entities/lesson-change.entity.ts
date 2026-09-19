@@ -42,7 +42,7 @@ export class LessonChange {
   @Column({ type: 'text', nullable: true })
   reason: string | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   source: string | null;
 
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })

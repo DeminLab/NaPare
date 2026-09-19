@@ -46,7 +46,7 @@ export class AcademicEvent {
   @Column({ type: 'jsonb', nullable: true })
   payload: AcademicEventPayload | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   source: string | null;
 
   @Column({ type: 'timestamp', nullable: true })

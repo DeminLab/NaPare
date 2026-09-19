@@ -37,7 +37,7 @@ export class Announcement {
   @Column({ default: false })
   isPinned: boolean;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   source: string | null;
 
   @Column({ type: 'timestamp', nullable: true })

@@ -53,7 +53,7 @@ export class Absence {
   @Column({ type: 'int', default: 0 })
   affectedLessonsCount: number;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   source: string | null;
 
   @Column({ type: 'timestamp', nullable: true })

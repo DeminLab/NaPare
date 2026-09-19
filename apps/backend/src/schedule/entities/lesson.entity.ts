@@ -110,7 +110,7 @@ export class Lesson {
   @Column({ nullable: true })
   changeDescription: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   source: string;
 
   @Column({ nullable: true })
