@@ -56,12 +56,13 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 ENV PORT=3000
+ENV APP_DIR=${APP_DIR}
 
 COPY --chown=node:node --from=builder /app/${APP_DIR}/.next/standalone ./
-COPY --chown=node:node --from=builder /app/${APP_DIR}/.next/static ./.next/static
+COPY --chown=node:node --from=builder /app/${APP_DIR}/.next/static ./${APP_DIR}/.next/static
 
 EXPOSE 3000
 
 USER node
 
-CMD ["node", "server.js"]
+CMD ["sh", "-c", "node \"$APP_DIR/server.js\""]
