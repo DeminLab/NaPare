@@ -12,7 +12,7 @@ type Filter = 'all' | 'student' | 'teacher' | 'admin';
 
 const roleLabels: Record<string, string> = { student: 'Студент', teacher: 'Преподаватель', curator: 'Куратор', faculty_dean: 'Декан', department_head: 'Зав. кафедрой', university_admin: 'Администратор', superadmin: 'Суперадмин', developer: 'Разработчик' };
 const roleVariants: Record<string, 'sky' | 'purple' | 'teal' | 'amber' | 'pink' | 'slate' | 'red' | 'green'> = { student: 'sky', teacher: 'purple', curator: 'teal', faculty_dean: 'amber', department_head: 'pink', university_admin: 'slate', superadmin: 'red', developer: 'green' };
-const assignableRoles = ['student', 'teacher', 'curator', 'faculty_dean', 'department_head', 'university_admin', 'superadmin', 'developer'];
+const assignableRoles = ['student', 'teacher', 'curator', 'faculty_dean', 'department_head', 'university_admin'];
 
 function userRole(user: AdminUser) { return user.role || user.roles?.[0] || 'student'; }
 function lastActive(value?: string) { return value ? new Date(value).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Нет данных'; }

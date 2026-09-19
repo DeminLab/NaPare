@@ -1,10 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 
 import { User } from './entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { TenantContext } from '../common/tenant/tenant-context';
+import { UserRole } from '../auth/interfaces/user-role';
 import {
   PaginatedResponse,
   PaginationQueryDto,
@@ -41,10 +42,11 @@ export class UsersService {
   async findByUniversityId(
     universityId: string,
     pagination: PaginationQueryDto = new PaginationQueryDto(),
+    roles?: UserRole[],
   ): Promise<PaginatedResponse<User>> {
     this.tenantContext.assertAccess(universityId);
     const [data, total] = await this.usersRepository.findAndCount({
-      where: { universityId },
+      where: { universityId, ...(roles?.length ? { role: In(roles) } : {}) },
       order: { createdAt: 'DESC' },
       skip: (pagination.page - 1) * pagination.limit,
       take: pagination.limit,

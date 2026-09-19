@@ -52,6 +52,13 @@ describe('AdminService', () => {
   });
 
   describe('updateUserRole', () => {
+    it('does not allow university admins to assign the developer role', async () => {
+      mockUsersService.findById.mockResolvedValue({ id: 'u1', universityId: 'uni-1' });
+      await expect(
+        service.updateUserRole('uni-1', 'u1', { role: UserRole.DEVELOPER }, UserRole.UNIVERSITY_ADMIN),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
     it('should throw ForbiddenException if requester cannot assign role', async () => {
       mockUsersService.findById.mockResolvedValue({ id: 'u1', universityId: 'uni-1' });
       await expect(
@@ -69,6 +76,20 @@ describe('AdminService', () => {
         UserRole.UNIVERSITY_ADMIN,
       );
       expect(result.role).toBe(UserRole.TEACHER);
+    });
+  });
+
+  describe('getUniversityUsers', () => {
+    it('hides platform roles from university administrators', async () => {
+      const pagination = { page: 1, limit: 20 } as any;
+
+      await service.getUniversityUsers('uni-1', pagination, UserRole.UNIVERSITY_ADMIN);
+
+      expect(mockUsersService.findByUniversityId).toHaveBeenCalledWith(
+        'uni-1',
+        pagination,
+        expect.not.arrayContaining([UserRole.DEVELOPER, UserRole.SUPERADMIN]),
+      );
     });
   });
 

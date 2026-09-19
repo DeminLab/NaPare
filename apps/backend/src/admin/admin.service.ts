@@ -58,9 +58,14 @@ export class AdminService {
   async getUniversityUsers(
     universityId: string,
     pagination: PaginationQueryDto,
+    requesterRole: UserRole,
   ): Promise<PaginatedResponse<User>> {
     this.tenantContext.assertAccess(universityId);
-    return this.usersService.findByUniversityId(universityId, pagination);
+    return this.usersService.findByUniversityId(
+      universityId,
+      pagination,
+      this.getVisibleUserRoles(requesterRole),
+    );
   }
 
   async getGroupStudents(
@@ -200,8 +205,22 @@ export class AdminService {
   }
 
   private canManageRole(requesterRole: UserRole, targetRole: UserRole): boolean {
+    if (targetRole === UserRole.DEVELOPER) {
+      return requesterRole === UserRole.SUPERADMIN;
+    }
+
     const requesterLevel = ROLE_HIERARCHY[requesterRole] ?? -1;
     const targetLevel = ROLE_HIERARCHY[targetRole] ?? -1;
     return requesterLevel > targetLevel;
+  }
+
+  private getVisibleUserRoles(requesterRole: UserRole): UserRole[] {
+    if (requesterRole === UserRole.SUPERADMIN) {
+      return Object.values(UserRole);
+    }
+
+    return Object.values(UserRole).filter(
+      (role) => role !== UserRole.DEVELOPER && role !== UserRole.SUPERADMIN,
+    );
   }
 }

@@ -37,7 +37,7 @@ export class AdminController {
   @ApiOkResponse({ description: 'Пользователи получены', type: PaginatedResponseDto })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getUsers(@Request() req, @Query() pagination: PaginationQueryDto) {
-    return this.adminService.getUniversityUsers(req.user.universityId, pagination);
+    return this.adminService.getUniversityUsers(req.user.universityId, pagination, req.user.role);
   }
 
   @Patch('users/:id/roles')
