@@ -2,7 +2,7 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Use the repository lockfile and avoid the npm installer crash observed on the server.
+# Use the app lockfile and avoid the npm installer crash observed on the server.
 ENV NODE_ENV=development
 RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
 
