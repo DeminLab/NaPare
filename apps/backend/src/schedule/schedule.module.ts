@@ -10,9 +10,12 @@ import { ChangeDetectorService } from './change-detector.service';
 import { ExcelConnectorService } from './connectors/excel-connector.service';
 import { SibitConnectorService } from './connectors/sibit-connector.service';
 import { RaspModule } from '../rasp/rasp.module';
+import { EventsModule } from '../events/events.module';
+import { LessonOccurrence } from '../academic/entities/lesson-occurrence.entity';
+import { ScheduleChange } from '../academic/entities/schedule-change.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Lesson, LessonChange]), HttpModule, RaspModule],
+  imports: [TypeOrmModule.forFeature([Lesson, LessonChange, LessonOccurrence, ScheduleChange]), HttpModule, RaspModule, EventsModule],
   providers: [
     ScheduleService,
     ChangeDetectorService,

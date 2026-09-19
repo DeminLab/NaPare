@@ -12,6 +12,18 @@ import type {
   Absence,
   Notification,
   MyDayResponse,
+  EventEnvelope,
+  NotificationPreference,
+  InboxItem,
+  AcademicPage,
+  Course,
+  LessonSeries,
+  LessonOccurrence,
+  LessonSpace,
+  CourseSpace,
+  AcademicEvent,
+  ScheduleChange,
+  AcademicEventType,
 } from './types';
 
 export class ApiClient {
@@ -221,9 +233,175 @@ export class ApiClient {
     await this.client.patch('/notifications/read-all');
   }
 
+  async getNotificationPreferences(): Promise<NotificationPreference> {
+    const response = await this.client.get<NotificationPreference>('/notifications/preferences');
+    return response.data;
+  }
+
+  async updateNotificationPreferences(
+    data: Partial<Omit<NotificationPreference, 'id' | 'userId' | 'universityId'>>,
+  ): Promise<NotificationPreference> {
+    const response = await this.client.patch<NotificationPreference>('/notifications/preferences', data);
+    return response.data;
+  }
+
+  async getInbox(status?: InboxItem['status']): Promise<InboxItem[]> {
+    const response = await this.client.get<InboxItem[]>('/notifications/inbox', {
+      params: status ? { status } : undefined,
+    });
+    return response.data;
+  }
+
+  async completeInboxItem(id: string): Promise<void> {
+    await this.client.patch(`/notifications/inbox/${id}/complete`);
+  }
+
+  async snoozeInboxItem(id: string, until: string): Promise<void> {
+    await this.client.patch(`/notifications/inbox/${id}/snooze`, { until });
+  }
+
+  async getEventsSince(since?: string): Promise<EventEnvelope[]> {
+    const response = await this.client.get<EventEnvelope[]>('/events', {
+      params: since ? { since } : undefined,
+    });
+    return response.data;
+  }
+
+  subscribeToEvents(
+    onEvent: (event: EventEnvelope) => void,
+    options: { since?: string; onStatusChange?: (status: 'connecting' | 'open' | 'offline') => void } = {},
+  ): () => void {
+    const baseUrl = this.client.defaults.baseURL ?? '/api/v1';
+    const query = options.since ? `?since=${encodeURIComponent(options.since)}` : '';
+    const controller = new AbortController();
+    options.onStatusChange?.('connecting');
+    void (async () => {
+      try {
+        const token = this.accessToken ?? (typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null);
+        const response = await fetch(`${baseUrl}/events/stream${query}`, {
+          headers: token ? { Authorization: `Bearer ${token}`, Accept: 'text/event-stream' } : { Accept: 'text/event-stream' },
+          signal: controller.signal,
+        });
+        if (!response.ok || !response.body) throw new Error(`Event stream failed: ${response.status}`);
+        options.onStatusChange?.('open');
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        while (!controller.signal.aborted) {
+          const chunk = await reader.read();
+          if (chunk.done) break;
+          buffer += decoder.decode(chunk.value, { stream: true });
+          const messages = buffer.split('\n\n');
+          buffer = messages.pop() ?? '';
+          for (const message of messages) {
+            const data = message.split('\n').find((line) => line.startsWith('data:'))?.slice(5).trim();
+            if (!data) continue;
+            const event = JSON.parse(data) as EventEnvelope;
+            if (event.type !== 'heartbeat') onEvent(event);
+          }
+        }
+        if (!controller.signal.aborted) options.onStatusChange?.('offline');
+      } catch {
+        if (!controller.signal.aborted) options.onStatusChange?.('offline');
+      }
+    })();
+    return () => controller.abort();
+  }
+
   // My Day
   async getMyDay(): Promise<MyDayResponse> {
     const response = await this.client.get<MyDayResponse>('/my-day');
+    return response.data;
+  }
+
+  // Academic context
+  async getAcademicCourses(params: { page?: number; limit?: number } = {}): Promise<AcademicPage<Course>> {
+    const response = await this.client.get<AcademicPage<Course>>('/academic/courses', { params });
+    return response.data;
+  }
+
+  async getAcademicCourse(id: string): Promise<Course> {
+    const response = await this.client.get<Course>(`/academic/courses/${id}`);
+    return response.data;
+  }
+
+  async createAcademicCourse(data: { code: string; name: string; facultyId?: string; description?: string; credits?: number }): Promise<Course> {
+    const response = await this.client.post<Course>('/academic/courses', data);
+    return response.data;
+  }
+
+  async updateAcademicCourse(id: string, data: Partial<{ code: string; name: string; facultyId: string; description: string; credits: number }>): Promise<Course> {
+    const response = await this.client.patch<Course>(`/academic/courses/${id}`, data);
+    return response.data;
+  }
+
+  async getCourseSpace(courseId: string): Promise<CourseSpace> {
+    const response = await this.client.get<CourseSpace>(`/academic/courses/${courseId}/space`);
+    return response.data;
+  }
+
+  async getLessonSeries(courseId: string, params: { page?: number; limit?: number } = {}): Promise<AcademicPage<LessonSeries>> {
+    const response = await this.client.get<AcademicPage<LessonSeries>>(`/academic/courses/${courseId}/series`, { params });
+    return response.data;
+  }
+
+  async createLessonSeries(courseId: string, data: {
+    groupId: string;
+    teacherId?: string;
+    title?: string;
+    subjectType?: string;
+    recurrenceRule?: string;
+    dayOfWeek: number;
+    startTime: string;
+    endTime: string;
+    pairNumber: number;
+    weekType?: 'both' | 'odd' | 'even';
+    room?: string;
+    building?: string;
+    validFrom: string;
+    validTo?: string;
+  }): Promise<LessonSeries> {
+    const response = await this.client.post<LessonSeries>(`/academic/courses/${courseId}/series`, data);
+    return response.data;
+  }
+
+  async getLessonOccurrences(params: { courseId?: string; groupId?: string; from?: string; to?: string; page?: number; limit?: number } = {}): Promise<AcademicPage<LessonOccurrence>> {
+    const response = await this.client.get<AcademicPage<LessonOccurrence>>('/academic/occurrences', { params });
+    return response.data;
+  }
+
+  async getLessonOccurrenceContext(id: string): Promise<{ course: Course; series: LessonSeries; occurrence: LessonOccurrence }> {
+    const response = await this.client.get(`/academic/occurrences/${id}/context`);
+    return response.data;
+  }
+
+  async getLessonSpace(occurrenceId: string): Promise<LessonSpace> {
+    const response = await this.client.get<LessonSpace>(`/academic/occurrences/${occurrenceId}/space`);
+    return response.data;
+  }
+
+  async createLessonOccurrence(seriesId: string, data: { startsAt: string; endsAt: string; room?: string; building?: string; status?: LessonOccurrence['status']; changeReason?: string }): Promise<LessonOccurrence> {
+    const response = await this.client.post<LessonOccurrence>(`/academic/series/${seriesId}/occurrences`, data);
+    return response.data;
+  }
+
+  async updateLessonOccurrence(id: string, data: Partial<{ startsAt: string; endsAt: string; room: string; building: string; status: LessonOccurrence['status']; changeReason: string }>): Promise<LessonOccurrence> {
+    const response = await this.client.patch<LessonOccurrence>(`/academic/occurrences/${id}`, data);
+    return response.data;
+  }
+
+  async getOccurrenceScheduleChanges(id: string, params: { page?: number; limit?: number } = {}): Promise<AcademicPage<ScheduleChange>> {
+    const response = await this.client.get<AcademicPage<ScheduleChange>>(`/academic/occurrences/${id}/changes`, { params });
+    return response.data;
+  }
+
+  async getAcademicEvents(params: { type?: AcademicEventType; courseId?: string; groupId?: string; from?: string; to?: string; page?: number; limit?: number } = {}): Promise<AcademicPage<AcademicEvent>> {
+    const response = await this.client.get<AcademicPage<AcademicEvent>>('/academic/events', { params });
+    return response.data;
+  }
+
+  async createAcademicEvent(data: { type: AcademicEventType; title: string; description?: string; courseId?: string; groupId?: string; occurrenceId?: string; startsAt?: string; endsAt?: string }): Promise<AcademicEvent> {
+    const response = await this.client.post<AcademicEvent>('/academic/events', data);
     return response.data;
   }
 }

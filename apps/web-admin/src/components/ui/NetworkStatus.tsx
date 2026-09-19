@@ -1,3 +1,1 @@
-'use client';
-import { useEffect, useState } from 'react';
-export function NetworkStatus() { const [online, setOnline] = useState(true); useEffect(() => { const update = () => setOnline(navigator.onLine); update(); window.addEventListener('online', update); window.addEventListener('offline', update); return () => { window.removeEventListener('online', update); window.removeEventListener('offline', update); }; }, []); if (online) return null; return <div role="status" className="fixed inset-x-0 bottom-4 z-[60] mx-auto flex w-fit max-w-[calc(100%-2rem)] items-center gap-3 rounded-xl bg-slate-900 px-4 py-3 text-sm text-white shadow-xl"><span>Нет подключения к сети. Проверьте интернет и повторите попытку.</span><button onClick={() => window.location.reload()} className="shrink-0 font-semibold text-indigo-200 hover:text-white">Обновить</button></div>; }
+export { NetworkStatus } from '@napare/ui';

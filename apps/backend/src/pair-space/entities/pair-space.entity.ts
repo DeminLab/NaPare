@@ -25,6 +25,15 @@ export class PairSpace {
   @Column({ type: 'uuid' })
   lessonId: string;
 
+  @Column({ type: 'uuid', nullable: true })
+  courseId: string | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  lessonOccurrenceId: string | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  lessonSpaceId: string | null;
+
   @Column()
   subject: string;
 
@@ -45,6 +54,18 @@ export class PairSpace {
 
   @Column({ default: true })
   isActive: boolean;
+
+  @Column({ nullable: true })
+  source: string | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  lastSyncedAt: Date | null;
+
+  @Column({ nullable: true })
+  sourceVersion: string | null;
+
+  @Column({ type: 'varchar', default: 'unknown' })
+  syncStatus: string;
 
   @Column({ type: 'timestamp', nullable: true })
   activeUntil: Date;

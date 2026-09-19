@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between, ArrayContains } from 'typeorm';
 
@@ -12,6 +12,7 @@ import {
   PaginationQueryDto,
   toPaginatedResponse,
 } from '../common/dto/pagination-query.dto';
+import { EventBusService } from '../events/event-bus.service';
 
 export const ABSENCE_STAFF_ROLES: UserRole[] = [
   UserRole.TEACHER,
@@ -28,6 +29,7 @@ export class AbsencesService {
     @InjectRepository(Absence)
     private readonly absenceRepository: Repository<Absence>,
     private readonly tenantContext: TenantContext,
+    @Optional() private readonly eventBus?: EventBusService,
   ) {}
 
   async findByStudent(
@@ -97,8 +99,12 @@ export class AbsencesService {
       startDate: new Date(createAbsenceDto.startDate),
       endDate: new Date(createAbsenceDto.endDate),
       comment: createAbsenceDto.comment,
+      source: 'manual',
+      syncStatus: 'synced',
     });
-    return this.absenceRepository.save(absence);
+    const saved = await this.absenceRepository.save(absence);
+    await this.publishAbsence('absence.created', saved, 'normal');
+    return saved;
   }
 
   async update(id: string, updateAbsenceDto: UpdateAbsenceDto): Promise<Absence> {
@@ -114,7 +120,9 @@ export class AbsencesService {
       ...(updateAbsenceDto.startDate && { startDate: new Date(updateAbsenceDto.startDate) }),
       ...(updateAbsenceDto.endDate && { endDate: new Date(updateAbsenceDto.endDate) }),
     });
-    return this.absenceRepository.save(absence);
+    const saved = await this.absenceRepository.save(absence);
+    await this.publishAbsence('absence.updated', saved, 'normal');
+    return saved;
   }
 
   async findByUniversity(
@@ -148,7 +156,9 @@ export class AbsencesService {
     if (comment) {
       absence.comment = comment;
     }
-    return this.absenceRepository.save(absence);
+    const saved = await this.absenceRepository.save(absence);
+    await this.publishAbsence('absence.updated', saved, 'normal');
+    return saved;
   }
 
   async reject(
@@ -164,7 +174,9 @@ export class AbsencesService {
     this.assertStaffAccess(absence.universityId);
 
     absence.comment = reason;
-    return this.absenceRepository.save(absence);
+    const saved = await this.absenceRepository.save(absence);
+    await this.publishAbsence('absence.updated', saved, 'high');
+    return saved;
   }
 
   async delete(id: string): Promise<void> {
@@ -213,5 +225,27 @@ export class AbsencesService {
       throw new ForbiddenException('Staff role required');
     }
     this.tenantContext.assertAccess(universityId);
+  }
+
+  private async publishAbsence(
+    type: 'absence.created' | 'absence.updated',
+    absence: Absence,
+    priority: 'normal' | 'high',
+  ): Promise<void> {
+    const user = this.tenantContext.getUser();
+    await this.eventBus?.publish({
+      type,
+      universityId: absence.universityId,
+      actor: user ? { id: user.id, type: 'user', role: user.role } : { type: 'system' },
+      target: { type: 'absence', id: absence.id },
+      payload: {
+        studentId: absence.studentId,
+        startDate: absence.startDate.toISOString(),
+        endDate: absence.endDate.toISOString(),
+        deepLink: `/attendance/absences/${absence.id}`,
+      },
+      priority,
+      recipients: [absence.studentId],
+    });
   }
 }

@@ -20,6 +20,8 @@ import configuration from './config/configuration';
 import { validateEnvironment } from './config/validate-environment';
 import { AppConfig } from './config/configuration';
 import { TenantContextModule } from './common/tenant/tenant-context.module';
+import { EventsModule } from './events/events.module';
+import { AcademicModule } from './academic/academic.module';
 
 @Module({
   imports: [
@@ -75,6 +77,8 @@ import { TenantContextModule } from './common/tenant/tenant-context.module';
     MyDayModule,
     DatabaseModule,
     TenantContextModule,
+    EventsModule,
+    AcademicModule,
   ],
   controllers: [AppController, HealthController],
 })

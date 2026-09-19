@@ -107,6 +107,8 @@ describe('AbsencesService', () => {
         startDate: new Date('2026-09-16'),
         endDate: new Date('2026-09-18'),
         comment: 'Medical leave',
+        source: 'manual',
+        syncStatus: 'synced',
       });
     });
   });

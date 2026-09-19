@@ -9,10 +9,10 @@ interface Student { id: string; firstName: string; lastName: string; email?: str
 interface Absence { id: string; studentId: string; isExcused: boolean; }
 interface Lesson { id: string; subject: string; groupName: string; startTime: string; endTime?: string; }
 interface Group { id: string; name: string; }
-type AttendanceStatus = 'present' | 'absent' | 'late';
+type AttendanceStatus = 'present' | 'absent' | 'late' | 'unmarked';
 
-const statusLabels: Record<AttendanceStatus, string> = { present: 'Присутствует', absent: 'Отсутствует', late: 'Опоздал' };
-const statusVariants: Record<AttendanceStatus, 'green' | 'red' | 'amber'> = { present: 'green', absent: 'red', late: 'amber' };
+const statusLabels: Record<AttendanceStatus, string> = { present: 'Присутствует', absent: 'Отсутствует', late: 'Опоздал', unmarked: 'Не отмечен' };
+const statusVariants: Record<AttendanceStatus, 'green' | 'red' | 'amber' | 'slate'> = { present: 'green', absent: 'red', late: 'amber', unmarked: 'slate' };
 
 function todayKey() { return new Date().toISOString().split('T')[0]; }
 function displayTime(value?: string) { return value?.includes('T') ? value.slice(11, 16) : value || '—'; }
@@ -47,10 +47,10 @@ export default function AttendancePage() {
 
   useEffect(() => {
     if (!lessonId) { setStatuses({}); return; }
-    apiFetchList<Absence>(`/absences/lesson/${lessonId}`).then((items) => { const next: Record<string, AttendanceStatus> = {}; students.forEach((student) => { next[student.id] = items.some((item) => item.studentId === student.id) ? 'absent' : 'present'; }); setStatuses(next); }).catch((err) => setError(err instanceof Error ? err.message : 'Не удалось загрузить отметки.'));
+    apiFetchList<Absence>(`/absences/lesson/${lessonId}`).then((items) => { const next: Record<string, AttendanceStatus> = {}; students.forEach((student) => { next[student.id] = items.some((item) => item.studentId === student.id) ? 'absent' : 'unmarked'; }); setStatuses(next); }).catch((err) => setError(err instanceof Error ? err.message : 'Не удалось загрузить отметки.'));
   }, [lessonId, students]);
 
-  const counts = useMemo(() => { const values = students.map((student) => statuses[student.id] || 'present'); return { present: values.filter((value) => value === 'present').length, absent: values.filter((value) => value === 'absent').length, late: values.filter((value) => value === 'late').length }; }, [students, statuses]);
+  const counts = useMemo(() => { const values = students.map((student) => statuses[student.id] || 'unmarked'); return { present: values.filter((value) => value === 'present').length, absent: values.filter((value) => value === 'absent').length, late: values.filter((value) => value === 'late').length, unmarked: values.filter((value) => value === 'unmarked').length }; }, [students, statuses]);
   const percentage = students.length ? Math.round(((counts.present + counts.late) / students.length) * 100) : null;
   const selectedLesson = lessons.find((lesson) => lesson.id === lessonId);
 

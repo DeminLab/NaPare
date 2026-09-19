@@ -2,43 +2,34 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { WorkspaceShell, type NavigationLinkProps, type WorkspaceCommand, type WorkspaceNavGroup } from '@napare/ui/workspace-shell';
 import { apiFetch, getHealth, getUser, logout } from '@/lib/api';
 import type { HealthInfo, UserInfo } from '@/lib/api';
-import Avatar from '@/components/ui/Avatar';
 
-type NavItem = { href: string; label: string; icon: string };
-const groups: Array<{ label: string; items: NavItem[] }> = [
+const groups: WorkspaceNavGroup[] = [
   { label: 'Overview', items: [{ href: '/overview', label: 'Overview', icon: 'home' }] },
-  { label: 'API', items: [{ href: '/api', label: 'API Explorer', icon: 'code' }, { href: '/api#endpoints', label: 'Endpoints', icon: 'list' }, { href: '/api#authentication', label: 'Authentication', icon: 'lock' }] },
-  { label: 'Documentation', items: [{ href: '/docs', label: 'Documentation', icon: 'book' }] },
-  { label: 'Architecture', items: [{ href: '/architecture', label: 'Architecture', icon: 'layers' }] },
-  { label: 'Tools', items: [{ href: '/session', label: 'Sessions', icon: 'users' }, { href: '/notifications', label: 'Notifications', icon: 'bell' }] },
+  { label: 'Platform', items: [{ href: '/api', label: 'API', icon: 'code', keywords: ['api explorer', 'endpoints'] }, { href: '/api#logs', label: 'Logs', icon: 'list' }, { href: '/api#events', label: 'Events', icon: 'pulse' }, { href: '/api#connectors', label: 'Connectors', icon: 'plug' }] },
+  { label: 'Knowledge', items: [{ href: '/docs', label: 'Documentation', icon: 'book' }, { href: '/architecture', label: 'Architecture', icon: 'layers' }] },
+  { label: 'Access', items: [{ href: '/session', label: 'Sessions', icon: 'users' }] },
 ];
-const allItems = groups.flatMap((group) => group.items);
-function Glyph({ icon }: { icon: string }) {
-  const paths: Record<string, string> = {
-    home: 'M4 11l8-7 8 7v9h-5v-5H9v5H4v-9z',
-    code: 'M8 9l-3 3 3 3m8-6l3 3-3 3m-3-8l-2 10',
-    list: 'M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01',
-    lock: 'M6 10V8a6 6 0 0112 0v2m-13 0h14v10H5V10z',
-    book: 'M5 4h10a4 4 0 014 4v12H9a4 4 0 00-4 0V4zm0 0v12a4 4 0 014 0h10',
-    layers: 'M12 3l9 5-9 5-9-5 9-5zm-9 9l9 5 9-5M3 17l9 5 9-5',
-    users: 'M16 20v-1a4 4 0 00-4-4H7a4 4 0 00-4 4v1m6-9a4 4 0 100-8 4 4 0 000 8zm6-7a3 3 0 010 6m4 7v-1a4 4 0 00-3-3.87',
-    bell: 'M18 8a6 6 0 00-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9m-8 13h4',
-  };
-  return <span aria-hidden="true" className="flex h-5 w-5 items-center justify-center"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5"><path d={paths[icon] || paths.home} /></svg></span>;
-}
+const AppLink = ({ href, children, ...props }: NavigationLinkProps) => <Link href={href} {...props}>{children}</Link>;
 
 export default function DeveloperLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const [user, setUser] = useState<UserInfo | null>(null); const [health, setHealth] = useState<HealthInfo | null>(null); const [unread, setUnread] = useState(0);
-  const [collapsed, setCollapsed] = useState(false); const [mobileOpen, setMobileOpen] = useState(false); const [paletteOpen, setPaletteOpen] = useState(false); const [profileOpen, setProfileOpen] = useState(false); const [query, setQuery] = useState('');
-  useEffect(() => { getUser().then(setUser).catch(() => undefined); getHealth().then(setHealth).catch(() => setHealth(null)); apiFetch<{ data: Array<{ isRead: boolean }> }>('/notifications').then((response) => setUnread(response.data.filter((item) => !item.isRead).length)).catch(() => undefined); }, []);
-  useEffect(() => { const handler = (event: KeyboardEvent) => { if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); setPaletteOpen(true); } if (event.key === 'Escape') { setPaletteOpen(false); setProfileOpen(false); } }; window.addEventListener('keydown', handler); return () => window.removeEventListener('keydown', handler); }, []);
-  const title = allItems.find((item) => pathname === item.href.split('#')[0])?.label || 'Overview';
-  const filtered = useMemo(() => allItems.filter((item) => item.label.toLowerCase().includes(query.toLowerCase())), [query]);
-  const active = (item: NavItem) => pathname === item.href.split('#')[0];
-  const itemLink = (item: NavItem) => <Link href={item.href} onClick={() => setMobileOpen(false)} title={collapsed ? item.label : undefined} className={`flex min-h-10 items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 ${active(item) ? 'bg-cyan-400 font-semibold text-slate-950' : 'text-white/55 hover:bg-white/10 hover:text-white'}`}><Glyph icon={item.icon} /><span className={collapsed ? 'lg:hidden' : ''}>{item.label}</span></Link>;
-  return <div className="developer-shell flex min-h-screen bg-[var(--color-background)] text-white lg:h-screen lg:overflow-hidden"><div className={`fixed inset-0 z-40 bg-black/60 lg:hidden ${mobileOpen ? 'block' : 'hidden'}`} onClick={() => setMobileOpen(false)} /><aside className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-white/10 bg-[var(--color-sidebar)] transition-all duration-200 lg:static lg:translate-x-0 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'} ${collapsed ? 'lg:w-[72px]' : 'lg:w-64'}`}><div className="flex h-16 items-center justify-between border-b border-white/10 px-4"><Link href="/overview" className="flex items-center gap-2.5 rounded-lg font-bold tracking-tight text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-400 text-xs font-bold text-slate-950">Н</span><span className={collapsed ? 'lg:hidden' : ''}>NaPare</span></Link><div className="flex gap-1"><button type="button" onClick={() => setMobileOpen(false)} className="h-9 w-9 rounded-lg text-white/60 hover:bg-white/10 lg:hidden" aria-label="Закрыть меню">×</button><button type="button" onClick={() => setCollapsed((value) => !value)} className="hidden h-9 w-9 rounded-lg text-white/50 hover:bg-white/10 hover:text-white lg:block" aria-label={collapsed ? 'Развернуть sidebar' : 'Свернуть sidebar'}>{collapsed ? '→' : '←'}</button></div></div><nav className="flex-1 space-y-5 overflow-y-auto px-3 py-5" aria-label="Developer portal navigation">{groups.map((group) => <section key={group.label}><p className={`mb-1 px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-white/30 ${collapsed ? 'lg:hidden' : ''}`}>{group.label}</p><div className="space-y-0.5">{group.items.map((item) => <div key={`${group.label}-${item.label}`}>{itemLink(item)}</div>)}</div></section>)}</nav><div className="border-t border-white/10 p-3"><button type="button" onClick={() => setProfileOpen((value) => !value)} className="flex w-full items-center gap-3 rounded-lg p-2 text-left hover:bg-white/10" aria-expanded={profileOpen}><Avatar name={user ? `${user.firstName} ${user.lastName}` : 'Developer'} size="sm" /><span className={`min-w-0 flex-1 ${collapsed ? 'lg:hidden' : ''}`}><span className="block truncate text-xs font-semibold text-white/80">{user ? `${user.firstName} ${user.lastName}` : 'Developer'}</span><span className="block text-[10px] text-white/35">developer avatar</span></span></button>{profileOpen && <div className="absolute bottom-20 left-3 right-3 z-50 rounded-lg border border-white/10 bg-slate-900 p-1 shadow-2xl"><Link href="/overview" className="block rounded-md px-3 py-2 text-sm text-white/75 hover:bg-white/10">Overview</Link><button type="button" onClick={logout} className="block w-full rounded-md px-3 py-2 text-left text-sm text-red-300 hover:bg-red-500/10">Sign out</button></div>}</div></aside><main className="min-w-0 flex-1 bg-[var(--color-background)] lg:overflow-y-auto"><header className="sticky top-0 z-30 flex min-h-16 items-center gap-3 border-b border-white/10 bg-slate-950/90 px-4 backdrop-blur lg:px-6"><button type="button" onClick={() => setMobileOpen(true)} className="h-10 w-10 rounded-lg text-lg text-cyan-200 hover:bg-white/10 lg:hidden" aria-label="Открыть меню">☰</button><div className="min-w-0 shrink-0"><div className="text-[11px] text-white/35">Developer <span aria-hidden="true">/</span></div><h1 className="truncate text-sm font-semibold text-white">{title}</h1></div><button type="button" onClick={() => setPaletteOpen(true)} className="ml-auto hidden h-9 min-w-0 max-w-xl flex-1 items-center justify-between rounded-lg border border-white/10 bg-white/5 px-3 text-left text-xs text-white/40 lg:flex" aria-label="Открыть global search"><span>Search API, docs and tools</span><kbd className="font-mono text-white/60">Ctrl/⌘ K</kbd></button><span className={`hidden items-center gap-2 text-xs md:flex ${health ? 'text-emerald-300' : 'text-amber-300'}`}><span className={`h-2 w-2 rounded-full ${health ? 'bg-emerald-400' : 'bg-amber-400'}`} />API {health ? 'online' : 'unavailable'}</span><Link href="/notifications" className="relative flex h-10 w-10 items-center justify-center rounded-lg text-lg text-white/55 hover:bg-white/10" aria-label="Уведомления">♧{unread > 0 && <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-cyan-300" />}</Link><button type="button" onClick={() => setProfileOpen((value) => !value)} className="rounded-full" aria-label="Открыть developer profile"><Avatar name={user ? `${user.firstName} ${user.lastName}` : 'Developer'} size="sm" /></button></header>{paletteOpen && <div className="fixed inset-0 z-[60] bg-black/60 p-4 pt-[12vh]" onClick={() => setPaletteOpen(false)}><div role="dialog" aria-modal="true" aria-label="Command Palette" className="mx-auto max-w-xl overflow-hidden rounded-xl border border-white/10 bg-slate-900 shadow-2xl" onClick={(event) => event.stopPropagation()}><div className="border-b border-white/10 px-4"><input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} className="h-14 w-full bg-transparent text-sm text-white outline-none placeholder:text-white/35" placeholder="Search API, docs and tools" /></div><div className="max-h-80 overflow-y-auto p-2">{filtered.map((item) => <Link key={`${item.href}-${item.label}`} href={item.href} onClick={() => { setPaletteOpen(false); setQuery(''); }} className="flex items-center gap-3 rounded-lg px-3 py-3 text-sm text-white/75 hover:bg-white/10"><Glyph icon={item.icon} />{item.label}</Link>)}</div></div></div>}<div className="ds-page-enter min-h-[calc(100vh-4rem)]">{children}</div></main></div>;
+  const [user, setUser] = useState<UserInfo | null>(null);
+  const [health, setHealth] = useState<HealthInfo | null>(null);
+  const [unread, setUnread] = useState(0);
+  useEffect(() => {
+    getUser().then(setUser).catch(() => undefined);
+    getHealth().then(setHealth).catch(() => setHealth(null));
+    apiFetch<{ data: Array<{ isRead: boolean }> }>('/notifications').then((response) => setUnread(response.data.filter((item) => !item.isRead).length)).catch(() => undefined);
+  }, []);
+  const commands: WorkspaceCommand[] = [
+    { id: 'developer:api', label: 'Открыть API Explorer', description: 'Эндпоинты и авторизация', icon: 'code', href: '/api', keywords: ['api', 'endpoints'] },
+    { id: 'developer:docs', label: 'Открыть документацию', icon: 'book', href: '/docs' },
+    { id: 'developer:session', label: 'Открыть активные сессии', icon: 'users', href: '/session', keywords: ['sessions', 'jobs'] },
+  ];
+  const name = user ? user.firstName + ' ' + user.lastName : 'Developer';
+  return <WorkspaceShell className="developer-shell" LinkComponent={AppLink} pathname={pathname} groups={groups} roleLabel="Developer" homeHref="/overview" user={{ name, role: 'Developer' }} unreadCount={unread} status={{ label: health ? 'API online' : 'API unavailable', tone: health ? 'success' : 'warning' }} commands={commands} onLogout={logout}>{children}</WorkspaceShell>;
 }

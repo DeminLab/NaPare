@@ -1,0 +1,11 @@
+{
+  "name": "@napare/design-tokens",
+  "version": "1.0.0",
+  "private": true,
+  "main": "./tailwind.preset.js",
+  "exports": {
+    ".": "./src/index.ts",
+    "./styles.css": "./styles.css",
+    "./tailwind": "./tailwind.preset.js"
+  }
+}

@@ -95,6 +95,7 @@ npx @openapitools/openapi-generator-cli generate \
 | Absences | `/api/v1/absences`, `/api/v1/curator` | [modules/absences.md](../modules/absences.md) |
 | Notifications | `/api/v1/notifications`, `/api/v1/devices` | [modules/notifications.md](../modules/notifications.md) |
 | Admin | `/api/v1/admin`, `/api/v1/superadmin` | [modules/admin.md](../modules/admin.md) |
+| Academic context | `/api/v1/academic` | [modules/academic.md](../modules/academic.md) |
 
 ---
 

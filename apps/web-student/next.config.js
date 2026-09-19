@@ -8,6 +8,7 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   output: 'standalone',
+  transpilePackages: ['@napare/ui', '@napare/design-tokens'],
   async rewrites() {
     return [
       {

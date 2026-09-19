@@ -1,316 +1,43 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { apiFetch, getUser } from '@/lib/api';
-import { Card, Badge, Button, Input, TabBar, EmptyState, Avatar, Skeleton, Modal, RequestState } from '@/components/ui';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { apiFetch } from '@/lib/api';
+import { Avatar, Badge, Button, Card, EmptyState, Icon, Input, Modal, RequestState, Skeleton, TabBar } from '@/components/ui';
 
-interface Announcement {
-  id: string;
-  text: string;
-  isPinned: boolean;
-  authorName: string;
-  createdAt: string;
-}
+interface Announcement { id: string; text: string; isPinned: boolean; authorName?: string; createdAt: string; }
+interface Homework { id: string; title: string; description?: string; deadline?: string; isCompleted?: boolean; }
+interface Message { id: string; text: string; authorName?: string; createdAt: string; }
+interface FileItem { id: string; fileName: string; fileUrl: string; fileType: string; size: number; createdAt: string; }
+interface PairSpace { id: string; lessonId: string; announcements: Announcement[]; homeworks: Homework[]; messages: Message[]; files?: FileItem[]; }
+interface Lesson { id: string; subject: string; subjectType?: string; room?: string; startTime: string; endTime: string; groupName?: string; isChanged?: boolean; changeDescription?: string; }
 
-interface Homework {
-  id: string;
-  title: string;
-  description: string;
-  deadline: string;
-  isCompleted: boolean;
-}
-
-interface Message {
-  id: string;
-  text: string;
-  authorName: string;
-  createdAt: string;
-}
-
-interface PairSpace {
-  id: string;
-  lessonId: string;
-  announcements: Announcement[];
-  homeworks: Homework[];
-  messages: Message[];
-}
-
-interface Lesson {
-  id: string;
-  subject: string;
-  subjectType: string;
-  room: string;
-  startTime: string;
-  endTime: string;
-  groupName: string;
-}
-
-const typeLabels: Record<string, string> = {
-  lecture: 'Лекция', practice: 'Практика', lab: 'Лабораторная',
-  exam: 'Экзамен', consultation: 'Консультация',
-};
-
-function timeAgo(dateStr: string): string {
-  const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
-  if (diff < 60) return 'только что';
-  if (diff < 3600) return `${Math.floor(diff / 60)} мин`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)} ч`;
-  return `${Math.floor(diff / 86400)} дн`;
-}
+function timeAgo(value: string) { const diff = Math.floor((Date.now() - new Date(value).getTime()) / 1000); if (diff < 60) return 'только что'; if (diff < 3600) return `${Math.floor(diff / 60)} мин`; if (diff < 86400) return `${Math.floor(diff / 3600)} ч`; return `${Math.floor(diff / 86400)} дн`; }
+function statusFor(homework: Homework) { if (homework.isCompleted) return { label: 'Closed', variant: 'slate' as const }; return homework.deadline && new Date(homework.deadline) < new Date() ? { label: 'Closed', variant: 'amber' as const } : { label: 'Published', variant: 'green' as const }; }
 
 export default function PairSpacePage() {
-  const params = useParams();
-  const router = useRouter();
-  const lessonId = params.lessonId as string;
-  const [activeTab, setActiveTab] = useState('announcements');
-  const [pairSpace, setPairSpace] = useState<PairSpace | null>(null);
-  const [lesson, setLesson] = useState<Lesson | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [newMessage, setNewMessage] = useState('');
-  const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
-  const [showHomeworkModal, setShowHomeworkModal] = useState(false);
-  const [announcementText, setAnnouncementText] = useState('');
-  const [homeworkTitle, setHomeworkTitle] = useState('');
-  const [homeworkDescription, setHomeworkDescription] = useState('');
-  const [homeworkDeadline, setHomeworkDeadline] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-
-  useEffect(() => {
-    setError('');
-    Promise.all([
-      apiFetch<PairSpace>(`/pair-spaces/${lessonId}`),
-      apiFetch<Lesson>(`/schedule/lessons/${lessonId}`),
-    ]).then(([ps, l]) => {
-      setPairSpace(ps);
-      setLesson(l);
-    }).catch((err) => setError(err instanceof Error ? err.message : 'Не удалось загрузить пространство пары.')).finally(() => setLoading(false));
-  }, [lessonId]);
-
-  const handleSendMessage = async () => {
-    if (!newMessage.trim()) return;
-    try {
-      const msg = await apiFetch<Message>(`/pair-spaces/${lessonId}/messages`, {
-        method: 'POST',
-        body: JSON.stringify({ text: newMessage }),
-      });
-      setPairSpace(prev => prev ? { ...prev, messages: [...prev.messages, msg] } : prev);
-      setNewMessage('');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Не удалось отправить сообщение.');
-    }
-  };
-
-  const handleCreateAnnouncement = async () => {
-    if (!announcementText.trim()) return;
-    setSubmitting(true);
-    try {
-      const a = await apiFetch<Announcement>(`/pair-spaces/${lessonId}/announcements`, {
-        method: 'POST',
-        body: JSON.stringify({ text: announcementText }),
-      });
-      setPairSpace(prev => prev ? { ...prev, announcements: [...prev.announcements, a] } : prev);
-      setAnnouncementText('');
-      setShowAnnouncementModal(false);
-      setSuccess('Объявление опубликовано.');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Не удалось опубликовать объявление.');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleCreateHomework = async () => {
-    if (!homeworkTitle.trim()) return;
-    setSubmitting(true);
-    try {
-      const h = await apiFetch<Homework>(`/pair-spaces/${lessonId}/homeworks`, {
-        method: 'POST',
-        body: JSON.stringify({ title: homeworkTitle, description: homeworkDescription, deadline: homeworkDeadline || undefined }),
-      });
-      setPairSpace(prev => prev ? { ...prev, homeworks: [...prev.homeworks, h] } : prev);
-      setHomeworkTitle('');
-      setHomeworkDescription('');
-      setHomeworkDeadline('');
-      setShowHomeworkModal(false);
-      setSuccess('Домашнее задание создано.');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Не удалось создать домашнее задание.');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="mx-auto max-w-2xl space-y-6 p-4">
-        <Skeleton className="h-24" />
-        <Skeleton className="h-48" />
-      </div>
-    );
-  }
-
-  if (error && !pairSpace) {
-    return <div className="mx-auto max-w-2xl"><RequestState title="Не удалось открыть PairSpace" description={error} onRetry={() => window.location.reload()} /></div>;
-  }
-
-  const tabs = [
-    { id: 'announcements', label: 'Объявления', count: pairSpace?.announcements.length },
-    { id: 'homeworks', label: 'Домашки', count: pairSpace?.homeworks.length },
-    { id: 'chat', label: 'Чат', count: pairSpace?.messages.length },
-  ];
-
-  return (
-    <div className="mx-auto max-w-2xl space-y-6">
-      <div>
-        <button onClick={() => router.back()} className="mb-3 flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700">
-          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          Назад
-        </button>
-        {lesson && (
-          <Card>
-            <h1 className="text-xl font-bold text-slate-900">{lesson.subject}</h1>
-            <div className="mt-2 flex items-center gap-3 text-sm text-slate-500">
-              <Badge variant="purple">{typeLabels[lesson.subjectType] || lesson.subjectType}</Badge>
-              {lesson.groupName && <span>{lesson.groupName}</span>}
-              {lesson.room && <span>а. {lesson.room}</span>}
-            </div>
-          </Card>
-        )}
-      </div>
-
-      <TabBar tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
-      {error && <RequestState title="Не удалось выполнить действие" description={error} onRetry={() => setError('')} />}
-      {success && <p role="status" className="text-sm font-medium text-emerald-700">{success}</p>}
-
-      {activeTab === 'announcements' && (
-        <div className="space-y-3">
-          <Button variant="secondary" fullWidth onClick={() => setShowAnnouncementModal(true)}>
-            + Новое объявление
-          </Button>
-          {pairSpace?.announcements.length === 0 ? (
-            <EmptyState title="Нет объявлений" description="Создайте первое объявление для группы" />
-          ) : (
-            pairSpace?.announcements.map(a => (
-              <Card key={a.id} padding="sm" className={a.isPinned ? 'border-amber-200 bg-amber-50/50' : ''}>
-                <div className="flex items-start gap-3">
-                  <span className="text-lg">{a.isPinned ? '📌' : '💬'}</span>
-                  <div className="flex-1">
-                    <p className="text-sm text-slate-900">{a.text}</p>
-                    <p className="mt-1 text-xs text-slate-400">{a.authorName} · {timeAgo(a.createdAt)}</p>
-                  </div>
-                </div>
-              </Card>
-            ))
-          )}
-        </div>
-      )}
-
-      {activeTab === 'homeworks' && (
-        <div className="space-y-3">
-          <Button variant="secondary" fullWidth onClick={() => setShowHomeworkModal(true)}>
-            + Новое задание
-          </Button>
-          {pairSpace?.homeworks.length === 0 ? (
-            <EmptyState title="Нет домашних заданий" description="Создайте задание для группы" />
-          ) : (
-            pairSpace?.homeworks.map(h => (
-              <Card key={h.id} padding="sm">
-                <div>
-                  <h3 className="font-semibold text-slate-900">{h.title}</h3>
-                  {h.description && <p className="mt-1 text-sm text-slate-600">{h.description}</p>}
-                  {h.deadline && (
-                    <p className="mt-2 text-xs text-slate-400">
-                      Срок: {new Date(h.deadline).toLocaleDateString('ru-RU')}
-                    </p>
-                  )}
-                </div>
-              </Card>
-            ))
-          )}
-        </div>
-      )}
-
-      {activeTab === 'chat' && (
-        <div className="space-y-3">
-          {pairSpace?.messages.length === 0 ? (
-            <EmptyState title="Нет сообщений" description="Начните обсуждение" />
-          ) : (
-            pairSpace?.messages.map(m => (
-              <Card key={m.id} padding="sm">
-                <div className="flex items-start gap-3">
-                  <Avatar name={m.authorName} size="sm" />
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-slate-900">{m.authorName}</span>
-                      <span className="text-xs text-slate-400">{timeAgo(m.createdAt)}</span>
-                    </div>
-                    <p className="mt-0.5 text-sm text-slate-700">{m.text}</p>
-                  </div>
-                </div>
-              </Card>
-            ))
-          )}
-
-          <div className="flex gap-2">
-            <Input
-              value={newMessage}
-              onChange={e => setNewMessage(e.target.value)}
-              placeholder="Сообщение..."
-              onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
-            />
-            <Button onClick={handleSendMessage}>&#10148;</Button>
-          </div>
-        </div>
-      )}
-
-      <Modal open={showAnnouncementModal} onClose={() => setShowAnnouncementModal(false)} title="Новое объявление">
-        <div className="space-y-4">
-          <textarea
-            value={announcementText}
-            onChange={e => setAnnouncementText(e.target.value)}
-            placeholder="Текст объявления..."
-            rows={4}
-            className="block w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 placeholder-slate-400 transition-colors focus:border-purple-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-purple-100"
-          />
-          <div className="flex gap-2">
-            <Button variant="secondary" fullWidth onClick={() => setShowAnnouncementModal(false)}>Отмена</Button>
-            <Button fullWidth loading={submitting} onClick={handleCreateAnnouncement}>Опубликовать</Button>
-          </div>
-        </div>
-      </Modal>
-
-      <Modal open={showHomeworkModal} onClose={() => setShowHomeworkModal(false)} title="Новое задание">
-        <div className="space-y-4">
-          <Input
-            label="Название"
-            value={homeworkTitle}
-            onChange={e => setHomeworkTitle(e.target.value)}
-            placeholder="Название задания"
-          />
-          <textarea
-            value={homeworkDescription}
-            onChange={e => setHomeworkDescription(e.target.value)}
-            placeholder="Описание (необязательно)"
-            rows={3}
-            className="block w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 placeholder-slate-400 transition-colors focus:border-purple-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-purple-100"
-          />
-          <Input
-            label="Срок сдачи"
-            type="date"
-            value={homeworkDeadline}
-            onChange={e => setHomeworkDeadline(e.target.value)}
-          />
-          <div className="flex gap-2">
-            <Button variant="secondary" fullWidth onClick={() => setShowHomeworkModal(false)}>Отмена</Button>
-            <Button fullWidth loading={submitting} onClick={handleCreateHomework}>Создать</Button>
-          </div>
-        </div>
-      </Modal>
-    </div>
-  );
+  const params = useParams(); const router = useRouter(); const searchParams = useSearchParams(); const lessonId = params.lessonId as string;
+  const [activeTab, setActiveTab] = useState(searchParams.get('compose') ? 'homeworks' : 'overview'); const [pairSpace, setPairSpace] = useState<PairSpace | null>(null); const [lesson, setLesson] = useState<Lesson | null>(null); const [loading, setLoading] = useState(true); const [error, setError] = useState(''); const [success, setSuccess] = useState(''); const [submitting, setSubmitting] = useState(false); const [modal, setModal] = useState<'announcement' | 'homework' | 'file' | null>(searchParams.get('compose') === 'homework' ? 'homework' : null);
+  const [announcementText, setAnnouncementText] = useState(''); const [homeworkTitle, setHomeworkTitle] = useState(''); const [homeworkDescription, setHomeworkDescription] = useState(''); const [homeworkDeadline, setHomeworkDeadline] = useState(''); const [file, setFile] = useState({ fileUrl: '', fileName: '', fileType: 'pdf', size: '0' }); const [newMessage, setNewMessage] = useState('');
+  const load = () => { setLoading(true); setError(''); Promise.all([apiFetch<PairSpace>(`/pair-spaces/${lessonId}`), apiFetch<Lesson>(`/schedule/lessons/${lessonId}`)]).then(([space, currentLesson]) => { setPairSpace(space); setLesson(currentLesson); }).catch((err) => setError(err instanceof Error ? err.message : 'Не удалось открыть пространство пары.')).finally(() => setLoading(false)); };
+  useEffect(() => { load(); }, [lessonId]);
+  const run = async <T,>(action: () => Promise<T>, message: string, update: (value: T) => void) => { setSubmitting(true); setError(''); try { const value = await action(); update(value); setModal(null); setSuccess(message); } catch (err) { setError(err instanceof Error ? err.message : 'Не удалось выполнить действие.'); } finally { setSubmitting(false); } };
+  const sendMessage = () => { if (!newMessage.trim()) return; void run(() => apiFetch<Message>(`/pair-spaces/${lessonId}/messages`, { method: 'POST', body: JSON.stringify({ text: newMessage }) }), 'Сообщение отправлено.', (message) => { setPairSpace((current) => current ? { ...current, messages: [...current.messages, message] } : current); setNewMessage(''); }); };
+  if (loading) return <div className="mx-auto max-w-[1200px] space-y-6"><Skeleton className="h-32" /><Skeleton className="h-12" /><Skeleton className="h-[420px]" /></div>;
+  if (error && !pairSpace) return <div className="mx-auto max-w-[1200px]"><RequestState title="Не удалось открыть пространство пары" description={error} onRetry={load} /></div>;
+  if (!pairSpace || !lesson) return <div className="mx-auto max-w-[1200px]"><EmptyState title="Пространство пары недоступно" description="Для этого занятия пока не создан рабочий контекст." /></div>;
+  const tabs = [{ id: 'overview', label: 'Обзор' }, { id: 'materials', label: 'Материалы', count: pairSpace.files?.length || 0 }, { id: 'homeworks', label: 'Задания', count: pairSpace.homeworks.length }, { id: 'discussion', label: 'Обсуждение', count: pairSpace.messages.length }];
+  const action = (kind: 'announcement' | 'homework' | 'file') => { setSuccess(''); setModal(kind); };
+  return <div className="mx-auto max-w-[1200px] space-y-6"><button onClick={() => router.back()} className="inline-flex min-h-10 items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-900"><Icon name="chevron-left" size={16} />Назад</button>
+    <Card className="px-5 py-5"><div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between"><div><div className="flex flex-wrap items-center gap-2"><h1 className="text-2xl font-bold text-slate-900">{lesson.subject}</h1><Badge variant="sky">Рабочее пространство</Badge></div><div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-500"><span className="font-semibold text-slate-800">{lesson.startTime}–{lesson.endTime}</span><span>{lesson.groupName || 'Группа не указана'}</span><span>Ауд. {lesson.room || '—'}</span><span>{lesson.subjectType || 'Занятие'}</span></div>{lesson.isChanged && <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800">{lesson.changeDescription || 'Расписание пары изменилось'}</p>}</div><div className="flex flex-wrap gap-2"><Button size="sm" onClick={() => action('announcement')}><Icon name="bell" size={15} />Объявление</Button><Button size="sm" variant="secondary" onClick={() => action('homework')}><Icon name="clipboard" size={15} />Новое ДЗ</Button><Button size="sm" variant="secondary" onClick={() => action('file')}><Icon name="upload" size={15} />Материал</Button></div></div></Card>
+    <div className="flex flex-wrap gap-2 rounded-xl border border-slate-200 bg-slate-50 p-2"><Button size="sm" variant="ghost" onClick={() => action('announcement')}>Новое объявление</Button><Button size="sm" variant="ghost" onClick={() => action('homework')}>Новое ДЗ</Button><Button size="sm" variant="ghost" onClick={() => action('file')}>Загрузить материал</Button><Button size="sm" variant="ghost" disabled title="Для опросов пока нет backend-контракта">Опрос</Button><Button size="sm" variant="ghost" disabled title="Для ссылок пока нет backend-контракта">Ссылка</Button><Button size="sm" variant="ghost" onClick={() => setActiveTab('discussion')}>Сообщение группе</Button></div>
+    <TabBar tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />{error && <RequestState title="Не удалось выполнить действие" description={error} onRetry={() => setError('')} />}{success && <p role="status" className="text-sm font-medium text-emerald-700">{success}</p>}
+    {activeTab === 'overview' && <div className="grid gap-4 md:grid-cols-3"><Card padding="sm"><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Что нужно сделать</p><div className="mt-3 space-y-2 text-sm text-slate-700"><p>{pairSpace.homeworks.length ? `${pairSpace.homeworks.length} заданий опубликовано` : 'Добавьте первое задание'}</p><p>{pairSpace.files?.length || 0} материалов доступно группе</p><p>{pairSpace.messages.length ? `${pairSpace.messages.length} сообщений в обсуждении` : 'Обсуждение пока пустое'}</p></div></Card><Card padding="sm"><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Быстрый итог</p><div className="mt-3 space-y-2 text-sm text-slate-700"><p>Объявлений: {pairSpace.announcements.length}</p><p>Заданий: {pairSpace.homeworks.length}</p><p>Материалов: {pairSpace.files?.length || 0}</p></div></Card><Card padding="sm"><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Статус пары</p><p className="mt-3 text-lg font-semibold text-slate-900">{lesson.isChanged ? 'Есть изменение' : 'По расписанию'}</p><p className="mt-1 text-sm text-slate-500">Публикации и сообщения доступны группе сразу после сохранения.</p></Card></div>}
+    {activeTab === 'materials' && (!pairSpace.files?.length ? <EmptyState title="Материалов пока нет" description="Загрузите файл, чтобы группа увидела его в пространстве пары." /> : <div className="grid gap-3 md:grid-cols-2">{pairSpace.files.map((item) => <Card key={item.id} padding="sm"><div className="flex items-center gap-3"><Icon name="file" className="text-sky-700" /><div className="min-w-0 flex-1"><a href={item.fileUrl} target="_blank" rel="noreferrer" className="truncate text-sm font-semibold text-slate-900 hover:text-sky-700">{item.fileName}</a><p className="mt-1 text-xs text-slate-500">{item.fileType.toUpperCase()} · {Math.round(item.size / 1024)} KB</p></div></div></Card>)}</div>)}
+    {activeTab === 'homeworks' && (!pairSpace.homeworks.length ? <EmptyState title="Заданий пока нет" description="Создайте ДЗ прямо из этого пространства." /> : <div className="space-y-3">{pairSpace.homeworks.map((item) => { const status = statusFor(item); return <Card key={item.id} padding="sm"><div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between"><div><h3 className="font-semibold text-slate-900">{item.title}</h3>{item.description && <p className="mt-1 text-sm text-slate-600">{item.description}</p>}{item.deadline && <p className="mt-2 text-xs text-slate-500">Дедлайн: {new Date(item.deadline).toLocaleDateString('ru-RU')}</p>}</div><Badge variant={status.variant}>{status.label}</Badge></div></Card>; })}</div>)}
+    {activeTab === 'discussion' && <div className="space-y-3">{!pairSpace.messages.length ? <EmptyState title="Нет сообщений" description="Начните обсуждение с группой." /> : pairSpace.messages.map((item) => <Card key={item.id} padding="sm"><div className="flex items-start gap-3"><Avatar name={item.authorName || 'Участник'} size="sm" /><div><div className="flex items-center gap-2"><span className="text-sm font-semibold text-slate-900">{item.authorName || 'Участник'}</span><span className="text-xs text-slate-400">{timeAgo(item.createdAt)}</span></div><p className="mt-1 text-sm text-slate-700">{item.text}</p></div></div></Card>)}<div className="flex gap-2"><Input value={newMessage} onChange={(event) => setNewMessage(event.target.value)} placeholder="Сообщение группе" onKeyDown={(event) => event.key === 'Enter' && sendMessage()} /><Button onClick={sendMessage} aria-label="Отправить сообщение"><Icon name="arrow-right" size={16} /></Button></div></div>}
+    <Modal open={modal === 'announcement'} onClose={() => setModal(null)} title="Новое объявление"><div className="space-y-4"><textarea value={announcementText} onChange={(event) => setAnnouncementText(event.target.value)} rows={4} placeholder="Что важно сообщить группе?" className="block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100" /><div className="flex gap-2"><Button variant="secondary" fullWidth onClick={() => setModal(null)}>Отмена</Button><Button fullWidth loading={submitting} onClick={() => { if (!announcementText.trim()) return; void run(() => apiFetch<Announcement>(`/pair-spaces/${lessonId}/announcements`, { method: 'POST', body: JSON.stringify({ text: announcementText }) }), 'Объявление опубликовано.', (item) => { setPairSpace({ ...pairSpace, announcements: [...pairSpace.announcements, item] }); setAnnouncementText(''); }); }}>Опубликовать</Button></div></div></Modal>
+    <Modal open={modal === 'homework'} onClose={() => setModal(null)} title="Новое задание"><div className="space-y-4"><Input label="Название" value={homeworkTitle} onChange={(event) => setHomeworkTitle(event.target.value)} placeholder="Например, практическая работа №3" /><textarea value={homeworkDescription} onChange={(event) => setHomeworkDescription(event.target.value)} rows={3} placeholder="Описание и критерии" className="block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100" /><Input label="Дедлайн" type="date" value={homeworkDeadline} onChange={(event) => setHomeworkDeadline(event.target.value)} /><div className="flex gap-2"><Button variant="secondary" fullWidth onClick={() => setModal(null)}>Отмена</Button><Button fullWidth loading={submitting} onClick={() => { if (!homeworkTitle.trim()) return; void run(() => apiFetch<Homework>(`/pair-spaces/${lessonId}/homeworks`, { method: 'POST', body: JSON.stringify({ title: homeworkTitle, description: homeworkDescription, deadline: homeworkDeadline || undefined }) }), 'Задание опубликовано.', (item) => { setPairSpace({ ...pairSpace, homeworks: [...pairSpace.homeworks, item] }); setHomeworkTitle(''); setHomeworkDescription(''); setHomeworkDeadline(''); }); }}>Опубликовать</Button></div><p className="text-xs text-slate-500">Текущий API публикует задание сразу. Draft/Closed потребуют отдельного backend-контракта.</p></div></Modal>
+    <Modal open={modal === 'file'} onClose={() => setModal(null)} title="Загрузить материал"><div className="space-y-4"><Input label="Название файла" value={file.fileName} onChange={(event) => setFile({ ...file, fileName: event.target.value })} placeholder="lecture-03.pdf" /><Input label="URL файла" value={file.fileUrl} onChange={(event) => setFile({ ...file, fileUrl: event.target.value })} placeholder="https://..." /><div className="grid grid-cols-2 gap-3"><Input label="Тип" value={file.fileType} onChange={(event) => setFile({ ...file, fileType: event.target.value })} /><Input label="Размер, байт" type="number" value={file.size} onChange={(event) => setFile({ ...file, size: event.target.value })} /></div><div className="flex gap-2"><Button variant="secondary" fullWidth onClick={() => setModal(null)}>Отмена</Button><Button fullWidth loading={submitting} onClick={() => { if (!file.fileName.trim() || !file.fileUrl.trim()) return; void run(() => apiFetch<FileItem>(`/pair-spaces/${lessonId}/files`, { method: 'POST', body: JSON.stringify({ ...file, size: Number(file.size) || 0 }) }), 'Материал добавлен.', (item) => { setPairSpace({ ...pairSpace, files: [...(pairSpace.files || []), item] }); setFile({ fileUrl: '', fileName: '', fileType: 'pdf', size: '0' }); }); }}>Добавить</Button></div><p className="text-xs text-slate-500">API ожидает URL уже загруженного файла; multipart-загрузка пока не подключена.</p></div></Modal>
+  </div>;
 }

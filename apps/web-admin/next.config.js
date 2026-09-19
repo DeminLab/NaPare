@@ -2,6 +2,7 @@
 const backendUrl = process.env.BACKEND_URL || 'http://localhost:3000';
 
 const nextConfig = {
+  transpilePackages: ['@napare/ui', '@napare/design-tokens'],
   basePath: '/deanery',
   reactStrictMode: true,
   eslint: {

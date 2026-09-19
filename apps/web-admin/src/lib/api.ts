@@ -15,7 +15,19 @@ export function clearTokens(): void {
   window.localStorage.removeItem('refreshToken');
 }
 
+let refreshPromise: Promise<boolean> | null = null;
+
 async function tryRefresh(): Promise<boolean> {
+  if (refreshPromise) return refreshPromise;
+  refreshPromise = refreshTokens();
+  try {
+    return await refreshPromise;
+  } finally {
+    refreshPromise = null;
+  }
+}
+
+async function refreshTokens(): Promise<boolean> {
   const refreshToken = window.localStorage.getItem('refreshToken');
   if (!refreshToken) return false;
   try {

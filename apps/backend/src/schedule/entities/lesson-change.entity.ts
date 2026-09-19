@@ -37,7 +37,13 @@ export class LessonChange {
   newValues: JsonObject;
 
   @Column({ type: 'uuid', nullable: true })
-  changedBy: string;
+  changedBy: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  reason: string | null;
+
+  @Column({ nullable: true })
+  source: string | null;
 
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   changedAt: Date;

@@ -5,6 +5,7 @@ import { Lesson } from './entities/lesson.entity';
 import { LessonChange } from './entities/lesson-change.entity';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { TenantContext } from '../common/tenant/tenant-context';
+import { DataSource } from 'typeorm';
 
 describe('ScheduleService', () => {
   let service: ScheduleService;
@@ -31,6 +32,7 @@ describe('ScheduleService', () => {
         { provide: getRepositoryToken(LessonChange), useValue: mockChangeRepo },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
         { provide: TenantContext, useValue: { assertAccess: jest.fn(), getUser: jest.fn() } },
+        { provide: DataSource, useValue: { transaction: jest.fn() } },
       ],
     }).compile();
 

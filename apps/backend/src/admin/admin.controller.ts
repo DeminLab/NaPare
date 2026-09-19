@@ -23,13 +23,18 @@ import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { UserRole } from '../auth/interfaces/user-role';
 import { PaginatedResponseDto, PaginationQueryDto } from '../common/dto/pagination-query.dto';
+import { UpdateConnectorDto } from './dto/update-connector.dto';
+import { EventBusService } from '../events/event-bus.service';
 
 @ApiTags('admin')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('admin')
 export class AdminController {
-  constructor(private readonly adminService: AdminService) {}
+  constructor(
+    private readonly adminService: AdminService,
+    private readonly eventBus: EventBusService,
+  ) {}
 
   @Get('users')
   @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
@@ -76,7 +81,16 @@ export class AdminController {
   @ApiResponse({ status: 200, description: 'Синхронизация запущена' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async syncSchedule(@Request() req) {
-    return { status: 'synced', timestamp: new Date().toISOString() };
+    const result = { status: 'synced', timestamp: new Date().toISOString() };
+    await this.eventBus.publish({
+      type: 'sync.completed',
+      universityId: req.user.universityId,
+      actor: { id: req.user.id, type: 'user', role: req.user.role },
+      target: { type: 'schedule', id: req.user.universityId },
+      payload: result,
+      priority: 'normal',
+    });
+    return result;
   }
 
   @Get('schedule/sync-status')
@@ -196,5 +210,29 @@ export class AdminController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getStats(@Request() req) {
     return this.adminService.getUniversityStats(req.user.universityId);
+  }
+
+  @Get('audit-log')
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @ApiOperation({ summary: 'Получить журнал критических изменений' })
+  @ApiOkResponse({ description: 'Журнал изменений получен', type: PaginatedResponseDto })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async getAuditLog(@Request() req, @Query() pagination: PaginationQueryDto) {
+    return this.adminService.getAuditLog(req.user.universityId, pagination);
+  }
+
+  @Get('connectors')
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @ApiOperation({ summary: 'Получить коннекторы университета' })
+  @ApiOkResponse({ description: 'Коннекторы получены', type: PaginatedResponseDto })
+  async getConnectors(@Query() pagination: PaginationQueryDto) {
+    return this.adminService.getConnectors(pagination);
+  }
+
+  @Patch('connectors/:id')
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @ApiOperation({ summary: 'Обновить коннектор университета' })
+  async updateConnector(@Param('id') id: string, @Body() updateConnectorDto: UpdateConnectorDto) {
+    return this.adminService.updateConnector(id, updateConnectorDto);
   }
 }

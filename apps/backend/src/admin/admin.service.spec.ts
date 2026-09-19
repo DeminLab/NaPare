@@ -9,6 +9,7 @@ import { Group } from '../users/entities/group.entity';
 import { ForbiddenException } from '@nestjs/common';
 import { UserRole } from '../auth/interfaces/user-role';
 import { TenantContext } from '../common/tenant/tenant-context';
+import { AuditLog } from '../common/entities/audit-log.entity';
 
 describe('AdminService', () => {
   let service: AdminService;
@@ -40,6 +41,7 @@ describe('AdminService', () => {
         { provide: getRepositoryToken(University), useValue: mockRepo({ findOne: { id: 'uni-1', name: 'Test Uni' } }) },
         { provide: getRepositoryToken(Faculty), useValue: mockRepo() },
         { provide: getRepositoryToken(Group), useValue: mockRepo() },
+        { provide: getRepositoryToken(AuditLog), useValue: { ...mockRepo(), findAndCount: jest.fn().mockResolvedValue([[], 0]) } },
         { provide: TenantContext, useValue: { assertAccess: jest.fn(), getUser: jest.fn() } },
       ],
     }).compile();

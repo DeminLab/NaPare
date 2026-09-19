@@ -10,12 +10,15 @@ import { ScheduleModule } from '../schedule/schedule.module';
 import { University } from '../users/entities/university.entity';
 import { Faculty } from '../users/entities/faculty.entity';
 import { Group } from '../users/entities/group.entity';
+import { AuditLog } from '../common/entities/audit-log.entity';
+import { EventsModule } from '../events/events.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([University, Faculty, Group]),
+    TypeOrmModule.forFeature([University, Faculty, Group, AuditLog]),
     UsersModule,
     ScheduleModule,
+    EventsModule,
   ],
   providers: [AdminService, SuperadminService],
   controllers: [AdminController, SuperadminController],

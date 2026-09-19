@@ -8,6 +8,12 @@ import {
 } from 'typeorm';
 import { JsonObject } from '../../common/types/json-value.type';
 
+export interface NotificationAction {
+  label: string;
+  href: string;
+  method?: 'GET' | 'POST' | 'PATCH';
+}
+
 export const NOTIFICATION_TYPES = [
   'schedule_change',
   'new_announcement',
@@ -30,6 +36,7 @@ export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 @Index('IDX_notifications_user_university_unread', ['userId', 'universityId'], {
   where: '"isRead" = false',
 })
+@Index('UQ_notifications_event_user', ['eventId', 'userId'], { unique: true })
 export class Notification {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -64,6 +71,18 @@ export class Notification {
 
   @Column({ type: 'jsonb', nullable: true })
   data: JsonObject;
+
+  @Column({ type: 'varchar', default: 'all' })
+  category: 'all' | 'important' | 'schedule' | 'homework' | 'teachers' | 'system';
+
+  @Column({ type: 'varchar', default: 'normal' })
+  priority: 'low' | 'normal' | 'high' | 'urgent';
+
+  @Column({ type: 'jsonb', nullable: true })
+  actions: NotificationAction[] | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  eventId: string | null;
 
   @CreateDateColumn()
   createdAt: Date;

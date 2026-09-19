@@ -1,3 +1,5 @@
+@import '@napare/design-tokens/styles.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -95,6 +97,12 @@ body {
 @keyframes slideInFromRight {
   from { opacity: 0; transform: translateX(100%); }
   to { opacity: 1; transform: translateX(0); }
+}
+
+:root {
+  --color-brand: #4f46e5;
+  --color-brand-strong: #4338ca;
+  --color-brand-soft: #eef2ff;
 }
 
 html, body { min-width: 320px; overflow-x: hidden; }

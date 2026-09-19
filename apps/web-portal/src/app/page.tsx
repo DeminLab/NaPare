@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Icon } from '@napare/ui';
 
 export default function HomePage() {
   return (
@@ -11,7 +12,7 @@ export default function HomePage() {
         <p className="eyebrow">Цифровая среда университета</p>
         <h1>Учебный день —<br /><em>в одном месте.</em></h1>
         <p className="lead">Расписание, занятия, посещаемость и объявления для студентов, преподавателей и деканата.</p>
-        <Link href="/login" className="primary-action">Войти в НаПаре <span aria-hidden="true">→</span></Link>
+        <Link href="/login" className="primary-action">Войти в НаПаре <Icon name="arrow-right" size={17} /></Link>
       </section>
       <section className="role-grid" aria-label="Возможности НаПаре">
         <article><h2>Студентам</h2><p>Актуальное расписание, пространство пары и важные изменения.</p></article>

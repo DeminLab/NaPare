@@ -9,6 +9,8 @@ import { DiscussionMessage } from './entities/discussion-message.entity';
 import { HomeworkSubmission } from './entities/homework-submission.entity';
 import { PairSpaceService } from './pair-space.service';
 import { PairSpaceController } from './pair-space.controller';
+import { EventsModule } from '../events/events.module';
+import { Lesson } from '../schedule/entities/lesson.entity';
 
 @Module({
   imports: [
@@ -19,7 +21,9 @@ import { PairSpaceController } from './pair-space.controller';
       FileAttachment,
       DiscussionMessage,
       HomeworkSubmission,
+      Lesson,
     ]),
+    EventsModule,
   ],
   providers: [PairSpaceService],
   controllers: [PairSpaceController],

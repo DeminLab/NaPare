@@ -11,4 +11,18 @@ export type {
   Absence,
   Notification,
   MyDayResponse,
+  EventEnvelope,
+  NapareEventType,
+  NotificationPreference,
+  InboxItem,
+  AcademicPage,
+  Course,
+  LessonSeries,
+  LessonOccurrence,
+  CourseSpace,
+  LessonSpace,
+  AcademicEvent,
+  ScheduleChange,
+  AcademicEventType,
 } from './types';
+export * from './offline-event-store';

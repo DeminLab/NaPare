@@ -5,4 +5,5 @@ export interface AuthenticatedUser {
   email: string;
   role: UserRole;
   universityId: string;
+  groupId?: string | null;
 }

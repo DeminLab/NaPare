@@ -69,6 +69,22 @@ export class UsersService {
     return toPaginatedResponse(data, total, pagination);
   }
 
+  async findActiveByUniversityId(universityId: string): Promise<User[]> {
+    this.tenantContext.assertAccess(universityId);
+    return this.usersRepository.find({
+      where: { universityId, isActive: true },
+      order: { lastName: 'ASC', firstName: 'ASC' },
+    });
+  }
+
+  async findActiveByGroupId(universityId: string, groupId: string): Promise<User[]> {
+    this.tenantContext.assertAccess(universityId);
+    return this.usersRepository.find({
+      where: { universityId, groupId, isActive: true },
+      order: { lastName: 'ASC', firstName: 'ASC' },
+    });
+  }
+
   async update(id: string, updateData: Partial<User>): Promise<User> {
     const user = await this.findById(id);
 

@@ -19,6 +19,16 @@ import { AbsenceConfirmation } from '../absences/entities/absence-confirmation.e
 import { Notification } from '../notifications/entities/notification.entity';
 import { DeviceToken } from '../notifications/entities/device-token.entity';
 import { AuditLog } from '../common/entities/audit-log.entity';
+import { EventRecord } from '../events/entities/event-record.entity';
+import { NotificationPreference } from '../notifications/entities/notification-preference.entity';
+import { InboxItem } from '../notifications/entities/inbox-item.entity';
+import { Course } from '../academic/entities/course.entity';
+import { LessonSeries } from '../academic/entities/lesson-series.entity';
+import { LessonOccurrence } from '../academic/entities/lesson-occurrence.entity';
+import { AcademicEvent } from '../academic/entities/academic-event.entity';
+import { CourseSpace } from '../academic/entities/course-space.entity';
+import { LessonSpace } from '../academic/entities/lesson-space.entity';
+import { ScheduleChange } from '../academic/entities/schedule-change.entity';
 
 const entities = [
   University,
@@ -39,6 +49,16 @@ const entities = [
   Notification,
   DeviceToken,
   AuditLog,
+  EventRecord,
+  NotificationPreference,
+  InboxItem,
+  Course,
+  LessonSeries,
+  LessonOccurrence,
+  AcademicEvent,
+  CourseSpace,
+  LessonSpace,
+  ScheduleChange,
 ];
 
 @Module({

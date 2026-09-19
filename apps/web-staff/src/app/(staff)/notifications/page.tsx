@@ -5,15 +5,14 @@ import { useEffect, useMemo, useState } from 'react';
 import { apiFetchList, markAllRead, markNotificationRead } from '@/lib/api';
 import { Badge, Button, Card, EmptyState, RequestState, Skeleton } from '@/components/ui';
 
-interface Notification { id: string; title: string; body: string; type: string; isRead: boolean; createdAt: string; deepLink?: string; data?: Record<string, unknown>; }
-type Filter = 'all' | 'students' | 'groups' | 'schedule' | 'messages' | 'system';
+interface Notification { id: string; title: string; body: string; type: string; category?: 'all' | 'important' | 'schedule' | 'homework' | 'teachers' | 'system'; isRead: boolean; createdAt: string; deepLink?: string; actions?: Array<{ label: string; href: string }>; data?: Record<string, unknown>; }
+type Filter = 'all' | 'important' | 'schedule' | 'homework' | 'teachers' | 'system';
 
-const filters: Array<{ id: Filter; label: string }> = [{ id: 'all', label: 'Все' }, { id: 'students', label: 'Студенты' }, { id: 'groups', label: 'Группы' }, { id: 'schedule', label: 'Расписание' }, { id: 'messages', label: 'Сообщения' }, { id: 'system', label: 'Система' }];
-const filterTypes: Record<Exclude<Filter, 'all'>, string[]> = { students: ['new_absence', 'absence_decision'], groups: ['new_announcement', 'new_homework', 'new_file'], schedule: ['schedule_change'], messages: ['message', 'chat'], system: ['system', 'deadline', 'other'] };
+const filters: Array<{ id: Filter; label: string }> = [{ id: 'all', label: 'Все' }, { id: 'important', label: 'Важное' }, { id: 'schedule', label: 'Расписание' }, { id: 'homework', label: 'Задания' }, { id: 'teachers', label: 'Преподаватели' }, { id: 'system', label: 'Система' }];
 
 function timeAgo(value: string) { const seconds = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 1000)); if (seconds < 60) return 'только что'; if (seconds < 3600) return `${Math.floor(seconds / 60)} мин назад`; if (seconds < 86400) return `${Math.floor(seconds / 3600)} ч назад`; return new Date(value).toLocaleDateString('ru-RU'); }
 function actorName(notification: Notification) { const data = notification.data || {}; return String(data.studentName || data.actorName || data.authorName || 'НаПаре'); }
-function actionFor(notification: Notification) { if (notification.type === 'new_absence' || notification.type === 'absence_decision') return { label: 'Открыть посещаемость', href: notification.deepLink || '/attendance' }; if (notification.type === 'schedule_change') return { label: 'Открыть расписание', href: notification.deepLink || '/week' }; return notification.deepLink ? { label: 'Открыть', href: notification.deepLink } : null; }
+function actionFor(notification: Notification) { return notification.actions?.[0] || (notification.deepLink ? { label: 'Открыть', href: notification.deepLink } : null); }
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -24,7 +23,7 @@ export default function NotificationsPage() {
   const load = () => { setLoading(true); setError(''); apiFetchList<Notification>('/notifications').then(setNotifications).catch((err) => setError(err instanceof Error ? err.message : 'Не удалось загрузить уведомления.')).finally(() => setLoading(false)); };
   useEffect(() => { load(); }, []);
   const unread = notifications.filter((item) => !item.isRead).length;
-  const visible = useMemo(() => filter === 'all' ? notifications : notifications.filter((item) => filterTypes[filter].includes(item.type)), [filter, notifications]);
+  const visible = useMemo(() => filter === 'all' ? notifications : notifications.filter((item) => item.category === filter), [filter, notifications]);
   const markRead = async (id: string) => { try { await markNotificationRead(id); setNotifications((items) => items.map((item) => item.id === id ? { ...item, isRead: true } : item)); } catch { /* keep the notification unread when API is unavailable */ } };
   const markEverythingRead = async () => { try { await markAllRead(); setNotifications((items) => items.map((item) => ({ ...item, isRead: true }))); } catch { setError('Не удалось отметить уведомления прочитанными.'); } };
 

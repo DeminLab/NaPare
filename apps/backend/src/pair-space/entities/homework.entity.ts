@@ -45,6 +45,18 @@ export class Homework {
   @Column({ default: false })
   isCompleted: boolean;
 
+  @Column({ nullable: true })
+  source: string | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  lastSyncedAt: Date | null;
+
+  @Column({ nullable: true })
+  sourceVersion: string | null;
+
+  @Column({ type: 'varchar', default: 'unknown' })
+  syncStatus: string;
+
   @CreateDateColumn()
   createdAt: Date;
 

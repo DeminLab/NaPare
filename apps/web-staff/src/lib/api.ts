@@ -20,6 +20,8 @@ export function clearTokens(): void {
   window.localStorage.removeItem('refreshToken');
 }
 
+let refreshPromise: Promise<boolean> | null = null;
+
 export function isLoggedIn(): boolean {
   return !!getToken();
 }
@@ -99,6 +101,16 @@ async function toApiError(response: Response): Promise<Error> {
 }
 
 async function tryRefresh(): Promise<boolean> {
+  if (refreshPromise) return refreshPromise;
+  refreshPromise = refreshTokens();
+  try {
+    return await refreshPromise;
+  } finally {
+    refreshPromise = null;
+  }
+}
+
+async function refreshTokens(): Promise<boolean> {
   const refreshToken = getRefreshToken();
   if (!refreshToken) return false;
   try {

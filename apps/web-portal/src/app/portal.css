@@ -1,10 +1,11 @@
-:root { color: #172033; background: #fff; font-family: Arial, Helvetica, sans-serif; }
+@import '@napare/design-tokens/styles.css';
+:root { color: var(--color-text); background: var(--color-surface); }
 * { box-sizing: border-box; }
 body { margin: 0; }
 a { color: inherit; text-decoration: none; }
 .portal-header { align-items: center; display: flex; justify-content: space-between; margin: 0 auto; max-width: 1160px; padding: 24px; }
 .brand { align-items: center; display: inline-flex; font-size: 18px; font-weight: 750; gap: 10px; letter-spacing: -.03em; }
-.brand span { align-items: center; background: #4f46e5; border-radius: 10px; color: white; display: inline-flex; font-size: 14px; height: 34px; justify-content: center; width: 34px; }
+.brand span { align-items: center; background: var(--color-brand); border-radius: var(--radius-md); color: white; display: inline-flex; font-size: 14px; height: 34px; justify-content: center; width: 34px; }
 .text-link { color: #3f4860; font-size: 14px; font-weight: 650; padding: 10px 14px; }
 .hero { background: linear-gradient(145deg, #eef2ff, #fff 68%); padding: 112px 24px 136px; text-align: center; }
 .eyebrow { color: #4f46e5; font-size: 14px; font-weight: 700; letter-spacing: .03em; margin: 0 0 18px; }

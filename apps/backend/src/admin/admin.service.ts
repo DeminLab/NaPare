@@ -1,6 +1,6 @@
 import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 
 import { UsersService } from '../users/users.service';
 import { ScheduleService } from '../schedule/schedule.service';
@@ -17,6 +17,9 @@ import { UpdateFacultyDto } from './dto/update-faculty.dto';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
 import { UpdateUniversityDto } from './dto/update-university.dto';
+import { AuditLog } from '../common/entities/audit-log.entity';
+import { ConnectorResponseDto } from './dto/connector-response.dto';
+import { UpdateConnectorDto } from './dto/update-connector.dto';
 import {
   PaginatedResponse,
   PaginationQueryDto,
@@ -41,6 +44,11 @@ const ROLE_HIERARCHY: Record<UserRole, number> = {
   [UserRole.SUPERADMIN]: 7,
 };
 
+const UNIVERSITY_CONNECTORS: ConnectorResponseDto[] = [
+  { id: 'sibit', name: 'SIBIT', type: 'api', status: 'active' },
+  { id: 'excel', name: 'Excel Import', type: 'file', status: 'active' },
+];
+
 @Injectable()
 export class AdminService {
   constructor(
@@ -52,6 +60,8 @@ export class AdminService {
     private readonly facultyRepository: Repository<Faculty>,
     @InjectRepository(Group)
     private readonly groupRepository: Repository<Group>,
+    @InjectRepository(AuditLog)
+    private readonly auditLogRepository: Repository<AuditLog>,
     private readonly tenantContext: TenantContext,
   ) {}
 
@@ -212,6 +222,35 @@ export class AdminService {
     const requesterLevel = ROLE_HIERARCHY[requesterRole] ?? -1;
     const targetLevel = ROLE_HIERARCHY[targetRole] ?? -1;
     return requesterLevel > targetLevel;
+  }
+
+  async getAuditLog(
+    universityId: string,
+    pagination: PaginationQueryDto,
+  ): Promise<PaginatedResponse<AuditLog & { source: string }>> {
+    this.tenantContext.assertAccess(universityId);
+    const universityUsers = await this.usersService.findByUniversityId(universityId, { page: 1, limit: 100 }, Object.values(UserRole));
+    const userIds = universityUsers.data.map((user) => user.id);
+    if (!userIds.length) return toPaginatedResponse([], 0, pagination);
+    const [data, total] = await this.auditLogRepository.findAndCount({
+      where: { userId: In(userIds) },
+      order: { createdAt: 'DESC' },
+      skip: (pagination.page - 1) * pagination.limit,
+      take: pagination.limit,
+    });
+    return toPaginatedResponse(data.map((item) => ({ ...item, source: item.ip ? 'user action' : 'system' })), total, pagination);
+  }
+
+  async getConnectors(pagination: PaginationQueryDto): Promise<PaginatedResponse<ConnectorResponseDto>> {
+    const start = (pagination.page - 1) * pagination.limit;
+    return toPaginatedResponse(UNIVERSITY_CONNECTORS.slice(start, start + pagination.limit), UNIVERSITY_CONNECTORS.length, pagination);
+  }
+
+  async updateConnector(id: string, updateData: UpdateConnectorDto): Promise<ConnectorResponseDto & { updatedAt: string }> {
+    const connector = UNIVERSITY_CONNECTORS.find((item) => item.id === id);
+    if (!connector) throw new NotFoundException(`Connector ${id} not found`);
+    Object.assign(connector, updateData);
+    return { ...connector, updatedAt: new Date().toISOString() };
   }
 
   private getVisibleUserRoles(requesterRole: UserRole): UserRole[] {

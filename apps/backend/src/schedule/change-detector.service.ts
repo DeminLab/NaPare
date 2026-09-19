@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -7,6 +7,7 @@ import { Lesson } from './entities/lesson.entity';
 import { LessonChange } from './entities/lesson-change.entity';
 import { CreateLessonDto } from './dto/create-lesson.dto';
 import { JsonObject } from '../common/types/json-value.type';
+import { EventBusService } from '../events/event-bus.service';
 
 @Injectable()
 export class ChangeDetectorService {
@@ -18,6 +19,7 @@ export class ChangeDetectorService {
     @InjectRepository(LessonChange)
     private readonly lessonChangeRepository: Repository<LessonChange>,
     private readonly eventEmitter: EventEmitter2,
+    @Optional() private readonly eventBus?: EventBusService,
   ) {}
 
   async detectChanges(
@@ -45,6 +47,8 @@ export class ChangeDetectorService {
             changeType: diff.changeType,
             oldValues: diff.oldValues,
             newValues: diff.newValues,
+            reason: diff.changeDescription,
+            source: newLesson.source ?? 'sync',
           });
 
           changes.push(change);
@@ -54,6 +58,8 @@ export class ChangeDetectorService {
             ...newLesson,
             isChanged: true,
             changeDescription: diff.changeDescription,
+            lastSyncedAt: new Date(),
+            syncStatus: 'synced',
           });
 
           // Emit change event
@@ -63,6 +69,27 @@ export class ChangeDetectorService {
             oldValue: diff.oldValues,
             newValue: diff.newValues,
             changeDescription: diff.changeDescription,
+          });
+
+          const type = diff.changeType === 'room_changed'
+            ? 'room.changed'
+            : diff.changeType === 'moved'
+              ? 'lesson.rescheduled'
+              : 'lesson.changed';
+          await this.eventBus?.publish({
+            type,
+            universityId,
+            actor: { type: 'system' },
+            target: { type: 'lesson', id: existingLesson.id },
+            payload: {
+              oldValue: diff.oldValues,
+              newValue: diff.newValues,
+              groupId: existingLesson.groupId,
+              teacherId: existingLesson.teacherId,
+              changeDescription: diff.changeDescription,
+              deepLink: `/schedule?lessonId=${existingLesson.id}`,
+            },
+            priority: 'high',
           });
         }
       }

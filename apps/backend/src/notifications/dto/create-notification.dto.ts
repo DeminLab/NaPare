@@ -1,7 +1,7 @@
 import { IsString, IsOptional, IsEnum, IsUUID } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { JsonObject } from '../../common/types/json-value.type';
-import { NOTIFICATION_TYPES, NotificationType } from '../entities/notification.entity';
+import { NOTIFICATION_TYPES, NotificationAction, NotificationType } from '../entities/notification.entity';
 
 export class CreateNotificationDto {
   @ApiProperty()
@@ -33,4 +33,8 @@ export class CreateNotificationDto {
   @IsOptional()
   @IsString()
   deepLink?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  actions?: NotificationAction[];
 }

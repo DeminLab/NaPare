@@ -38,6 +38,15 @@ export class Lesson {
   groupId: string;
 
   @Column({ type: 'uuid', nullable: true })
+  courseId: string | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  seriesId: string | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  occurrenceId: string | null;
+
+  @Column({ type: 'uuid', nullable: true })
   teacherId: string;
 
   @Column()
@@ -106,6 +115,15 @@ export class Lesson {
 
   @Column({ nullable: true })
   externalId: string;
+
+  @Column({ type: 'timestamp', nullable: true })
+  lastSyncedAt: Date | null;
+
+  @Column({ nullable: true })
+  sourceVersion: string | null;
+
+  @Column({ type: 'varchar', default: 'unknown' })
+  syncStatus: string;
 
   @CreateDateColumn()
   createdAt: Date;

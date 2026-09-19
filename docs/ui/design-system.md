@@ -1,131 +1,44 @@
-# Дизайн-система НаПаре
+# NaPare Design System
 
-## 1. Принципы
+Единый foundation для role workspaces находится в packages/design-tokens и packages/ui. Student app сохраняет собственный compatibility boundary согласно AGENTS.md и не входит в активный redesign.
 
-- **Ясность** — студент должен понимать, что происходит, за 2 секунды
-- **Скорость** — минимум кликов до полезного действия
-- **Спокойствие** — учебный продукт, не развлекательный
-- **Доступность** — контраст, размеры тач-зон, поддержка тёмной темы
+## Архитектура
 
-## 2. Цвета
+- @napare/design-tokens — CSS custom properties, Tailwind preset и типизированная карта tokens.
+- @napare/ui — shared React primitives: Button, Badge, Card, Input, Modal, ConfirmDialog, EmptyState, RequestState, NetworkStatus, Skeleton, StatCard, TabBar, SearchInput, Avatar, ToastProvider/useToast и единый SVG Icon registry.
+- apps/web-{staff,admin,developer}/src/components/ui — только compatibility re-exports; бизнес-код и существующие page imports не меняются.
+- apps/web-{staff,admin,developer}/src/app/globals.css — импортирует shared CSS и оставляет только role accent/layout adaptations.
+- Tailwind configs используют общий preset; локальные color/radius/shadow copies удалены.
 
-### Светлая тема
-| Роль | Hex | Использование |
-|------|-----|---------------|
-| Primary | `#1E3A5F` | Основные кнопки, акценты, шапка |
-| Primary Light | `#2E5A8F` | Hover / pressed |
-| Accent | `#00B4A6` | Успех, «Сдано», позитивные действия |
-| Danger | `#E53935` | Ошибки, просроченные дедлайны |
-| Warning | `#FB8C00` | Изменения расписания, горящие дедлайны |
-| Background | `#F7F9FC` | Фон приложения |
-| Surface | `#FFFFFF` | Карточки |
-| Text Primary | `#1A1A2E` | Основной текст |
-| Text Secondary | `#6B7280` | Вторичный текст |
-| Border | `#E5E7EB` | Разделители |
+## Token contract
 
-### Тёмная тема
-| Роль | Hex |
-|------|-----|
-| Primary | `#4A7AB5` |
-| Accent | `#26D0C3` |
-| Background | `#0F1419` |
-| Surface | `#1A2332` |
-| Text Primary | `#F1F5F9` |
-| Text Secondary | `#94A3B8` |
-| Border | `#2D3748` |
+| Слой | Канонические значения |
+| --- | --- |
+| Surfaces | --color-background, --color-surface, --color-surface-secondary, --color-surface-tertiary |
+| Content | --color-text, --color-text-secondary, --color-text-muted |
+| Brand/semantic | --color-brand*, --color-success*, --color-warning*, --color-danger*, --color-info* |
+| Shape/elevation | --radius-sm/md/lg/xl, --shadow-sm/md/lg |
+| Motion | --motion-fast/normal/slow, --motion-ease; all animated foundation styles respect prefers-reduced-motion |
+| Layering | --z-base/sticky/overlay/modal/toast |
 
-### Статусы отсутствий
-- Учусь → зелёный
-- Болен → оранжевый / красный
-- Работа → синий
-- Другой город → фиолетовый
-- Другая причина → серый
+Base interaction height is 44px. Focus is :focus-visible with semantic brand ring. Inputs expose aria-invalid and aria-describedby for errors. Loading, empty, error, forbidden and offline states use icons, not text glyphs.
 
-## 3. Типографика
+## Role accents
 
-| Стиль | Размер / Вес | Использование |
-|-------|--------------|---------------|
-| H1 | 28 / Bold | Заголовки экранов |
-| H2 | 22 / SemiBold | Секции |
-| H3 | 18 / SemiBold | Карточки, названия пар |
-| Body | 16 / Regular | Основной текст |
-| Body Small | 14 / Regular | Вторичный текст, мета |
-| Caption | 12 / Medium | Бейджи, время, подписи |
-| Button | 16 / SemiBold | Текст кнопок |
+Staff uses restrained info blue, admin uses indigo, developer uses technical blue. These accents only set role emphasis; surfaces, typography, geometry, states and component behavior remain shared.
 
-Шрифт: **Inter** (web) / системный (SF Pro / Roboto на mobile).
+## Migration rule
 
-## 4. Отступы и сетка
+New UI imports from @napare/ui. Do not add role-local primitives or duplicate token values. Navigation/header/logo files remain protected by repository policy and are outside this migration boundary.
 
-- Базовый шаг: **4 px**
-- Основные отступы: 8 / 12 / 16 / 20 / 24 / 32
-- Горизонтальные отступы экрана: **16–20 px**
-- Радиус карточек: **12–16 px**
-- Радиус кнопок: **10–12 px**
-- Минимальная высота тач-зоны: **44 px**
+## Workspace shell
 
-## 5. Компоненты
+\`WorkspaceShell\` in \`@napare/ui\` is the shared application frame for staff, admin and developer workspaces:
 
-### Кнопки
-- Primary (заливка Primary)
-- Secondary (обводка)
-- Ghost / Text
-- Danger
-- Размеры: Large (высота 48), Medium (40), Small (32)
+- grouped desktop sidebar with active state, collapsed mode, tooltips and badges;
+- mobile drawer plus five-item bottom navigation with safe-area padding;
+- top bar with role context, breadcrumbs, status, notifications and profile;
+- \`Ctrl/Cmd+K\` command palette with fuzzy matching, recent commands, keyboard navigation, Escape and focus looping;
+- navigation commands, contextual actions and entity commands are passed as data, so role policy stays in the app while presentation stays shared.
 
-### Карточки
-- Фон Surface
-- Тень: `0 1px 3px rgba(0,0,0,0.08)`
-- Padding: 16
-- Радиус: 12–16
-
-### Чипы / Бейджи
-- Статус пары («Изменено»)
-- Статус ДЗ («Не сдано» / «Сдано»)
-- Статус отсутствия
-
-### Инпуты
-- Высота 48
-- Border + focus ring Primary
-- Ошибка — красная обводка + текст под полем
-
-### Bottom Navigation
-- 4–5 пунктов
-- Активный пункт — Primary + иконка заполненная
-- Бейдж на иконке уведомлений
-
-### Empty States
-- Иллюстрация / иконка
-- Заголовок
-- Короткое описание
-- (опционально) кнопка действия
-
-## 6. Иконки
-
-- Стиль: outline (неактивные) / filled (активные)
-- Размер в навигации: 24
-- Размер в списках: 20
-- Рекомендуемый набор: Lucide / Heroicons / Phosphor
-
-## 7. Анимации
-
-- Переходы экранов: 200–250 ms ease
-- Появление карточек: лёгкий fade + slide up
-- Pull-to-refresh — стандартный
-- Не злоупотреблять сложными анимациями
-
-## 8. Тёмная тема
-
-- Обязательна
-- Переключатель в профиле: Светлая / Тёмная / Системная
-- Все цвета через токены (не хардкод)
-
-## 9. Адаптивность (Web)
-
-| Breakpoint | Ширина |
-|------------|--------|
-| Mobile | < 768 |
-| Tablet | 768–1023 |
-| Desktop | ≥ 1024 |
-
-На desktop админка и кураторский дашборд — полноценные таблицы и сайдбар.
+Role navigation is a task hierarchy, not a CRUD menu. Student remains on its protected shell boundary; its target information architecture is documented separately before connection to this shared runtime.
