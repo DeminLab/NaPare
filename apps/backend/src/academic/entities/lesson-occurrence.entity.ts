@@ -32,10 +32,10 @@ export class LessonOccurrence {
   @Column({ type: 'timestamp' })
   endsAt: Date;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   room: string | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   building: string | null;
 
   @Column({ type: 'varchar', default: 'scheduled' })

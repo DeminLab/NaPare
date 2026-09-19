@@ -32,7 +32,7 @@ export class InboxItem {
   @Column({ type: 'text' })
   description: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   deepLink: string | null;
 
   @Column({ type: 'varchar', default: 'normal' })

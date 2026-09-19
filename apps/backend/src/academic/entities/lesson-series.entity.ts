@@ -22,10 +22,10 @@ export class LessonSeries {
   @Column({ type: 'uuid', nullable: true })
   teacherId: string | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   title: string | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   subjectType: string | null;
 
   @Column({ type: 'varchar', default: 'weekly' })
@@ -46,10 +46,10 @@ export class LessonSeries {
   @Column({ type: 'varchar', default: 'both' })
   weekType: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   room: string | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   building: string | null;
 
   @Column({ type: 'timestamp' })
