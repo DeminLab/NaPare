@@ -53,7 +53,7 @@ export class LessonOccurrence {
   @Column({ type: 'timestamp', nullable: true })
   lastSyncedAt: Date | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   sourceVersion: string | null;
 
   @Column({ type: 'varchar', default: 'unknown' })
