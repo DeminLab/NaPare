@@ -231,7 +231,7 @@ export class AcademicContext1700000000004 implements MigrationInterface {
     `);
     await queryRunner.query(`
       INSERT INTO "lesson_spaces" ("universityId", "courseSpaceId", "occurrenceId", "name")
-      SELECT ps."universityId", cs."id", ps."lessonOccurrenceId", ps."name"
+      SELECT ps."universityId", cs."id", ps."lessonOccurrenceId", ps."subject"
       FROM "pair_spaces" ps
       JOIN "course_spaces" cs ON cs."courseId" = ps."courseId"
       WHERE ps."lessonOccurrenceId" IS NOT NULL
