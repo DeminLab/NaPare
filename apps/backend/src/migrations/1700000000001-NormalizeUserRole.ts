@@ -25,9 +25,14 @@ export class NormalizeUserRole1700000000001 implements MigrationInterface {
 
     await queryRunner.query(`
       ALTER TABLE "users"
+      ALTER COLUMN "role" DROP DEFAULT,
       ALTER COLUMN "role" TYPE users_role_enum
-      USING "role"::text::users_role_enum,
-      ALTER COLUMN "role" SET DEFAULT 'student',
+      USING "role"::text::users_role_enum
+    `);
+
+    await queryRunner.query(`
+      ALTER TABLE "users"
+      ALTER COLUMN "role" SET DEFAULT 'student'::users_role_enum,
       ALTER COLUMN "role" SET NOT NULL
     `);
   }
