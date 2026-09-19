@@ -1,4 +1,5 @@
 import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
+import { join } from 'node:path';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { EventEmitterModule } from '@nestjs/event-emitter';
@@ -40,6 +41,8 @@ import { TenantContextModule } from './common/tenant/tenant-context.module';
             type: 'postgres' as const,
             url: databaseUrl,
             autoLoadEntities: true,
+            migrations: [join(__dirname, 'migrations/*.{js,ts}')],
+            migrationsRun: configService.getOrThrow('nodeEnv') === 'production',
             synchronize: configService.getOrThrow('nodeEnv') !== 'production',
           };
         }
@@ -51,6 +54,8 @@ import { TenantContextModule } from './common/tenant/tenant-context.module';
           password: configService.get<string>('DB_PASSWORD', 'postgres'),
           database: configService.get<string>('DB_NAME', 'napare'),
           autoLoadEntities: true,
+          migrations: [join(__dirname, 'migrations/*.{js,ts}')],
+          migrationsRun: configService.getOrThrow('nodeEnv') === 'production',
           synchronize: configService.getOrThrow('nodeEnv') !== 'production',
         };
       },
