@@ -23,7 +23,7 @@ export class EventRecord {
   @Column({ type: 'uuid' })
   universityId: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   idempotencyKey: string | null;
 
   @Column({ type: 'jsonb' })
