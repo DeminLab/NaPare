@@ -2,6 +2,7 @@
 const backendUrl = process.env.BACKEND_URL || 'http://localhost:3000';
 
 const nextConfig = {
+  basePath: '/staff',
   reactStrictMode: true,
   eslint: {
     ignoreDuringBuilds: true,

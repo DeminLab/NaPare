@@ -1,4 +1,4 @@
-# Универсальный Dockerfile для всех веб-приложений (web-student, web-staff, web-admin, web-developer).
+# Универсальный Dockerfile для всех веб-приложений (web-portal, web-student, web-staff, web-admin, web-developer).
 # Путь к приложению передаётся как build-arg APP_DIR, поэтому сборка каждого фронтенда
 # тянет зависимости только этого приложения и кэшируется независимо.
 # BACKEND_URL нужен на этапе build: next.config.js резолвит rewrites для /api/*

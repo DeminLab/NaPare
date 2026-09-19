@@ -42,6 +42,10 @@ jobs:
             image: web-student
             file: infrastructure/docker/web.Dockerfile
             build_args: APP_DIR=apps/web-student
+          - name: portal web
+            image: web-portal
+            file: infrastructure/docker/web.Dockerfile
+            build_args: APP_DIR=apps/web-portal
           - name: staff web
             image: web-staff
             file: infrastructure/docker/web.Dockerfile

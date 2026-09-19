@@ -8,6 +8,8 @@ Choose the card matching the task area, read the canonical source and then follo
 
 ## Cards
 
+- [116 — `apps/web-portal/src/app/login/page.tsx`](116-apps-web-portal-src-app-login-page-tsx.md)
+
 - [001 — `apps/web-admin/src/app/(admin)/connectors/page.tsx`](001-apps-web-admin-src-app-admin-connectors-page-tsx.md)
 - [002 — `apps/web-admin/src/app/(admin)/dashboard/page.tsx`](002-apps-web-admin-src-app-admin-dashboard-page-tsx.md)
 - [003 — `apps/web-admin/src/app/(admin)/faculties/page.tsx`](003-apps-web-admin-src-app-admin-faculties-page-tsx.md)
@@ -123,4 +125,3 @@ Choose the card matching the task area, read the canonical source and then follo
 - [113 — `apps/backend/src/common/guards/university.guard.spec.ts`](113-apps-backend-src-common-guards-university-guard-spec-ts.md)
 - [114 — `apps/backend/src/common/guards/university.guard.ts`](114-apps-backend-src-common-guards-university-guard-ts.md)
 - [115 — `apps/backend/src/common/tenant/tenant-context.module.ts`](115-apps-backend-src-common-tenant-tenant-context-module-ts.md)
-

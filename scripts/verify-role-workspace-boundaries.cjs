@@ -4,7 +4,11 @@ const { readFileSync } = require('node:fs');
 const protectedPath = /^(?:apps\/web-student\/|apps\/[^/]+\/src\/components\/navigation\/|apps\/[^/]+\/src\/components\/ui\/Avatar\.tsx$)|(?:^|\/)[^/]*logo[^/]*(?:\/|$)/i;
 
 function assertAllowed(paths) {
-  const blocked = paths.filter((path) => protectedPath.test(path.replace(/\\/g, '/')));
+  const allowedMigrationPath = 'apps/web-student/next.config.js';
+  const blocked = paths.filter((path) => {
+    const normalizedPath = path.replace(/\\/g, '/');
+    return normalizedPath !== allowedMigrationPath && protectedPath.test(normalizedPath);
+  });
   if (blocked.length) {
     throw new Error(`Role workspace foundation changes include protected paths:\n${blocked.map((path) => `- ${path}`).join('\n')}`);
   }

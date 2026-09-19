@@ -79,21 +79,51 @@ services:
     security_opt: [no-new-privileges:true]
     cap_drop: [ALL]
 
-  web-student: &web
+  web-portal: &web
+    build:
+      context: .
+      dockerfile: infrastructure/docker/web.Dockerfile
+      args:
+        APP_DIR: apps/web-portal
+        BACKEND_URL: http://backend:3000
+    restart: unless-stopped
+    init: true
+    ports:
+      - '127.0.0.1:3001:3000'
+    environment:
+      HOSTNAME: '0.0.0.0'
+      BACKEND_URL: http://backend:3000
+    networks: [edge, app]
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'node', '-e', "fetch('http://127.0.0.1:3000').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+
+  web-student:
+    <<: *web
     build:
       context: .
       dockerfile: infrastructure/docker/web.Dockerfile
       args:
         APP_DIR: apps/web-student
         BACKEND_URL: http://backend:3000
-        NEXT_PUBLIC_STUDENT_URL: ${NEXT_PUBLIC_STUDENT_URL:-https://student.napare.sano.ru}
-        NEXT_PUBLIC_TEACHER_URL: ${NEXT_PUBLIC_TEACHER_URL:-https://teacher.napare.sano.ru}
-        NEXT_PUBLIC_ADMIN_URL: ${NEXT_PUBLIC_ADMIN_URL:-https://admin.napare.sano.ru}
+        NEXT_PUBLIC_STUDENT_URL: ${NEXT_PUBLIC_STUDENT_URL:-https://napare.sano.ru/student}
+        NEXT_PUBLIC_TEACHER_URL: ${NEXT_PUBLIC_TEACHER_URL:-https://napare.sano.ru/staff}
+        NEXT_PUBLIC_ADMIN_URL: ${NEXT_PUBLIC_ADMIN_URL:-https://napare.sano.ru/deanery}
         NEXT_PUBLIC_DEVELOPER_URL: ${NEXT_PUBLIC_DEVELOPER_URL:-https://developer.napare.sano.ru}
     restart: unless-stopped
     init: true
     ports:
-      - '127.0.0.1:3001:3000'
+      - '127.0.0.1:3002:3000'
     environment:
       HOSTNAME: '0.0.0.0'
       BACKEND_URL: http://backend:3000
@@ -120,12 +150,12 @@ services:
       args:
         APP_DIR: apps/web-staff
         BACKEND_URL: http://backend:3000
-        NEXT_PUBLIC_STUDENT_URL: ${NEXT_PUBLIC_STUDENT_URL:-https://student.napare.sano.ru}
-        NEXT_PUBLIC_TEACHER_URL: ${NEXT_PUBLIC_TEACHER_URL:-https://teacher.napare.sano.ru}
-        NEXT_PUBLIC_ADMIN_URL: ${NEXT_PUBLIC_ADMIN_URL:-https://admin.napare.sano.ru}
+        NEXT_PUBLIC_STUDENT_URL: ${NEXT_PUBLIC_STUDENT_URL:-https://napare.sano.ru/student}
+        NEXT_PUBLIC_TEACHER_URL: ${NEXT_PUBLIC_TEACHER_URL:-https://napare.sano.ru/staff}
+        NEXT_PUBLIC_ADMIN_URL: ${NEXT_PUBLIC_ADMIN_URL:-https://napare.sano.ru/deanery}
         NEXT_PUBLIC_DEVELOPER_URL: ${NEXT_PUBLIC_DEVELOPER_URL:-https://developer.napare.sano.ru}
     ports:
-      - '127.0.0.1:3002:3000'
+      - '127.0.0.1:3003:3000'
 
   web-admin:
     <<: *web
@@ -135,12 +165,12 @@ services:
       args:
         APP_DIR: apps/web-admin
         BACKEND_URL: http://backend:3000
-        NEXT_PUBLIC_STUDENT_URL: ${NEXT_PUBLIC_STUDENT_URL:-https://student.napare.sano.ru}
-        NEXT_PUBLIC_TEACHER_URL: ${NEXT_PUBLIC_TEACHER_URL:-https://teacher.napare.sano.ru}
-        NEXT_PUBLIC_ADMIN_URL: ${NEXT_PUBLIC_ADMIN_URL:-https://admin.napare.sano.ru}
+        NEXT_PUBLIC_STUDENT_URL: ${NEXT_PUBLIC_STUDENT_URL:-https://napare.sano.ru/student}
+        NEXT_PUBLIC_TEACHER_URL: ${NEXT_PUBLIC_TEACHER_URL:-https://napare.sano.ru/staff}
+        NEXT_PUBLIC_ADMIN_URL: ${NEXT_PUBLIC_ADMIN_URL:-https://napare.sano.ru/deanery}
         NEXT_PUBLIC_DEVELOPER_URL: ${NEXT_PUBLIC_DEVELOPER_URL:-https://developer.napare.sano.ru}
     ports:
-      - '127.0.0.1:3003:3000'
+      - '127.0.0.1:3004:3000'
 
   web-developer:
     <<: *web
@@ -150,12 +180,12 @@ services:
       args:
         APP_DIR: apps/web-developer
         BACKEND_URL: http://backend:3000
-        NEXT_PUBLIC_STUDENT_URL: ${NEXT_PUBLIC_STUDENT_URL:-https://student.napare.sano.ru}
-        NEXT_PUBLIC_TEACHER_URL: ${NEXT_PUBLIC_TEACHER_URL:-https://teacher.napare.sano.ru}
-        NEXT_PUBLIC_ADMIN_URL: ${NEXT_PUBLIC_ADMIN_URL:-https://admin.napare.sano.ru}
+        NEXT_PUBLIC_STUDENT_URL: ${NEXT_PUBLIC_STUDENT_URL:-https://napare.sano.ru/student}
+        NEXT_PUBLIC_TEACHER_URL: ${NEXT_PUBLIC_TEACHER_URL:-https://napare.sano.ru/staff}
+        NEXT_PUBLIC_ADMIN_URL: ${NEXT_PUBLIC_ADMIN_URL:-https://napare.sano.ru/deanery}
         NEXT_PUBLIC_DEVELOPER_URL: ${NEXT_PUBLIC_DEVELOPER_URL:-https://developer.napare.sano.ru}
     ports:
-      - '127.0.0.1:3004:3000'
+      - '127.0.0.1:3005:3000'
 
   max-miniapp:
     build:
@@ -164,7 +194,7 @@ services:
     restart: unless-stopped
     init: true
     ports:
-      - '127.0.0.1:3005:8080'
+      - '127.0.0.1:3006:8080'
     networks: [edge]
     healthcheck:
       test: ['CMD-SHELL', 'wget -q --spider http://127.0.0.1:8080/ || exit 1']
@@ -191,6 +221,8 @@ services:
       backend:
         condition: service_healthy
       web-student:
+        condition: service_healthy
+      web-portal:
         condition: service_healthy
       web-staff:
         condition: service_healthy

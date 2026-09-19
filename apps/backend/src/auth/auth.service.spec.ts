@@ -3,17 +3,13 @@ import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { UnauthorizedException, ConflictException } from '@nestjs/common';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { University } from '../users/entities/university.entity';
-import { RaspScraperService } from './rasp-scraper.service';
+import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 
 describe('AuthService', () => {
   let service: AuthService;
   let usersService: Partial<UsersService>;
   let jwtService: Partial<JwtService>;
-  let raspScraperService: { isValidGroup: jest.Mock };
 
   beforeEach(async () => {
     usersService = {
@@ -25,7 +21,6 @@ describe('AuthService', () => {
       sign: jest.fn().mockReturnValue('mock-token'),
       verify: jest.fn(),
     };
-    raspScraperService = { isValidGroup: jest.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -39,8 +34,6 @@ describe('AuthService', () => {
             getOrThrow: jest.fn((key: string) => key === 'auth.jwt.refreshSecret' ? 'test-refresh-secret' : '30d'),
           },
         },
-        { provide: getRepositoryToken(University), useValue: { findOne: jest.fn().mockResolvedValue({ id: 'uni-1', name: 'СИБИТ', city: 'Омск', status: 'active' }) } },
-        { provide: RaspScraperService, useValue: raspScraperService },
       ],
     }).compile();
 
@@ -80,38 +73,23 @@ describe('AuthService', () => {
     });
   });
 
-  describe('register', () => {
-    it('should throw ConflictException for existing user', async () => {
-      (usersService.findByEmail as jest.Mock).mockResolvedValue({ id: '1' });
-      await expect(
-        service.register({
-          email: 'test@test.com',
-          password: 'pass',
-          firstName: 'Test',
-          lastName: 'User',
-          universityId: 'uni-1',
-        }),
-      ).rejects.toThrow(ConflictException);
+  describe('portalLogin', () => {
+    it.each([
+      ['student', 'student'],
+      ['teacher', 'staff'],
+      ['university_admin', 'admin'],
+    ])('assigns %s to the %s workspace', async (role, workspace) => {
+      const passwordHash = await bcrypt.hash('correct-password', 4);
+      (usersService.findByEmail as jest.Mock).mockResolvedValue({ id: 'user-1', email: 'user@sibit.ru', passwordHash, isActive: true, firstName: 'Тест', lastName: 'Пользователь', role, universityId: 'uni-1' });
+
+      await expect(service.portalLogin({ email: 'user@sibit.ru', password: 'correct-password' })).resolves.toMatchObject({ workspace });
     });
 
-    it('normalizes an email before creating a student account', async () => {
-      (usersService.findByEmail as jest.Mock).mockResolvedValue(null);
-      (usersService.create as jest.Mock).mockResolvedValue({
-        id: 'user-1',
-        email: 'student@sibit.ru',
-        firstName: 'Тест',
-        lastName: 'Студент',
-        role: 'student',
-        universityId: 'uni-1',
-        groupId: '12136',
-      });
-      raspScraperService.isValidGroup.mockResolvedValue(true);
+    it('rejects the developer role because it has a separate login', async () => {
+      const passwordHash = await bcrypt.hash('correct-password', 4);
+      (usersService.findByEmail as jest.Mock).mockResolvedValue({ id: 'developer-1', email: 'dev@sibit.ru', passwordHash, isActive: true, firstName: 'Тест', lastName: 'Разработчик', role: 'developer', universityId: 'uni-1' });
 
-      await service.register({
-        email: ' Student@SIBIT.RU ', password: 'correct-password', firstName: 'Тест', lastName: 'Студент', universityId: 'uni-1', groupId: '12136',
-      });
-
-      expect(usersService.create).toHaveBeenCalledWith(expect.objectContaining({ email: 'student@sibit.ru' }));
+      await expect(service.portalLogin({ email: 'dev@sibit.ru', password: 'correct-password' })).rejects.toThrow(ForbiddenException);
     });
   });
 });

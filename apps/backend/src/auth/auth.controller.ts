@@ -1,11 +1,10 @@
-import { Controller, Post, Get, Body, HttpCode, HttpStatus, UseGuards, Query } from '@nestjs/common';
+import { Controller, Post, Get, Body, HttpCode, HttpStatus, UseGuards, Query, ForbiddenException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
-import { RegisterDto } from './dto/register.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { University } from '../users/entities/university.entity';
@@ -30,13 +29,22 @@ export class AuthController {
     return this.authService.login(loginDto);
   }
 
+  @Post('portal-login')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Единый вход в кабинеты NaPare' })
+  @ApiResponse({ status: 200, description: 'Вход выполнен, определён кабинет пользователя' })
+  @ApiResponse({ status: 401, description: 'Неверные учетные данные' })
+  @ApiResponse({ status: 403, description: 'Роль использует отдельный вход' })
+  async portalLogin(@Body() loginDto: LoginDto) {
+    return this.authService.portalLogin(loginDto);
+  }
+
   @Post('register')
-  @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Регистрация нового пользователя' })
-  @ApiResponse({ status: 201, description: 'Пользователь зарегистрирован' })
-  @ApiResponse({ status: 409, description: 'Пользователь уже существует' })
-  async register(@Body() registerDto: RegisterDto) {
-    return this.authService.register(registerDto);
+  @HttpCode(HttpStatus.FORBIDDEN)
+  @ApiOperation({ summary: 'Самостоятельная регистрация отключена' })
+  @ApiResponse({ status: 403, description: 'Новые аккаунты создаёт университет' })
+  register(): never {
+    throw new ForbiddenException('Самостоятельная регистрация отключена. Получите готовые учётные данные в университете.');
   }
 
   @Get('universities')
