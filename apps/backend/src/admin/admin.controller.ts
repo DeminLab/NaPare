@@ -81,7 +81,7 @@ export class AdminController {
   @ApiResponse({ status: 200, description: 'Синхронизация запущена' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async syncSchedule(@Request() req) {
-    const result = { status: 'synced', timestamp: new Date().toISOString() };
+    const result = await this.adminService.syncSchedule(req.user.universityId);
     await this.eventBus.publish({
       type: 'sync.completed',
       universityId: req.user.universityId,

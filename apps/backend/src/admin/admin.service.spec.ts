@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AdminService } from './admin.service';
 import { UsersService } from '../users/users.service';
 import { ScheduleService } from '../schedule/schedule.service';
+import { SibitConnectorService } from '../schedule/connectors/sibit-connector.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { University } from '../users/entities/university.entity';
 import { Faculty } from '../users/entities/faculty.entity';
@@ -24,6 +25,10 @@ describe('AdminService', () => {
     importLessons: jest.fn().mockResolvedValue({ imported: 0, updated: 0 }),
   };
 
+  const mockSibitConnectorService = {
+    sync: jest.fn().mockResolvedValue({ groups: 26, lessons: 3000, teachers: 120 }),
+  };
+
   const mockRepo = (defaults: any = {}) => ({
     find: jest.fn().mockResolvedValue(defaults.find || []),
     findOne: jest.fn().mockResolvedValue(defaults.findOne || null),
@@ -38,6 +43,7 @@ describe('AdminService', () => {
         AdminService,
         { provide: UsersService, useValue: mockUsersService },
         { provide: ScheduleService, useValue: mockScheduleService },
+        { provide: SibitConnectorService, useValue: mockSibitConnectorService },
         { provide: getRepositoryToken(University), useValue: mockRepo({ findOne: { id: 'uni-1', name: 'Test Uni' } }) },
         { provide: getRepositoryToken(Faculty), useValue: mockRepo() },
         { provide: getRepositoryToken(Group), useValue: mockRepo() },
@@ -99,6 +105,21 @@ describe('AdminService', () => {
     it('should return university', async () => {
       const result = await service.getUniversity('uni-1');
       expect(result.id).toBe('uni-1');
+    });
+  });
+
+  describe('syncSchedule', () => {
+    it('runs the SIBIT connector and reports the fetched counts', async () => {
+      const result = await service.syncSchedule('uni-1');
+
+      expect(mockSibitConnectorService.sync).toHaveBeenCalledTimes(1);
+      expect(result).toMatchObject({
+        status: 'synced',
+        groups: 26,
+        lessons: 3000,
+        teachers: 120,
+      });
+      expect(typeof result.timestamp).toBe('string');
     });
   });
 });

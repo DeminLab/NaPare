@@ -252,7 +252,7 @@ export class RaspScraperService {
     const date = item.дата?.slice(0, 10);
     const discipline = item.дисциплина?.trim();
     if (!date || !discipline || !item.начало || !item.конец) return null;
-    const subjectMatch = discipline.match(/^(лек|пр|лаб)\s+(.+)$/i);
+    const subjectMatch = discipline.match(/^(лек|пр|лаб)\.?\s+(.+)$/i);
     const subjectType = subjectMatch?.[1]?.toLowerCase();
     const subject = (subjectMatch?.[2] || discipline).trim();
     const sourceDay = Number(item.деньНедели);

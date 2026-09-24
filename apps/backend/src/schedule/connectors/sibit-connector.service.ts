@@ -1,112 +1,124 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { HttpService } from '@nestjs/axios';
-import { firstValueFrom } from 'rxjs';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 
 import { CreateLessonDto } from '../dto/create-lesson.dto';
+import {
+  RaspGroup,
+  RaspLesson,
+  RaspScraperService,
+} from '../../auth/rasp-scraper.service';
 
-interface SibitLesson {
-  id?: string | number;
-  groupId?: string;
-  group?: string;
-  date: string;
-  startTime: string;
-  endTime: string;
-  pairNumber: number;
-  subject: string;
-  subjectType?: string;
-  teacher?: string;
-  teacherId?: string;
-  room?: string;
-  building?: string;
-  subgroup?: string;
-  department?: string;
-  faculty?: string;
+const SIBIT_SOURCE = 'sibit';
+const ACADEMIC_YEAR_START_MONTH = 9;
+const ACADEMIC_YEAR_END_MONTH = 8;
+const ACADEMIC_YEAR_END_DAY = 31;
+
+export interface SibitTeacher {
+  id: string;
+  name: string;
 }
 
-interface SibitGroup { name: string; }
-interface SibitTeacher { id: string; name: string; }
+export interface SibitSyncSummary {
+  groups: number;
+  lessons: number;
+  teachers: number;
+}
 
 @Injectable()
 export class SibitConnectorService {
   private readonly logger = new Logger(SibitConnectorService.name);
-  private readonly baseUrl = 'https://rasp.sibit.ru/api';
 
-  constructor(private readonly httpService: HttpService) {}
+  constructor(private readonly raspScraperService: RaspScraperService) {}
+
+  async getGroups(year?: string): Promise<string[]> {
+    const groups = await this.raspScraperService.getGroups(year);
+    return groups.map((group) => group.name);
+  }
 
   async getSchedule(
     group: string,
     startDate: string,
     endDate: string,
   ): Promise<CreateLessonDto[]> {
-    try {
-      const response = await firstValueFrom(
-        this.httpService.get<SibitLesson[]>(`${this.baseUrl}/schedule`, {
-          params: {
-            group,
-            start: startDate,
-            end: endDate,
-          },
-        }),
-      );
-
-      return this.mapToLessons(response.data, startDate, endDate);
-    } catch (error) {
-      this.logger.error(`Failed to fetch schedule from Sibit: ${errorMessage(error)}`);
-      throw error;
+    const academicYear = await this.resolveAcademicYear(startDate);
+    const groups = await this.raspScraperService.getGroups(academicYear);
+    const match = groups.find(
+      (item) => item.name.trim().toLowerCase() === group.trim().toLowerCase(),
+    );
+    if (!match) {
+      throw new NotFoundException(`Группа «${group}» не найдена в расписании СИБИТа`);
     }
+
+    const lessons = await this.raspScraperService.getSchedule(match.groupId, academicYear);
+    const from = startDate.slice(0, 10);
+    const to = endDate.slice(0, 10);
+    return lessons
+      .filter((lesson) => lesson.date >= from && lesson.date <= to)
+      .map((lesson) => this.toLessonDto(lesson, match));
   }
 
-  async getGroups(): Promise<string[]> {
-    try {
-      const response = await firstValueFrom(
-        this.httpService.get<SibitGroup[]>(`${this.baseUrl}/groups`),
-      );
+  async getTeachers(year?: string): Promise<SibitTeacher[]> {
+    const catalog = await this.raspScraperService.getCatalog(year);
+    return this.collectTeachers(catalog.lessons);
+  }
 
-      return response.data.map((group) => group.name);
-    } catch (error) {
-      this.logger.error(`Failed to fetch groups from Sibit: ${errorMessage(error)}`);
-      throw error;
+  async sync(year?: string): Promise<SibitSyncSummary> {
+    const catalog = await this.raspScraperService.getCatalog(year);
+    const summary: SibitSyncSummary = {
+      groups: catalog.groups.length,
+      lessons: catalog.lessons.length,
+      teachers: this.collectTeachers(catalog.lessons).length,
+    };
+    this.logger.log(
+      `SIBIT sync for ${catalog.academicYear}: ${summary.groups} groups, ${summary.lessons} lessons, ${summary.teachers} teachers`,
+    );
+    return summary;
+  }
+
+  private async resolveAcademicYear(startDate: string): Promise<string | undefined> {
+    const years = (await this.raspScraperService.getYears()).map((item) => item.value);
+    const date = startDate.slice(0, 10);
+    const match = years.find((year) => {
+      const startYear = Number(year.slice(0, 4));
+      if (!Number.isInteger(startYear)) return false;
+      const from = `${startYear}-${String(ACADEMIC_YEAR_START_MONTH).padStart(2, '0')}-01`;
+      const to = `${startYear + 1}-${String(ACADEMIC_YEAR_END_MONTH).padStart(2, '0')}-${ACADEMIC_YEAR_END_DAY}`;
+      return date >= from && date <= to;
+    });
+    return match ?? years[years.length - 1];
+  }
+
+  private toLessonDto(lesson: RaspLesson, group: RaspGroup): CreateLessonDto {
+    return {
+      groupId: group.groupId,
+      subject: lesson.subject,
+      subjectType: lesson.subjectType,
+      room: lesson.room,
+      dayOfWeek: lesson.dayOfWeek,
+      startTime: lesson.startTime,
+      endTime: lesson.endTime,
+      pairNumber: lesson.pairNumber,
+      weekType: lesson.weekType,
+      startDate: new Date(`${lesson.date}T${lesson.startTime}:00`),
+      endDate: new Date(`${lesson.date}T${lesson.endTime}:00`),
+      teacherName: lesson.teacher,
+      groupName: lesson.groupName,
+      subgroup: lesson.subgroup,
+      faculty: group.faculty,
+      isChanged: lesson.isReplacement,
+      changeDescription: lesson.isReplacement ? 'Замена по источнику rasp.sano.ru' : undefined,
+      source: SIBIT_SOURCE,
+      externalId: lesson.lessonId,
+    };
+  }
+
+  private collectTeachers(lessons: RaspLesson[]): SibitTeacher[] {
+    const teachers = new Map<string, SibitTeacher>();
+    for (const lesson of lessons) {
+      const name = lesson.teacher?.trim();
+      if (!name) continue;
+      const id = lesson.teacherId || name;
+      if (!teachers.has(id)) teachers.set(id, { id, name });
     }
+    return [...teachers.values()].sort((a, b) => a.name.localeCompare(b.name, 'ru'));
   }
-
-  async getTeachers(): Promise<SibitTeacher[]> {
-    try {
-      const response = await firstValueFrom(
-        this.httpService.get<SibitTeacher[]>(`${this.baseUrl}/teachers`),
-      );
-
-      return response.data;
-    } catch (error) {
-      this.logger.error(`Failed to fetch teachers from Sibit: ${errorMessage(error)}`);
-      throw error;
-    }
-  }
-
-  private mapToLessons(data: SibitLesson[], startDate: string, endDate: string): CreateLessonDto[] {
-    return data.map((item) => ({
-      groupId: item.groupId || item.group || '',
-      dayOfWeek: new Date(item.date).getDay(),
-      startTime: item.startTime,
-      endTime: item.endTime,
-      pairNumber: item.pairNumber,
-      subject: item.subject,
-      subjectType: item.subjectType,
-      teacherName: item.teacher,
-      teacherId: item.teacherId,
-      room: item.room,
-      building: item.building,
-      subgroup: item.subgroup,
-      department: item.department,
-      faculty: item.faculty,
-      weekType: 'both',
-      startDate: new Date(startDate),
-      endDate: new Date(endDate),
-      externalId: item.id?.toString(),
-      source: 'sibit',
-    }));
-  }
-}
-
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }

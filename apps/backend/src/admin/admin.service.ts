@@ -4,6 +4,7 @@ import { In, Repository } from 'typeorm';
 
 import { UsersService } from '../users/users.service';
 import { ScheduleService } from '../schedule/schedule.service';
+import { SibitConnectorService } from '../schedule/connectors/sibit-connector.service';
 import { University } from '../users/entities/university.entity';
 import { Faculty } from '../users/entities/faculty.entity';
 import { Group } from '../users/entities/group.entity';
@@ -54,6 +55,7 @@ export class AdminService {
   constructor(
     private readonly usersService: UsersService,
     private readonly scheduleService: ScheduleService,
+    private readonly sibitConnectorService: SibitConnectorService,
     @InjectRepository(University)
     private readonly universityRepository: Repository<University>,
     @InjectRepository(Faculty)
@@ -110,6 +112,20 @@ export class AdminService {
     importScheduleDto: ImportScheduleDto,
   ): Promise<{ imported: number; updated: number }> {
     return this.scheduleService.importLessons(universityId, []);
+  }
+
+  async syncSchedule(
+    universityId: string,
+  ): Promise<{ status: string; timestamp: string; groups: number; lessons: number; teachers: number }> {
+    this.tenantContext.assertAccess(universityId);
+    const summary = await this.sibitConnectorService.sync();
+    return {
+      status: 'synced',
+      timestamp: new Date().toISOString(),
+      groups: summary.groups,
+      lessons: summary.lessons,
+      teachers: summary.teachers,
+    };
   }
 
   async getUniversityStats(_universityId: string): Promise<UniversityStats> {

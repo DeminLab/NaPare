@@ -23,6 +23,6 @@ import { ScheduleChange } from '../academic/entities/schedule-change.entity';
     SibitConnectorService,
   ],
   controllers: [ScheduleController],
-  exports: [ScheduleService],
+  exports: [ScheduleService, SibitConnectorService],
 })
 export class ScheduleModule {}

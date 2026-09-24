@@ -74,4 +74,32 @@ describe('RaspScraperService', () => {
     const service = new RaspScraperService();
     await expect(service.getSchedule('99999')).rejects.toThrow('Группа не найдена');
   });
+
+  it('extracts the subject type from a dotted source prefix', async () => {
+    const fetchMock = jest.fn() as jest.MockedFunction<typeof fetch>;
+    fetchMock.mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.endsWith('/api/Rasp/ListYears')) {
+        return { ok: true, json: async () => ({ state: 1, data: { years: ['2026-2027'] } }) } as Response;
+      }
+      if (url.includes('/api/raspGrouplist')) {
+        return { ok: true, json: async () => ({ state: 1, data: groups }) } as Response;
+      }
+      return {
+        ok: true,
+        json: async () => ({
+          state: 1,
+          data: { rasp: [{ ...sourceLesson(12136, 777), дисциплина: 'пр. Тестовый предмет' }] },
+        }),
+      } as Response;
+    });
+    global.fetch = fetchMock;
+
+    const service = new RaspScraperService();
+    const lessons = await service.getSchedule('12136', '2026-2027');
+
+    expect(lessons).toHaveLength(1);
+    expect(lessons[0].subjectType).toBe('пр');
+    expect(lessons[0].subject).toBe('Тестовый предмет');
+  });
 });

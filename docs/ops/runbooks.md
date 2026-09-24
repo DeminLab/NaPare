@@ -6,8 +6,8 @@
 
 **Действия:**
 1. Проверить логи: `docker compose logs backend | grep connector`
-2. Проверить доступность сайта СИБИТ: `curl https://sibit.ru/schedule`
-3. Если сайт изменился — обновить парсер в `apps/backend/src/schedule/connectors/sibit-connector.ts`
+2. Проверить доступность источника: `curl https://rasp.sano.ru/api/Rasp/ListYears`
+3. Если источник сменил формат — обновить парсер в `apps/backend/src/schedule/connectors/sibit-connector.service.ts` и `apps/backend/src/auth/rasp-scraper.service.ts`
 4. Запустить ручной синк: `POST /api/v1/admin/schedule/sync`
 5. Если не помогает — временно переключить на ручной импорт
 
