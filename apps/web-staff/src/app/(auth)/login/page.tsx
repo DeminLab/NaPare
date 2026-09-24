@@ -40,7 +40,7 @@ export default function LoginPage() {
               <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">{error}</div>
             )}
             <div>
-              <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-slate-700">Email</label>
+              <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-slate-700">Электронная почта</label>
               <input
                 id="email" type="email" required value={email}
                 onChange={(e) => setEmail(e.target.value)}

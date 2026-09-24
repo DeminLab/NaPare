@@ -55,7 +55,7 @@ export default function Home() {
                 color: 'bg-cyan-400/10 text-cyan-300 group-hover:bg-cyan-400 group-hover:text-slate-950',
                 ring: 'border-white/10 bg-white/[0.04] hover:border-cyan-300/40 hover:bg-white/[0.06]',
                 title: 'API мониторинг',
-                desc: 'Health check, uptime и статус эндпоинтов в реальном времени',
+                desc: 'Проверка состояния, аптайм и статус эндпоинтов в реальном времени',
               },
               {
                 icon: (

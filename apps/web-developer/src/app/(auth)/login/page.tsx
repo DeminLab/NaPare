@@ -53,7 +53,7 @@ export default function LoginPage() {
 
             <div>
               <label htmlFor="email" className="mb-1.5 block font-mono text-sm font-medium text-slate-300">
-                Email
+                Электронная почта
               </label>
               <input
                 id="email"

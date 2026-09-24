@@ -8,10 +8,10 @@ import { apiFetch, getHealth, getUser, logout } from '@/lib/api';
 import type { HealthInfo, UserInfo } from '@/lib/api';
 
 const groups: WorkspaceNavGroup[] = [
-  { label: 'Overview', items: [{ href: '/overview', label: 'Overview', icon: 'home' }] },
-  { label: 'Platform', items: [{ href: '/api', label: 'API', icon: 'code', keywords: ['api explorer', 'endpoints'] }, { href: '/api#logs', label: 'Logs', icon: 'list' }, { href: '/api#events', label: 'Events', icon: 'pulse' }, { href: '/api#connectors', label: 'Connectors', icon: 'plug' }] },
-  { label: 'Knowledge', items: [{ href: '/docs', label: 'Documentation', icon: 'book' }, { href: '/architecture', label: 'Architecture', icon: 'layers' }] },
-  { label: 'Access', items: [{ href: '/session', label: 'Sessions', icon: 'users' }] },
+  { label: 'Обзор', items: [{ href: '/overview', label: 'Обзор', icon: 'home' }] },
+  { label: 'Платформа', items: [{ href: '/api', label: 'API', icon: 'code', keywords: ['api explorer', 'endpoints', 'api'] }, { href: '/api#logs', label: 'Журналы', icon: 'list', keywords: ['логи', 'logs'] }, { href: '/api#events', label: 'События', icon: 'pulse', keywords: ['events'] }, { href: '/api#connectors', label: 'Коннекторы', icon: 'plug', keywords: ['connectors', 'интеграции'] }] },
+  { label: 'База знаний', items: [{ href: '/docs', label: 'Документация', icon: 'book', keywords: ['docs', 'документация'] }, { href: '/architecture', label: 'Архитектура', icon: 'layers', keywords: ['architecture'] }] },
+  { label: 'Доступ', items: [{ href: '/session', label: 'Сессии', icon: 'users', keywords: ['sessions', 'сессии'] }] },
 ];
 const AppLink = ({ href, children, ...props }: NavigationLinkProps) => <Link href={href} {...props}>{children}</Link>;
 
@@ -30,6 +30,6 @@ export default function DeveloperLayout({ children }: { children: ReactNode }) {
     { id: 'developer:docs', label: 'Открыть документацию', icon: 'book', href: '/docs' },
     { id: 'developer:session', label: 'Открыть активные сессии', icon: 'users', href: '/session', keywords: ['sessions', 'jobs'] },
   ];
-  const name = user ? user.firstName + ' ' + user.lastName : 'Developer';
-  return <WorkspaceShell className="developer-shell" LinkComponent={AppLink} pathname={pathname} groups={groups} roleLabel="Developer" homeHref="/overview" user={{ name, role: 'Developer' }} unreadCount={unread} status={{ label: health ? 'API online' : 'API unavailable', tone: health ? 'success' : 'warning' }} commands={commands} onLogout={logout}>{children}</WorkspaceShell>;
+  const name = user ? user.firstName + ' ' + user.lastName : 'Разработчик';
+  return <WorkspaceShell className="developer-shell" LinkComponent={AppLink} pathname={pathname} groups={groups} roleLabel="Разработчик" homeHref="/overview" user={{ name, role: 'Разработчик' }} unreadCount={unread} status={{ label: health ? 'API доступен' : 'API недоступен', tone: health ? 'success' : 'warning' }} commands={commands} onLogout={logout}>{children}</WorkspaceShell>;
 }

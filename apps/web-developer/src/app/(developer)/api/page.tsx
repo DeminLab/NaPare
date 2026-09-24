@@ -17,11 +17,11 @@ interface Endpoint {
 }
 
 const defaultEndpoints: Endpoint[] = [
-  { name: 'Health Check', method: 'GET', path: '/health', status: 'unknown' },
-  { name: 'App Info', method: 'GET', path: '/app', status: 'unknown' },
-  { name: 'Login', method: 'POST', path: '/auth/login', status: 'unknown' },
-  { name: 'User Info', method: 'GET', path: '/users/me', status: 'unknown' },
-  { name: 'Swagger Docs', method: 'GET', path: '/docs', status: 'unknown' },
+  { name: 'Проверка состояния', method: 'GET', path: '/health', status: 'unknown' },
+  { name: 'Информация о приложении', method: 'GET', path: '/app', status: 'unknown' },
+  { name: 'Вход', method: 'POST', path: '/auth/login', status: 'unknown' },
+  { name: 'Данные пользователя', method: 'GET', path: '/users/me', status: 'unknown' },
+  { name: 'Документация Swagger', method: 'GET', path: '/docs', status: 'unknown' },
 ];
 
 function formatUptime(seconds?: number): string {
@@ -136,11 +136,11 @@ export default function ApiPage() {
             <>
               <StatCard
                 label="Статус"
-                value={health?.status ?? '—'}
+                value={isHealthy ? 'Работает' : health?.status ?? '—'}
                 icon={<div className={`h-2.5 w-2.5 rounded-full ${isHealthy ? 'bg-emerald-500 animate-pulse-dot' : 'bg-red-500'}`} />}
               />
               <StatCard
-                label="Uptime"
+                label="Время работы"
                 value={formatUptime(health?.uptime)}
                 icon={
                   <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
