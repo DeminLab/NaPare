@@ -39,6 +39,11 @@ export class UsersService {
       .getOne();
   }
 
+  async findByMaxUserId(maxUserId: string): Promise<User | null> {
+    if (!maxUserId) return null;
+    return this.usersRepository.findOne({ where: { maxUserId } });
+  }
+
   async findByUniversityId(
     universityId: string,
     pagination: PaginationQueryDto = new PaginationQueryDto(),

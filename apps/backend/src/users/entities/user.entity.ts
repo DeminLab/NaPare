@@ -11,6 +11,7 @@ import { UserRole } from '../../auth/interfaces/user-role';
 
 @Entity('users')
 @Index('IDX_users_university_id', ['universityId'])
+@Index('IDX_users_max_user_id', ['maxUserId'], { unique: true })
 export class User {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -46,6 +47,9 @@ export class User {
 
   @Column({ type: 'varchar', nullable: true })
   groupId: string;
+
+  @Column({ type: 'varchar', nullable: true })
+  maxUserId: string | null;
 
   @Column({ default: true })
   isActive: boolean;

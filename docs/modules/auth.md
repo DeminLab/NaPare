@@ -12,7 +12,7 @@
 
 | Сущность | Описание | Ключевые поля |
 |----------|----------|---------------|
-| User | Пользователь | id, phone, email, password_hash, first_name, last_name, roles[], university_id, group_id |
+| User | Пользователь | id, phone, email, password_hash, first_name, last_name, roles[], university_id, group_id, max_user_id |
 | DeviceToken | Токен устройства для push | id, user_id, platform, token |
 | AuditLog | Лог действий | id, user_id, action, entity, entity_id, ip |
 
@@ -27,6 +27,7 @@
 | `/api/v1/auth/request-code` | POST | Запрос SMS/email кода |
 | `/api/v1/auth/verify-code` | POST | Проверка кода, выдача JWT |
 | `/api/v1/auth/login` | POST | Вход по email/паролю |
+| `/api/v1/auth/max` | POST | Вход через MAX Mini App (валидация initData, привязка аккаунта) |
 | `/api/v1/auth/refresh` | POST | Обновление access token |
 | `/api/v1/auth/logout` | POST | Выход (инвалидация refresh) |
 | `/api/v1/users/me` | GET | Текущий пользователь |
@@ -78,6 +79,7 @@
 4. **Refresh token:** mobile — Secure Storage, web — HttpOnly cookie
 5. **Удаление аккаунта:** soft-delete + 30 дней на восстановление
 6. **Восстановление пароля:** по email, ссылка с TTL 24 часа
+7. **Вход через MAX:** `POST /auth/max` проверяет подпись `initData` токеном `MAX_BOT_TOKEN`; `users.maxUserId` (unique) хранит привязку. Без токена — ответ 503 `MAX_NOT_CONFIGURED`. Непривязанный MAX-аккаунт получает 401 `MAX_ACCOUNT_NOT_LINKED` и привязывается при первом входе по email/паролю. Свежесть `initData` ограничена `MAX_INIT_DATA_TTL_SECONDS` (по умолчанию 1 час).
 
 ---
 
@@ -110,7 +112,7 @@
 - [ ] Согласие на ПДн обязательно и сохраняется
 - [ ] Можно удалить аккаунт
 - [ ] Вход по email/паролю работает для преподавателей
-- [ ] MAX auth через initData работает
+- [x] MAX auth через initData работает (эндпоинт реализован и покрыт тестами; для прогона в MAX задайте `MAX_BOT_TOKEN`)
 - [ ] Refresh token автоматически обновляет access token
 - [ ] Rate limiting работает
 

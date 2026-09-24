@@ -5,6 +5,7 @@ import { Repository } from 'typeorm';
 
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
+import { MaxAuthDto } from './dto/max-auth.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { University } from '../users/entities/university.entity';
@@ -27,6 +28,17 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Неверные учетные данные' })
   async login(@Body() loginDto: LoginDto) {
     return this.authService.login(loginDto);
+  }
+
+  @Post('max')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Вход через MAX Mini App (валидация initData)' })
+  @ApiResponse({ status: 200, description: 'Успешный вход или привязка аккаунта' })
+  @ApiResponse({ status: 401, description: 'Неверные данные MAX, аккаунт не привязан' })
+  @ApiResponse({ status: 409, description: 'Аккаунт MAX уже привязан к другому пользователю' })
+  @ApiResponse({ status: 503, description: 'MAX не настроен (нет MAX_BOT_TOKEN)' })
+  async maxAuth(@Body() maxAuthDto: MaxAuthDto) {
+    return this.authService.maxAuth(maxAuthDto);
   }
 
   @Post('portal-login')

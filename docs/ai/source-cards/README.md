@@ -10,6 +10,14 @@ Choose the card matching the task area, read the canonical source and then follo
 
 - [116 — `apps/web-portal/src/app/login/page.tsx`](116-apps-web-portal-src-app-login-page-tsx.md)
 
+- [117 — `apps/backend/src/schedule/connectors/sibit-connector.service.ts`](117-apps-backend-src-schedule-connectors-sibit-connector-service-ts.md)
+- [118 — `apps/backend/src/schedule/connectors/sibit-connector.service.spec.ts`](118-apps-backend-src-schedule-connectors-sibit-connector-service-spec-ts.md)
+
+- [119 — `apps/backend/src/auth/max-init-data.ts`](119-apps-backend-src-auth-max-init-data-ts.md)
+- [120 — `apps/backend/src/auth/max-init-data.spec.ts`](120-apps-backend-src-auth-max-init-data-spec-ts.md)
+- [121 — `apps/max-miniapp/src/lib/api.ts`](121-apps-max-miniapp-src-lib-api-ts.md)
+- [122 — `apps/max-miniapp/src/lib/api.test.ts`](122-apps-max-miniapp-src-lib-api-test-ts.md)
+
 - [001 — `apps/web-admin/src/app/(admin)/connectors/page.tsx`](001-apps-web-admin-src-app-admin-connectors-page-tsx.md)
 - [002 — `apps/web-admin/src/app/(admin)/dashboard/page.tsx`](002-apps-web-admin-src-app-admin-dashboard-page-tsx.md)
 - [003 — `apps/web-admin/src/app/(admin)/faculties/page.tsx`](003-apps-web-admin-src-app-admin-faculties-page-tsx.md)

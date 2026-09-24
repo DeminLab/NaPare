@@ -295,6 +295,52 @@
 
 ---
 
+### 1.10 POST `/auth/max`
+
+Вход через MAX Mini-App. Сервер валидирует подпись `window.WebApp.initData` токеном `MAX_BOT_TOKEN` и выдаёт JWT НаПаре. При первом входе вместе с `email`/`password` аккаунт университета привязывается к MAX-идентификатору (`users.maxUserId`) — дальше вход в MAX автоматический.
+
+**Request:**
+```json
+{
+  "initData": "auth_date=1758700000&user=%7B%22id%22%3A424242%7D&hash=…",
+  "email": "student@university.ru",
+  "password": "securePassword123"
+}
+```
+
+**Validation:**
+- `initData`: string, 1–8192 (обязательно)
+- `email`, `password`: опционально, только вместе (первичная привязка); `password` min 6
+
+**Подпись:** HMAC-SHA256 по алгоритму MAX (секрет `WebAppData` + `MAX_BOT_TOKEN`), сравнение timing-safe; `auth_date` не старше `MAX_INIT_DATA_TTL_SECONDS` (по умолчанию 3600) и не «из будущего».
+
+**Response 200:**
+```json
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiIs...",
+  "refreshToken": "eyJhbGciOiJIUzI1NiIs...",
+  "user": {
+    "id": "uuid",
+    "email": "student@university.ru",
+    "firstName": "Иван",
+    "lastName": "Иванов",
+    "role": "student"
+  }
+}
+```
+
+**Errors:**
+| Код | Статус | Описание |
+|-----|--------|----------|
+| `MAX_INVALID_INIT_DATA` | 401 | Подпись неверна или `auth_date` устарел |
+| `MAX_ACCOUNT_NOT_LINKED` | 401 | Аккаунт не привязан — передайте email/password |
+| `UNAUTHORIZED` | 401 | Неверный email или пароль при привязке |
+| `CONFLICT` | 409 | MAX-идентификатор уже привязан к другому аккаунту |
+| `MAX_NOT_CONFIGURED` | 503 | Не задан `MAX_BOT_TOKEN` |
+| `VALIDATION_ERROR` | 400 | Некорректное тело запроса |
+
+---
+
 ## 2. Schedule (Расписание)
 
 ### 2.1 GET `/schedule/my`
@@ -1633,3 +1679,4 @@
 | 53 | `/superadmin/universities/:id` | DELETE | superadmin | — |
 | 54 | `/superadmin/connectors` | GET | superadmin | — |
 | 55 | `/superadmin/connectors/:id` | PATCH | superadmin | — |
+| 56 | `/auth/max` | POST | Public (MAX initData) | — |

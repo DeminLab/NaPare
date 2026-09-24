@@ -10,12 +10,26 @@ export interface AppConfig {
       refreshExpiration: string;
     };
   };
+  max: {
+    botToken: string;
+    initDataTtlSeconds: number;
+  };
 }
 
 function requiredEnvironmentValue(name: string): string {
   const value = process.env[name];
   if (!value) throw new Error(`${name} is required`);
   return value;
+}
+
+function positiveIntegerEnvironmentValue(name: string, fallback: number): number {
+  const value = process.env[name];
+  if (value === undefined || value === '') return fallback;
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    throw new Error(`${name} must be a positive integer`);
+  }
+  return parsed;
 }
 
 function nodeEnvironment(value: string | undefined): NodeEnvironment {
@@ -34,5 +48,9 @@ export default (): AppConfig => ({
       accessExpiration: requiredEnvironmentValue('JWT_ACCESS_EXPIRATION'),
       refreshExpiration: requiredEnvironmentValue('JWT_REFRESH_EXPIRATION'),
     },
+  },
+  max: {
+    botToken: process.env.MAX_BOT_TOKEN?.trim() ?? '',
+    initDataTtlSeconds: positiveIntegerEnvironmentValue('MAX_INIT_DATA_TTL_SECONDS', 3600),
   },
 });

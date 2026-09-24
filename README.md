@@ -365,6 +365,8 @@ NEXT_PUBLIC_APP_NAME=НаПаре
 | `JWT_REFRESH_EXPIRATION` | Да | Время жизни refresh-токена (например, `30d`) |
 | `REDIS_HOST`, `REDIS_PORT` или `REDIS_URL` | Зависит от среды | Подключение к Redis |
 | `CORS_ORIGIN` | Production | Разрешённый web-оригин |
+| `MAX_BOT_TOKEN` | Для входа через MAX Mini App | Токен бота MAX; без него `POST /api/v1/auth/max` отвечает 503 |
+| `MAX_INIT_DATA_TTL_SECONDS` | Нет | Срок действия `initData` MAX; по умолчанию `3600` |
 | `SENTRY_DSN` | Нет | DSN Sentry |
 | `STORAGE_ENDPOINT`, `STORAGE_BUCKET`, `STORAGE_ACCESS_KEY`, `STORAGE_SECRET_KEY`, `STORAGE_USE_SSL` | Для хранилища файлов | Конфигурация S3-хранилища |
 

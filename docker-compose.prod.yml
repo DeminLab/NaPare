@@ -62,6 +62,8 @@ services:
       FCM_PROJECT_ID: ${FCM_PROJECT_ID:-}
       FCM_PRIVATE_KEY: ${FCM_PRIVATE_KEY:-}
       FCM_CLIENT_EMAIL: ${FCM_CLIENT_EMAIL:-}
+      MAX_BOT_TOKEN: ${MAX_BOT_TOKEN:-}
+      MAX_INIT_DATA_TTL_SECONDS: ${MAX_INIT_DATA_TTL_SECONDS:-3600}
     networks: [app, data]
     depends_on:
       postgres:
@@ -212,7 +214,10 @@ services:
     init: true
     ports:
       - '127.0.0.1:3006:8080'
-    networks: [edge]
+    networks: [edge, app]
+    depends_on:
+      backend:
+        condition: service_healthy
     healthcheck:
       test: ['CMD-SHELL', 'wget -q --spider http://127.0.0.1:8080/ || exit 1']
       interval: 15s
