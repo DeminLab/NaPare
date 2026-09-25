@@ -16,5 +16,6 @@
   .action-card { padding: 1.5rem; } .table-shell { overflow-x: auto; -webkit-overflow-scrolling: touch; } .table-shell > table { min-width: 42rem; width: 100%; }
   .status-dot { display: inline-block; width: .5rem; height: .5rem; border-radius: 9999px; background: var(--color-text-muted); } .status-dot--success { background: var(--color-success); } .status-dot--warning { background: var(--color-warning); } .status-dot--danger { background: var(--color-danger); }
 }
-html, body { min-width: 320px; overflow-x: hidden; } img, svg, video { max-width: 100%; } button, input, select, textarea { max-width: 100%; } nav[aria-label="Мобильная навигация"] { padding-bottom: max(.375rem, env(safe-area-inset-bottom)); }
-@media (max-width: 639px) { .grid-cols-3 { grid-template-columns: minmax(0, 1fr); } }
+html, body { min-width: 320px; overflow-x: clip; } img, svg, video { max-width: 100%; } button, input, select, textarea { max-width: 100%; } input, select, textarea { font-size: max(16px, 1rem); } button, [role="button"], nav a { min-height: 2.75rem; } nav[aria-label="Мобильная навигация"] { padding-bottom: max(.375rem, env(safe-area-inset-bottom)); }
+@media (max-width: 639px) { .grid-cols-3 { grid-template-columns: minmax(0, 1fr); } .action-card { padding: 1rem; } }
+@media (min-width: 640px) { .table-shell, [role="table"] { scrollbar-gutter: stable; } }

@@ -8,7 +8,7 @@ import { getUnreadCount, getUser, isLoggedIn, logout } from '@/lib/api';
 
 const groups: WorkspaceNavGroup[] = [
   { label: 'Сегодня', items: [{ href: '/today', label: 'Сегодня', icon: 'calendar', keywords: ['мой день', 'ближайшая пара'] }] },
-  { label: 'Работа', items: [{ href: '/week', label: 'Расписание', icon: 'calendar', keywords: ['неделя', 'пары'] }, { href: '/groups', label: 'Группы', icon: 'users' }, { href: '/attendance', label: 'Посещаемость', icon: 'check' }, { href: '/pair-space', label: 'Пространства пар', icon: 'book' }] },
+  { label: 'Работа', items: [{ href: '/week', label: 'Расписание', icon: 'calendar', keywords: ['неделя', 'пары'] }, { href: '/assignments', label: 'Задания', icon: 'clipboard', keywords: ['дз', 'дедлайны', 'работа'] }, { href: '/groups', label: 'Группы', icon: 'users' }, { href: '/attendance', label: 'Посещаемость', icon: 'check' }, { href: '/pair-space', label: 'Пространства пар', icon: 'book' }] },
   { label: 'Коммуникация', items: [{ href: '/inbox', label: 'Входящие', icon: 'bell' }, { href: '/notifications', label: 'Уведомления', icon: 'bell' }] },
   { label: 'Аккаунт', items: [{ href: '/profile', label: 'Профиль', icon: 'user' }, { href: '/settings', label: 'Настройки', icon: 'settings' }] },
 ];

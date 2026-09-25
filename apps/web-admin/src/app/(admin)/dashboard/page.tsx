@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { apiFetch, apiFetchList } from '@/lib/api';
 import { Badge, Button, Card, EmptyState, RequestState, Skeleton } from '@/components/ui';
 
@@ -11,27 +11,107 @@ interface Faculty { id: string; name: string; }
 interface Lesson { id: string; startTime?: string; endTime?: string; subject?: string; groupName?: string; room?: string; teacherName?: string; isChanged?: boolean; changeDescription?: string; }
 interface Notice { id?: string; title?: string; body?: string; type?: string; createdAt?: string; isRead?: boolean; }
 interface Sync { status?: string; lastSync?: string | null; }
+type BackendStatus = 'online' | 'offline' | 'unknown';
 
 const dateKey = (value: Date) => value.toISOString().split('T')[0];
 const role = (user: AdminUser) => user.role || 'student';
 const displayNumber = (value: number) => new Intl.NumberFormat('ru-RU').format(value);
 const time = (value?: string) => value?.includes('T') ? value.slice(11, 16) : value || '—';
+const formatDate = (value: string) => new Date(value).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+const formatDateTime = (value?: string) => value ? new Date(value).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Нет данных';
 
-function sameSlot(a: Lesson, b: Lesson) { return Boolean(a.startTime && b.startTime && time(a.startTime) === time(b.startTime) && a.room && b.room && a.room === b.room); }
+function isUpcoming(lesson: Lesson) {
+  const start = lesson.startTime ? new Date(lesson.startTime).getTime() : Number.POSITIVE_INFINITY;
+  return start >= Date.now();
+}
 
 export default function DashboardPage() {
-  const [users, setUsers] = useState<AdminUser[]>([]); const [groups, setGroups] = useState<Group[]>([]); const [faculties, setFaculties] = useState<Faculty[]>([]); const [lessons, setLessons] = useState<Lesson[]>([]); const [notices, setNotices] = useState<Notice[]>([]); const [sync, setSync] = useState<Sync | null>(null); const [backend, setBackend] = useState<'online' | 'offline' | 'unknown'>('unknown'); const [loading, setLoading] = useState(true); const [error, setError] = useState('');
-  const load = () => { setLoading(true); setError(''); const today = dateKey(new Date()); Promise.all([apiFetchList<AdminUser>('/admin/users?limit=100'), apiFetchList<Group>('/admin/groups?limit=100'), apiFetchList<Faculty>('/admin/faculties?limit=100'), apiFetchList<Lesson>(`/schedule?date=${today}&limit=100`).catch(() => []), apiFetchList<Notice>('/notifications').catch(() => []), apiFetch<Sync>('/admin/schedule/sync-status').catch(() => null), apiFetch<{ status: string }>('/health').then(() => 'online' as const).catch(() => 'offline' as const)]).then(([userItems, groupItems, facultyItems, lessonItems, notificationItems, syncStatus, health]) => { setUsers(userItems); setGroups(groupItems); setFaculties(facultyItems); setLessons(lessonItems); setNotices(notificationItems); setSync(syncStatus); setBackend(health); }).catch((err) => setError(err instanceof Error ? err.message : 'Не удалось загрузить операционную сводку.')).finally(() => setLoading(false)); };
-  useEffect(() => { load(); }, []);
-  const today = dateKey(new Date()); const students = users.filter((user) => role(user) === 'student').length; const teachers = users.filter((user) => role(user) === 'teacher').length; const activeToday = users.filter((user) => user.lastLoginAt?.slice(0, 10) === today).length; const unread = notices.filter((notice) => notice.isRead === false).length;
-  const problems = useMemo(() => { const missingRooms = lessons.filter((lesson) => !lesson.room).length; const conflicts = lessons.filter((lesson, index) => lessons.some((other, otherIndex) => otherIndex > index && sameSlot(lesson, other))).length; const unmappedTeachers = lessons.filter((lesson) => !lesson.teacherName).length; const importErrors = notices.filter((notice) => (notice.type || '').toLowerCase().includes('import') || (notice.type || '').toLowerCase().includes('error')).length; return [{ label: 'Занятия без аудитории', value: missingRooms, href: '/schedule-import', description: 'Нужно проверить назначение помещений' }, { label: 'Конфликты расписания', value: conflicts, href: '/schedule-import', description: 'Совпадающие временные слоты и аудитории' }, { label: 'Преподаватели не сопоставлены', value: unmappedTeachers, href: '/users?role=teacher', description: 'В расписании отсутствует связь с аккаунтом' }, { label: 'Ошибки импорта', value: importErrors, href: '/schedule-import', description: 'События импорта из системных уведомлений' }]; }, [lessons, notices]);
-  const openProblems = problems.filter((item) => item.value > 0).reduce((sum, item) => sum + item.value, 0); const pendingActions = openProblems + unread + (sync?.status === 'error' ? 1 : 0); const syncLabel = sync?.status === 'error' ? 'Ошибка' : sync?.status === 'synced' || sync?.status === 'active' ? 'Синхронизировано' : 'Нет данных';
-  if (loading) return <div className="mx-auto max-w-[1500px] space-y-6"><Skeleton className="h-24" /><Skeleton className="h-44" /><Skeleton className="h-[380px]" /></div>;
-  if (error && !users.length) return <div className="mx-auto max-w-[1500px]"><RequestState title="Не удалось загрузить операционный центр" description={error} onRetry={load} /></div>;
-  return <div className="mx-auto max-w-[1500px] space-y-6"><div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end"><div><h1 className="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Операционный центр университета</h1><p className="mt-1 text-sm text-slate-500">{new Date().toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} · контроль состояния университета</p></div><div className="flex gap-2"><Badge variant={backend === 'online' ? 'green' : backend === 'offline' ? 'red' : 'slate'} dot>{backend === 'online' ? 'Бэкенд работает' : backend === 'offline' ? 'Ошибка бэкенда' : 'Проверка'}</Badge><Link href="/schedule-import"><Button size="sm">Импортировать данные</Button></Link></div></div>
-    {error && <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">Часть операционных данных недоступна: {error}</p>}
-    <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_340px]"><Card className="border-red-200" padding="sm"><div className="flex items-center justify-between border-b border-red-100 pb-3"><div><h2 className="text-lg font-bold text-slate-950">Проблемы / требуют внимания</h2><p className="mt-1 text-sm text-slate-500">Данные рассчитаны по текущему расписанию и системным событиям</p></div><Badge variant={openProblems ? 'red' : 'green'}>{openProblems || 'OK'}</Badge></div><div className="divide-y divide-slate-100">{problems.map((problem) => <Link key={problem.label} href={problem.href} className="flex items-center justify-between gap-4 py-4 hover:bg-slate-50"><div><p className="text-sm font-semibold text-slate-900">{problem.label}</p><p className="mt-1 text-xs text-slate-500">{problem.description}</p></div><span className={`text-lg font-bold ${problem.value ? 'text-red-600' : 'text-slate-400'}`}>{problem.value}</span></Link>)}</div></Card><Card padding="sm"><div className="flex items-center justify-between border-b border-slate-200 pb-3"><h2 className="text-lg font-bold text-slate-950">Состояние системы</h2><Badge variant={sync?.status === 'error' ? 'red' : sync ? 'green' : 'slate'} dot>{syncLabel}</Badge></div><div className="divide-y divide-slate-100"><div className="flex items-center justify-between py-3 text-sm"><span className="text-slate-600">Бэкенд</span><span className={backend === 'online' ? 'text-emerald-700' : 'text-red-700'}>{backend === 'online' ? 'Работает' : 'Ошибка'}</span></div><div className="flex items-center justify-between py-3 text-sm"><span className="text-slate-600">Синхронизация расписания</span><span className="text-slate-700">{syncLabel}</span></div><div className="flex items-center justify-between py-3 text-sm"><span className="text-slate-600">Последняя синхронизация</span><span className="text-right text-xs text-slate-500">{sync?.lastSync ? new Date(sync.lastSync).toLocaleString('ru-RU') : 'Нет данных'}</span></div></div><Link href="/connectors" className="mt-4 block text-sm font-semibold text-sky-700">Открыть центр коннекторов</Link></Card></div>
-    <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-8">{[{ label: 'Пользователи', value: users.length, href: '/users' }, { label: 'Активные сегодня', value: activeToday, href: '/users?status=active' }, { label: 'Студенты', value: students, href: '/users?role=student' }, { label: 'Преподаватели', value: teachers, href: '/users?role=teacher' }, { label: 'Группы', value: groups.length, href: '/groups' }, { label: 'Факультеты', value: faculties.length, href: '/faculties' }, { label: 'Занятия сегодня', value: lessons.length, href: '/schedule-import' }, { label: 'Ожидающие действия', value: pendingActions, href: '/notifications' }].map((metric) => <Link key={metric.label} href={metric.href} className="min-w-0"><Card hover padding="sm" className="h-full"><p className="truncate text-xs font-medium text-slate-500">{metric.label}</p><p className="mt-2 text-2xl font-bold text-slate-950">{displayNumber(metric.value)}</p></Card></Link>)}</div>
-    <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_320px]"><Card padding="sm"><div className="flex items-center justify-between border-b border-slate-200 pb-3"><div><h2 className="text-lg font-bold text-slate-950">Сегодня в расписании</h2><p className="mt-1 text-sm text-slate-500">{lessons.length} записей · изменения отмечены отдельно</p></div><Link href="/schedule-import" className="text-sm font-semibold text-sky-700">Открыть расписание</Link></div>{lessons.length ? <div className="mt-2 divide-y divide-slate-100">{lessons.slice(0, 8).map((lesson) => <div key={lesson.id} className="flex items-center justify-between gap-4 py-3"><div className="min-w-0"><p className="truncate text-sm font-semibold text-slate-900">{lesson.subject || 'Без названия'}</p><p className="mt-1 text-xs text-slate-500">{time(lesson.startTime)}–{time(lesson.endTime)} · {lesson.groupName || 'Группа не указана'} · ауд. {lesson.room || 'не назначена'}</p></div>{lesson.isChanged ? <Badge variant="amber">Изменено</Badge> : <Badge variant="slate">По плану</Badge>}</div>)}</div> : <div className="py-6"><EmptyState title="Нет занятий на сегодня" description="Проверьте импорт расписания или выбранную дату." /></div>}</Card><div className="space-y-6"><Card padding="sm"><div className="flex items-center justify-between"><h2 className="font-bold text-slate-950">Ожидающие действия</h2><span className="text-xs text-slate-400">{pendingActions}</span></div><div className="mt-3 divide-y divide-slate-100"><Link href="/notifications" className="flex justify-between py-3 text-sm"><span className="text-slate-600">Непрочитанные события</span><b className="text-slate-900">{unread}</b></Link><Link href="/schedule-import" className="flex justify-between py-3 text-sm"><span className="text-slate-600">Проблемы расписания</span><b className="text-slate-900">{openProblems}</b></Link></div></Card><Card padding="sm"><h2 className="font-bold text-slate-950">Быстрые действия</h2><div className="mt-3 space-y-2"><Link href="/users"><Button variant="secondary" fullWidth>Открыть пользователей</Button></Link><Link href="/university"><Button variant="secondary" fullWidth>Проверить структуру</Button></Link><Link href="/audit-log"><Button variant="secondary" fullWidth>Открыть журнал аудита</Button></Link></div></Card></div></div>
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [faculties, setFaculties] = useState<Faculty[]>([]);
+  const [lessons, setLessons] = useState<Lesson[]>([]);
+  const [notices, setNotices] = useState<Notice[]>([]);
+  const [sync, setSync] = useState<Sync | null>(null);
+  const [backend, setBackend] = useState<BackendStatus>('unknown');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [partial, setPartial] = useState<string[]>([]);
+  const [today, setToday] = useState('');
+
+  const load = useCallback(() => {
+    setLoading(true);
+    setError('');
+    const todayKey = dateKey(new Date());
+    Promise.allSettled([
+      apiFetchList<AdminUser>('/admin/users?limit=100'),
+      apiFetchList<Group>('/admin/groups?limit=100'),
+      apiFetchList<Faculty>('/admin/faculties?limit=100'),
+      apiFetchList<Lesson>(`/schedule?date=${todayKey}&limit=100`),
+      apiFetchList<Notice>('/notifications'),
+      apiFetch<Sync>('/admin/schedule/sync-status'),
+      apiFetch<{ status: string }>('/health'),
+    ]).then((results) => {
+      const failed: string[] = [];
+      const value = <T,>(index: number, label: string, fallback: T): T => {
+        const result = results[index];
+        if (result.status === 'fulfilled') return result.value as T;
+        failed.push(label);
+        return fallback;
+      };
+      setUsers(value(0, 'пользователи', []));
+      setGroups(value(1, 'группы', []));
+      setFaculties(value(2, 'факультеты', []));
+      setLessons(value(3, 'расписание', []));
+      setNotices(value(4, 'уведомления', []));
+      setSync(value<Sync | null>(5, 'синхронизация', null));
+      setBackend(results[6].status === 'fulfilled' ? 'online' : 'offline');
+      if (results[6].status === 'rejected') failed.push('статус backend');
+      setPartial(failed);
+      if (failed.length === results.length) setError('Не удалось загрузить операционную сводку.');
+    }).finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => { setToday(dateKey(new Date())); load(); }, [load]);
+
+  const currentDate = today ? new Date(`${today}T12:00:00`).toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : 'Сегодня';
+  const students = users.filter((user) => role(user) === 'student').length;
+  const teachers = users.filter((user) => role(user) === 'teacher').length;
+  const activeToday = today ? users.filter((user) => user.lastLoginAt?.slice(0, 10) === today).length : 0;
+  const unread = notices.filter((notice) => notice.isRead === false).length;
+  const nextLesson = lessons.filter(isUpcoming).sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''))[0];
+  const nextLessons = lessons.filter((lesson) => lesson.id !== nextLesson?.id).slice(0, 4);
+  const deadlines = notices.filter((notice) => notice.type?.toLowerCase().includes('deadline') || notice.type?.toLowerCase().includes('import')).slice(0, 3);
+  const problems = useMemo(() => [
+    { label: 'Занятия без аудитории', value: lessons.filter((lesson) => !lesson.room).length, href: '/schedule-import' },
+    { label: 'Преподаватели не сопоставлены', value: lessons.filter((lesson) => !lesson.teacherName).length, href: '/users?role=teacher' },
+    { label: 'Ошибки импорта', value: notices.filter((notice) => (notice.type || '').toLowerCase().includes('error')).length, href: '/schedule-import' },
+  ], [lessons, notices]);
+  const openProblems = problems.reduce((sum, item) => sum + item.value, 0);
+  const syncLabel = sync?.status === 'error' ? 'Ошибка' : sync?.status === 'synced' || sync?.status === 'active' ? 'Синхронизировано' : 'Нет данных';
+
+  if (loading) return <div className="mx-auto max-w-[var(--layout-content-max)] space-y-6" aria-busy="true" aria-label="Загрузка dashboard"><Skeleton className="h-28" /><div className="grid gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(18rem,.7fr)]"><Skeleton className="h-72" /><Skeleton className="h-72" /></div><Skeleton className="h-48" /></div>;
+  if (error && !users.length && !lessons.length) return <div className="mx-auto max-w-[var(--layout-content-max)]"><RequestState title="Не удалось загрузить dashboard" description={error} onRetry={load} /></div>;
+
+  return <div className="mx-auto max-w-[var(--layout-content-max)] space-y-6">
+    <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+      <div><p className="mb-2 text-sm font-semibold uppercase tracking-[.12em] text-[var(--color-brand)]">Рабочий день администратора</p><h1 className="ds-page-title">Что требует внимания сейчас?</h1><p className="mt-2 text-sm capitalize text-[var(--color-text-secondary)]">{currentDate}</p></div>
+      <div className="flex flex-wrap gap-2"><Badge variant={backend === 'online' ? 'green' : backend === 'offline' ? 'red' : 'slate'} dot>{backend === 'online' ? 'Система работает' : backend === 'offline' ? 'Нет связи с backend' : 'Проверяем систему'}</Badge><Link href="/schedule-import"><Button size="sm">Импортировать расписание</Button></Link></div>
+    </header>
+
+    {partial.length > 0 && <div role="status" className="rounded-[var(--radius-md)] border border-[var(--color-warning)] bg-[var(--color-warning-soft)] px-4 py-3 text-sm text-[var(--color-warning)]">Часть данных недоступна: {partial.join(', ')}. Показаны доступные сведения.</div>}
+
+    <section aria-labelledby="priority-title" className="grid gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(18rem,.65fr)]">
+      <Card padding="lg" className="border-[var(--color-brand)] bg-[var(--color-brand-soft)]"><div className="flex flex-col justify-between gap-6 sm:flex-row"><div><Badge variant="indigo">Главный фокус</Badge><h2 id="priority-title" className="mt-4 ds-section-title">{openProblems ? `${displayNumber(openProblems)} вопрос${openProblems === 1 ? '' : 'а'} требуют решения` : 'Критичных проблем не найдено'}</h2><p className="mt-2 max-w-xl text-sm leading-6 text-[var(--color-text-secondary)]">Начните с проблем расписания, затем проверьте новые события и ближайшую синхронизацию.</p></div><div className="flex shrink-0 items-start"><Link href={openProblems ? '/schedule-import' : '/notifications'}><Button>{openProblems ? 'Разобрать проблемы' : 'Проверить события'}</Button></Link></div></div><div className="mt-6 grid gap-2 sm:grid-cols-3">{problems.map((problem) => <Link key={problem.label} href={problem.href} className="rounded-[var(--radius-md)] bg-[var(--color-surface)]/70 p-3 transition-colors hover:bg-[var(--color-surface)]"><p className="text-xs text-[var(--color-text-secondary)]">{problem.label}</p><p className="mt-1 text-xl font-bold text-[var(--color-text)]">{displayNumber(problem.value)}</p></Link>)}</div></Card>
+      <Card padding="lg"><div className="flex items-center justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-[.1em] text-[var(--color-text-muted)]">Ближайшая пара</p><h2 className="mt-2 ds-card-title">{nextLesson?.subject || 'Нет ближайших занятий'}</h2></div>{nextLesson && <Badge variant={nextLesson.isChanged ? 'amber' : 'green'}>{nextLesson.isChanged ? 'Изменено' : 'По плану'}</Badge>}</div>{nextLesson ? <><p className="mt-4 text-2xl font-bold text-[var(--color-brand)]">{time(nextLesson.startTime)}–{time(nextLesson.endTime)}</p><p className="mt-2 text-sm text-[var(--color-text-secondary)]">{nextLesson.groupName || 'Группа не указана'} · ауд. {nextLesson.room || 'не назначена'}</p></> : <p className="mt-4 text-sm text-[var(--color-text-secondary)]">На сегодня новых занятий нет.</p>}<Link href="/schedule-import" className="mt-5 block text-sm font-semibold text-[var(--color-brand)]">Открыть расписание →</Link></Card>
+    </section>
+
+    <section aria-labelledby="today-title" className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(18rem,.8fr)]"><Card padding="sm"><div className="flex items-center justify-between gap-3 border-b pb-3"><div><h2 id="today-title" className="ds-card-title">Дальше сегодня</h2><p className="mt-1 text-sm text-[var(--color-text-secondary)]">Короткая временная шкала событий</p></div><Badge variant="slate">{lessons.length} занятий</Badge></div>{nextLessons.length ? <div className="divide-y">{nextLessons.map((lesson) => <div key={lesson.id} className="flex gap-4 py-4"><div className="w-16 shrink-0 text-sm font-semibold text-[var(--color-brand)]">{time(lesson.startTime)}</div><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold text-[var(--color-text)]">{lesson.subject || 'Без названия'}</p><p className="mt-1 truncate text-xs text-[var(--color-text-secondary)]">{lesson.groupName || 'Группа не указана'} · ауд. {lesson.room || 'не назначена'}</p></div>{lesson.isChanged && <Badge variant="amber">Изменено</Badge>}</div>)}</div> : <EmptyState title="Расписание свободно" description="Нет других занятий для отображения." />}</Card><div className="space-y-6"><Card padding="sm"><div className="flex items-center justify-between"><h2 className="ds-card-title">Новые события</h2><Badge variant={unread ? 'red' : 'slate'}>{unread}</Badge></div>{notices.length ? <div className="mt-2 divide-y">{notices.slice(0, 3).map((notice, index) => <Link key={notice.id || index} href="/notifications" className="block py-3"><p className="truncate text-sm font-medium text-[var(--color-text)]">{notice.title || 'Системное событие'}</p><p className="mt-1 truncate text-xs text-[var(--color-text-secondary)]">{notice.body || 'Открыть уведомление для подробностей'}</p></Link>)}</div> : <p className="mt-3 text-sm text-[var(--color-text-secondary)]">Новых событий нет.</p>}<Link href="/notifications" className="mt-3 block text-sm font-semibold text-[var(--color-brand)]">Открыть все события →</Link></Card>
+      <Card padding="sm"><h2 className="ds-card-title">Быстрые действия</h2><div className="mt-3 grid gap-2 sm:grid-cols-3 lg:grid-cols-1"><Link href="/users"><Button variant="secondary" fullWidth>Пользователи</Button></Link><Link href="/connectors"><Button variant="secondary" fullWidth>Коннекторы</Button></Link><Link href="/audit-log"><Button variant="secondary" fullWidth>Журнал аудита</Button></Link></div></Card></div></section>
+
+    <section aria-labelledby="secondary-title"><div className="mb-3 flex items-center justify-between"><h2 id="secondary-title" className="text-sm font-semibold uppercase tracking-[.1em] text-[var(--color-text-secondary)]">Контекст системы</h2><Link href="/university" className="text-sm font-semibold text-[var(--color-brand)]">Открыть структуру →</Link></div><div className="grid grid-cols-2 gap-3 md:grid-cols-4">{[{ label: 'Пользователи', value: users.length }, { label: 'Активны сегодня', value: activeToday }, { label: 'Студенты', value: students }, { label: 'Преподаватели', value: teachers }, { label: 'Группы', value: groups.length }, { label: 'Факультеты', value: faculties.length }, { label: 'Непрочитанные', value: unread }, { label: 'Синхронизация', value: syncLabel }].map((metric) => <Card key={metric.label} padding="sm"><p className="truncate text-xs text-[var(--color-text-secondary)]">{metric.label}</p><p className="mt-2 truncate text-xl font-bold text-[var(--color-text)]">{typeof metric.value === 'number' ? displayNumber(metric.value) : metric.value}</p></Card>)}</div></section>
+
+    {deadlines.length > 0 && <section aria-labelledby="deadlines-title"><h2 id="deadlines-title" className="mb-3 text-sm font-semibold uppercase tracking-[.1em] text-[var(--color-text-secondary)]">Важные сроки и подсказки</h2><div className="grid gap-3 md:grid-cols-3">{deadlines.map((notice, index) => <Link key={notice.id || index} href="/notifications" className="rounded-[var(--radius-md)] border bg-[var(--color-surface)] p-4 transition-colors hover:border-[var(--color-brand)]"><p className="text-sm font-semibold text-[var(--color-text)]">{notice.title || 'Проверьте событие'}</p><p className="mt-1 text-xs text-[var(--color-text-secondary)]">{notice.createdAt ? formatDate(notice.createdAt) : 'Требует проверки'}</p></Link>)}</div></section>}
+
+    <footer className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-[var(--color-text-secondary)]"><span>Синхронизация: {formatDateTime(sync?.lastSync || undefined)}</span><span>Статус: {syncLabel}</span><Link href="/connectors" className="font-semibold text-[var(--color-brand)]">Настроить источник данных</Link></footer>
   </div>;
 }

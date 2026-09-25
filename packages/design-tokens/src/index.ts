@@ -2,10 +2,14 @@ export const designTokens = {
   colors: {
     background: 'var(--color-background)',
     surface: 'var(--color-surface)',
+    surfaceElevated: 'var(--color-surface-elevated)',
     surfaceSecondary: 'var(--color-surface-secondary)',
+    surfaceTertiary: 'var(--color-surface-tertiary)',
     text: 'var(--color-text)',
     textSecondary: 'var(--color-text-secondary)',
+    textMuted: 'var(--color-text-muted)',
     border: 'var(--color-border)',
+    borderStrong: 'var(--color-border-strong)',
     brand: 'var(--color-brand)',
     brandStrong: 'var(--color-brand-strong)',
     brandSoft: 'var(--color-brand-soft)',
@@ -17,10 +21,16 @@ export const designTokens = {
     dangerSoft: 'var(--color-danger-soft)',
     info: 'var(--color-info)',
     infoSoft: 'var(--color-info-soft)',
+    overlay: 'var(--color-overlay)',
   },
-  radius: { sm: 'var(--radius-sm)', md: 'var(--radius-md)', lg: 'var(--radius-lg)', xl: 'var(--radius-xl)' },
-  shadow: { sm: 'var(--shadow-sm)', md: 'var(--shadow-md)', lg: 'var(--shadow-lg)' },
+  typography: {
+    display: 'var(--font-size-display)', h1: 'var(--font-size-h1)', h2: 'var(--font-size-h2)', h3: 'var(--font-size-h3)', body: 'var(--font-size-body)', small: 'var(--font-size-small)', caption: 'var(--font-size-caption)',
+  },
+  spacing: { xs: 'var(--space-1)', sm: 'var(--space-2)', md: 'var(--space-3)', lg: 'var(--space-4)', xl: 'var(--space-6)', '2xl': 'var(--space-8)', '3xl': 'var(--space-12)' },
+  radius: { sm: 'var(--radius-sm)', md: 'var(--radius-md)', lg: 'var(--radius-lg)', xl: 'var(--radius-xl)', pill: 'var(--radius-pill)' },
+  shadow: { subtle: 'var(--shadow-sm)', card: 'var(--shadow-md)', elevated: 'var(--shadow-lg)', modal: 'var(--shadow-modal)' },
   motion: { fast: 'var(--motion-fast)', normal: 'var(--motion-normal)', slow: 'var(--motion-slow)', ease: 'var(--motion-ease)' },
+  layout: { contentMax: 'var(--layout-content-max)', sidebarWidth: 'var(--layout-sidebar-width)', headerHeight: 'var(--layout-header-height)' },
   zIndex: { base: 'var(--z-base)', sticky: 'var(--z-sticky)', overlay: 'var(--z-overlay)', modal: 'var(--z-modal)', toast: 'var(--z-toast)' },
 } as const;
 

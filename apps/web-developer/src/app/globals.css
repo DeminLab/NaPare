@@ -7,5 +7,6 @@
 .developer-shell { --role-accent: #0369a1; --role-accent-soft: #eff8ff; }
 @layer components { .workspace-hero { display: grid; gap: 1rem; padding: clamp(1.5rem, 4vw, 2.5rem); border: 1px solid var(--color-border); border-radius: var(--radius-xl); background: var(--color-surface); box-shadow: var(--shadow-sm); } .workspace-kicker { display: inline-flex; align-items: center; gap: .5rem; color: var(--role-accent); font-family: var(--font-mono); font-size: .75rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; } .metric-rail { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr)); gap: .75rem; } .action-card, .table-shell { border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: var(--shadow-sm); } .action-card { padding: 1.5rem; } .table-shell { overflow-x: auto; -webkit-overflow-scrolling: touch; } .table-shell > table { min-width: 42rem; width: 100%; } }
 code, pre, .font-mono { font-family: var(--font-mono); }
-html, body { min-width: 320px; overflow-x: hidden; } img, svg, video { max-width: 100%; } button, input, select, textarea { max-width: 100%; }
-@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 1ms !important; transition-duration: 1ms !important; scroll-behavior: auto !important; } }
+html, body { min-width: 320px; overflow-x: clip; } img, svg, video { max-width: 100%; } button, input, select, textarea { max-width: 100%; } input, select, textarea { font-size: max(16px, 1rem); } button, [role="button"], nav a { min-height: 2.75rem; }
+@media (max-width: 639px) { .action-card { padding: 1rem; } }
+@media (min-width: 640px) { .table-shell, [role="table"] { scrollbar-gutter: stable; } }
