@@ -15,10 +15,10 @@ const roles = [
     bullets: ['Быстрая публикация в пару', 'Список отсутствующих', 'Материалы и обсуждение уроков'],
   },
   {
-    title: 'Деканату и кураторам',
+    title: 'Университетам',
     icon: 'building' as IconName,
-    text: 'Группы, роли, импорт расписания и подтверждение отсутствий в одном рабочем пространстве.',
-    bullets: ['Дашборд отсутствий группы', 'Структура вуза и пользователи', 'Загрузка и синхронизация расписания'],
+    text: 'Одна цифровая среда для учебной операционки — от структуры вуза и ролей до расписания и контроля изменений.',
+    bullets: ['Прозрачная работа деканата и кураторов', 'Структура вуза и пользователи', 'Загрузка и синхронизация расписания'],
   },
 ] as const;
 
@@ -87,21 +87,43 @@ export default function HomePage() {
       </header>
 
       <section className="hero">
-        <p className="eyebrow">Цифровая среда университета</p>
-        <h1>Учебный день —<br /><em>в одном месте.</em></h1>
-        <p className="lead">
-          Расписание, изменения, задания, материалы, обсуждения и учёт отсутствий —
-          всё вокруг конкретной пары. Для студентов, преподавателей и деканата.
-        </p>
-        <div className="hero-actions">
-          <Link href="/login" className="primary-action">Войти в НаПаре <Icon name="arrow-right" size={17} /></Link>
-          <a href="#features" className="secondary-action">Что внутри</a>
+        <div className="hero-inner">
+          <div className="hero-copy">
+            <p className="eyebrow">Цифровая среда университета</p>
+            <h1>Университет,<br /><em>который работает</em> как единая система.</h1>
+            <p className="lead">
+              Расписание, учебный день, задания, материалы и коммуникация —
+              в одном понятном пространстве для студентов, преподавателей и деканата.
+            </p>
+            <div className="hero-actions">
+              <Link href="/login" className="primary-action">Войти в НаПаре <Icon name="arrow-right" size={17} /></Link>
+              <a href="#roles" className="secondary-action">Для вашего вуза</a>
+            </div>
+            <ul className="hero-points" aria-label="Ключевые преимущества">
+              <li><Icon name="check" size={16} /> Один контур вместо разрозненных чатов</li>
+              <li><Icon name="check" size={16} /> Свой кабинет для каждой роли</li>
+            </ul>
+          </div>
+          <div className="product-preview" aria-label="Пример рабочего дня студента">
+            <div className="preview-topbar"><span className="preview-brand"><span>Н</span> НаПаре</span><span className="preview-status"><i /> Система работает</span><span className="preview-avatar">АК</span></div>
+            <div className="preview-body">
+              <div className="preview-sidebar"><span className="preview-sidebar-active">Сегодня</span><span>Расписание</span><span>Задания</span><span>Уведомления</span></div>
+              <div className="preview-content">
+                <div className="preview-heading"><div><small>Четверг, 26 сентября</small><strong>Добрый день, Алина</strong></div><span className="preview-chip">3 события</span></div>
+                <div className="preview-next"><div><small>СЕЙЧАС · 10:20–11:50</small><strong>Проектирование интерфейсов</strong><span>Группа ИТ-31 · Аудитория 204</span></div><b><Icon name="arrow-right" size={16} /></b></div>
+                <div className="preview-grid"><div className="preview-mini"><small>Ближайшее ДЗ</small><strong>Прототип личного кабинета</strong><span>до завтра</span></div><div className="preview-mini"><small>Изменения</small><strong>Пара перенесена</strong><span className="preview-warning">требует внимания</span></div></div>
+                <div className="preview-timeline"><span /><div><small>12:10</small><strong>Анализ данных</strong></div><span /><div><small>14:00</small><strong>Свободное окно</strong></div></div>
+              </div>
+            </div>
+          </div>
         </div>
-        <ul className="hero-points" aria-label="Ключевые факты">
-          <li><Icon name="check" size={16} /> Один аккаунт — своё пространство</li>
-          <li><Icon name="check" size={16} /> Изменения пары приходят сразу</li>
-          <li><Icon name="check" size={16} /> Учётные данные выдаёт университет</li>
-        </ul>
+      </section>
+
+      <section className="proof-strip" aria-label="Ценность платформы">
+        <div><strong>1</strong><span>единый учебный день</span></div>
+        <div><strong>3+</strong><span>рабочие роли в одной системе</span></div>
+        <div><strong>0</strong><span>потерянных изменений в чатах</span></div>
+        <div><strong>24/7</strong><span>доступ к актуальному контексту</span></div>
       </section>
 
       <section id="problem" className="section section-alt">
@@ -225,10 +247,10 @@ export default function HomePage() {
           </div>
           <div className="cta-band">
             <div>
-              <h3>Готовы открыть свой день?</h3>
-              <p>Войдите теми учётными данными, которые выдал университет.</p>
+              <h3>Пора собрать учебный день в одну систему?</h3>
+              <p>Студенты получают ясность, преподаватели — контекст, университет — управляемую операционку.</p>
             </div>
-            <Link href="/login" className="primary-action">Войти в НаПаре <Icon name="arrow-right" size={17} /></Link>
+            <div className="cta-actions"><Link href="/login" className="primary-action">Войти в НаПаре <Icon name="arrow-right" size={17} /></Link><a href="mailto:support@napare.ru?subject=Демо%20NaPare" className="cta-contact">Обсудить запуск</a></div>
           </div>
         </div>
       </section>

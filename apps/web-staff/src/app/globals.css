@@ -4,7 +4,7 @@
 @tailwind utilities;
 
 :root {
-  --role-accent: #0369a1; --role-accent-soft: #eff8ff; --workspace-accent: var(--role-accent); --workspace-accent-soft: var(--role-accent-soft);
+  --role-accent: #0369a1; --role-accent-soft: #eff8ff; --color-role: var(--role-accent); --color-role-soft: var(--role-accent-soft); --workspace-accent: var(--role-accent); --workspace-accent-soft: var(--role-accent-soft);
   --workspace-paper: var(--color-surface); --workspace-line: var(--color-border); --workspace-ink: var(--color-text); --workspace-muted: var(--color-text-secondary); --workspace-focus-ring: var(--color-brand-soft); --workspace-success: var(--color-success); --workspace-warning: var(--color-warning); --workspace-danger: var(--color-danger); --workspace-skeleton: var(--color-surface-tertiary);
   --space-2: .5rem; --space-3: .75rem; --space-4: 1rem; --space-6: 1.5rem; --space-8: 2rem; --space-12: 3rem;
 }
@@ -17,5 +17,6 @@
   .status-dot { display: inline-block; width: .5rem; height: .5rem; border-radius: 9999px; background: var(--color-text-muted); } .status-dot--success { background: var(--color-success); } .status-dot--warning { background: var(--color-warning); } .status-dot--danger { background: var(--color-danger); }
 }
 html, body { min-width: 320px; overflow-x: clip; } img, svg, video { max-width: 100%; } button, input, select, textarea { max-width: 100%; } input, select, textarea { font-size: max(16px, 1rem); } button, [role="button"], nav a { min-height: 2.75rem; } nav[aria-label="Мобильная навигация"] { padding-bottom: max(.375rem, env(safe-area-inset-bottom)); }
+button, a, input, select, textarea { touch-action: manipulation; }
 @media (max-width: 639px) { .grid-cols-3 { grid-template-columns: minmax(0, 1fr); } .action-card { padding: 1rem; } }
 @media (min-width: 640px) { .table-shell, [role="table"] { scrollbar-gutter: stable; } }

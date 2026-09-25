@@ -4,10 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { apiFetch, getHealth, getUser } from '@/lib/api';
 import type { HealthInfo, UserInfo } from '@/lib/api';
-import Badge from '@/components/ui/Badge';
-import Button from '@/components/ui/Button';
-import Card from '@/components/ui/Card';
-import Skeleton from '@/components/ui/Skeleton';
+import { Badge, Button, Card, PageHeader, Skeleton } from '@/components/ui';
 
 interface Notice { id?: string; title?: string; body?: string; }
 interface Telemetry { requests?: number; activeSessions?: number; errors?: number; }
@@ -18,7 +15,7 @@ const status = (online: boolean | null) => {
 };
 
 function EmptyChart({ title }: { title: string }) {
-  return <div className="flex h-48 items-center justify-center rounded-xl border border-dashed border-white/10 bg-black/10 text-center"><div><div className="mx-auto mb-3 h-2 w-28 rounded-full bg-white/10" /><p className="text-sm text-white/45">{title}</p><p className="mt-1 text-xs text-white/25">Телеметрия не подключена</p></div></div>;
+  return <div className="flex h-48 items-center justify-center rounded-[var(--radius-lg)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-secondary)] text-center"><div><div className="mx-auto mb-3 h-2 w-28 rounded-full bg-[var(--color-border-strong)]" /><p className="text-sm text-[var(--color-text-secondary)]">{title}</p><p className="mt-1 text-xs text-[var(--color-text-muted)]">Телеметрия не подключена</p></div></div>;
 }
 
 export default function DeveloperOverviewPage() {
@@ -53,7 +50,7 @@ export default function DeveloperOverviewPage() {
 
   return <div className="p-4 sm:p-6 lg:p-8"><div className="mx-auto max-w-7xl space-y-6">
     <div className="flex items-center gap-2 text-xs text-white/40">Разработчик <span>/</span> <span className="text-white/80">Обзор</span></div>
-    <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end"><div><h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">Обзор панели разработчика</h1><p className="mt-1 text-sm text-white/45">Состояние API-платформы и операционная телеметрия</p></div><Button variant="secondary" onClick={load}>Обновить</Button></div>
+    <PageHeader eyebrow="Developer workspace" title="Обзор панели разработчика" description="Состояние API-платформы и операционная телеметрия" actions={<Button variant="secondary" onClick={load}>Обновить</Button>} />
     {loading ? <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">{metrics.map((metric) => <Card key={metric.label} className="border-white/10 bg-white/[0.04]"><Skeleton className="h-3 w-24" /><Skeleton className="mt-4 h-7 w-20" /></Card>)}</div> : <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">{metrics.map((metric) => <Card key={metric.label} className="border-white/10 bg-white/[0.04]"><p className="text-xs uppercase tracking-wider text-white/40">{metric.label}</p><p className="mt-3 text-2xl font-bold text-white">{metric.value}</p></Card>)}</div>}
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_300px]"><div className="space-y-6">
       <div className="grid gap-6 lg:grid-cols-2"><Card className="border-white/10 bg-white/[0.04]"><div className="mb-4 flex items-center justify-between"><h2 className="text-sm font-bold uppercase tracking-wider text-white/70">График использования API</h2><span className="text-xs text-white/35">Последние 24 часа</span></div><EmptyChart title={telemetry ? 'Данные использования готовы к построению' : 'Нет данных об использовании API'} /></Card><Card className="border-white/10 bg-white/[0.04]"><div className="mb-4 flex items-center justify-between"><h2 className="text-sm font-bold uppercase tracking-wider text-white/70">График запросов</h2><span className="text-xs text-white/35">Запросы</span></div><EmptyChart title="Нет данных телеметрии запросов" /></Card></div>

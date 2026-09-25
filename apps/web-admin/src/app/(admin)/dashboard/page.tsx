@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { apiFetch, apiFetchList } from '@/lib/api';
-import { Badge, Button, Card, EmptyState, RequestState, Skeleton } from '@/components/ui';
+import { Badge, Button, Card, EmptyState, PageHeader, RequestState, Skeleton } from '@/components/ui';
 
 interface AdminUser { id: string; firstName: string; lastName: string; role?: string; lastLoginAt?: string; isActive?: boolean; }
 interface Group { id: string; name: string; }
@@ -93,10 +93,7 @@ export default function DashboardPage() {
   if (error && !users.length && !lessons.length) return <div className="mx-auto max-w-[var(--layout-content-max)]"><RequestState title="Не удалось загрузить dashboard" description={error} onRetry={load} /></div>;
 
   return <div className="mx-auto max-w-[var(--layout-content-max)] space-y-6">
-    <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-      <div><p className="mb-2 text-sm font-semibold uppercase tracking-[.12em] text-[var(--color-brand)]">Рабочий день администратора</p><h1 className="ds-page-title">Что требует внимания сейчас?</h1><p className="mt-2 text-sm capitalize text-[var(--color-text-secondary)]">{currentDate}</p></div>
-      <div className="flex flex-wrap gap-2"><Badge variant={backend === 'online' ? 'green' : backend === 'offline' ? 'red' : 'slate'} dot>{backend === 'online' ? 'Система работает' : backend === 'offline' ? 'Нет связи с backend' : 'Проверяем систему'}</Badge><Link href="/schedule-import"><Button size="sm">Импортировать расписание</Button></Link></div>
-    </header>
+    <PageHeader eyebrow="Рабочий день администратора" title="Что требует внимания сейчас?" description={currentDate} actions={<><Badge variant={backend === 'online' ? 'green' : backend === 'offline' ? 'red' : 'slate'} dot>{backend === 'online' ? 'Система работает' : backend === 'offline' ? 'Нет связи с backend' : 'Проверяем систему'}</Badge><Link href="/schedule-import"><Button size="sm">Импортировать расписание</Button></Link></>} />
 
     {partial.length > 0 && <div role="status" className="rounded-[var(--radius-md)] border border-[var(--color-warning)] bg-[var(--color-warning-soft)] px-4 py-3 text-sm text-[var(--color-warning)]">Часть данных недоступна: {partial.join(', ')}. Показаны доступные сведения.</div>}
 

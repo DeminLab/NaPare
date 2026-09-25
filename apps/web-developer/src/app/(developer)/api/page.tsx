@@ -86,15 +86,15 @@ export default function ApiPage() {
       <div className="mx-auto max-w-5xl">
         <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">API Мониторинг</h1>
-            <p className="mt-1 text-sm text-slate-500">
+            <h1 className="ds-page-title">API Мониторинг</h1>
+            <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
               Состояние сервера и список эндпоинтов
-              {lastCheck && <span className="ml-2 text-slate-400">· Обновлено в {lastCheck}</span>}
+              {lastCheck && <span className="ml-2 text-[var(--color-text-muted)]">· Обновлено в {lastCheck}</span>}
             </p>
           </div>
           <button
             onClick={checkEndpoints}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-200"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-md)] border bg-[var(--color-surface-secondary)] px-4 py-2 text-sm font-medium text-[var(--color-text)] transition-colors hover:bg-[var(--color-surface-tertiary)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-brand-soft)]"
           >
             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -118,10 +118,10 @@ export default function ApiPage() {
               )}
             </div>
             <div>
-              <h2 className="text-lg font-bold text-slate-900">
+              <h2 className="text-lg font-bold text-[var(--color-text)]">
                 {isHealthy ? 'Сервер работает' : 'Сервер недоступен'}
               </h2>
-              <p className="text-sm text-slate-500">
+              <p className="text-sm text-[var(--color-text-secondary)]">
                 {health?.timestamp ? `Последняя проверка: ${health.timestamp}` : 'Проверка...'}
               </p>
             </div>
@@ -179,15 +179,15 @@ export default function ApiPage() {
           <div className="overflow-x-auto" aria-label="Таблица статусов API">
             <table className="min-w-[680px] w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-100">
-                  <th className="pb-3 text-left font-medium text-slate-500">Метод</th>
-                  <th className="pb-3 text-left font-medium text-slate-500">Путь</th>
-                  <th className="pb-3 text-left font-medium text-slate-500">Имя</th>
-                  <th className="pb-3 text-left font-medium text-slate-500">Статус</th>
-                  <th className="pb-3 text-right font-medium text-slate-500">Задержка</th>
+                <tr className="border-b border-[var(--color-border)]">
+                  <th className="pb-3 text-left font-medium text-[var(--color-text-secondary)]">Метод</th>
+                  <th className="pb-3 text-left font-medium text-[var(--color-text-secondary)]">Путь</th>
+                  <th className="pb-3 text-left font-medium text-[var(--color-text-secondary)]">Имя</th>
+                  <th className="pb-3 text-left font-medium text-[var(--color-text-secondary)]">Статус</th>
+                  <th className="pb-3 text-right font-medium text-[var(--color-text-secondary)]">Задержка</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50">
+              <tbody className="divide-y divide-[var(--color-border)]">
                 {endpoints.map((ep) => (
                   <tr key={ep.path} className="group">
                     <td className="py-3 pr-4">
@@ -200,11 +200,11 @@ export default function ApiPage() {
                       </span>
                     </td>
                     <td className="py-3 pr-4">
-                      <code className="rounded-lg bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700 font-mono">
+                      <code className="rounded-[var(--radius-sm)] bg-[var(--color-surface-secondary)] px-2 py-0.5 font-mono text-xs font-medium text-[var(--color-text)]">
                         {ep.path}
                       </code>
                     </td>
-                    <td className="py-3 pr-4 text-sm font-medium text-slate-700">{ep.name}</td>
+                    <td className="py-3 pr-4 text-sm font-medium text-[var(--color-text)]">{ep.name}</td>
                     <td className="py-3 pr-4">
                       <Badge variant={
                         ep.status === 'ok' ? 'success' :
@@ -212,12 +212,12 @@ export default function ApiPage() {
                       }>
                         <span className={`h-1.5 w-1.5 rounded-full ${
                           ep.status === 'ok' ? 'bg-emerald-500' :
-                          ep.status === 'error' ? 'bg-red-500' : 'bg-slate-400'
+                          ep.status === 'error' ? 'bg-[var(--color-danger)]' : 'bg-[var(--color-text-muted)]'
                         }`} />
                         {ep.status === 'ok' ? 'OK' : ep.status === 'error' ? 'Ошибка' : '—'}
                       </Badge>
                     </td>
-                    <td className="py-3 text-right text-xs text-slate-500 font-mono">
+                    <td className="ds-table-number py-3 text-right font-mono text-xs text-[var(--color-text-secondary)]">
                       {formatLatency(ep.latency)}
                     </td>
                   </tr>
