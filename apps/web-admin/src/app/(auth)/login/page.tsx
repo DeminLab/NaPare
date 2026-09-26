@@ -26,33 +26,33 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-100 via-white to-sky-50 px-4">
+    <div className="flex min-h-screen items-center justify-center bg-[var(--color-background)] px-4 py-8">
       <div className="w-full max-w-md">
-        <div className="rounded-2xl bg-white p-8 shadow-xl shadow-slate-200/50 ring-1 ring-slate-100">
+        <div className="rounded-[var(--radius-xl)] border bg-[var(--color-surface)] p-6 shadow-[var(--shadow-lg)] sm:p-8">
           <div className="mb-8 text-center">
-            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-800 to-sky-600">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-[var(--radius-lg)] bg-[var(--color-brand)]">
               <svg className="h-7 w-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
               </svg>
             </div>
-            <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-slate-400">
+            <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-[var(--color-text-muted)]">
               НаПаре
             </p>
-            <h1 className="text-2xl font-bold text-slate-900">Вход администратора</h1>
-            <p className="mt-1.5 text-sm text-slate-400">
-              Панель управления университетом
+            <h1 className="ds-page-title">Вход в кабинет ВУЗа</h1>
+            <p className="mt-1.5 text-sm text-[var(--color-text-secondary)]">
+              Управляйте учебным процессом и данными ВУЗа
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             {error && (
-              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
+                <div role="alert" className="rounded-[var(--radius-md)] border border-[var(--color-danger)] bg-[var(--color-danger-soft)] px-4 py-3 text-sm font-medium text-[var(--color-danger)]">
                 {error}
               </div>
             )}
 
             <div>
-              <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-slate-700">
+              <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">
                 Электронная почта
               </label>
               <input
@@ -62,12 +62,12 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="admin@university.ru"
-                className="block w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 placeholder-slate-400 transition-colors focus:border-sky-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-sky-100"
+                className="ds-input block w-full px-4 py-3 text-sm"
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-slate-700">
+              <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">
                 Пароль
               </label>
               <input
@@ -77,14 +77,14 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;"
-                className="block w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 placeholder-slate-400 transition-colors focus:border-sky-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-sky-100"
+                className="ds-input block w-full px-4 py-3 text-sm"
               />
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-xl bg-gradient-to-r from-slate-800 to-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-slate-800/25 transition-all hover:from-slate-900 hover:to-slate-950 hover:shadow-xl disabled:opacity-50 disabled:shadow-none"
+              className="min-h-[var(--control-height-md)] w-full rounded-[var(--radius-md)] bg-[var(--color-brand)] px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-brand-strong)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-brand-soft)] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {loading ? (
                 <span className="inline-flex items-center gap-2">
@@ -101,7 +101,7 @@ export default function LoginPage() {
           </form>
         </div>
 
-        <p className="mt-6 text-center text-xs text-slate-400">
+        <p className="mt-6 text-center text-xs text-[var(--color-text-muted)]">
           &copy; 2026 НаПаре
         </p>
       </div>

@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
+import { ForbiddenException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, FindManyOptions, Repository, Between } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -14,6 +14,7 @@ import { EventBusService } from '../events/event-bus.service';
 import { LessonOccurrence } from '../academic/entities/lesson-occurrence.entity';
 import { ScheduleChange } from '../academic/entities/schedule-change.entity';
 import { RaspLesson, RaspScraperService } from '../auth/rasp-scraper.service';
+import { UserRole } from '../auth/interfaces/user-role';
 import {
   PaginatedResponse,
   PaginationQueryDto,
@@ -48,6 +49,25 @@ export class ScheduleService {
     }
     this.tenantContext.assertAccess(lesson.universityId);
 
+    return lesson;
+  }
+
+  async findAccessibleById(
+    id: string,
+    user: { id: string; universityId: string; role: UserRole; groupId?: string | null },
+  ): Promise<Lesson> {
+    const lesson = await this.lessonRepository.findOne({
+      where: { id, universityId: user.universityId },
+    });
+    if (!lesson) {
+      throw new NotFoundException(`Lesson with id ${id} not found`);
+    }
+    if (user.role === UserRole.STUDENT && (!user.groupId || lesson.groupId !== user.groupId)) {
+      throw new ForbiddenException('Students can only access lessons for their own group');
+    }
+    if (user.role === UserRole.TEACHER && lesson.teacherId !== user.id) {
+      throw new ForbiddenException('Teachers can only access their own lessons');
+    }
     return lesson;
   }
 
@@ -112,7 +132,17 @@ export class ScheduleService {
         .map((lesson) => this.mapRaspLesson(lesson, universityId));
       return toPaginatedResponse(lessons, lessons.length, pagination);
     }
-    return this.findByDateRange(universityId, startDate, endDate, pagination);
+    if (!groupId) {
+      return toPaginatedResponse([], 0, pagination);
+    }
+    return this.findPaginated({
+      where: {
+        universityId,
+        groupId,
+        startDate: Between(new Date(startDate), new Date(endDate)),
+      },
+      order: { startDate: 'ASC', pairNumber: 'ASC' },
+    }, pagination);
   }
 
   async findForStudentDate(
@@ -128,7 +158,10 @@ export class ScheduleService {
         .map((lesson) => this.mapRaspLesson(lesson, universityId));
       return toPaginatedResponse(lessons, lessons.length, pagination);
     }
-    return this.findByDate(universityId, date, pagination);
+    if (!groupId) {
+      return toPaginatedResponse([], 0, pagination);
+    }
+    return this.findByGroup(universityId, groupId, date, pagination);
   }
 
   private mapRaspLesson(lesson: RaspLesson, universityId: string): Lesson {
@@ -209,12 +242,44 @@ export class ScheduleService {
     }, pagination);
   }
 
+  async findByTeacherDateRange(
+    universityId: string,
+    teacherId: string,
+    startDate: string,
+    endDate: string,
+    pagination: PaginationQueryDto = new PaginationQueryDto(),
+  ): Promise<PaginatedResponse<Lesson>> {
+    this.tenantContext.assertAccess(universityId);
+    return this.findPaginated({
+      where: {
+        universityId,
+        teacherId,
+        startDate: Between(new Date(startDate), new Date(endDate)),
+      },
+      order: { startDate: 'ASC', pairNumber: 'ASC' },
+    }, pagination);
+  }
+
+  async getTeacherGroupIds(universityId: string, teacherId: string): Promise<string[]> {
+    this.tenantContext.assertAccess(universityId);
+    const lessons = await this.lessonRepository.find({
+      select: ['groupId'],
+      where: { universityId, teacherId },
+    });
+    return [...new Set(lessons.map((lesson) => lesson.groupId).filter(Boolean))];
+  }
+
   async create(createLessonDto: CreateLessonDto): Promise<Lesson> {
     if (createLessonDto.universityId) {
       this.tenantContext.assertAccess(createLessonDto.universityId);
     }
+    const actor = this.tenantContext.getUser();
+    if (actor?.role === UserRole.TEACHER && createLessonDto.teacherId && createLessonDto.teacherId !== actor.id) {
+      throw new ForbiddenException('Teachers can only create lessons for themselves');
+    }
     const lesson = this.lessonRepository.create({
       ...createLessonDto,
+      ...(actor?.role === UserRole.TEACHER ? { teacherId: actor.id } : {}),
       source: createLessonDto.source ?? 'manual',
       lastSyncedAt: createLessonDto.source ? new Date() : null,
       syncStatus: createLessonDto.source ? 'synced' : 'unknown',
@@ -229,6 +294,7 @@ export class ScheduleService {
       throw new NotFoundException(`Lesson with id ${id} not found`);
     }
     this.tenantContext.assertAccess(lesson.universityId);
+    this.assertTeacherCanManageLesson(lesson);
 
     const oldValue = lessonChangeValues(lesson);
     Object.assign(lesson, updateLessonDto);
@@ -300,7 +366,7 @@ export class ScheduleService {
         newValue: updatedValues,
         groupId: lesson.groupId,
         teacherId: lesson.teacherId,
-        deepLink: `/schedule?lessonId=${lesson.id}`,
+        deepLink: `/week?date=${lesson.startDate.toISOString().slice(0, 10)}`,
       },
       priority: eventType === 'lesson.changed' ? 'normal' : 'high',
     });
@@ -310,6 +376,7 @@ export class ScheduleService {
 
   async delete(id: string): Promise<void> {
     const lesson = await this.findById(id);
+    this.assertTeacherCanManageLesson(lesson);
     await this.lessonRepository.delete(lesson.id);
     await this.eventBus?.publish({
       type: 'lesson.cancelled',
@@ -320,10 +387,17 @@ export class ScheduleService {
         oldValue: lessonChangeValues(lesson),
         groupId: lesson.groupId,
         teacherId: lesson.teacherId,
-        deepLink: `/schedule?date=${lesson.startDate.toISOString().slice(0, 10)}`,
+        deepLink: `/week?date=${lesson.startDate.toISOString().slice(0, 10)}`,
       },
       priority: 'high',
     });
+  }
+
+  private assertTeacherCanManageLesson(lesson: Lesson): void {
+    const user = this.tenantContext.getUser();
+    if (user?.role === UserRole.TEACHER && lesson.teacherId !== user.id) {
+      throw new ForbiddenException('Teachers can only manage their own lessons');
+    }
   }
 
   async importLessons(

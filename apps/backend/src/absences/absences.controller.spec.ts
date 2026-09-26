@@ -19,4 +19,12 @@ describe('AbsencesController authorization', () => {
       expect(roles).toContain(UserRole.CURATOR);
     }
   });
+
+  it('limits attendance records to staff roles', () => {
+    for (const handler of [controller.findAttendanceByLesson, controller.markAttendance]) {
+      const roles = Reflect.getMetadata(ROLES_KEY, handler) as UserRole[];
+      expect(roles).not.toContain(UserRole.STUDENT);
+      expect(roles).toContain(UserRole.TEACHER);
+    }
+  });
 });

@@ -14,15 +14,18 @@ import { AuditLog } from '../common/entities/audit-log.entity';
 
 describe('AdminService', () => {
   let service: AdminService;
+  let module: TestingModule;
 
   const mockUsersService = {
     findByUniversityId: jest.fn().mockResolvedValue([]),
+    findByGroupId: jest.fn().mockResolvedValue({ data: [], meta: {} }),
     findById: jest.fn().mockResolvedValue(null),
     update: jest.fn(),
   };
 
   const mockScheduleService = {
     importLessons: jest.fn().mockResolvedValue({ imported: 0, updated: 0 }),
+    getTeacherGroupIds: jest.fn().mockResolvedValue([]),
   };
 
   const mockSibitConnectorService = {
@@ -34,11 +37,12 @@ describe('AdminService', () => {
     findOne: jest.fn().mockResolvedValue(defaults.findOne || null),
     create: jest.fn().mockImplementation((dto) => ({ id: '1', ...dto })),
     save: jest.fn().mockImplementation((entity) => Promise.resolve(entity)),
+    findAndCount: jest.fn().mockResolvedValue([[], 0]),
     delete: jest.fn(),
   });
 
   beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
+    module = await Test.createTestingModule({
       providers: [
         AdminService,
         { provide: UsersService, useValue: mockUsersService },
@@ -108,8 +112,75 @@ describe('AdminService', () => {
     });
   });
 
+  describe('attendance group access', () => {
+    it('does not expose students from a group without the teacher\'s lessons', async () => {
+      mockScheduleService.getTeacherGroupIds.mockResolvedValue(['group-1']);
+
+      await expect(service.getGroupStudents('uni-1', 'group-2', { page: 1, limit: 50 } as any, 'teacher-1', UserRole.TEACHER))
+        .rejects.toThrow(ForbiddenException);
+      expect(mockUsersService.findByGroupId).not.toHaveBeenCalled();
+    });
+
+    it('returns only the teacher\'s own lesson groups for attendance', async () => {
+      mockScheduleService.getTeacherGroupIds.mockResolvedValue(['group-1']);
+      const groupRepository = module.get(getRepositoryToken(Group));
+      groupRepository.findAndCount.mockResolvedValue([[{ id: 'group-1', name: 'ПИ-21' }], 1]);
+
+      const result = await service.getAttendanceGroups('uni-1', 'teacher-1', UserRole.TEACHER, { page: 1, limit: 50 } as any);
+
+      expect(result.data).toEqual([{ id: 'group-1', name: 'ПИ-21' }]);
+      expect(groupRepository.findAndCount).toHaveBeenCalledWith(expect.objectContaining({ where: { universityId: 'uni-1', id: expect.anything() } }));
+    });
+  });
+
+  describe('importSchedule', () => {
+    const importRow = {
+      date: '2026-09-26',
+      startTime: '09:00',
+      endTime: '10:30',
+      pairNumber: 1,
+      subject: 'Математика',
+      group: 'ПИ-21',
+      teacher: 'Иванов И.И.',
+      room: '305',
+    };
+
+    it('resolves a university group and imports the actual parsed lesson rows', async () => {
+      const groupRepository = module.get(getRepositoryToken(Group));
+      groupRepository.find.mockResolvedValue([{ id: 'group-1', name: 'ПИ-21', universityId: 'uni-1' }]);
+      mockScheduleService.importLessons.mockClear();
+
+      await service.importSchedule('uni-1', {
+        fileName: 'schedule.csv',
+        format: 'csv',
+        rows: [importRow],
+      });
+
+      expect(mockScheduleService.importLessons).toHaveBeenCalledWith('uni-1', [expect.objectContaining({
+        groupId: 'group-1',
+        groupName: 'ПИ-21',
+        subject: 'Математика',
+        startTime: '09:00',
+        endTime: '10:30',
+        pairNumber: 1,
+      })]);
+    });
+
+    it('rejects rows that reference groups outside the university structure', async () => {
+      const groupRepository = module.get(getRepositoryToken(Group));
+      groupRepository.find.mockResolvedValue([]);
+
+      await expect(service.importSchedule('uni-1', {
+        fileName: 'schedule.csv',
+        format: 'csv',
+        rows: [importRow],
+      })).rejects.toThrow('Не найдены группы ВУЗа');
+    });
+  });
+
   describe('syncSchedule', () => {
     it('runs the SIBIT connector and reports the fetched counts', async () => {
+      const universityRepository = module.get(getRepositoryToken(University));
       const result = await service.syncSchedule('uni-1');
 
       expect(mockSibitConnectorService.sync).toHaveBeenCalledTimes(1);
@@ -120,6 +191,38 @@ describe('AdminService', () => {
         teachers: 120,
       });
       expect(typeof result.timestamp).toBe('string');
+      expect(universityRepository.save).toHaveBeenCalledWith(expect.objectContaining({
+        connectorConfig: expect.objectContaining({ status: 'active', lastSync: result.timestamp }),
+      }));
+    });
+  });
+
+  describe('connectors', () => {
+    it('identifies Moodle as an LMS connector without offering schedule sync', async () => {
+      const universityRepository = module.get(getRepositoryToken(University));
+      universityRepository.findOne.mockResolvedValue({ id: 'uni-1', name: 'СИБИТ', connectorType: 'moodle', connectorConfig: { status: 'inactive' } });
+
+      const result = await service.getConnectors('uni-1', { page: 1, limit: 20 } as any);
+
+      expect(result.data).toEqual([expect.objectContaining({
+        id: 'moodle',
+        name: 'Moodle',
+        type: 'lms',
+        capabilities: { learningManagement: true },
+      })]);
+      expect(result.data[0].capabilities.scheduleSync).toBeUndefined();
+    });
+
+    it('persists a connector status inside the current university configuration', async () => {
+      const universityRepository = module.get(getRepositoryToken(University));
+      universityRepository.findOne.mockResolvedValue({ id: 'uni-1', name: 'СИБИТ', connectorType: 'rasp-sano', connectorConfig: { status: 'active' } });
+
+      const result = await service.updateConnector('uni-1', 'sibit', { status: 'inactive' });
+
+      expect(result.status).toBe('inactive');
+      expect(universityRepository.save).toHaveBeenCalledWith(expect.objectContaining({
+        connectorConfig: expect.objectContaining({ status: 'inactive', updatedAt: expect.any(String) }),
+      }));
     });
   });
 });

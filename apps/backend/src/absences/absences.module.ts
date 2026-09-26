@@ -3,6 +3,9 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { Absence } from './entities/absence.entity';
 import { AbsenceConfirmation } from './entities/absence-confirmation.entity';
+import { AttendanceRecord } from './entities/attendance-record.entity';
+import { Lesson } from '../schedule/entities/lesson.entity';
+import { User } from '../users/entities/user.entity';
 import { AbsencesService } from './absences.service';
 import { AbsencesController } from './absences.controller';
 import { CuratorController } from './curator.controller';
@@ -10,7 +13,7 @@ import { EventsModule } from '../events/events.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Absence, AbsenceConfirmation]),
+    TypeOrmModule.forFeature([Absence, AbsenceConfirmation, AttendanceRecord, Lesson, User]),
     EventsModule,
   ],
   providers: [AbsencesService],

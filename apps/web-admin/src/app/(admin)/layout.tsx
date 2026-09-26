@@ -35,5 +35,5 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const fullName = user.firstName + ' ' + user.lastName;
   const resolvedGroups = groups.map((group) => ({ ...group, items: group.items.map((item) => item.href === '/notifications' ? { ...item, badge: notificationCount } : item) }));
   const status = systemStatus === 'online' ? { label: 'Система работает', tone: 'success' as const } : systemStatus === 'offline' ? { label: 'Система недоступна', tone: 'danger' as const } : { label: 'Проверка системы', tone: 'warning' as const };
-  return <WorkspaceShell LinkComponent={AppLink} pathname={pathname} groups={resolvedGroups} roleLabel="Администратор" homeHref="/dashboard" user={{ name: fullName, role: 'Профиль администратора' }} unreadCount={notificationCount} status={status} commands={commands} onLogout={logout}>{children}</WorkspaceShell>;
+  return <WorkspaceShell LinkComponent={AppLink} pathname={pathname} groups={resolvedGroups} roleLabel="Кабинет ВУЗа" homeHref="/dashboard" user={{ name: fullName, role: 'Оператор ВУЗа' }} unreadCount={notificationCount} status={status} commands={commands} onLogout={logout}>{children}</WorkspaceShell>;
 }

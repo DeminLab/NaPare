@@ -38,13 +38,9 @@ export class ScheduleController {
     @Request() req,
     @Query() query: DateRangeQueryDto,
   ) {
-    return this.scheduleService.findForStudentDateRange(
-      req.user.universityId,
-      req.user.groupId,
-      query.startDate,
-      query.endDate,
-      query,
-    );
+    if (req.user.role === UserRole.STUDENT) return this.scheduleService.findForStudentDateRange(req.user.universityId, req.user.groupId, query.startDate, query.endDate, query);
+    if (req.user.role === UserRole.TEACHER) return this.scheduleService.findByTeacherDateRange(req.user.universityId, req.user.id, query.startDate, query.endDate, query);
+    return this.scheduleService.findByDateRange(req.user.universityId, query.startDate, query.endDate, query);
   }
 
   @Get()
@@ -56,6 +52,8 @@ export class ScheduleController {
     @Query() query: ScheduleQueryDto,
   ) {
     const universityId = req.user.universityId;
+    if (req.user.role === UserRole.STUDENT) return this.scheduleService.findForStudentDate(universityId, req.user.groupId, query.date, query);
+    if (req.user.role === UserRole.TEACHER) return this.scheduleService.findByTeacher(universityId, req.user.id, query.date, query);
 
     if (query.groupId) {
       return this.scheduleService.findByGroup(universityId, query.groupId, query.date, query);
@@ -73,8 +71,8 @@ export class ScheduleController {
   @ApiResponse({ status: 200, description: 'Урок найден' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Not found' })
-  async findLesson(@Param('id') id: string) {
-    return this.scheduleService.findById(id);
+  async findLesson(@Param('id') id: string, @Request() req) {
+    return this.scheduleService.findAccessibleById(id, req.user);
   }
 
   @Get('lessons/:id/changes')
@@ -82,7 +80,8 @@ export class ScheduleController {
   @ApiOkResponse({ description: 'Изменения получены', type: PaginatedResponseDto })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Not found' })
-  async getLessonChanges(@Param('id') id: string, @Query() pagination: PaginationQueryDto) {
+  async getLessonChanges(@Param('id') id: string, @Request() req, @Query() pagination: PaginationQueryDto) {
+    await this.scheduleService.findAccessibleById(id, req.user);
     return this.scheduleService.getLessonChanges(id, pagination);
   }
 
@@ -94,13 +93,9 @@ export class ScheduleController {
     @Request() req,
     @Query() query: DateRangeQueryDto,
   ) {
-    return this.scheduleService.findForStudentDateRange(
-      req.user.universityId,
-      req.user.groupId,
-      query.startDate,
-      query.endDate,
-      query,
-    );
+    if (req.user.role === UserRole.STUDENT) return this.scheduleService.findForStudentDateRange(req.user.universityId, req.user.groupId, query.startDate, query.endDate, query);
+    if (req.user.role === UserRole.TEACHER) return this.scheduleService.findByTeacherDateRange(req.user.universityId, req.user.id, query.startDate, query.endDate, query);
+    return this.scheduleService.findByDateRange(req.user.universityId, query.startDate, query.endDate, query);
   }
 
   @Get('changes')

@@ -56,7 +56,7 @@ export interface Absence {
   type: string;
   startDate: string;
   endDate: string;
-  status: string;
+  confirmationRequired: boolean;
   comment?: string | null;
 }
 
@@ -105,6 +105,7 @@ export interface AbsenceInput {
   startDate: string;
   endDate: string;
   comment?: string;
+  lessonId?: string;
 }
 
 const memoryStore = new Map<string, string>();

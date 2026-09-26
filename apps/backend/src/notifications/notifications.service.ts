@@ -67,6 +67,12 @@ export class NotificationsService {
   async processEvent(event: EventEnvelope, recipientIds: string[]): Promise<void> {
     const mapped = mapEvent(event);
     for (const userId of recipientIds) {
+      const recipientDeepLinks = event.payload.recipientDeepLinks;
+      const deepLink = recipientDeepLinks && typeof recipientDeepLinks === 'object'
+        && typeof (recipientDeepLinks as Record<string, unknown>)[userId] === 'string'
+        ? (recipientDeepLinks as Record<string, string>)[userId]
+        : mapped.deepLink;
+      const actions: NotificationAction[] = [{ label: 'Открыть', href: deepLink }];
       const preference = await this.getPreferences(userId, event.university.id);
       if (!this.isAllowed(event.type, event.priority, preference)) continue;
 
@@ -81,8 +87,8 @@ export class NotificationsService {
           priority: event.priority,
           title: mapped.title,
           body: mapped.body,
-          deepLink: mapped.deepLink,
-          actions: mapped.actions,
+          deepLink,
+          actions,
           eventId: event.id,
           data: event.payload,
         }));
@@ -99,11 +105,11 @@ export class NotificationsService {
             type: event.type,
             title: mapped.inbox.title,
             description: mapped.inbox.description,
-            deepLink: mapped.deepLink,
+            deepLink,
             priority: event.priority,
             status: 'open',
             dueAt: mapped.dueAt,
-            actions: mapped.actions,
+            actions,
             data: event.payload,
           }));
         }
@@ -159,10 +165,14 @@ export class NotificationsService {
     await this.inboxRepository.update(item.id, { status: 'snoozed', dueAt: until });
   }
 
-  async markAsRead(id: string): Promise<void> {
+  async markAsRead(id: string, userId: string): Promise<void> {
     const notification = await this.notificationRepository.findOne({ where: { id } });
     if (!notification) {
       throw new NotFoundException(`Notification with id ${id} not found`);
+    }
+    const currentUser = this.tenantContext.getUser();
+    if (!currentUser || currentUser.id !== userId || notification.userId !== userId) {
+      throw new ForbiddenException('Cannot mark another user\'s notification as read');
     }
     this.tenantContext.assertAccess(notification.universityId);
     await this.notificationRepository.update(notification.id, {

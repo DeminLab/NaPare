@@ -16,6 +16,7 @@ import { ABSENCE_STAFF_ROLES, AbsencesService } from './absences.service';
 import { CreateAbsenceDto } from './dto/create-absence.dto';
 import { UpdateAbsenceDto } from './dto/update-absence.dto';
 import { RejectAbsenceDto } from './dto/reject-absence.dto';
+import { MarkAttendanceDto } from './dto/mark-attendance.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -55,6 +56,27 @@ export class AbsencesController {
   @ApiResponse({ status: 404, description: 'Not found' })
   async findByLesson(@Param('lessonId') lessonId: string, @Query() pagination: PaginationQueryDto) {
     return this.absencesService.findByLesson(lessonId, pagination);
+  }
+
+  @Get('pending')
+  @Roles(...ABSENCE_STAFF_ROLES)
+  @ApiOperation({ summary: 'Получить ожидающие подтверждения отсутствия текущего ВУЗа' })
+  async findPending(@Query() pagination: PaginationQueryDto) {
+    return this.absencesService.findPendingForCurrentUniversity(pagination);
+  }
+
+  @Get('attendance/lesson/:lessonId')
+  @Roles(...ABSENCE_STAFF_ROLES)
+  @ApiOperation({ summary: 'Получить отметки посещаемости занятия' })
+  async findAttendanceByLesson(@Param('lessonId') lessonId: string, @Query() pagination: PaginationQueryDto) {
+    return this.absencesService.findAttendanceForLesson(lessonId, pagination);
+  }
+
+  @Post('attendance')
+  @Roles(...ABSENCE_STAFF_ROLES)
+  @ApiOperation({ summary: 'Сохранить посещаемость занятия' })
+  async markAttendance(@Request() req, @Body() markAttendanceDto: MarkAttendanceDto) {
+    return this.absencesService.markAttendance(req.user.universityId, req.user.id, markAttendanceDto);
   }
 
   @Get('stats/:studentId')

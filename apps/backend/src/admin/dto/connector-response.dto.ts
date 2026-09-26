@@ -12,4 +12,10 @@ export class ConnectorResponseDto {
 
   @ApiProperty({ example: 'active' })
   status: string;
+
+  @ApiProperty({ example: { scheduleSync: true } })
+  capabilities: {
+    scheduleSync?: boolean;
+    learningManagement?: boolean;
+  };
 }

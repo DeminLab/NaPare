@@ -4,6 +4,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { Notification } from './entities/notification.entity';
 import { DeviceToken } from './entities/device-token.entity';
 import { TenantContext } from '../common/tenant/tenant-context';
+import { ForbiddenException } from '@nestjs/common';
 
 describe('NotificationsService', () => {
   let service: NotificationsService;
@@ -25,17 +26,21 @@ describe('NotificationsService', () => {
     delete: jest.fn(),
   };
 
+  const mockTenantContext = { assertAccess: jest.fn(), getUser: jest.fn() };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         NotificationsService,
         { provide: getRepositoryToken(Notification), useValue: mockNotificationRepo },
         { provide: getRepositoryToken(DeviceToken), useValue: mockDeviceTokenRepo },
-        { provide: TenantContext, useValue: { assertAccess: jest.fn(), getUser: jest.fn() } },
+        { provide: TenantContext, useValue: mockTenantContext },
       ],
     }).compile();
 
     service = module.get<NotificationsService>(NotificationsService);
+    jest.clearAllMocks();
+    mockTenantContext.getUser.mockReturnValue(undefined);
   });
 
   it('should be defined', () => {
@@ -52,11 +57,21 @@ describe('NotificationsService', () => {
 
   describe('markAsRead', () => {
     it('should update notification as read', async () => {
-      await service.markAsRead('notif-1');
+      mockNotificationRepo.findOne.mockResolvedValue({ id: 'notif-1', userId: 'user-1', universityId: 'uni-1' });
+      mockTenantContext.getUser.mockReturnValue({ id: 'user-1', universityId: 'uni-1' });
+      await service.markAsRead('notif-1', 'user-1');
       expect(mockNotificationRepo.update).toHaveBeenCalledWith('notif-1', {
         isRead: true,
         readAt: expect.any(Date),
       });
+    });
+
+    it('does not let a user mark a colleague\'s notification as read', async () => {
+      mockNotificationRepo.findOne.mockResolvedValue({ id: 'notif-2', userId: 'user-2', universityId: 'uni-1' });
+      mockTenantContext.getUser.mockReturnValue({ id: 'user-1', universityId: 'uni-1' });
+
+      await expect(service.markAsRead('notif-2', 'user-1')).rejects.toThrow(ForbiddenException);
+      expect(mockNotificationRepo.update).not.toHaveBeenCalled();
     });
   });
 

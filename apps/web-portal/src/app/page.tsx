@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { Icon, type IconName } from '@napare/ui';
 
 const roles = [
@@ -11,8 +12,8 @@ const roles = [
   {
     title: 'Преподавателям',
     icon: 'users' as IconName,
-    text: 'Объявления, задания и файлы публикуются в контексте конкретной пары — группа видит их сразу.',
-    bullets: ['Быстрая публикация в пару', 'Список отсутствующих', 'Материалы и обсуждение уроков'],
+    text: 'Объявления, подготовка к паре и файлы публикуются в контексте занятия — группа видит их сразу.',
+    bullets: ['Быстрая подготовка к паре', 'Список отсутствующих', 'Материалы и обсуждение уроков'],
   },
   {
     title: 'Университетам',
@@ -31,7 +32,7 @@ const features = [
   {
     icon: 'layers' as IconName,
     title: 'Пространство пары',
-    text: 'У каждого занятия своя страница: преподаватель, аудитория, объявления, ДЗ, файлы и обсуждение — в одном месте.',
+    text: 'У каждого занятия своя страница: преподаватель, аудитория, объявления, подготовка к паре, файлы и обсуждение — в одном месте.',
   },
   {
     icon: 'home' as IconName,
@@ -64,7 +65,7 @@ const steps = [
 
 const modules = [
   ['Расписание', 'Получение, хранение и детект изменений занятий'],
-  ['Пространство пары', 'Объявления, задания, файлы и обсуждение урока'],
+  ['Пространство пары', 'Объявления, подготовка к занятию, файлы и обсуждение урока'],
   ['Мой день', 'Агрегированная сводка для главного экрана студента'],
   ['Отсутствия', 'Статусы пропусков и подтверждение куратором'],
   ['Уведомления', 'Push и in-app оповещения о важных событиях'],
@@ -75,7 +76,7 @@ export default function HomePage() {
   return (
     <main>
       <header className="portal-header">
-        <Link href="/" className="brand"><span>Н</span>НаПаре</Link>
+        <Link href="/" className="brand"><Image src="/brand/np-mark.png" alt="" width={34} height={34} priority />НаПаре</Link>
         <nav className="portal-nav" aria-label="Разделы страницы">
           <a href="#problem">Зачем</a>
           <a href="#features">Возможности</a>
@@ -104,18 +105,10 @@ export default function HomePage() {
               <li><Icon name="check" size={16} /> Свой кабинет для каждой роли</li>
             </ul>
           </div>
-          <div className="product-preview" aria-label="Пример рабочего дня студента">
-            <div className="preview-topbar"><span className="preview-brand"><span>Н</span> НаПаре</span><span className="preview-status"><i /> Система работает</span><span className="preview-avatar">АК</span></div>
-            <div className="preview-body">
-              <div className="preview-sidebar"><span className="preview-sidebar-active">Сегодня</span><span>Расписание</span><span>Задания</span><span>Уведомления</span></div>
-              <div className="preview-content">
-                <div className="preview-heading"><div><small>Четверг, 26 сентября</small><strong>Добрый день, Алина</strong></div><span className="preview-chip">3 события</span></div>
-                <div className="preview-next"><div><small>СЕЙЧАС · 10:20–11:50</small><strong>Проектирование интерфейсов</strong><span>Группа ИТ-31 · Аудитория 204</span></div><b><Icon name="arrow-right" size={16} /></b></div>
-                <div className="preview-grid"><div className="preview-mini"><small>Ближайшее ДЗ</small><strong>Прототип личного кабинета</strong><span>до завтра</span></div><div className="preview-mini"><small>Изменения</small><strong>Пара перенесена</strong><span className="preview-warning">требует внимания</span></div></div>
-                <div className="preview-timeline"><span /><div><small>12:10</small><strong>Анализ данных</strong></div><span /><div><small>14:00</small><strong>Свободное окно</strong></div></div>
-              </div>
-            </div>
-          </div>
+          <figure className="hero-visual">
+            <Image src="/brand/napare-hero.jpg" alt="НаПаре объединяет расписание, уведомления и учебный день" fill priority sizes="(max-width: 1100px) 100vw, 56vw" />
+            <figcaption>Один понятный контур для учебного дня</figcaption>
+          </figure>
         </div>
       </section>
 
@@ -124,6 +117,15 @@ export default function HomePage() {
         <div><strong>3+</strong><span>рабочие роли в одной системе</span></div>
         <div><strong>0</strong><span>потерянных изменений в чатах</span></div>
         <div><strong>24/7</strong><span>доступ к актуальному контексту</span></div>
+      </section>
+
+      <section className="brand-showcase" aria-labelledby="brand-showcase-title">
+        <div className="brand-showcase-copy">
+          <p className="eyebrow">NaPare</p>
+          <h2 id="brand-showcase-title">Технологичный бренд, в котором легко ориентироваться</h2>
+          <p>Светлые поверхности для работы, глубокий синий для фокуса и живой градиент NP — знак, который одинаково узнаваем в браузере, приложении и коммуникациях университета.</p>
+        </div>
+        <Image src="/brand/napare-brand-board.jpg" alt="Фирменный стиль NaPare: логотип, приложение и носители бренда" width={1280} height={720} sizes="(max-width: 960px) 100vw, 52vw" />
       </section>
 
       <section id="problem" className="section section-alt">
@@ -162,6 +164,10 @@ export default function HomePage() {
             </p>
           </div>
         </div>
+        <figure className="problem-visual">
+          <Image src="/brand/campus-learning.png" alt="Студенты используют цифровые сервисы университета в кампусе" width={1664} height={936} sizes="(max-width: 1160px) 100vw, 1160px" />
+          <figcaption>Учебный день остаётся человеческим — технологии лишь собирают нужное в нужный момент.</figcaption>
+        </figure>
       </section>
 
       <section id="features" className="section">
@@ -284,7 +290,7 @@ export default function HomePage() {
 
       <footer>
         <div className="footer-row">
-          <Link href="/" className="brand footer-brand"><span>Н</span>НаПаре</Link>
+          <Link href="/" className="brand footer-brand"><Image src="/brand/np-mark.png" alt="" width={34} height={34} />НаПаре</Link>
           <p>Цифровая среда университета: расписание, пары, посещаемость и объявления.</p>
           <Link href="/login" className="text-link">Войти</Link>
         </div>

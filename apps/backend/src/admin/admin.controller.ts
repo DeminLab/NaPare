@@ -18,6 +18,7 @@ import { CreateFacultyDto } from './dto/create-faculty.dto';
 import { UpdateFacultyDto } from './dto/update-faculty.dto';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
+import { ImportScheduleDto } from './dto/import-schedule.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -68,11 +69,8 @@ export class AdminController {
   @ApiOperation({ summary: 'Загрузить расписание' })
   @ApiResponse({ status: 201, description: 'Расписание загружено' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async uploadSchedule(@Request() req) {
-    return this.adminService.importSchedule(req.user.universityId, {
-      fileUrl: '',
-      format: 'excel',
-    });
+  async uploadSchedule(@Request() req, @Body() importScheduleDto: ImportScheduleDto) {
+    return this.adminService.importSchedule(req.user.universityId, importScheduleDto);
   }
 
   @Post('schedule/sync')
@@ -99,7 +97,12 @@ export class AdminController {
   @ApiResponse({ status: 200, description: 'Статус получен' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getSyncStatus(@Request() req) {
-    return { lastSync: null, status: 'idle' };
+    const university = await this.adminService.getUniversity(req.user.universityId);
+    const config = university.connectorConfig || {};
+    return {
+      lastSync: typeof config.lastSync === 'string' ? config.lastSync : null,
+      status: typeof config.status === 'string' ? config.status : 'idle',
+    };
   }
 
   @Get('university')
@@ -165,6 +168,13 @@ export class AdminController {
     return this.adminService.getGroups(req.user.universityId, pagination);
   }
 
+  @Get('attendance-groups')
+  @Roles(UserRole.TEACHER, UserRole.CURATOR, UserRole.DEPARTMENT_HEAD, UserRole.FACULTY_DEAN, UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @ApiOperation({ summary: 'Получить группы, доступные для посещаемости' })
+  async getAttendanceGroups(@Request() req, @Query() pagination: PaginationQueryDto) {
+    return this.adminService.getAttendanceGroups(req.user.universityId, req.user.id, req.user.role, pagination);
+  }
+
   @Get('groups/:id/students')
   @Roles(UserRole.TEACHER, UserRole.CURATOR, UserRole.DEPARTMENT_HEAD, UserRole.FACULTY_DEAN, UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Получить студентов группы своего университета' })
@@ -176,7 +186,7 @@ export class AdminController {
     @Param('id') id: string,
     @Query() pagination: PaginationQueryDto,
   ) {
-    return this.adminService.getGroupStudents(req.user.universityId, id, pagination);
+    return this.adminService.getGroupStudents(req.user.universityId, id, pagination, req.user.id, req.user.role);
   }
 
   @Post('groups')
@@ -225,14 +235,14 @@ export class AdminController {
   @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Получить коннекторы университета' })
   @ApiOkResponse({ description: 'Коннекторы получены', type: PaginatedResponseDto })
-  async getConnectors(@Query() pagination: PaginationQueryDto) {
-    return this.adminService.getConnectors(pagination);
+  async getConnectors(@Request() req, @Query() pagination: PaginationQueryDto) {
+    return this.adminService.getConnectors(req.user.universityId, pagination);
   }
 
   @Patch('connectors/:id')
   @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Обновить коннектор университета' })
-  async updateConnector(@Param('id') id: string, @Body() updateConnectorDto: UpdateConnectorDto) {
-    return this.adminService.updateConnector(id, updateConnectorDto);
+  async updateConnector(@Request() req, @Param('id') id: string, @Body() updateConnectorDto: UpdateConnectorDto) {
+    return this.adminService.updateConnector(req.user.universityId, id, updateConnectorDto);
   }
 }

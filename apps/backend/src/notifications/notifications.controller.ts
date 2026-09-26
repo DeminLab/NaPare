@@ -45,8 +45,8 @@ export class NotificationsController {
   @ApiOperation({ summary: 'Отметить уведомление как прочитанное' })
   @ApiResponse({ status: 200, description: 'Уведомление отмечено как прочитанное' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async markAsRead(@Param('id') id: string) {
-    return this.notificationsService.markAsRead(id);
+  async markAsRead(@Param('id') id: string, @Request() req) {
+    return this.notificationsService.markAsRead(id, req.user.id);
   }
 
   @Post('read-all')

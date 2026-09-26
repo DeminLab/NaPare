@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   ApiError,
   clearTokens,
+  createAbsence,
   getAccessToken,
   getMyDay,
   getRefreshToken,
@@ -131,6 +132,20 @@ describe('MAX mini app API client', () => {
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toContain('/auth/max');
     expect(String(init.body)).toContain('signed-data');
+  });
+
+  it('sends the selected lesson with a student absence', async () => {
+    saveTokens({ accessToken: 'access-1', refreshToken: 'refresh-1' });
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(201, { id: 'absence-1' }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await createAbsence({
+      type: 'learning', startDate: '2026-09-26', endDate: '2026-09-26', lessonId: 'lesson-1',
+    });
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toContain('/api/v1/absences');
+    expect(String(init.body)).toContain('"lessonId":"lesson-1"');
   });
 
   it('reports network failures as ApiError', async () => {

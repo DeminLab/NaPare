@@ -180,6 +180,7 @@ export function App() {
   const [profileError, setProfileError] = useState<string | null>(null);
 
   const [absenceOpen, setAbsenceOpen] = useState(false);
+  const [absenceLessonId, setAbsenceLessonId] = useState<string | null>(null);
   const [absenceSent, setAbsenceSent] = useState(false);
   const [absenceBusy, setAbsenceBusy] = useState(false);
   const [absenceError, setAbsenceError] = useState<string | null>(null);
@@ -352,6 +353,13 @@ export function App() {
     setTab('lessons');
   }
 
+  function openAbsence(lesson?: Lesson | null) {
+    setAbsenceLessonId(lesson?.id || null);
+    setAbsenceOpen(true);
+    setAbsenceSent(false);
+    setAbsenceError(null);
+  }
+
   async function handleAbsenceSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
@@ -364,6 +372,7 @@ export function App() {
         startDate: String(form.get('startDate')),
         endDate: String(form.get('endDate')),
         ...(comment ? { comment } : {}),
+        ...(absenceLessonId ? { lessonId: absenceLessonId } : {}),
       });
       setAbsenceSent(true);
       setRefreshKey((key) => key + 1);
@@ -474,7 +483,7 @@ export function App() {
                     {upcoming.lesson.teacherName && <span>♙ {upcoming.lesson.teacherName}</span>}
                   </div>
                   {isStudent && (
-                    <button className="absence-button" onClick={() => { setAbsenceOpen(true); setAbsenceSent(false); setAbsenceError(null); }}>
+                    <button className="absence-button" onClick={() => openAbsence(upcoming.lesson)}>
                       Сообщить об отсутствии
                     </button>
                   )}
@@ -488,7 +497,7 @@ export function App() {
                     {myDay.lessons.length ? 'Все пары на сегодня уже закончились.' : 'Сегодня пар нет.'}
                   </p>
                   {isStudent && (
-                    <button className="absence-button" onClick={() => { setAbsenceOpen(true); setAbsenceSent(false); setAbsenceError(null); }}>
+                    <button className="absence-button" onClick={() => openAbsence()}>
                       Сообщить об отсутствии
                     </button>
                   )}
@@ -521,6 +530,26 @@ export function App() {
                   </div>
                 )}
               </section>
+              {isStudent && myDay.absences.length > 0 && (
+                <section className="schedule-section" aria-labelledby="absence-status-title">
+                  <div className="section-title">
+                    <h2 id="absence-status-title">Мои обращения</h2>
+                    <span>{myDay.absences.length}</span>
+                  </div>
+                  <div className="lesson-list">
+                    {myDay.absences.map((absence) => (
+                      <article className="lesson-row" key={absence.id}>
+                        <span className="divider" />
+                        <span className="lesson-copy">
+                          <strong>{absence.confirmationRequired ? 'Ожидает подтверждения' : 'Подтверждено'}</strong>
+                          <small>{absence.comment || 'Отсутствие зарегистрировано'}</small>
+                        </span>
+                        <em>{absence.confirmationRequired ? 'В работе' : 'Готово'}</em>
+                      </article>
+                    ))}
+                  </div>
+                </section>
+              )}
             </>
           )}
         </section>
@@ -780,7 +809,7 @@ export function App() {
             {absenceSent ? (
               <>
                 <h2 id="absence-title">Заявка отправлена</h2>
-                <p>Куратор увидит период отсутствия и комментарий.</p>
+                <p>{absenceLessonId ? 'Преподаватель и куратор увидят отсутствие по этой паре.' : 'Куратор увидит период отсутствия и комментарий.'}</p>
                 <button className="primary" onClick={() => setAbsenceOpen(false)}>Готово</button>
               </>
             ) : (

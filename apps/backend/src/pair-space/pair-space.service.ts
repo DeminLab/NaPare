@@ -62,7 +62,7 @@ export class PairSpaceService {
     if (!pairSpace) {
       throw new NotFoundException(`PairSpace with id ${id} not found`);
     }
-    this.tenantContext.assertAccess(pairSpace.universityId);
+    await this.assertRoleScopedAccess(pairSpace);
 
     return pairSpace;
   }
@@ -76,7 +76,7 @@ export class PairSpaceService {
     if (!pairSpace) {
       throw new NotFoundException(`PairSpace for lesson ${lessonId} not found`);
     }
-    this.tenantContext.assertAccess(pairSpace.universityId);
+    await this.assertRoleScopedAccess(pairSpace);
 
     return pairSpace;
   }
@@ -106,7 +106,7 @@ export class PairSpaceService {
         pairSpaceId,
         ...(await this.lessonContext(pairSpace)),
         groupName: pairSpace.group ?? null,
-        deepLink: `/pair-space/${pairSpaceId}/announcements`,
+        deepLink: `/pair-space/${pairSpace.lessonId}`,
       },
       priority: 'normal',
     });
@@ -147,7 +147,7 @@ export class PairSpaceService {
         ...(await this.lessonContext(pairSpace)),
         groupName: pairSpace.group ?? null,
         deadline: saved.deadline?.toISOString() ?? null,
-        deepLink: `/pair-space/${pairSpaceId}/homeworks/${saved.id}`,
+        deepLink: `/pair-space/${pairSpace.lessonId}`,
       },
       priority: 'normal',
     });
@@ -199,7 +199,8 @@ export class PairSpaceService {
     userId: string,
     createMessageDto: CreateMessageDto,
   ): Promise<DiscussionMessage> {
-    await this.assertPairSpaceAccess(pairSpaceId);
+    const pairSpace = await this.assertPairSpaceAccess(pairSpaceId);
+    await this.assertTeacherOwnsPairSpace(pairSpace);
     const message = this.messageRepository.create({
       pairSpaceId,
       userId,
@@ -208,17 +209,17 @@ export class PairSpaceService {
     });
 
     const saved = await this.messageRepository.save(message);
-    const pairSpace = await this.findById(pairSpaceId);
+    const eventPairSpace = await this.findById(pairSpaceId);
     await this.eventBus?.publish({
       type: 'message.created',
-      universityId: pairSpace.universityId,
+      universityId: eventPairSpace.universityId,
       actor: this.eventActor(userId),
       target: { type: 'message', id: saved.id },
       payload: {
         pairSpaceId,
-        ...(await this.lessonContext(pairSpace)),
-        groupName: pairSpace.group ?? null,
-        deepLink: `/pair-space/${pairSpaceId}/discussion`,
+        ...(await this.lessonContext(eventPairSpace)),
+        groupName: eventPairSpace.group ?? null,
+        deepLink: `/pair-space/${eventPairSpace.lessonId}`,
       },
       priority: 'normal',
     });
@@ -237,7 +238,11 @@ export class PairSpaceService {
     if (!homework) {
       throw new NotFoundException(`Homework with id ${homeworkId} not found`);
     }
-    this.tenantContext.assertAccess(homework.pairSpace.universityId);
+    const user = this.tenantContext.getUser();
+    if (!user || user.role !== UserRole.STUDENT || user.id !== studentId) {
+      throw new ForbiddenException('Only the authenticated student can submit homework');
+    }
+    await this.assertRoleScopedAccess(homework.pairSpace);
 
     const existing = await this.submissionRepository.findOne({
       where: { homeworkId, studentId },
@@ -288,7 +293,7 @@ export class PairSpaceService {
       payload: {
         pairSpaceId: homework.pairSpaceId,
         ...(await this.lessonContext(homework.pairSpace)),
-        deepLink: `/pair-space/${homework.pairSpaceId}/homeworks/${saved.id}`,
+        deepLink: `/pair-space/${homework.pairSpace.lessonId}`,
       },
       priority: 'normal',
     });
@@ -300,8 +305,23 @@ export class PairSpaceService {
     if (!pairSpace) {
       throw new NotFoundException(`PairSpace with id ${pairSpaceId} not found`);
     }
-    this.tenantContext.assertAccess(pairSpace.universityId);
+    await this.assertRoleScopedAccess(pairSpace);
     return pairSpace;
+  }
+
+  private async assertRoleScopedAccess(pairSpace: PairSpace): Promise<void> {
+    this.tenantContext.assertAccess(pairSpace.universityId);
+    const user = this.tenantContext.getUser();
+    if (!user || user.role !== UserRole.STUDENT) return;
+    if (!user.groupId || !this.lessonRepository) {
+      throw new ForbiddenException('Student group access cannot be established');
+    }
+    const lesson = await this.lessonRepository.findOne({
+      where: { id: pairSpace.lessonId, universityId: pairSpace.universityId },
+    });
+    if (!lesson || lesson.groupId !== user.groupId) {
+      throw new ForbiddenException('Students can only access pair spaces for their own group');
+    }
   }
 
   private async assertCanPublishContent(pairSpaceId: string, actorId: string): Promise<PairSpace> {
@@ -312,7 +332,27 @@ export class PairSpaceService {
     if (user.id !== actorId) {
       throw new ForbiddenException('Users can only publish pair space content as themselves');
     }
-    return this.assertPairSpaceAccess(pairSpaceId);
+    const pairSpace = await this.assertPairSpaceAccess(pairSpaceId);
+    await this.assertTeacherOwnsPairSpace(pairSpace);
+    return pairSpace;
+  }
+
+  private async assertTeacherOwnsPairSpace(pairSpace: PairSpace): Promise<void> {
+    const user = this.tenantContext.getUser();
+    if (user?.role !== UserRole.TEACHER) return;
+    if (!this.lessonRepository) {
+      throw new ForbiddenException('Teacher lesson access cannot be established');
+    }
+    const lesson = await this.lessonRepository.findOne({
+      where: {
+        id: pairSpace.lessonId,
+        universityId: pairSpace.universityId,
+        teacherId: user.id,
+      },
+    });
+    if (!lesson) {
+      throw new ForbiddenException('Teachers can only access their own lesson spaces');
+    }
   }
 
   private eventActor(id?: string) {

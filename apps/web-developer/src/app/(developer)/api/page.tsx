@@ -19,9 +19,7 @@ interface Endpoint {
 const defaultEndpoints: Endpoint[] = [
   { name: 'Проверка состояния', method: 'GET', path: '/health', status: 'unknown' },
   { name: 'Информация о приложении', method: 'GET', path: '/app', status: 'unknown' },
-  { name: 'Вход', method: 'POST', path: '/auth/login', status: 'unknown' },
   { name: 'Данные пользователя', method: 'GET', path: '/users/me', status: 'unknown' },
-  { name: 'Документация Swagger', method: 'GET', path: '/docs', status: 'unknown' },
 ];
 
 function formatUptime(seconds?: number): string {
@@ -49,7 +47,7 @@ export default function ApiPage() {
     const checks = [
       { idx: 0, path: '/health', method: 'GET' },
       { idx: 1, path: '/app', method: 'GET' },
-      { idx: 3, path: '/users/me', method: 'GET' },
+      { idx: 2, path: '/users/me', method: 'GET' },
     ];
 
     await Promise.allSettled(
@@ -64,9 +62,6 @@ export default function ApiPage() {
       })
     );
 
-    results[2] = { ...results[2], status: 'ok' };
-    results[4] = { ...results[4], status: 'ok' };
-
     setEndpoints(results);
     setLastCheck(now);
   }, []);
@@ -79,7 +74,12 @@ export default function ApiPage() {
     ]).finally(() => setLoading(false));
   }, [checkEndpoints]);
 
-  const isHealthy = health?.status === 'ok' || health?.status === 'healthy';
+  const healthStatus = health?.status === 'ok' || health?.status === 'healthy'
+    ? 'healthy'
+    : health
+      ? 'unhealthy'
+      : 'unknown';
+  const isHealthy = healthStatus === 'healthy';
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -88,7 +88,7 @@ export default function ApiPage() {
           <div>
             <h1 className="ds-page-title">API Мониторинг</h1>
             <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-              Состояние сервера и список эндпоинтов
+              Безопасная проверка доступных эндпоинтов без выполнения входа и мутаций
               {lastCheck && <span className="ml-2 text-[var(--color-text-muted)]">· Обновлено в {lastCheck}</span>}
             </p>
           </div>
@@ -106,23 +106,23 @@ export default function ApiPage() {
         {/* Status banner */}
         <Card className="mb-6">
           <div className="flex items-center gap-4">
-            <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${isHealthy ? 'bg-emerald-100 glow-success' : 'bg-red-100 glow-danger'}`}>
-              {isHealthy ? (
+            <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${healthStatus === 'healthy' ? 'bg-emerald-100 glow-success' : healthStatus === 'unhealthy' ? 'bg-red-100 glow-danger' : 'bg-slate-100'}`}>
+              {healthStatus === 'healthy' ? (
                 <svg className="h-6 w-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-              ) : (
+              ) : healthStatus === 'unhealthy' ? (
                 <svg className="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
                 </svg>
-              )}
+              ) : <svg className="h-6 w-6 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3.75m0 3h.008M4.93 19.5h14.14c1.54 0 2.5-1.67 1.73-3L13.73 4.5c-.77-1.33-2.69-1.33-3.46 0l-7.07 12c-.77 1.33.19 3 1.73 3z" /></svg>}
             </div>
             <div>
               <h2 className="text-lg font-bold text-[var(--color-text)]">
-                {isHealthy ? 'Сервер работает' : 'Сервер недоступен'}
+                {healthStatus === 'healthy' ? 'Сервер работает' : healthStatus === 'unhealthy' ? 'Сервер недоступен' : 'Статус сервера не определён'}
               </h2>
               <p className="text-sm text-[var(--color-text-secondary)]">
-                {health?.timestamp ? `Последняя проверка: ${health.timestamp}` : 'Проверка...'}
+                {health?.timestamp ? `Последняя проверка: ${health.timestamp}` : 'Не удалось получить ответ health-check.'}
               </p>
             </div>
           </div>
@@ -136,8 +136,8 @@ export default function ApiPage() {
             <>
               <StatCard
                 label="Статус"
-                value={isHealthy ? 'Работает' : health?.status ?? '—'}
-                icon={<div className={`h-2.5 w-2.5 rounded-full ${isHealthy ? 'bg-emerald-500 animate-pulse-dot' : 'bg-red-500'}`} />}
+                value={healthStatus === 'healthy' ? 'Работает' : healthStatus === 'unhealthy' ? health?.status ?? 'Недоступен' : 'Неизвестно'}
+                icon={<div className={`h-2.5 w-2.5 rounded-full ${healthStatus === 'healthy' ? 'bg-emerald-500 animate-pulse-dot' : healthStatus === 'unhealthy' ? 'bg-red-500' : 'bg-slate-400'}`} />}
               />
               <StatCard
                 label="Время работы"

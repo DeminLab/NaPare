@@ -87,7 +87,7 @@ export class ChangeDetectorService {
               groupId: existingLesson.groupId,
               teacherId: existingLesson.teacherId,
               changeDescription: diff.changeDescription,
-              deepLink: `/schedule?lessonId=${existingLesson.id}`,
+              deepLink: `/week?date=${existingLesson.startDate.toISOString().slice(0, 10)}`,
             },
             priority: 'high',
           });

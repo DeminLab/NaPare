@@ -28,4 +28,5 @@ describe('PairSpaceController content write authorization', () => {
   it('allows a teacher to create an announcement', () => {
     expect(rolesGuard.canActivate(contextFor(controller.createAnnouncement, UserRole.TEACHER))).toBe(true);
   });
+
 });

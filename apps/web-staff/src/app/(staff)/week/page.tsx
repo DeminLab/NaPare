@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { apiFetchList } from '@/lib/api';
 import { Badge, Button, Card, EmptyState, RequestState, Skeleton } from '@/components/ui';
 
@@ -14,25 +15,29 @@ const weekDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
 
 function getWeekStart(date: Date) { const start = new Date(date); const day = start.getDay(); start.setDate(start.getDate() - (day === 0 ? 6 : day - 1)); start.setHours(0, 0, 0, 0); return start; }
 function dateKey(date: Date) { return date.toISOString().split('T')[0]; }
+function dateFromParam(value: string | null) { if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null; const date = new Date(`${value}T12:00:00`); return Number.isNaN(date.getTime()) || dateKey(date) !== value ? null : date; }
 function formatRange(start: Date, end: Date) { return `${start.getDate()} ${start.toLocaleDateString('ru-RU', { month: 'long' })} — ${end.getDate()} ${end.toLocaleDateString('ru-RU', { month: 'long' })}`; }
 function time(value?: string) { return value?.includes('T') ? value.slice(11, 16) : value || '—'; }
 function minutes(value?: string) { const [hour, minute] = time(value).split(':').map(Number); return Number.isFinite(hour) ? hour * 60 + minute : -1; }
 function statusOf(lesson: Lesson, now: Date) { const status = (lesson.status || '').toLowerCase(); if (status.includes('cancel')) return { label: 'Отменено', variant: 'red' as const }; if (lesson.isChanged || status.includes('replace')) return { label: 'Замена', variant: 'amber' as const }; const current = now.getHours() * 60 + now.getMinutes(); if (current >= minutes(lesson.startTime) && current < minutes(lesson.endTime)) return { label: 'Сейчас', variant: 'sky' as const }; if (current < minutes(lesson.startTime)) return { label: 'Предстоит', variant: 'indigo' as const }; return { label: 'Завершено', variant: 'slate' as const }; }
 
 export default function WeekPage() {
-  const [weekStart, setWeekStart] = useState(() => getWeekStart(new Date()));
+  const searchParams = useSearchParams();
+  const requestedDate = searchParams.get('date');
+  const [weekStart, setWeekStart] = useState(() => getWeekStart(dateFromParam(requestedDate) || new Date()));
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [groupFilter, setGroupFilter] = useState('all');
   const [subjectFilter, setSubjectFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
-  const [selectedDate, setSelectedDate] = useState(dateKey(new Date()));
+  const [selectedDate, setSelectedDate] = useState(() => dateKey(dateFromParam(requestedDate) || new Date()));
   const [now, setNow] = useState(() => new Date());
   const currentRef = useRef<HTMLDivElement>(null);
 
   const loadWeek = () => { const end = new Date(weekStart); end.setDate(end.getDate() + 5); setLoading(true); setError(''); apiFetchList<Lesson>(`/schedule/range?startDate=${dateKey(weekStart)}&endDate=${dateKey(end)}`).then(setLessons).catch((err) => setError(err instanceof Error ? err.message : 'Не удалось загрузить расписание.')).finally(() => setLoading(false)); };
   useEffect(() => { loadWeek(); }, [weekStart]);
+  useEffect(() => { const date = dateFromParam(requestedDate); if (!date) return; setWeekStart(getWeekStart(date)); setSelectedDate(dateKey(date)); }, [requestedDate]);
   useEffect(() => { const timer = window.setInterval(() => setNow(new Date()), 60_000); return () => window.clearInterval(timer); }, []);
 
   const groups = [...new Set(lessons.map((lesson) => lesson.groupName).filter(Boolean))].sort();

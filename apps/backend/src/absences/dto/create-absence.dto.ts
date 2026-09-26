@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsDateString, IsEnum, MaxLength } from 'class-validator';
+import { IsString, IsOptional, IsDateString, IsEnum, IsUUID, MaxLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateAbsenceDto {
@@ -19,4 +19,9 @@ export class CreateAbsenceDto {
   @IsString()
   @MaxLength(500)
   comment?: string;
+
+  @ApiPropertyOptional({ description: 'Занятие, к которому относится отсутствие' })
+  @IsOptional()
+  @IsUUID()
+  lessonId?: string;
 }

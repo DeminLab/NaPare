@@ -7,33 +7,29 @@ import type { HealthInfo, UserInfo } from '@/lib/api';
 import { Badge, Button, Card, PageHeader, Skeleton } from '@/components/ui';
 
 interface Notice { id?: string; title?: string; body?: string; }
-interface Telemetry { requests?: number; activeSessions?: number; errors?: number; }
+interface PlatformEvent { id: string; type: string; timestamp: string; priority?: string; }
 
 const status = (online: boolean | null) => {
   if (online === null) return { label: 'Неизвестно', variant: 'default' as const };
   return online ? { label: 'Работает', variant: 'success' as const } : { label: 'Недоступно', variant: 'danger' as const };
 };
 
-function EmptyChart({ title }: { title: string }) {
-  return <div className="flex h-48 items-center justify-center rounded-[var(--radius-lg)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-secondary)] text-center"><div><div className="mx-auto mb-3 h-2 w-28 rounded-full bg-[var(--color-border-strong)]" /><p className="text-sm text-[var(--color-text-secondary)]">{title}</p><p className="mt-1 text-xs text-[var(--color-text-muted)]">Телеметрия не подключена</p></div></div>;
-}
-
 export default function DeveloperOverviewPage() {
   const [health, setHealth] = useState<HealthInfo | null>(null);
   const [user, setUser] = useState<UserInfo | null>(null);
   const [activity, setActivity] = useState<Notice[]>([]);
-  const [telemetry, setTelemetry] = useState<Telemetry | null>(null);
+  const [events, setEvents] = useState<PlatformEvent[]>([]);
   const [loading, setLoading] = useState(true);
 
   const load = async () => {
     setLoading(true);
-    const [healthData, userData, notifications, telemetryData] = await Promise.all([
+    const [healthData, userData, notifications, eventData] = await Promise.all([
       getHealth().catch(() => null),
       getUser().catch(() => null),
       apiFetch<{ data: Notice[] }>('/notifications').then((response) => response.data).catch(() => []),
-      apiFetch<Telemetry>('/developer/telemetry').catch(() => null),
+      apiFetch<PlatformEvent[]>('/events').catch(() => []),
     ]);
-    setHealth(healthData); setUser(userData); setActivity(notifications); setTelemetry(telemetryData); setLoading(false);
+    setHealth(healthData); setUser(userData); setActivity(notifications); setEvents(eventData); setLoading(false);
   };
 
   useEffect(() => { void load(); }, []);
@@ -42,9 +38,9 @@ export default function DeveloperOverviewPage() {
   const auth = status(Boolean(user));
   const metrics = [
     { label: 'Статус API', value: backend.label },
-    { label: 'Запросы', value: telemetry?.requests ?? '—' },
-    { label: 'Активные сессии', value: telemetry?.activeSessions ?? '—' },
-    { label: 'Ошибки', value: telemetry?.errors ?? '—' },
+    { label: 'События потока', value: events.length },
+    { label: 'Уведомления', value: activity.length },
+    { label: 'Ошибки API', value: '—' },
   ];
   const actions = [{ label: 'API Explorer', href: '/api' }, { label: 'Документация', href: '/docs' }, { label: 'Архитектура', href: '/architecture' }, { label: 'Сессии', href: '/session' }];
 
@@ -53,8 +49,7 @@ export default function DeveloperOverviewPage() {
     <PageHeader eyebrow="Developer workspace" title="Обзор панели разработчика" description="Состояние API-платформы и операционная телеметрия" actions={<Button variant="secondary" onClick={load}>Обновить</Button>} />
     {loading ? <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">{metrics.map((metric) => <Card key={metric.label} className="border-white/10 bg-white/[0.04]"><Skeleton className="h-3 w-24" /><Skeleton className="mt-4 h-7 w-20" /></Card>)}</div> : <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">{metrics.map((metric) => <Card key={metric.label} className="border-white/10 bg-white/[0.04]"><p className="text-xs uppercase tracking-wider text-white/40">{metric.label}</p><p className="mt-3 text-2xl font-bold text-white">{metric.value}</p></Card>)}</div>}
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_300px]"><div className="space-y-6">
-      <div className="grid gap-6 lg:grid-cols-2"><Card className="border-white/10 bg-white/[0.04]"><div className="mb-4 flex items-center justify-between"><h2 className="text-sm font-bold uppercase tracking-wider text-white/70">График использования API</h2><span className="text-xs text-white/35">Последние 24 часа</span></div><EmptyChart title={telemetry ? 'Данные использования готовы к построению' : 'Нет данных об использовании API'} /></Card><Card className="border-white/10 bg-white/[0.04]"><div className="mb-4 flex items-center justify-between"><h2 className="text-sm font-bold uppercase tracking-wider text-white/70">График запросов</h2><span className="text-xs text-white/35">Запросы</span></div><EmptyChart title="Нет данных телеметрии запросов" /></Card></div>
-      <Card className="border-white/10 bg-white/[0.04]"><div className="mb-4 flex items-center justify-between"><h2 className="text-sm font-bold uppercase tracking-wider text-white/70">Доля ошибок</h2><Badge variant="default">Недоступно</Badge></div><EmptyChart title="Данные о доле ошибок недоступны" /></Card>
+      <Card className="border-white/10 bg-white/[0.04]"><div className="mb-4 flex items-center justify-between"><div><h2 className="text-sm font-bold uppercase tracking-wider text-white/70">Поток доменных событий</h2><p className="mt-1 text-xs text-white/35">Фактически записанные события вашего ВУЗа</p></div><Badge variant={events.length ? 'success' : 'default'}>{events.length ? 'Есть события' : 'Пусто'}</Badge></div>{events.length ? <div className="divide-y divide-white/10">{events.slice(-8).reverse().map((event) => <div key={event.id} className="flex items-center justify-between gap-3 py-3"><div><p className="font-mono text-xs text-cyan-200">{event.type}</p><p className="mt-1 text-xs text-white/35">{new Date(event.timestamp).toLocaleString('ru-RU')}</p></div><Badge variant={event.priority === 'high' || event.priority === 'urgent' ? 'danger' : 'default'}>{event.priority || 'normal'}</Badge></div>)}</div> : <p className="py-10 text-center text-sm text-white/40">События появятся после действий в учебных сценариях.</p>}</Card>
       <Card className="border-white/10 bg-white/[0.04]"><h2 className="text-sm font-bold uppercase tracking-wider text-white/70">Последняя активность</h2>{activity.length ? <div className="mt-3 divide-y divide-white/10">{activity.slice(0, 6).map((item, index) => <div key={item.id || index} className="py-3"><p className="text-sm text-white/75">{item.title || 'Системное событие'}</p><p className="mt-1 text-xs text-white/35">{item.body || 'Событие уведомления'}</p></div>)}</div> : <p className="mt-4 text-sm text-white/40">Активности пока нет.</p>}</Card>
     </div><aside className="space-y-6"><Card className="border-white/10 bg-white/[0.04]"><h2 className="text-sm font-bold uppercase tracking-wider text-white/70">Быстрые действия</h2><div className="mt-3 grid gap-2">{actions.map((item) => <Link key={item.href} href={item.href} className="rounded-lg border border-white/10 px-3 py-2.5 text-sm text-white/70 hover:bg-white/10 hover:text-white">{item.label}<span className="float-right text-white/35">→</span></Link>)}</div></Card><Card className="border-white/10 bg-white/[0.04]"><h2 className="text-sm font-bold uppercase tracking-wider text-white/70">Состояние системы</h2><div className="mt-3 divide-y divide-white/10"><div className="flex items-center justify-between py-3 text-sm text-white/65"><span>Бэкенд</span><Badge variant={backend.variant}>{backend.label}</Badge></div><div className="flex items-center justify-between py-3 text-sm text-white/65"><span>База данных</span><Badge variant="default">Неизвестно</Badge></div><div className="flex items-center justify-between py-3 text-sm text-white/65"><span>Аутентификация</span><Badge variant={auth.variant}>{auth.label}</Badge></div><div className="flex items-center justify-between py-3 text-sm text-white/65"><span>Вебхуки</span><Badge variant="default">Неизвестно</Badge></div></div></Card></aside></div>
   </div></div>;

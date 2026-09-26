@@ -16,6 +16,7 @@ import { FileAttachment } from '../pair-space/entities/file-attachment.entity';
 import { DiscussionMessage } from '../pair-space/entities/discussion-message.entity';
 import { Absence } from '../absences/entities/absence.entity';
 import { AbsenceConfirmation } from '../absences/entities/absence-confirmation.entity';
+import { AttendanceRecord } from '../absences/entities/attendance-record.entity';
 import { Notification } from '../notifications/entities/notification.entity';
 import { DeviceToken } from '../notifications/entities/device-token.entity';
 import { AuditLog } from '../common/entities/audit-log.entity';
@@ -46,6 +47,7 @@ const entities = [
   DiscussionMessage,
   Absence,
   AbsenceConfirmation,
+  AttendanceRecord,
   Notification,
   DeviceToken,
   AuditLog,
