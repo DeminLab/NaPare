@@ -1,13 +1,14 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from "@nestjs/common";
 
-import { CreateLessonDto } from '../dto/create-lesson.dto';
+import { CreateLessonDto } from "../dto/create-lesson.dto";
 import {
   RaspGroup,
+  RaspCatalog,
   RaspLesson,
   RaspScraperService,
-} from '../../auth/rasp-scraper.service';
+} from "../../auth/rasp-scraper.service";
 
-const SIBIT_SOURCE = 'sibit';
+const SIBIT_SOURCE = "sibit";
 const ACADEMIC_YEAR_START_MONTH = 9;
 const ACADEMIC_YEAR_END_MONTH = 8;
 const ACADEMIC_YEAR_END_DAY = 31;
@@ -21,6 +22,10 @@ export interface SibitSyncSummary {
   groups: number;
   lessons: number;
   teachers: number;
+}
+
+export interface SibitSyncResult extends SibitSyncSummary {
+  catalog: RaspCatalog;
 }
 
 @Injectable()
@@ -45,10 +50,15 @@ export class SibitConnectorService {
       (item) => item.name.trim().toLowerCase() === group.trim().toLowerCase(),
     );
     if (!match) {
-      throw new NotFoundException(`Группа «${group}» не найдена в расписании СИБИТа`);
+      throw new NotFoundException(
+        `Группа «${group}» не найдена в расписании СИБИТа`,
+      );
     }
 
-    const lessons = await this.raspScraperService.getSchedule(match.groupId, academicYear);
+    const lessons = await this.raspScraperService.getSchedule(
+      match.groupId,
+      academicYear,
+    );
     const from = startDate.slice(0, 10);
     const to = endDate.slice(0, 10);
     return lessons
@@ -61,7 +71,7 @@ export class SibitConnectorService {
     return this.collectTeachers(catalog.lessons);
   }
 
-  async sync(year?: string): Promise<SibitSyncSummary> {
+  async sync(year?: string): Promise<SibitSyncResult> {
     const catalog = await this.raspScraperService.getCatalog(year);
     const summary: SibitSyncSummary = {
       groups: catalog.groups.length,
@@ -71,17 +81,21 @@ export class SibitConnectorService {
     this.logger.log(
       `SIBIT sync for ${catalog.academicYear}: ${summary.groups} groups, ${summary.lessons} lessons, ${summary.teachers} teachers`,
     );
-    return summary;
+    return { ...summary, catalog };
   }
 
-  private async resolveAcademicYear(startDate: string): Promise<string | undefined> {
-    const years = (await this.raspScraperService.getYears()).map((item) => item.value);
+  private async resolveAcademicYear(
+    startDate: string,
+  ): Promise<string | undefined> {
+    const years = (await this.raspScraperService.getYears()).map(
+      (item) => item.value,
+    );
     const date = startDate.slice(0, 10);
     const match = years.find((year) => {
       const startYear = Number(year.slice(0, 4));
       if (!Number.isInteger(startYear)) return false;
-      const from = `${startYear}-${String(ACADEMIC_YEAR_START_MONTH).padStart(2, '0')}-01`;
-      const to = `${startYear + 1}-${String(ACADEMIC_YEAR_END_MONTH).padStart(2, '0')}-${ACADEMIC_YEAR_END_DAY}`;
+      const from = `${startYear}-${String(ACADEMIC_YEAR_START_MONTH).padStart(2, "0")}-01`;
+      const to = `${startYear + 1}-${String(ACADEMIC_YEAR_END_MONTH).padStart(2, "0")}-${ACADEMIC_YEAR_END_DAY}`;
       return date >= from && date <= to;
     });
     return match ?? years[years.length - 1];
@@ -105,7 +119,9 @@ export class SibitConnectorService {
       subgroup: lesson.subgroup,
       faculty: group.faculty,
       isChanged: lesson.isReplacement,
-      changeDescription: lesson.isReplacement ? 'Замена по источнику rasp.sano.ru' : undefined,
+      changeDescription: lesson.isReplacement
+        ? "Замена по источнику rasp.sano.ru"
+        : undefined,
       source: SIBIT_SOURCE,
       externalId: lesson.lessonId,
     };
@@ -119,6 +135,8 @@ export class SibitConnectorService {
       const id = lesson.teacherId || name;
       if (!teachers.has(id)) teachers.set(id, { id, name });
     }
-    return [...teachers.values()].sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+    return [...teachers.values()].sort((a, b) =>
+      a.name.localeCompare(b.name, "ru"),
+    );
   }
 }

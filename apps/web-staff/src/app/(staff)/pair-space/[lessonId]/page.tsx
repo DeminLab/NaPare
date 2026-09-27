@@ -1,43 +1,677 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { apiFetch } from '@/lib/api';
-import { Avatar, Badge, Button, Card, EmptyState, Icon, Input, Modal, RequestState, Skeleton, TabBar } from '@/components/ui';
+import { useEffect, useState } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { apiFetch } from "@/lib/api";
+import {
+  Avatar,
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  Icon,
+  Input,
+  Modal,
+  RequestState,
+  Skeleton,
+  TabBar,
+} from "@/components/ui";
 
-interface Announcement { id: string; text: string; isPinned: boolean; authorName?: string; createdAt: string; }
-interface Homework { id: string; title: string; description?: string; deadline?: string; isCompleted?: boolean; }
-interface Message { id: string; text: string; authorName?: string; createdAt: string; }
-interface FileItem { id: string; fileName: string; fileUrl: string; fileType: string; size: number; createdAt: string; }
-interface PairSpace { id: string; lessonId: string; announcements: Announcement[]; homeworks: Homework[]; messages: Message[]; files?: FileItem[]; }
-interface Lesson { id: string; subject: string; subjectType?: string; room?: string; startTime: string; endTime: string; groupName?: string; isChanged?: boolean; changeDescription?: string; }
+interface Announcement {
+  id: string;
+  text: string;
+  isPinned: boolean;
+  authorName?: string;
+  createdAt: string;
+}
+interface Homework {
+  id: string;
+  title: string;
+  description?: string;
+  deadline?: string;
+  isCompleted?: boolean;
+}
+interface Message {
+  id: string;
+  text: string;
+  authorName?: string;
+  createdAt: string;
+}
+interface FileItem {
+  id: string;
+  fileName: string;
+  fileUrl: string;
+  fileType: string;
+  size: number;
+  createdAt: string;
+}
+interface PairSpace {
+  id: string;
+  lessonId: string;
+  moodleUrl?: string;
+  announcements: Announcement[];
+  homeworks: Homework[];
+  messages: Message[];
+  files?: FileItem[];
+}
+interface Lesson {
+  id: string;
+  subject: string;
+  subjectType?: string;
+  room?: string;
+  startTime: string;
+  endTime: string;
+  groupName?: string;
+  isChanged?: boolean;
+  changeDescription?: string;
+}
 
-function timeAgo(value: string) { const diff = Math.floor((Date.now() - new Date(value).getTime()) / 1000); if (diff < 60) return 'только что'; if (diff < 3600) return `${Math.floor(diff / 60)} мин`; if (diff < 86400) return `${Math.floor(diff / 3600)} ч`; return `${Math.floor(diff / 86400)} дн`; }
-function statusFor(homework: Homework) { if (homework.isCompleted) return { label: 'Закрыто', variant: 'slate' as const }; return homework.deadline && new Date(homework.deadline) < new Date() ? { label: 'Закрыто', variant: 'amber' as const } : { label: 'Опубликовано', variant: 'green' as const }; }
+function timeAgo(value: string) {
+  const diff = Math.floor((Date.now() - new Date(value).getTime()) / 1000);
+  if (diff < 60) return "только что";
+  if (diff < 3600) return `${Math.floor(diff / 60)} мин`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)} ч`;
+  return `${Math.floor(diff / 86400)} дн`;
+}
 
 export default function PairSpacePage() {
-  const params = useParams(); const router = useRouter(); const searchParams = useSearchParams(); const lessonId = params.lessonId as string;
-  const [activeTab, setActiveTab] = useState(searchParams.get('compose') ? 'homeworks' : 'overview'); const [pairSpace, setPairSpace] = useState<PairSpace | null>(null); const [lesson, setLesson] = useState<Lesson | null>(null); const [loading, setLoading] = useState(true); const [error, setError] = useState(''); const [success, setSuccess] = useState(''); const [submitting, setSubmitting] = useState(false); const [modal, setModal] = useState<'announcement' | 'homework' | 'file' | null>(searchParams.get('compose') === 'homework' ? 'homework' : null);
-  const [announcementText, setAnnouncementText] = useState(''); const [homeworkTitle, setHomeworkTitle] = useState(''); const [homeworkDescription, setHomeworkDescription] = useState(''); const [homeworkDeadline, setHomeworkDeadline] = useState(''); const [file, setFile] = useState({ fileUrl: '', fileName: '', fileType: 'pdf', size: '0' }); const [newMessage, setNewMessage] = useState('');
-  const load = () => { setLoading(true); setError(''); Promise.all([apiFetch<PairSpace>(`/pair-spaces/${lessonId}`), apiFetch<Lesson>(`/schedule/lessons/${lessonId}`)]).then(([space, currentLesson]) => { setPairSpace(space); setLesson(currentLesson); }).catch((err) => setError(err instanceof Error ? err.message : 'Не удалось открыть пространство пары.')).finally(() => setLoading(false)); };
-  useEffect(() => { load(); }, [lessonId]);
-  const run = async <T,>(action: () => Promise<T>, message: string, update: (value: T) => void) => { setSubmitting(true); setError(''); try { const value = await action(); update(value); setModal(null); setSuccess(message); } catch (err) { setError(err instanceof Error ? err.message : 'Не удалось выполнить действие.'); } finally { setSubmitting(false); } };
-  const sendMessage = () => { if (!newMessage.trim()) return; void run(() => apiFetch<Message>(`/pair-spaces/${lessonId}/messages`, { method: 'POST', body: JSON.stringify({ text: newMessage }) }), 'Сообщение отправлено.', (message) => { setPairSpace((current) => current ? { ...current, messages: [...current.messages, message] } : current); setNewMessage(''); }); };
-  if (loading) return <div className="mx-auto max-w-[1200px] space-y-6"><Skeleton className="h-32" /><Skeleton className="h-12" /><Skeleton className="h-[420px]" /></div>;
-  if (error && !pairSpace) return <div className="mx-auto max-w-[1200px]"><RequestState title="Не удалось открыть пространство пары" description={error} onRetry={load} /></div>;
-  if (!pairSpace || !lesson) return <div className="mx-auto max-w-[1200px]"><EmptyState title="Пространство пары недоступно" description="Для этого занятия пока не создан рабочий контекст." /></div>;
-  const tabs = [{ id: 'overview', label: 'Обзор' }, { id: 'materials', label: 'Материалы', count: pairSpace.files?.length || 0 }, { id: 'homeworks', label: 'Задания', count: pairSpace.homeworks.length }, { id: 'discussion', label: 'Обсуждение', count: pairSpace.messages.length }];
-  const action = (kind: 'announcement' | 'homework' | 'file') => { setSuccess(''); setModal(kind); };
-  return <div className="mx-auto max-w-[1200px] space-y-6"><button onClick={() => router.back()} className="inline-flex min-h-10 items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-900"><Icon name="chevron-left" size={16} />Назад</button>
-    <Card className="px-5 py-5"><div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between"><div><div className="flex flex-wrap items-center gap-2"><h1 className="text-2xl font-bold text-slate-900">{lesson.subject}</h1><Badge variant="sky">Рабочее пространство</Badge></div><div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-500"><span className="font-semibold text-slate-800">{lesson.startTime}–{lesson.endTime}</span><span>{lesson.groupName || 'Группа не указана'}</span><span>Ауд. {lesson.room || '—'}</span><span>{lesson.subjectType || 'Занятие'}</span></div>{lesson.isChanged && <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800">{lesson.changeDescription || 'Расписание пары изменилось'}</p>}</div><div className="flex flex-wrap gap-2"><Button size="sm" onClick={() => action('announcement')}><Icon name="bell" size={15} />Объявление</Button><Button size="sm" variant="secondary" onClick={() => action('homework')}><Icon name="clipboard" size={15} />Подготовка к паре</Button><Button size="sm" variant="secondary" onClick={() => action('file')}><Icon name="upload" size={15} />Материал</Button></div></div></Card>
-    <div className="flex flex-wrap gap-2 rounded-xl border border-slate-200 bg-slate-50 p-2"><Button size="sm" variant="ghost" onClick={() => action('announcement')}>Новое объявление</Button><Button size="sm" variant="ghost" onClick={() => action('homework')}>Подготовка к паре</Button><Button size="sm" variant="ghost" onClick={() => action('file')}>Загрузить материал</Button><Button size="sm" variant="ghost" disabled title="Для опросов пока нет контракта бэкенда">Опрос</Button><Button size="sm" variant="ghost" disabled title="Для ссылок пока нет контракта бэкенда">Ссылка</Button><Button size="sm" variant="ghost" onClick={() => setActiveTab('discussion')}>Сообщение группе</Button></div>
-    <TabBar tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />{error && <RequestState title="Не удалось выполнить действие" description={error} onRetry={() => setError('')} />}{success && <p role="status" className="text-sm font-medium text-emerald-700">{success}</p>}
-    {activeTab === 'overview' && <div className="grid gap-4 md:grid-cols-3"><Card padding="sm"><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Что нужно сделать</p><div className="mt-3 space-y-2 text-sm text-slate-700"><p>{pairSpace.homeworks.length ? `${pairSpace.homeworks.length} заданий опубликовано` : 'Добавьте первое задание'}</p><p>{pairSpace.files?.length || 0} материалов доступно группе</p><p>{pairSpace.messages.length ? `${pairSpace.messages.length} сообщений в обсуждении` : 'Обсуждение пока пустое'}</p></div></Card><Card padding="sm"><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Быстрый итог</p><div className="mt-3 space-y-2 text-sm text-slate-700"><p>Объявлений: {pairSpace.announcements.length}</p><p>Заданий: {pairSpace.homeworks.length}</p><p>Материалов: {pairSpace.files?.length || 0}</p></div></Card><Card padding="sm"><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Статус пары</p><p className="mt-3 text-lg font-semibold text-slate-900">{lesson.isChanged ? 'Есть изменение' : 'По расписанию'}</p><p className="mt-1 text-sm text-slate-500">Публикации и сообщения доступны группе сразу после сохранения.</p></Card></div>}
-    {activeTab === 'materials' && (!pairSpace.files?.length ? <EmptyState title="Материалов пока нет" description="Загрузите файл, чтобы группа увидела его в пространстве пары." /> : <div className="grid gap-3 md:grid-cols-2">{pairSpace.files.map((item) => <Card key={item.id} padding="sm"><div className="flex items-center gap-3"><Icon name="file" className="text-sky-700" /><div className="min-w-0 flex-1"><a href={item.fileUrl} target="_blank" rel="noreferrer" className="truncate text-sm font-semibold text-slate-900 hover:text-sky-700">{item.fileName}</a><p className="mt-1 text-xs text-slate-500">{item.fileType.toUpperCase()} · {Math.round(item.size / 1024)} KB</p></div></div></Card>)}</div>)}
-    {activeTab === 'homeworks' && (!pairSpace.homeworks.length ? <EmptyState title="Подготовок пока нет" description="Добавьте, что группе нужно подготовить к этому занятию." /> : <div className="space-y-3">{pairSpace.homeworks.map((item) => { const status = statusFor(item); return <Card key={item.id} padding="sm"><div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between"><div><h3 className="font-semibold text-slate-900">{item.title}</h3>{item.description && <p className="mt-1 text-sm text-slate-600">{item.description}</p>}{item.deadline && <p className="mt-2 text-xs text-slate-500">Подготовить к: {new Date(item.deadline).toLocaleDateString('ru-RU')}</p>}</div><Badge variant={status.variant}>{status.label}</Badge></div></Card>; })}</div>)}
-    {activeTab === 'discussion' && <div className="space-y-3">{!pairSpace.messages.length ? <EmptyState title="Нет сообщений" description="Начните обсуждение с группой." /> : pairSpace.messages.map((item) => <Card key={item.id} padding="sm"><div className="flex items-start gap-3"><Avatar name={item.authorName || 'Участник'} size="sm" /><div><div className="flex items-center gap-2"><span className="text-sm font-semibold text-slate-900">{item.authorName || 'Участник'}</span><span className="text-xs text-slate-400">{timeAgo(item.createdAt)}</span></div><p className="mt-1 text-sm text-slate-700">{item.text}</p></div></div></Card>)}<div className="flex gap-2"><Input value={newMessage} onChange={(event) => setNewMessage(event.target.value)} placeholder="Сообщение группе" onKeyDown={(event) => event.key === 'Enter' && sendMessage()} /><Button onClick={sendMessage} aria-label="Отправить сообщение"><Icon name="arrow-right" size={16} /></Button></div></div>}
-    <Modal open={modal === 'announcement'} onClose={() => setModal(null)} title="Новое объявление"><div className="space-y-4"><textarea value={announcementText} onChange={(event) => setAnnouncementText(event.target.value)} rows={4} placeholder="Что важно сообщить группе?" className="block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100" /><div className="flex gap-2"><Button variant="secondary" fullWidth onClick={() => setModal(null)}>Отмена</Button><Button fullWidth loading={submitting} onClick={() => { if (!announcementText.trim()) return; void run(() => apiFetch<Announcement>(`/pair-spaces/${lessonId}/announcements`, { method: 'POST', body: JSON.stringify({ text: announcementText }) }), 'Объявление опубликовано.', (item) => { setPairSpace({ ...pairSpace, announcements: [...pairSpace.announcements, item] }); setAnnouncementText(''); }); }}>Опубликовать</Button></div></div></Modal>
-    <Modal open={modal === 'homework'} onClose={() => setModal(null)} title="Подготовка к занятию"><div className="space-y-4"><Input label="Что подготовить" value={homeworkTitle} onChange={(event) => setHomeworkTitle(event.target.value)} placeholder="Например, сообщение о применении нейросетей" /><textarea value={homeworkDescription} onChange={(event) => setHomeworkDescription(event.target.value)} rows={3} placeholder="Контекст: тема лекции, формат и что принести" className="block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100" /><Input label="К какой дате" type="date" value={homeworkDeadline} onChange={(event) => setHomeworkDeadline(event.target.value)} /><div className="flex gap-2"><Button variant="secondary" fullWidth onClick={() => setModal(null)}>Отмена</Button><Button fullWidth loading={submitting} onClick={() => { if (!homeworkTitle.trim()) return; void run(() => apiFetch<Homework>(`/pair-spaces/${lessonId}/homeworks`, { method: 'POST', body: JSON.stringify({ title: homeworkTitle, description: homeworkDescription, deadline: homeworkDeadline || undefined }) }), 'Подготовка опубликована.', (item) => { setPairSpace({ ...pairSpace, homeworks: [...pairSpace.homeworks, item] }); setHomeworkTitle(''); setHomeworkDescription(''); setHomeworkDeadline(''); }); }}>Опубликовать</Button></div><p className="text-xs text-slate-500">Сдачи, оценки и критерии остаются в Moodle; здесь — только ориентир для конкретной пары.</p></div></Modal>
-    <Modal open={modal === 'file'} onClose={() => setModal(null)} title="Загрузить материал"><div className="space-y-4"><Input label="Название файла" value={file.fileName} onChange={(event) => setFile({ ...file, fileName: event.target.value })} placeholder="lecture-03.pdf" /><Input label="URL файла" value={file.fileUrl} onChange={(event) => setFile({ ...file, fileUrl: event.target.value })} placeholder="https://..." /><div className="grid grid-cols-2 gap-3"><Input label="Тип" value={file.fileType} onChange={(event) => setFile({ ...file, fileType: event.target.value })} /><Input label="Размер, байт" type="number" value={file.size} onChange={(event) => setFile({ ...file, size: event.target.value })} /></div><div className="flex gap-2"><Button variant="secondary" fullWidth onClick={() => setModal(null)}>Отмена</Button><Button fullWidth loading={submitting} onClick={() => { if (!file.fileName.trim() || !file.fileUrl.trim()) return; void run(() => apiFetch<FileItem>(`/pair-spaces/${lessonId}/files`, { method: 'POST', body: JSON.stringify({ ...file, size: Number(file.size) || 0 }) }), 'Материал добавлен.', (item) => { setPairSpace({ ...pairSpace, files: [...(pairSpace.files || []), item] }); setFile({ fileUrl: '', fileName: '', fileType: 'pdf', size: '0' }); }); }}>Добавить</Button></div><p className="text-xs text-slate-500">API ожидает URL уже загруженного файла; multipart-загрузка пока не подключена.</p></div></Modal>
-  </div>;
+  const params = useParams();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const lessonId = params.lessonId as string;
+  const [activeTab, setActiveTab] = useState(
+    searchParams.get("compose") ? "homeworks" : "overview",
+  );
+  const [pairSpace, setPairSpace] = useState<PairSpace | null>(null);
+  const [lesson, setLesson] = useState<Lesson | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [modal, setModal] = useState<
+    "announcement" | "homework" | "file" | null
+  >(searchParams.get("compose") === "homework" ? "homework" : null);
+  const [announcementText, setAnnouncementText] = useState("");
+  const [homeworkTitle, setHomeworkTitle] = useState("");
+  const [homeworkDescription, setHomeworkDescription] = useState("");
+  const [homeworkDeadline, setHomeworkDeadline] = useState("");
+  const [file, setFile] = useState({
+    fileUrl: "",
+    fileName: "",
+    fileType: "pdf",
+    size: "0",
+  });
+  const [newMessage, setNewMessage] = useState("");
+  const load = () => {
+    setLoading(true);
+    setError("");
+    Promise.all([
+      apiFetch<PairSpace>(`/pair-spaces/${lessonId}`),
+      apiFetch<Lesson>(`/schedule/lessons/${lessonId}`),
+    ])
+      .then(([space, currentLesson]) => {
+        setPairSpace(space);
+        setLesson(currentLesson);
+      })
+      .catch((err) =>
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Не удалось открыть пространство пары.",
+        ),
+      )
+      .finally(() => setLoading(false));
+  };
+  useEffect(() => {
+    load();
+  }, [lessonId]);
+  const run = async <T,>(
+    action: () => Promise<T>,
+    message: string,
+    update: (value: T) => void,
+  ) => {
+    setSubmitting(true);
+    setError("");
+    try {
+      const value = await action();
+      update(value);
+      setModal(null);
+      setSuccess(message);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Не удалось выполнить действие.",
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
+  const sendMessage = () => {
+    if (!newMessage.trim()) return;
+    void run(
+      () =>
+        apiFetch<Message>(`/pair-spaces/${lessonId}/messages`, {
+          method: "POST",
+          body: JSON.stringify({ text: newMessage }),
+        }),
+      "Сообщение отправлено.",
+      (message) => {
+        setPairSpace((current) =>
+          current
+            ? { ...current, messages: [...current.messages, message] }
+            : current,
+        );
+        setNewMessage("");
+      },
+    );
+  };
+  if (loading)
+    return (
+      <div className="mx-auto max-w-[1200px] space-y-6">
+        <Skeleton className="h-32" />
+        <Skeleton className="h-12" />
+        <Skeleton className="h-[420px]" />
+      </div>
+    );
+  if (error && !pairSpace)
+    return (
+      <div className="mx-auto max-w-[1200px]">
+        <RequestState
+          title="Не удалось открыть пространство пары"
+          description={error}
+          onRetry={load}
+        />
+      </div>
+    );
+  if (!pairSpace || !lesson)
+    return (
+      <div className="mx-auto max-w-[1200px]">
+        <EmptyState
+          title="Пространство пары недоступно"
+          description="Для этого занятия пока не создан рабочий контекст."
+        />
+      </div>
+    );
+  const tabs = [
+    { id: "overview", label: "Обзор" },
+    {
+      id: "materials",
+      label: "Материалы",
+      count: pairSpace.files?.length || 0,
+    },
+    { id: "homeworks", label: "Подготовка", count: pairSpace.homeworks.length },
+    { id: "discussion", label: "Обсуждение", count: pairSpace.messages.length },
+  ];
+  const action = (kind: "announcement" | "homework" | "file") => {
+    setSuccess("");
+    setModal(kind);
+  };
+  return (
+    <div className="mx-auto max-w-[1200px] space-y-6">
+      <button
+        onClick={() => router.back()}
+        className="inline-flex min-h-10 items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-900"
+      >
+        <Icon name="chevron-left" size={16} />
+        Назад
+      </button>
+      <Card className="px-5 py-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-2xl font-bold text-slate-900">
+                {lesson.subject}
+              </h1>
+              <Badge variant="sky">Рабочее пространство</Badge>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-500">
+              <span className="font-semibold text-slate-800">
+                {lesson.startTime}–{lesson.endTime}
+              </span>
+              <span>{lesson.groupName || "Группа не указана"}</span>
+              <span>Ауд. {lesson.room || "—"}</span>
+              <span>{lesson.subjectType || "Занятие"}</span>
+            </div>
+            {lesson.isChanged && (
+              <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800">
+                {lesson.changeDescription || "Расписание пары изменилось"}
+              </p>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {pairSpace.moodleUrl && (
+              <a
+                href={pairSpace.moodleUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 transition hover:border-sky-200 hover:text-sky-700"
+              >
+                <Icon name="arrow-right" size={15} />
+                Открыть Moodle
+              </a>
+            )}
+            <Button size="sm" onClick={() => action("announcement")}>
+              <Icon name="bell" size={15} />
+              Объявление
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => action("homework")}
+            >
+              <Icon name="clipboard" size={15} />
+              Подготовка к паре
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => action("file")}
+            >
+              <Icon name="upload" size={15} />
+              Материал
+            </Button>
+          </div>
+        </div>
+      </Card>
+      <div className="flex flex-wrap gap-2 rounded-xl border border-slate-200 bg-slate-50 p-2">
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => action("announcement")}
+        >
+          Новое объявление
+        </Button>
+        <Button size="sm" variant="ghost" onClick={() => action("homework")}>
+          Подготовка к паре
+        </Button>
+        <Button size="sm" variant="ghost" onClick={() => action("file")}>
+          Загрузить материал
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          disabled
+          title="Для опросов пока нет контракта бэкенда"
+        >
+          Опрос
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          disabled
+          title="Для ссылок пока нет контракта бэкенда"
+        >
+          Ссылка
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => setActiveTab("discussion")}
+        >
+          Сообщение группе
+        </Button>
+      </div>
+      <TabBar tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
+      {error && (
+        <RequestState
+          title="Не удалось выполнить действие"
+          description={error}
+          onRetry={() => setError("")}
+        />
+      )}
+      {success && (
+        <p role="status" className="text-sm font-medium text-emerald-700">
+          {success}
+        </p>
+      )}
+      {activeTab === "overview" && (
+        <div className="grid gap-4 md:grid-cols-3">
+          <Card padding="sm">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+              Что подготовить
+            </p>
+            <div className="mt-3 space-y-2 text-sm text-slate-700">
+              <p>
+                {pairSpace.homeworks.length
+                  ? `${pairSpace.homeworks.length} ориентиров опубликовано`
+                  : "Добавьте первый ориентир"}
+              </p>
+              <p>{pairSpace.files?.length || 0} материалов доступно группе</p>
+              <p>
+                {pairSpace.messages.length
+                  ? `${pairSpace.messages.length} сообщений в обсуждении`
+                  : "Обсуждение пока пустое"}
+              </p>
+            </div>
+          </Card>
+          <Card padding="sm">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+              Быстрый итог
+            </p>
+            <div className="mt-3 space-y-2 text-sm text-slate-700">
+              <p>Объявлений: {pairSpace.announcements.length}</p>
+              <p>Подготовок: {pairSpace.homeworks.length}</p>
+              <p>Материалов: {pairSpace.files?.length || 0}</p>
+            </div>
+          </Card>
+          <Card padding="sm">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+              Статус пары
+            </p>
+            <p className="mt-3 text-lg font-semibold text-slate-900">
+              {lesson.isChanged ? "Есть изменение" : "По расписанию"}
+            </p>
+            <p className="mt-1 text-sm text-slate-500">
+              Публикации и сообщения доступны группе сразу после сохранения.
+            </p>
+          </Card>
+        </div>
+      )}
+      {activeTab === "materials" &&
+        (!pairSpace.files?.length ? (
+          <EmptyState
+            title="Материалов пока нет"
+            description="Загрузите файл, чтобы группа увидела его в пространстве пары."
+          />
+        ) : (
+          <div className="grid gap-3 md:grid-cols-2">
+            {pairSpace.files.map((item) => (
+              <Card key={item.id} padding="sm">
+                <div className="flex items-center gap-3">
+                  <Icon name="file" className="text-sky-700" />
+                  <div className="min-w-0 flex-1">
+                    <a
+                      href={item.fileUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="truncate text-sm font-semibold text-slate-900 hover:text-sky-700"
+                    >
+                      {item.fileName}
+                    </a>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {item.fileType.toUpperCase()} ·{" "}
+                      {Math.round(item.size / 1024)} KB
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        ))}
+      {activeTab === "homeworks" &&
+        (!pairSpace.homeworks.length ? (
+          <EmptyState
+            title="Подготовок пока нет"
+            description="Добавьте, что группе нужно подготовить к этому занятию."
+          />
+        ) : (
+          <div className="space-y-3">
+            {pairSpace.homeworks.map((item) => (
+              <Card key={item.id} padding="sm">
+                <div>
+                  <h3 className="font-semibold text-slate-900">{item.title}</h3>
+                  {item.description && (
+                    <p className="mt-1 text-sm text-slate-600">
+                      {item.description}
+                    </p>
+                  )}
+                  {item.deadline && (
+                    <p className="mt-2 text-xs text-slate-500">
+                      Подготовить к:{" "}
+                      {new Date(item.deadline).toLocaleDateString("ru-RU")}
+                    </p>
+                  )}
+                </div>
+              </Card>
+            ))}
+          </div>
+        ))}
+      {activeTab === "discussion" && (
+        <div className="space-y-3">
+          {!pairSpace.messages.length ? (
+            <EmptyState
+              title="Нет сообщений"
+              description="Начните обсуждение с группой."
+            />
+          ) : (
+            pairSpace.messages.map((item) => (
+              <Card key={item.id} padding="sm">
+                <div className="flex items-start gap-3">
+                  <Avatar name={item.authorName || "Участник"} size="sm" />
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-slate-900">
+                        {item.authorName || "Участник"}
+                      </span>
+                      <span className="text-xs text-slate-400">
+                        {timeAgo(item.createdAt)}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-sm text-slate-700">{item.text}</p>
+                  </div>
+                </div>
+              </Card>
+            ))
+          )}
+          <div className="flex gap-2">
+            <Input
+              value={newMessage}
+              onChange={(event) => setNewMessage(event.target.value)}
+              placeholder="Сообщение группе"
+              onKeyDown={(event) => event.key === "Enter" && sendMessage()}
+            />
+            <Button onClick={sendMessage} aria-label="Отправить сообщение">
+              <Icon name="arrow-right" size={16} />
+            </Button>
+          </div>
+        </div>
+      )}
+      <Modal
+        open={modal === "announcement"}
+        onClose={() => setModal(null)}
+        title="Новое объявление"
+      >
+        <div className="space-y-4">
+          <textarea
+            value={announcementText}
+            onChange={(event) => setAnnouncementText(event.target.value)}
+            rows={4}
+            placeholder="Что важно сообщить группе?"
+            className="block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+          />
+          <div className="flex gap-2">
+            <Button
+              variant="secondary"
+              fullWidth
+              onClick={() => setModal(null)}
+            >
+              Отмена
+            </Button>
+            <Button
+              fullWidth
+              loading={submitting}
+              onClick={() => {
+                if (!announcementText.trim()) return;
+                void run(
+                  () =>
+                    apiFetch<Announcement>(
+                      `/pair-spaces/${lessonId}/announcements`,
+                      {
+                        method: "POST",
+                        body: JSON.stringify({ text: announcementText }),
+                      },
+                    ),
+                  "Объявление опубликовано.",
+                  (item) => {
+                    setPairSpace({
+                      ...pairSpace,
+                      announcements: [...pairSpace.announcements, item],
+                    });
+                    setAnnouncementText("");
+                  },
+                );
+              }}
+            >
+              Опубликовать
+            </Button>
+          </div>
+        </div>
+      </Modal>
+      <Modal
+        open={modal === "homework"}
+        onClose={() => setModal(null)}
+        title="Подготовка к занятию"
+      >
+        <div className="space-y-4">
+          <Input
+            label="Что подготовить"
+            value={homeworkTitle}
+            onChange={(event) => setHomeworkTitle(event.target.value)}
+            placeholder="Например, сообщение о применении нейросетей"
+          />
+          <textarea
+            value={homeworkDescription}
+            onChange={(event) => setHomeworkDescription(event.target.value)}
+            rows={3}
+            placeholder="Контекст: тема лекции, формат и что принести"
+            className="block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+          />
+          <Input
+            label="К какой дате"
+            type="date"
+            value={homeworkDeadline}
+            onChange={(event) => setHomeworkDeadline(event.target.value)}
+          />
+          <div className="flex gap-2">
+            <Button
+              variant="secondary"
+              fullWidth
+              onClick={() => setModal(null)}
+            >
+              Отмена
+            </Button>
+            <Button
+              fullWidth
+              loading={submitting}
+              onClick={() => {
+                if (!homeworkTitle.trim()) return;
+                void run(
+                  () =>
+                    apiFetch<Homework>(`/pair-spaces/${lessonId}/homeworks`, {
+                      method: "POST",
+                      body: JSON.stringify({
+                        title: homeworkTitle,
+                        description: homeworkDescription,
+                        deadline: homeworkDeadline || undefined,
+                      }),
+                    }),
+                  "Подготовка опубликована.",
+                  (item) => {
+                    setPairSpace({
+                      ...pairSpace,
+                      homeworks: [...pairSpace.homeworks, item],
+                    });
+                    setHomeworkTitle("");
+                    setHomeworkDescription("");
+                    setHomeworkDeadline("");
+                  },
+                );
+              }}
+            >
+              Опубликовать
+            </Button>
+          </div>
+          <p className="text-xs text-slate-500">
+            Сдачи, оценки и критерии остаются в Moodle; здесь — только ориентир
+            для конкретной пары.
+          </p>
+        </div>
+      </Modal>
+      <Modal
+        open={modal === "file"}
+        onClose={() => setModal(null)}
+        title="Загрузить материал"
+      >
+        <div className="space-y-4">
+          <Input
+            label="Название файла"
+            value={file.fileName}
+            onChange={(event) =>
+              setFile({ ...file, fileName: event.target.value })
+            }
+            placeholder="lecture-03.pdf"
+          />
+          <Input
+            label="URL файла"
+            value={file.fileUrl}
+            onChange={(event) =>
+              setFile({ ...file, fileUrl: event.target.value })
+            }
+            placeholder="https://..."
+          />
+          <div className="grid grid-cols-2 gap-3">
+            <Input
+              label="Тип"
+              value={file.fileType}
+              onChange={(event) =>
+                setFile({ ...file, fileType: event.target.value })
+              }
+            />
+            <Input
+              label="Размер, байт"
+              type="number"
+              value={file.size}
+              onChange={(event) =>
+                setFile({ ...file, size: event.target.value })
+              }
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="secondary"
+              fullWidth
+              onClick={() => setModal(null)}
+            >
+              Отмена
+            </Button>
+            <Button
+              fullWidth
+              loading={submitting}
+              onClick={() => {
+                if (!file.fileName.trim() || !file.fileUrl.trim()) return;
+                void run(
+                  () =>
+                    apiFetch<FileItem>(`/pair-spaces/${lessonId}/files`, {
+                      method: "POST",
+                      body: JSON.stringify({
+                        ...file,
+                        size: Number(file.size) || 0,
+                      }),
+                    }),
+                  "Материал добавлен.",
+                  (item) => {
+                    setPairSpace({
+                      ...pairSpace,
+                      files: [...(pairSpace.files || []), item],
+                    });
+                    setFile({
+                      fileUrl: "",
+                      fileName: "",
+                      fileType: "pdf",
+                      size: "0",
+                    });
+                  },
+                );
+              }}
+            >
+              Добавить
+            </Button>
+          </div>
+          <p className="text-xs text-slate-500">
+            API ожидает URL уже загруженного файла; multipart-загрузка пока не
+            подключена.
+          </p>
+        </div>
+      </Modal>
+    </div>
+  );
 }

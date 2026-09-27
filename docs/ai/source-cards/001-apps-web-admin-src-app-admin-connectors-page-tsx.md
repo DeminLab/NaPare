@@ -16,11 +16,10 @@ Administration workspace UI and its data flow.
 
 ## Change boundary
 
-Trace direct imports and the closest route or caller before changing this file.
+Trace direct imports and the closest route or caller before changing this file. Schedule sync returns persisted import counts (`imported`, `updated`, `studentsLinked`) and the UI must show these rather than only fetched source counts. Moodle configuration sends a token once to a protected endpoint and must never render or retain the saved token.
 
 ## Verification
 
 ```powershell
 pnpm --filter @napare/web-admin exec tsc --noEmit
 ```
-

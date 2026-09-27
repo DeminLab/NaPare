@@ -67,8 +67,9 @@ export class SuperadminService {
     pagination: PaginationQueryDto,
   ): Promise<PaginatedResponse<ConnectorResponseDto>> {
     const connectors: ConnectorResponseDto[] = [
-      { id: 'sibit', name: 'SIBIT', type: 'api', status: 'active' },
-      { id: 'excel', name: 'Excel Import', type: 'file', status: 'active' },
+      { id: 'sibit', name: 'SIBIT', type: 'api', status: 'active', capabilities: { scheduleSync: true } },
+      { id: 'excel', name: 'Excel Import', type: 'file', status: 'active', capabilities: {} },
+      { id: 'moodle', name: 'Moodle', type: 'lms', status: 'inactive', capabilities: { learningManagement: true } },
     ];
     const start = (pagination.page - 1) * pagination.limit;
     return toPaginatedResponse(connectors.slice(start, start + pagination.limit), connectors.length, pagination);

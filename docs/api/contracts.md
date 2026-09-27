@@ -17,19 +17,22 @@
 **Rate Limit:** 1 запрос в 60 секунд на номер/email.
 
 **Request:**
+
 ```json
 {
-  "phone": "+79991234567",     // Опционально
-  "email": "user@example.com"  // Опционально (одно из двух обязательно)
+  "phone": "+79991234567", // Опционально
+  "email": "user@example.com" // Опционально (одно из двух обязательно)
 }
 ```
 
 **Validation:**
+
 - `phone`: regex `^\+7\d{10}$` (если передан)
 - `email`: валидный email (если передан)
 - Одно из двух обязательно
 
 **Response 200:**
+
 ```json
 {
   "data": {
@@ -55,6 +58,7 @@
 **Rate Limit:** 5 попыток в минуту на номер/email.
 
 **Request:**
+
 ```json
 {
   "phone": "+79991234567",
@@ -63,10 +67,12 @@
 ```
 
 **Validation:**
+
 - `phone`: regex `^\+7\d{10}$`
 - `code`: string, length 4-6
 
 **Response 200 (существующий пользователь):**
+
 ```json
 {
   "data": {
@@ -86,6 +92,7 @@
 ```
 
 **Response 200 (новый пользователь):**
+
 ```json
 {
   "data": {
@@ -113,6 +120,7 @@
 **Rate Limit:** 5 попыток в минуту на email.
 
 **Request:**
+
 ```json
 {
   "email": "teacher@university.ru",
@@ -121,10 +129,12 @@
 ```
 
 **Validation:**
+
 - `email`: валидный email
 - `password`: string, min 8
 
 **Response 200:**
+
 ```json
 {
   "data": {
@@ -154,6 +164,7 @@
 Обновление access token.
 
 **Request:**
+
 ```json
 {
   "refreshToken": "eyJhbGciOiJIUzI1NiIs..."
@@ -161,6 +172,7 @@
 ```
 
 **Response 200:**
+
 ```json
 {
   "data": {
@@ -185,6 +197,7 @@
 **Headers:** `Authorization: Bearer <accessToken>`
 
 **Response 200:**
+
 ```json
 {
   "data": { "success": true }
@@ -200,6 +213,7 @@
 **Headers:** `Authorization: Bearer <accessToken>`
 
 **Response 200:**
+
 ```json
 {
   "data": {
@@ -229,6 +243,7 @@
 **Headers:** `Authorization: Bearer <accessToken>`
 
 **Request:**
+
 ```json
 {
   "firstName": "Иван",
@@ -238,6 +253,7 @@
 ```
 
 **Validation:**
+
 - `firstName`: string, min 1, max 100 (опционально)
 - `lastName`: string, min 1, max 100 (опционально)
 - `avatarUrl`: string URL (опционально)
@@ -253,6 +269,7 @@
 **Headers:** `Authorization: Bearer <accessToken>`
 
 **Request:**
+
 ```json
 {
   "universityId": "uuid",
@@ -263,6 +280,7 @@
 ```
 
 **Response 200:**
+
 ```json
 {
   "data": {
@@ -284,6 +302,7 @@
 **Headers:** `Authorization: Bearer <accessToken>`
 
 **Response 200:**
+
 ```json
 {
   "data": {
@@ -300,6 +319,7 @@
 Вход через MAX Mini-App. Сервер валидирует подпись `window.WebApp.initData` токеном `MAX_BOT_TOKEN` и выдаёт JWT НаПаре. При первом входе вместе с `email`/`password` аккаунт университета привязывается к MAX-идентификатору (`users.maxUserId`) — дальше вход в MAX автоматический.
 
 **Request:**
+
 ```json
 {
   "initData": "auth_date=1758700000&user=%7B%22id%22%3A424242%7D&hash=…",
@@ -309,12 +329,14 @@
 ```
 
 **Validation:**
+
 - `initData`: string, 1–8192 (обязательно)
 - `email`, `password`: опционально, только вместе (первичная привязка); `password` min 6
 
 **Подпись:** HMAC-SHA256 по алгоритму MAX (секрет `WebAppData` + `MAX_BOT_TOKEN`), сравнение timing-safe; `auth_date` не старше `MAX_INIT_DATA_TTL_SECONDS` (по умолчанию 3600) и не «из будущего».
 
 **Response 200:**
+
 ```json
 {
   "accessToken": "eyJhbGciOiJIUzI1NiIs...",
@@ -358,6 +380,7 @@
 | `limit` | number | 50 | Элементов на странице |
 
 **Response 200:**
+
 ```json
 {
   "data": [
@@ -399,6 +422,7 @@
 **Headers:** `Authorization: Bearer <accessToken>`
 
 **Response 200:**
+
 ```json
 {
   "data": {
@@ -460,6 +484,7 @@
 **Headers:** `Authorization: Bearer <accessToken>`
 
 **Response 200:**
+
 ```json
 {
   "data": {
@@ -501,6 +526,7 @@
 **Headers:** `Authorization: Bearer <accessToken>`
 
 **Response 200:**
+
 ```json
 {
   "data": [
@@ -537,6 +563,7 @@
 **Rate Limit:** 1 запрос в час на вуз.
 
 **Response 200:**
+
 ```json
 {
   "data": {
@@ -568,13 +595,17 @@
 **Roles:** `university_admin`
 
 **Response 200:**
+
 ```json
 {
-  "data": {
-    "syncId": "uuid",
-    "status": "started",
-    "startedAt": "2024-01-15T10:00:00Z"
-  }
+  "status": "synced",
+  "timestamp": "2026-09-26T10:00:00.000Z",
+  "groups": 26,
+  "lessons": 3000,
+  "teachers": 120,
+  "imported": 3000,
+  "updated": 0,
+  "studentsLinked": 42
 }
 ```
 
@@ -588,6 +619,7 @@
 **Roles:** `university_admin`
 
 **Response 200:**
+
 ```json
 {
   "data": {
@@ -612,6 +644,7 @@
 **Headers:** `Authorization: Bearer <accessToken>`
 
 **Response 200:**
+
 ```json
 {
   "data": {
@@ -664,6 +697,7 @@
 **Roles:** `teacher`
 
 **Request:**
+
 ```json
 {
   "text": "Не забудьте принести ноутбуки на следующую пару",
@@ -672,10 +706,12 @@
 ```
 
 **Validation:**
+
 - `text`: string, min 1, max 2000
 - `isPinned`: boolean (опционально, default false)
 
 **Response 201:**
+
 ```json
 {
   "data": {
@@ -697,6 +733,7 @@
 **Roles:** `teacher`
 
 **Request:**
+
 ```json
 {
   "title": "Лабораторная №3",
@@ -707,6 +744,7 @@
 ```
 
 **Validation:**
+
 - `title`: string, min 1, max 200
 - `description`: string, max 5000 (опционально)
 - `deadline`: ISO datetime, min now + 1 hour (опционально)
@@ -714,6 +752,7 @@
 - `recurringRule`: string (опционально, required if isRecurring=true)
 
 **Response 201:**
+
 ```json
 {
   "data": {
@@ -741,10 +780,12 @@
 | `file` | File | Да | Файл (pdf, doc, ppt, jpg, png) |
 
 **Validation:**
+
 - File size: max 50 MB
 - Allowed types: `application/pdf`, `application/msword`, `application/vnd.openxmlformats-officedocument.*`, `image/jpeg`, `image/png`
 
 **Response 201:**
+
 ```json
 {
   "data": {
@@ -768,6 +809,7 @@
 **Roles:** `student`
 
 **Response 200:**
+
 ```json
 {
   "data": {
@@ -793,6 +835,7 @@
 | `limit` | number | 50 | Элементов на странице |
 
 **Response 200:**
+
 ```json
 {
   "data": [
@@ -823,6 +866,7 @@
 **Headers:** `Authorization: Bearer <accessToken>`
 
 **Request:**
+
 ```json
 {
   "text": "Когда будет следующая пара?",
@@ -831,12 +875,14 @@
 ```
 
 **Validation:**
+
 - `text`: string, min 1, max 2000
 - `parentId`: UUID (опционально, для ответа)
 
 **Rate Limit:** 10 сообщений в минуту на пользователя.
 
 **Response 201:**
+
 ```json
 {
   "data": {
@@ -859,6 +905,7 @@
 **Roles:** `student`
 
 **Request:**
+
 ```json
 {
   "type": "sick",
@@ -869,12 +916,14 @@
 ```
 
 **Validation:**
+
 - `type`: enum ['learning', 'sick', 'work', 'other_city', 'other']
 - `startDate`: ISO date, min today
 - `endDate`: ISO date, min startDate
 - `comment`: string, max 500 (опционально)
 
 **Response 201:**
+
 ```json
 {
   "data": {
@@ -906,6 +955,7 @@
 | `limit` | number | 20 | Элементов на странице |
 
 **Response 200:**
+
 ```json
 {
   "data": [
@@ -943,6 +993,7 @@
 **Ограничение:** Только свои статусы со статусом `pending`
 
 **Request:**
+
 ```json
 {
   "type": "sick",
@@ -965,6 +1016,7 @@
 **Ограничение:** Только свои статусы со статусом `pending`
 
 **Response 200:**
+
 ```json
 {
   "data": { "success": true }
@@ -989,6 +1041,7 @@
 | `limit` | number | 20 | Элементов на странице |
 
 **Response 200:**
+
 ```json
 {
   "data": [
@@ -1028,6 +1081,7 @@
 **Roles:** `curator`
 
 **Request:**
+
 ```json
 {
   "comment": "Принято"
@@ -1035,6 +1089,7 @@
 ```
 
 **Response 200:**
+
 ```json
 {
   "data": {
@@ -1055,6 +1110,7 @@
 **Roles:** `curator`
 
 **Request:**
+
 ```json
 {
   "comment": "Необходима справка"
@@ -1062,6 +1118,7 @@
 ```
 
 **Response 200:**
+
 ```json
 {
   "data": {
@@ -1090,6 +1147,7 @@
 | `limit` | number | 20 | Элементов на странице |
 
 **Response 200:**
+
 ```json
 {
   "data": [
@@ -1121,6 +1179,7 @@
 **Headers:** `Authorization: Bearer <accessToken>`
 
 **Response 200:**
+
 ```json
 {
   "data": {
@@ -1139,6 +1198,7 @@
 **Headers:** `Authorization: Bearer <accessToken>`
 
 **Response 200:**
+
 ```json
 {
   "data": {
@@ -1156,6 +1216,7 @@
 **Headers:** `Authorization: Bearer <accessToken>`
 
 **Request:**
+
 ```json
 {
   "platform": "android",
@@ -1164,10 +1225,12 @@
 ```
 
 **Validation:**
+
 - `platform`: enum ['ios', 'android', 'web']
 - `token`: string, min 10
 
 **Response 200:**
+
 ```json
 {
   "data": {
@@ -1187,6 +1250,7 @@
 **Headers:** `Authorization: Bearer <accessToken>`
 
 **Response 200:**
+
 ```json
 {
   "data": {
@@ -1220,6 +1284,7 @@
 **Headers:** `Authorization: Bearer <accessToken>`
 
 **Request:**
+
 ```json
 {
   "pushEnabled": true,
@@ -1249,6 +1314,7 @@
 **Roles:** `university_admin`
 
 **Response 200:**
+
 ```json
 {
   "data": {
@@ -1277,6 +1343,7 @@
 **Roles:** `university_admin`
 
 **Request:**
+
 ```json
 {
   "name": "СИБИТ (обновлено)",
@@ -1296,6 +1363,7 @@
 **Roles:** `university_admin`
 
 **Response 200:**
+
 ```json
 {
   "data": [
@@ -1323,6 +1391,7 @@
 **Roles:** `university_admin`
 
 **Request:**
+
 ```json
 {
   "name": "Информатика",
@@ -1354,6 +1423,7 @@
 **Ограничение:** Только пустые факультеты (без групп)
 
 **Response 200:**
+
 ```json
 {
   "data": { "success": true }
@@ -1376,6 +1446,7 @@
 | `course` | number | Фильтр по курсу |
 
 **Response 200:**
+
 ```json
 {
   "data": [
@@ -1407,6 +1478,7 @@
 **Roles:** `university_admin`
 
 **Request:**
+
 ```json
 {
   "name": "ПМИ-201",
@@ -1436,6 +1508,7 @@
 | `limit` | number | Элементов на странице |
 
 **Response 200:**
+
 ```json
 {
   "data": [
@@ -1471,14 +1544,16 @@
 **Roles:** `university_admin`, `superadmin`
 
 **Request:**
+
 ```json
 {
   "roles": ["teacher", "curator"],
-  "groupId": "uuid"  // Опционально, для curator
+  "groupId": "uuid" // Опционально, для curator
 }
 ```
 
 **Response 200:**
+
 ```json
 {
   "data": {
@@ -1499,6 +1574,7 @@
 **Roles:** `university_admin`
 
 **Response 200:**
+
 ```json
 {
   "data": {
@@ -1536,6 +1612,7 @@
 **Roles:** `superadmin`
 
 **Response 200:**
+
 ```json
 {
   "data": [
@@ -1562,6 +1639,7 @@
 **Roles:** `superadmin`
 
 **Request:**
+
 ```json
 {
   "name": "ОмГУ",
@@ -1582,6 +1660,7 @@
 **Roles:** `superadmin`
 
 **Response 200:**
+
 ```json
 {
   "data": [
@@ -1607,6 +1686,7 @@
 **Roles:** `superadmin`
 
 **Request:**
+
 ```json
 {
   "status": "active",
@@ -1622,61 +1702,61 @@
 
 ## Сводная таблица эндпоинтов
 
-| # | Endpoint | Метод | Роль | Rate Limit |
-|---|----------|-------|------|------------|
-| 1 | `/auth/request-code` | POST | Public | 1/60s |
-| 2 | `/auth/verify-code` | POST | Public | 5/мин |
-| 3 | `/auth/login` | POST | Public | 5/мин |
-| 4 | `/auth/refresh` | POST | Public | 10/мин |
-| 5 | `/auth/logout` | POST | Auth | — |
-| 6 | `/users/me` | GET | Auth | — |
-| 7 | `/users/me` | PATCH | Auth | — |
-| 8 | `/users/me/bind-group` | POST | Auth | — |
-| 9 | `/users/me` | DELETE | Auth | — |
-| 10 | `/schedule/my` | GET | student, teacher | — |
-| 11 | `/schedule/my-day` | GET | student | — |
-| 12 | `/schedule/lessons/:id` | GET | Auth | — |
-| 13 | `/schedule/lessons/:id/changes` | GET | Auth | — |
-| 14 | `/admin/schedule/upload` | POST | admin | 1/час |
-| 15 | `/admin/schedule/sync` | POST | admin | — |
-| 16 | `/admin/schedule/sync-status` | GET | admin | — |
-| 17 | `/pair-spaces/:lessonId` | GET | Auth | — |
-| 18 | `/pair-spaces/:lessonId/announcements` | POST | teacher | — |
-| 19 | `/pair-spaces/:lessonId/homeworks` | POST | teacher | — |
-| 20 | `/pair-spaces/:lessonId/files` | POST | teacher | — |
-| 21 | `/homeworks/:id/submit` | PATCH | student | — |
-| 22 | `/pair-spaces/:lessonId/messages` | GET | Auth | — |
-| 23 | `/pair-spaces/:lessonId/messages` | POST | Auth | 10/мин |
-| 24 | `/absences` | POST | student | — |
-| 25 | `/absences/my` | GET | student | — |
-| 26 | `/absences/:id` | PATCH | student | — |
-| 27 | `/absences/:id` | DELETE | student | — |
-| 28 | `/curator/absences` | GET | curator | — |
-| 29 | `/curator/absences/:id/confirm` | PATCH | curator | — |
-| 30 | `/curator/absences/:id/reject` | PATCH | curator | — |
-| 31 | `/notifications` | GET | Auth | — |
-| 32 | `/notifications/:id/read` | PATCH | Auth | — |
-| 33 | `/notifications/read-all` | POST | Auth | — |
-| 34 | `/devices/token` | POST | Auth | — |
-| 35 | `/notifications/settings` | GET | Auth | — |
-| 36 | `/notifications/settings` | PATCH | Auth | — |
-| 37 | `/admin/university` | GET | admin | — |
-| 38 | `/admin/university` | PATCH | admin | — |
-| 39 | `/admin/faculties` | GET | admin | — |
-| 40 | `/admin/faculties` | POST | admin | — |
-| 41 | `/admin/faculties/:id` | PATCH | admin | — |
-| 42 | `/admin/faculties/:id` | DELETE | admin | — |
-| 43 | `/admin/groups` | GET | admin | — |
-| 44 | `/admin/groups` | POST | admin | — |
-| 45 | `/admin/groups/:id` | PATCH | admin | — |
-| 46 | `/admin/groups/:id` | DELETE | admin | — |
-| 47 | `/admin/users` | GET | admin | — |
-| 48 | `/admin/users/:id/roles` | PATCH | admin | — |
-| 49 | `/admin/stats` | GET | admin | — |
-| 50 | `/superadmin/universities` | GET | superadmin | — |
-| 51 | `/superadmin/universities` | POST | superadmin | — |
-| 52 | `/superadmin/universities/:id` | PATCH | superadmin | — |
-| 53 | `/superadmin/universities/:id` | DELETE | superadmin | — |
-| 54 | `/superadmin/connectors` | GET | superadmin | — |
-| 55 | `/superadmin/connectors/:id` | PATCH | superadmin | — |
-| 56 | `/auth/max` | POST | Public (MAX initData) | — |
+| #   | Endpoint                               | Метод  | Роль                  | Rate Limit |
+| --- | -------------------------------------- | ------ | --------------------- | ---------- |
+| 1   | `/auth/request-code`                   | POST   | Public                | 1/60s      |
+| 2   | `/auth/verify-code`                    | POST   | Public                | 5/мин      |
+| 3   | `/auth/login`                          | POST   | Public                | 5/мин      |
+| 4   | `/auth/refresh`                        | POST   | Public                | 10/мин     |
+| 5   | `/auth/logout`                         | POST   | Auth                  | —          |
+| 6   | `/users/me`                            | GET    | Auth                  | —          |
+| 7   | `/users/me`                            | PATCH  | Auth                  | —          |
+| 8   | `/users/me/bind-group`                 | POST   | Auth                  | —          |
+| 9   | `/users/me`                            | DELETE | Auth                  | —          |
+| 10  | `/schedule/my`                         | GET    | student, teacher      | —          |
+| 11  | `/schedule/my-day`                     | GET    | student               | —          |
+| 12  | `/schedule/lessons/:id`                | GET    | Auth                  | —          |
+| 13  | `/schedule/lessons/:id/changes`        | GET    | Auth                  | —          |
+| 14  | `/admin/schedule/upload`               | POST   | admin                 | 1/час      |
+| 15  | `/admin/schedule/sync`                 | POST   | admin                 | —          |
+| 16  | `/admin/schedule/sync-status`          | GET    | admin                 | —          |
+| 17  | `/pair-spaces/:lessonId`               | GET    | Auth                  | —          |
+| 18  | `/pair-spaces/:lessonId/announcements` | POST   | teacher               | —          |
+| 19  | `/pair-spaces/:lessonId/homeworks`     | POST   | teacher               | —          |
+| 20  | `/pair-spaces/:lessonId/files`         | POST   | teacher               | —          |
+| 21  | `/homeworks/:id/submit`                | PATCH  | student               | —          |
+| 22  | `/pair-spaces/:lessonId/messages`      | GET    | Auth                  | —          |
+| 23  | `/pair-spaces/:lessonId/messages`      | POST   | Auth                  | 10/мин     |
+| 24  | `/absences`                            | POST   | student               | —          |
+| 25  | `/absences/my`                         | GET    | student               | —          |
+| 26  | `/absences/:id`                        | PATCH  | student               | —          |
+| 27  | `/absences/:id`                        | DELETE | student               | —          |
+| 28  | `/curator/absences`                    | GET    | curator               | —          |
+| 29  | `/curator/absences/:id/confirm`        | PATCH  | curator               | —          |
+| 30  | `/curator/absences/:id/reject`         | PATCH  | curator               | —          |
+| 31  | `/notifications`                       | GET    | Auth                  | —          |
+| 32  | `/notifications/:id/read`              | PATCH  | Auth                  | —          |
+| 33  | `/notifications/read-all`              | POST   | Auth                  | —          |
+| 34  | `/devices/token`                       | POST   | Auth                  | —          |
+| 35  | `/notifications/settings`              | GET    | Auth                  | —          |
+| 36  | `/notifications/settings`              | PATCH  | Auth                  | —          |
+| 37  | `/admin/university`                    | GET    | admin                 | —          |
+| 38  | `/admin/university`                    | PATCH  | admin                 | —          |
+| 39  | `/admin/faculties`                     | GET    | admin                 | —          |
+| 40  | `/admin/faculties`                     | POST   | admin                 | —          |
+| 41  | `/admin/faculties/:id`                 | PATCH  | admin                 | —          |
+| 42  | `/admin/faculties/:id`                 | DELETE | admin                 | —          |
+| 43  | `/admin/groups`                        | GET    | admin                 | —          |
+| 44  | `/admin/groups`                        | POST   | admin                 | —          |
+| 45  | `/admin/groups/:id`                    | PATCH  | admin                 | —          |
+| 46  | `/admin/groups/:id`                    | DELETE | admin                 | —          |
+| 47  | `/admin/users`                         | GET    | admin                 | —          |
+| 48  | `/admin/users/:id/roles`               | PATCH  | admin                 | —          |
+| 49  | `/admin/stats`                         | GET    | admin                 | —          |
+| 50  | `/superadmin/universities`             | GET    | superadmin            | —          |
+| 51  | `/superadmin/universities`             | POST   | superadmin            | —          |
+| 52  | `/superadmin/universities/:id`         | PATCH  | superadmin            | —          |
+| 53  | `/superadmin/universities/:id`         | DELETE | superadmin            | —          |
+| 54  | `/superadmin/connectors`               | GET    | superadmin            | —          |
+| 55  | `/superadmin/connectors/:id`           | PATCH  | superadmin            | —          |
+| 56  | `/auth/max`                            | POST   | Public (MAX initData) | —          |

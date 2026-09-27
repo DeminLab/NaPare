@@ -4,73 +4,64 @@
 
 ---
 
-## 1. Регистрация студента (полный flow)
+## 1. Вход и привязка к группе (полный flow)
 
-### Шаг 1: Запрос SMS-кода
+Самостоятельная регистрация отключена: `POST /api/v1/auth/register` всегда отвечает `403` — аккаунты создаёт университет.
+
+### Шаг 1: Вход по email и паролю
 
 ```http
-POST /api/v1/auth/request-code
+POST /api/v1/auth/login
 Content-Type: application/json
 
 {
-  "identifier": "+79001234567",
-  "type": "phone"
+  "email": "student@university.ru",
+  "password": "password123"
 }
 ```
 
+Ответ (пароль — минимум 6 символов):
 ```json
 {
-  "success": true,
-  "message": "Код отправлен",
-  "expires_in": 300
-}
-```
-
-### Шаг 2: Проверка кода
-
-```http
-POST /api/v1/auth/verify-code
-Content-Type: application/json
-
-{
-  "identifier": "+79001234567",
-  "code": "123456",
-  "type": "phone"
-}
-```
-
-```json
-{
-  "success": true,
-  "data": {
-    "accessToken": "eyJ...",
-    "refreshToken": "eyJ...",
-    "user": {
-      "id": "550e8400-...",
-      "firstName": "Иван",
-      "lastName": "Иванов",
-      "roles": ["student"],
-      "universityId": null,
-      "groupId": null,
-      "needsOnboarding": true
-    }
+  "accessToken": "eyJ...",
+  "refreshToken": "eyJ...",
+  "user": {
+    "id": "550e8400-...",
+    "email": "student@university.ru",
+    "firstName": "Иван",
+    "lastName": "Иванов",
+    "role": "student"
   }
 }
 ```
 
-### Шаг 3: Привязка к группе
+Для единых кабинетов используйте `POST /api/v1/auth/portal-login` — то же тело, но в ответ добавляется `workspace` (`student` | `staff` | `admin`).
+
+### Шаг 2: Привязка к группе
+
+`PATCH /api/v1/users/me` принимает только `firstName`/`lastName`/`phone`/`avatarUrl`. Привязка к группе — отдельный endpoint с телом `{ groupId }`:
 
 ```http
-PATCH /api/v1/users/me
+POST /api/v1/users/me/bind-group
 Authorization: Bearer eyJ...
 Content-Type: application/json
 
 {
-  "universityId": "550e8400-...",
-  "facultyId": "550e8400-...",
-  "groupId": "550e8400-...",
+  "groupId": "550e8400-..."
+}
+```
+
+Ответ — обновлённый пользователь (без обёртки `data`):
+```json
+{
+  "id": "550e8400-...",
+  "email": "student@university.ru",
   "firstName": "Иван",
-  "lastName": "Иванов"
+  "lastName": "Иванов",
+  "role": "student",
+  "universityId": "550e8400-...",
+  "groupId": "550e8400-...",
+  "isActive": true
 }
 ```
 

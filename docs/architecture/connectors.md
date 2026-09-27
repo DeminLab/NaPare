@@ -23,18 +23,18 @@ interface ScheduleConnector {
 
 ```typescript
 interface NormalizedLesson {
-  externalId: string;        // ID во внешней системе
+  externalId: string; // ID во внешней системе
   universityId: string;
   groupId: string;
   teacherId?: string;
   subject: string;
   room?: string;
-  dayOfWeek: number;         // 1=Пн, 7=Вс
-  startTime: string;         // HH:MM
-  endTime: string;           // HH:MM
-  weekType: 'odd' | 'even' | 'both';
-  startDate: string;         // YYYY-MM-DD
-  endDate: string;           // YYYY-MM-DD
+  dayOfWeek: number; // 1=Пн, 7=Вс
+  startTime: string; // HH:MM
+  endTime: string; // HH:MM
+  weekType: "odd" | "even" | "both";
+  startDate: string; // YYYY-MM-DD
+  endDate: string; // YYYY-MM-DD
 }
 ```
 
@@ -42,13 +42,13 @@ interface NormalizedLesson {
 
 ## Приоритеты MVP
 
-| # | Коннектор | Тип | Статус |
-|---|-----------|-----|--------|
-| 1 | Excel/CSV импорт | Ручной | MVP |
-| 2 | Парсер СИБИТ | HTML + cron | MVP |
-| 3 | iCal | Формат | После MVP |
-| 4 | Moodle | LMS | Позже |
-| 5 | РУЭ | Гос. система | Позже |
+| #   | Коннектор        | Тип          | Статус                                                                      |
+| --- | ---------------- | ------------ | --------------------------------------------------------------------------- |
+| 1   | Excel/CSV импорт | Ручной       | MVP                                                                         |
+| 2   | Парсер СИБИТ     | HTML + cron  | MVP                                                                         |
+| 3   | iCal             | Формат       | После MVP                                                                   |
+| 4   | Moodle           | LMS          | Настройка и проверка Web Services готовы; учебный контент остаётся в Moodle |
+| 5   | РУЭ              | Гос. система | Позже                                                                       |
 
 ---
 
@@ -56,13 +56,13 @@ interface NormalizedLesson {
 
 При каждом обновлении расписания backend сравнивает новые данные со старыми:
 
-| Тип изменения | Описание | Пример |
-|---------------|----------|--------|
-| `moved` | Пара перенесена | Понедельник 10:00 → Вторник 14:00 |
-| `cancelled` | Пара отменена | — |
-| `room_changed` | Смена аудитории | ауд. 305 → ауд. 201 |
-| `teacher_changed` | Смена преподавателя | Иванов → Петров |
-| `added` | Новая пара | — |
+| Тип изменения     | Описание            | Пример                            |
+| ----------------- | ------------------- | --------------------------------- |
+| `moved`           | Пара перенесена     | Понедельник 10:00 → Вторник 14:00 |
+| `cancelled`       | Пара отменена       | —                                 |
+| `room_changed`    | Смена аудитории     | ауд. 305 → ауд. 201               |
+| `teacher_changed` | Смена преподавателя | Иванов → Петров                   |
+| `added`           | Новая пара          | —                                 |
 
 Каждое изменение фиксируется в `lesson_changes` и генерирует уведомление.
 
@@ -81,11 +81,15 @@ interface NormalizedLesson {
 
 Каждый коннектор имеет метод `healthCheck()`. Результаты отображаются в админке:
 
-| Статус | Значение |
-|--------|----------|
-| ✅ OK | Последний успешный синк < 24 часов |
-| ⚠️ Warning | Последний успешный синк 24–72 часа |
-| ❌ Error | Последний синк > 72 часа или ошибка |
+| Статус     | Значение                            |
+| ---------- | ----------------------------------- |
+| ✅ OK      | Последний успешный синк < 24 часов  |
+| ⚠️ Warning | Последний успешный синк 24–72 часа  |
+| ❌ Error   | Последний синк > 72 часа или ошибка |
+
+## Moodle Web Services
+
+Moodle не используется для копирования заданий, попыток сдачи или оценок. Кабинет ВУЗа сохраняет HTTPS URL и Web Services token через `POST /api/v1/admin/connectors/moodle/configure`, после чего `POST /api/v1/admin/connectors/moodle/test` вызывает `core_webservice_get_site_info`. Token сохраняется только в AES-256-GCM зашифрованном виде. До настройки требуется серверная переменная `CONNECTOR_ENCRYPTION_KEY` — base64 представление 32 случайных байтов.
 
 ---
 

@@ -1,4 +1,4 @@
-import { UserRole } from './user-role';
+import { UserRole } from "./user-role";
 
 export interface JwtPayload {
   sub: string;
@@ -6,4 +6,5 @@ export interface JwtPayload {
   role: UserRole;
   universityId: string;
   groupId?: string | null;
+  sessionVersion: number;
 }

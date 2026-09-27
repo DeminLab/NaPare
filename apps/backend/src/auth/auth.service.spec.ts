@@ -1,36 +1,44 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { AuthService } from './auth.service';
-import { UsersService } from '../users/users.service';
-import { JwtService } from '@nestjs/jwt';
-import { ConfigService } from '@nestjs/config';
+import { Test, TestingModule } from "@nestjs/testing";
+import { AuthService } from "./auth.service";
+import { UsersService } from "../users/users.service";
+import { JwtService } from "@nestjs/jwt";
+import { ConfigService } from "@nestjs/config";
 import {
   BadRequestException,
   ForbiddenException,
   ServiceUnavailableException,
   UnauthorizedException,
-} from '@nestjs/common';
-import { createHmac } from 'crypto';
-import * as bcrypt from 'bcrypt';
+} from "@nestjs/common";
+import { createHmac } from "crypto";
+import * as bcrypt from "bcrypt";
 
-const MAX_BOT_TOKEN = '1234567890:TEST-BOT-TOKEN';
+const MAX_BOT_TOKEN = "1234567890:TEST-BOT-TOKEN";
 
 function buildMaxInitData(authDate: number, userId = 424242): string {
   const values: Record<string, string> = {
     auth_date: String(authDate),
-    user: JSON.stringify({ id: userId, first_name: 'Иван', last_name: 'Иванов' }),
+    user: JSON.stringify({
+      id: userId,
+      first_name: "Иван",
+      last_name: "Иванов",
+    }),
   };
   const dataCheckString = Object.keys(values)
     .sort((a, b) => a.localeCompare(b))
     .map((key) => `${key}=${values[key]}`)
-    .join('\n');
-  const secretKey = createHmac('sha256', 'WebAppData').update(MAX_BOT_TOKEN).digest();
-  const hash = createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
+    .join("\n");
+  const secretKey = createHmac("sha256", "WebAppData")
+    .update(MAX_BOT_TOKEN)
+    .digest();
+  const hash = createHmac("sha256", secretKey)
+    .update(dataCheckString)
+    .digest("hex");
   return `${Object.entries(values)
     .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
-    .join('&')}&hash=${hash}`;
+    .join("&")}&hash=${hash}`;
 }
 
-describe('AuthService', () => {
+describe("AuthService", () => {
   let service: AuthService;
   let usersService: Partial<UsersService>;
   let jwtService: Partial<JwtService>;
@@ -42,9 +50,10 @@ describe('AuthService', () => {
       create: jest.fn(),
       findById: jest.fn(),
       update: jest.fn(),
+      invalidateSessions: jest.fn(),
     };
     jwtService = {
-      sign: jest.fn().mockReturnValue('mock-token'),
+      sign: jest.fn().mockReturnValue("mock-token"),
       verify: jest.fn(),
     };
 
@@ -57,11 +66,13 @@ describe('AuthService', () => {
           provide: ConfigService,
           useValue: {
             get: jest.fn((key: string) => {
-              if (key === 'max.botToken') return MAX_BOT_TOKEN;
-              if (key === 'max.initDataTtlSeconds') return 3600;
-              return '15m';
+              if (key === "max.botToken") return MAX_BOT_TOKEN;
+              if (key === "max.initDataTtlSeconds") return 3600;
+              return "15m";
             }),
-            getOrThrow: jest.fn((key: string) => key === 'auth.jwt.refreshSecret' ? 'test-refresh-secret' : '30d'),
+            getOrThrow: jest.fn((key: string) =>
+              key === "auth.jwt.refreshSecret" ? "test-refresh-secret" : "30d",
+            ),
           },
         },
       ],
@@ -70,86 +81,165 @@ describe('AuthService', () => {
     service = module.get<AuthService>(AuthService);
   });
 
-  it('should be defined', () => {
+  it("should be defined", () => {
     expect(service).toBeDefined();
   });
 
-  describe('login', () => {
-    it('should throw UnauthorizedException for non-existent user', async () => {
+  describe("login", () => {
+    it("should throw UnauthorizedException for non-existent user", async () => {
       (usersService.findByEmail as jest.Mock).mockResolvedValue(null);
       await expect(
-        service.login({ email: 'test@test.com', password: 'pass' }),
+        service.login({ email: "test@test.com", password: "pass" }),
       ).rejects.toThrow(UnauthorizedException);
     });
 
-    it('finds an account with an email entered in a different case', async () => {
-      const passwordHash = await bcrypt.hash('correct-password', 4);
+    it("finds an account with an email entered in a different case", async () => {
+      const passwordHash = await bcrypt.hash("correct-password", 4);
       (usersService.findByEmail as jest.Mock).mockResolvedValue({
-        id: 'user-1',
-        email: 'student@sibit.ru',
+        id: "user-1",
+        email: "student@sibit.ru",
         passwordHash,
         isActive: true,
-        firstName: 'Тест',
-        lastName: 'Студент',
-        role: 'student',
-        universityId: 'uni-1',
-        groupId: '12136',
+        firstName: "Тест",
+        lastName: "Студент",
+        role: "student",
+        universityId: "uni-1",
+        groupId: "12136",
       });
 
-      await service.login({ email: 'Student@SIBIT.RU', password: 'correct-password' });
+      await service.login({
+        email: "Student@SIBIT.RU",
+        password: "correct-password",
+      });
 
-      expect(usersService.findByEmail).toHaveBeenCalledWith('Student@SIBIT.RU');
+      expect(usersService.findByEmail).toHaveBeenCalledWith("Student@SIBIT.RU");
       expect(jwtService.sign).toHaveBeenCalled();
     });
   });
 
-  describe('portalLogin', () => {
+  describe("portalLogin", () => {
     it.each([
-      ['student', 'student'],
-      ['teacher', 'staff'],
-      ['university_admin', 'admin'],
-    ])('assigns %s to the %s workspace', async (role, workspace) => {
-      const passwordHash = await bcrypt.hash('correct-password', 4);
-      (usersService.findByEmail as jest.Mock).mockResolvedValue({ id: 'user-1', email: 'user@sibit.ru', passwordHash, isActive: true, firstName: 'Тест', lastName: 'Пользователь', role, universityId: 'uni-1' });
+      ["student", "student"],
+      ["teacher", "staff"],
+      ["university_admin", "admin"],
+    ])("assigns %s to the %s workspace", async (role, workspace) => {
+      const passwordHash = await bcrypt.hash("correct-password", 4);
+      (usersService.findByEmail as jest.Mock).mockResolvedValue({
+        id: "user-1",
+        email: "user@sibit.ru",
+        passwordHash,
+        isActive: true,
+        firstName: "Тест",
+        lastName: "Пользователь",
+        role,
+        universityId: "uni-1",
+      });
 
-      await expect(service.portalLogin({ email: 'user@sibit.ru', password: 'correct-password' })).resolves.toMatchObject({ workspace });
+      await expect(
+        service.portalLogin({
+          email: "user@sibit.ru",
+          password: "correct-password",
+        }),
+      ).resolves.toMatchObject({ workspace });
     });
 
-    it('rejects the developer role because it has a separate login', async () => {
-      const passwordHash = await bcrypt.hash('correct-password', 4);
-      (usersService.findByEmail as jest.Mock).mockResolvedValue({ id: 'developer-1', email: 'dev@sibit.ru', passwordHash, isActive: true, firstName: 'Тест', lastName: 'Разработчик', role: 'developer', universityId: 'uni-1' });
+    it("rejects the developer role because it has a separate login", async () => {
+      const passwordHash = await bcrypt.hash("correct-password", 4);
+      (usersService.findByEmail as jest.Mock).mockResolvedValue({
+        id: "developer-1",
+        email: "dev@sibit.ru",
+        passwordHash,
+        isActive: true,
+        firstName: "Тест",
+        lastName: "Разработчик",
+        role: "developer",
+        universityId: "uni-1",
+      });
 
-      await expect(service.portalLogin({ email: 'dev@sibit.ru', password: 'correct-password' })).rejects.toThrow(ForbiddenException);
+      await expect(
+        service.portalLogin({
+          email: "dev@sibit.ru",
+          password: "correct-password",
+        }),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 
-  describe('maxAuth', () => {
-    const freshInitData = () => buildMaxInitData(Math.floor(Date.now() / 1000) - 60);
-    const linkedUser = {
-      id: 'user-1',
-      email: 'student@sibit.ru',
-      maxUserId: '424242',
-      isActive: true,
-      firstName: 'Тест',
-      lastName: 'Студент',
-      role: 'student',
-      universityId: 'uni-1',
-      groupId: '12136',
+  describe("refreshToken", () => {
+    const refreshPayload = {
+      sub: "user-1",
+      email: "student@sibit.ru",
+      role: "student",
+      universityId: "uni-1",
+      sessionVersion: 2,
     };
 
-    it('issues tokens for an account linked to the MAX user', async () => {
+    it("rotates a refresh token only while its session version is current", async () => {
+      (jwtService.verify as jest.Mock).mockReturnValue(refreshPayload);
+      (usersService.findById as jest.Mock).mockResolvedValue({
+        ...refreshPayload,
+        isActive: true,
+        firstName: "Тест",
+        lastName: "Студент",
+      });
+
+      await expect(
+        service.refreshToken("refresh-token"),
+      ).resolves.toMatchObject({
+        accessToken: "mock-token",
+      });
+    });
+
+    it("rejects refresh tokens from a revoked session version", async () => {
+      (jwtService.verify as jest.Mock).mockReturnValue(refreshPayload);
+      (usersService.findById as jest.Mock).mockResolvedValue({
+        ...refreshPayload,
+        sessionVersion: 3,
+        isActive: true,
+      });
+
+      await expect(
+        service.refreshToken("revoked-refresh-token"),
+      ).rejects.toThrow(UnauthorizedException);
+    });
+  });
+
+  it("invalidates the current user session on logout", async () => {
+    await service.logout("user-1");
+
+    expect(usersService.invalidateSessions).toHaveBeenCalledWith("user-1");
+  });
+
+  describe("maxAuth", () => {
+    const freshInitData = () =>
+      buildMaxInitData(Math.floor(Date.now() / 1000) - 60);
+    const linkedUser = {
+      id: "user-1",
+      email: "student@sibit.ru",
+      maxUserId: "424242",
+      isActive: true,
+      firstName: "Тест",
+      lastName: "Студент",
+      role: "student",
+      universityId: "uni-1",
+      groupId: "12136",
+    };
+
+    it("issues tokens for an account linked to the MAX user", async () => {
       (usersService.findByMaxUserId as jest.Mock).mockResolvedValue(linkedUser);
 
-      await expect(service.maxAuth({ initData: freshInitData() })).resolves.toMatchObject({
-        accessToken: 'mock-token',
-        user: { id: 'user-1', email: 'student@sibit.ru' },
+      await expect(
+        service.maxAuth({ initData: freshInitData() }),
+      ).resolves.toMatchObject({
+        accessToken: "mock-token",
+        user: { id: "user-1", email: "student@sibit.ru" },
       });
-      expect(usersService.findByMaxUserId).toHaveBeenCalledWith('424242');
+      expect(usersService.findByMaxUserId).toHaveBeenCalledWith("424242");
       expect(usersService.findByEmail).not.toHaveBeenCalled();
     });
 
-    it('links the account on the first login with credentials', async () => {
-      const passwordHash = await bcrypt.hash('correct-password', 4);
+    it("links the account on the first login with credentials", async () => {
+      const passwordHash = await bcrypt.hash("correct-password", 4);
       (usersService.findByMaxUserId as jest.Mock).mockResolvedValue(null);
       (usersService.findByEmail as jest.Mock).mockResolvedValue({
         ...linkedUser,
@@ -161,53 +251,69 @@ describe('AuthService', () => {
       await expect(
         service.maxAuth({
           initData: freshInitData(),
-          email: 'student@sibit.ru',
-          password: 'correct-password',
+          email: "student@sibit.ru",
+          password: "correct-password",
         }),
-      ).resolves.toMatchObject({ user: { id: 'user-1' } });
-      expect(usersService.update).toHaveBeenCalledWith('user-1', { maxUserId: '424242' });
-    });
-
-    it('rejects an unlinked MAX account without credentials', async () => {
-      (usersService.findByMaxUserId as jest.Mock).mockResolvedValue(null);
-
-      await expect(service.maxAuth({ initData: freshInitData() })).rejects.toMatchObject({
-        response: expect.objectContaining({ code: 'MAX_ACCOUNT_NOT_LINKED' }),
+      ).resolves.toMatchObject({ user: { id: "user-1" } });
+      expect(usersService.update).toHaveBeenCalledWith("user-1", {
+        maxUserId: "424242",
       });
     });
 
-    it('rejects invalid credentials when linking', async () => {
-      const passwordHash = await bcrypt.hash('correct-password', 4);
+    it("rejects an unlinked MAX account without credentials", async () => {
       (usersService.findByMaxUserId as jest.Mock).mockResolvedValue(null);
-      (usersService.findByEmail as jest.Mock).mockResolvedValue({ ...linkedUser, maxUserId: null, passwordHash });
+
+      await expect(
+        service.maxAuth({ initData: freshInitData() }),
+      ).rejects.toMatchObject({
+        response: expect.objectContaining({ code: "MAX_ACCOUNT_NOT_LINKED" }),
+      });
+    });
+
+    it("rejects invalid credentials when linking", async () => {
+      const passwordHash = await bcrypt.hash("correct-password", 4);
+      (usersService.findByMaxUserId as jest.Mock).mockResolvedValue(null);
+      (usersService.findByEmail as jest.Mock).mockResolvedValue({
+        ...linkedUser,
+        maxUserId: null,
+        passwordHash,
+      });
 
       await expect(
         service.maxAuth({
           initData: freshInitData(),
-          email: 'student@sibit.ru',
-          password: 'wrong-password',
+          email: "student@sibit.ru",
+          password: "wrong-password",
         }),
       ).rejects.toThrow(UnauthorizedException);
       expect(usersService.update).not.toHaveBeenCalled();
     });
 
-    it('rejects initData that fails server-side validation', async () => {
+    it("rejects initData that fails server-side validation", async () => {
       await expect(
-        service.maxAuth({ initData: `auth_date=${Math.floor(Date.now() / 1000)}&hash=${'0'.repeat(64)}` }),
+        service.maxAuth({
+          initData: `auth_date=${Math.floor(Date.now() / 1000)}&hash=${"0".repeat(64)}`,
+        }),
       ).rejects.toMatchObject({
-        response: expect.objectContaining({ code: 'MAX_INVALID_INIT_DATA' }),
+        response: expect.objectContaining({ code: "MAX_INVALID_INIT_DATA" }),
       });
       expect(usersService.findByMaxUserId).not.toHaveBeenCalled();
     });
 
-    it('requires email and password together', async () => {
+    it("requires email and password together", async () => {
       await expect(
-        service.maxAuth({ initData: freshInitData(), email: 'student@sibit.ru' }),
+        service.maxAuth({
+          initData: freshInitData(),
+          email: "student@sibit.ru",
+        }),
       ).rejects.toThrow(BadRequestException);
     });
 
-    it('reports 503 when MAX_BOT_TOKEN is not configured', async () => {
-      const configService = { get: jest.fn().mockReturnValue(''), getOrThrow: jest.fn() };
+    it("reports 503 when MAX_BOT_TOKEN is not configured", async () => {
+      const configService = {
+        get: jest.fn().mockReturnValue(""),
+        getOrThrow: jest.fn(),
+      };
       const module = await Test.createTestingModule({
         providers: [
           AuthService,
@@ -218,18 +324,27 @@ describe('AuthService', () => {
       }).compile();
       const unconfigured = module.get<AuthService>(AuthService);
 
-      const error = await unconfigured.maxAuth({ initData: freshInitData() }).catch((e: unknown) => e);
+      const error = await unconfigured
+        .maxAuth({ initData: freshInitData() })
+        .catch((e: unknown) => e);
       expect(error).toBeInstanceOf(ServiceUnavailableException);
-      expect((error as ServiceUnavailableException).getResponse()).toMatchObject({
-        code: 'MAX_NOT_CONFIGURED',
+      expect(
+        (error as ServiceUnavailableException).getResponse(),
+      ).toMatchObject({
+        code: "MAX_NOT_CONFIGURED",
       });
       expect(usersService.findByMaxUserId).not.toHaveBeenCalled();
     });
 
-    it('blocks deactivated accounts', async () => {
-      (usersService.findByMaxUserId as jest.Mock).mockResolvedValue({ ...linkedUser, isActive: false });
+    it("blocks deactivated accounts", async () => {
+      (usersService.findByMaxUserId as jest.Mock).mockResolvedValue({
+        ...linkedUser,
+        isActive: false,
+      });
 
-      await expect(service.maxAuth({ initData: freshInitData() })).rejects.toThrow(ForbiddenException);
+      await expect(
+        service.maxAuth({ initData: freshInitData() }),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 });

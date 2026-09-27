@@ -16,7 +16,7 @@ NestJS backend module, HTTP boundary, authorization or data-service behavior.
 
 ## Change boundary
 
-Trace consumers and tests before changing data or authorization behavior. The connector maps `RaspScraperService` records from rasp.sano.ru into `CreateLessonDto`; `AdminService.syncSchedule` is its caller.
+Trace consumers and tests before changing data or authorization behavior. The connector reads and normalizes the `RaspScraperService` catalog from rasp.sano.ru; `AdminService.syncSchedule` persists it tenant-safely into local faculties, groups, users and lessons. `getSchedule()` still exposes source records as `CreateLessonDto` for a selected group.
 
 ## Verification
 

@@ -1,16 +1,18 @@
-import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { Module } from "@nestjs/common";
+import { TypeOrmModule } from "@nestjs/typeorm";
 
-import { PairSpace } from './entities/pair-space.entity';
-import { Announcement } from './entities/announcement.entity';
-import { Homework } from './entities/homework.entity';
-import { FileAttachment } from './entities/file-attachment.entity';
-import { DiscussionMessage } from './entities/discussion-message.entity';
-import { HomeworkSubmission } from './entities/homework-submission.entity';
-import { PairSpaceService } from './pair-space.service';
-import { PairSpaceController } from './pair-space.controller';
-import { EventsModule } from '../events/events.module';
-import { Lesson } from '../schedule/entities/lesson.entity';
+import { PairSpace } from "./entities/pair-space.entity";
+import { Announcement } from "./entities/announcement.entity";
+import { Homework } from "./entities/homework.entity";
+import { FileAttachment } from "./entities/file-attachment.entity";
+import { DiscussionMessage } from "./entities/discussion-message.entity";
+import { HomeworkSubmission } from "./entities/homework-submission.entity";
+import { PairSpaceService } from "./pair-space.service";
+import { PairSpaceController } from "./pair-space.controller";
+import { EventsModule } from "../events/events.module";
+import { Lesson } from "../schedule/entities/lesson.entity";
+import { Group } from "../users/entities/group.entity";
+import { University } from "../users/entities/university.entity";
 
 @Module({
   imports: [
@@ -22,6 +24,8 @@ import { Lesson } from '../schedule/entities/lesson.entity';
       DiscussionMessage,
       HomeworkSubmission,
       Lesson,
+      Group,
+      University,
     ]),
     EventsModule,
   ],

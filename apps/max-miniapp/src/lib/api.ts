@@ -1,8 +1,10 @@
-const viteEnv = (import.meta as unknown as { env?: Record<string, string | undefined> }).env ?? {};
-const API_BASE = viteEnv.VITE_API_BASE ?? '/api/v1';
+const viteEnv =
+  (import.meta as unknown as { env?: Record<string, string | undefined> })
+    .env ?? {};
+const API_BASE = viteEnv.VITE_API_BASE ?? "/api/v1";
 
-const ACCESS_TOKEN_KEY = 'accessToken';
-const REFRESH_TOKEN_KEY = 'refreshToken';
+const ACCESS_TOKEN_KEY = "accessToken";
+const REFRESH_TOKEN_KEY = "refreshToken";
 
 export class ApiError extends Error {
   constructor(
@@ -11,7 +13,7 @@ export class ApiError extends Error {
     readonly code: string,
   ) {
     super(message);
-    this.name = 'ApiError';
+    this.name = "ApiError";
   }
 }
 
@@ -37,6 +39,7 @@ export interface ProfileUser extends AuthUser {
 
 export interface Lesson {
   id: string;
+  source?: string;
   subject: string;
   subjectType?: string;
   room?: string;
@@ -65,7 +68,11 @@ export interface MyDayResponse {
   lessons: Lesson[];
   absences: Absence[];
   notifications: { unreadCount: number };
-  summary: { totalLessons: number; changedLessons: number; totalAbsences: number };
+  summary: {
+    totalLessons: number;
+    changedLessons: number;
+    totalAbsences: number;
+  };
 }
 
 export interface NotificationItem {
@@ -84,7 +91,12 @@ export interface PairSpace {
   pairNumber: number;
   teacherName?: string | null;
   room?: string | null;
-  announcements: Array<{ id: string; text: string; isPinned: boolean; createdAt: string }>;
+  announcements: Array<{
+    id: string;
+    text: string;
+    isPinned: boolean;
+    createdAt: string;
+  }>;
   homeworks: Array<{
     id: string;
     title: string;
@@ -92,7 +104,13 @@ export interface PairSpace {
     deadline?: string | null;
     isCompleted: boolean;
   }>;
-  files: Array<{ id: string; fileName: string; fileUrl: string; fileType: string; size: number }>;
+  files: Array<{
+    id: string;
+    fileName: string;
+    fileUrl: string;
+    fileType: string;
+    size: number;
+  }>;
 }
 
 export interface Paginated<T> {
@@ -108,11 +126,27 @@ export interface AbsenceInput {
   lessonId?: string;
 }
 
+/**
+ * Lessons received live from rasp.sano.ru have an external synthetic id and
+ * are deliberately not stored as `lessons` rows. The absence API only accepts
+ * persisted lesson ids, so sending that id would make a valid daily absence
+ * fail with a misleading "lesson not found" error.
+ */
+export function canLinkAbsenceToLesson(
+  lesson: Pick<Lesson, "id" | "source"> | null | undefined,
+): boolean {
+  return Boolean(
+    lesson &&
+      lesson.source !== "rasp.sano.ru" &&
+      !lesson.id.startsWith("rasp-"),
+  );
+}
+
 const memoryStore = new Map<string, string>();
 
-function storage(): Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> {
+function storage(): Pick<Storage, "getItem" | "setItem" | "removeItem"> {
   try {
-    if (typeof localStorage !== 'undefined') return localStorage;
+    if (typeof localStorage !== "undefined") return localStorage;
   } catch {
     // fall through to in-memory storage (tests, restricted contexts)
   }
@@ -135,7 +169,10 @@ export function getRefreshToken(): string | null {
   return storage().getItem(REFRESH_TOKEN_KEY);
 }
 
-export function saveTokens(tokens: { accessToken: string; refreshToken: string }): void {
+export function saveTokens(tokens: {
+  accessToken: string;
+  refreshToken: string;
+}): void {
   storage().setItem(ACCESS_TOKEN_KEY, tokens.accessToken);
   storage().setItem(REFRESH_TOKEN_KEY, tokens.refreshToken);
 }
@@ -153,10 +190,13 @@ async function toApiError(response: Response): Promise<ApiError> {
   let code = `HTTP_${response.status}`;
   let message = `Ошибка запроса (${response.status})`;
   try {
-    const body = (await response.json()) as { code?: string; message?: string | string[] };
-    if (typeof body.code === 'string' && body.code) code = body.code;
-    if (typeof body.message === 'string') message = body.message;
-    else if (Array.isArray(body.message)) message = body.message.join(', ');
+    const body = (await response.json()) as {
+      code?: string;
+      message?: string | string[];
+    };
+    if (typeof body.code === "string" && body.code) code = body.code;
+    if (typeof body.message === "string") message = body.message;
+    else if (Array.isArray(body.message)) message = body.message.join(", ");
   } catch {
     // non-JSON body keeps the defaults above
   }
@@ -169,15 +209,18 @@ async function tryRefresh(): Promise<boolean> {
 
   try {
     const response = await fetch(`${API_BASE}/auth/refresh`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ refreshToken }),
     });
     if (!response.ok) {
       if (response.status === 401 || response.status === 400) clearTokens();
       return false;
     }
-    const tokens = (await response.json()) as { accessToken: string; refreshToken: string };
+    const tokens = (await response.json()) as {
+      accessToken: string;
+      refreshToken: string;
+    };
     saveTokens(tokens);
     return true;
   } catch {
@@ -185,20 +228,33 @@ async function tryRefresh(): Promise<boolean> {
   }
 }
 
-async function request<T>(path: string, options: RequestInit = {}, allowRefresh = true): Promise<T> {
+async function request<T>(
+  path: string,
+  options: RequestInit = {},
+  allowRefresh = true,
+): Promise<T> {
   const headers = new Headers(options.headers);
   const token = getAccessToken();
-  if (token) headers.set('Authorization', `Bearer ${token}`);
-  if (options.body) headers.set('Content-Type', 'application/json');
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+  if (options.body) headers.set("Content-Type", "application/json");
 
   let response: Response;
   try {
     response = await fetch(`${API_BASE}${path}`, { ...options, headers });
   } catch {
-    throw new ApiError('Сервер недоступен. Проверьте соединение.', 0, 'NETWORK_ERROR');
+    throw new ApiError(
+      "Сервер недоступен. Проверьте соединение.",
+      0,
+      "NETWORK_ERROR",
+    );
   }
 
-  if (response.status === 401 && allowRefresh && getRefreshToken() && (await tryRefresh())) {
+  if (
+    response.status === 401 &&
+    allowRefresh &&
+    getRefreshToken() &&
+    (await tryRefresh())
+  ) {
     return request<T>(path, options, false);
   }
 
@@ -212,39 +268,59 @@ export async function loginWithMax(
   credentials?: { email: string; password: string },
 ): Promise<AuthResponse> {
   const payload = await request<AuthResponse>(
-    '/auth/max',
-    { method: 'POST', body: JSON.stringify({ initData, ...credentials }) },
+    "/auth/max",
+    { method: "POST", body: JSON.stringify({ initData, ...credentials }) },
     false,
   );
   saveTokens(payload);
   return payload;
 }
 
-export async function loginWithPassword(email: string, password: string): Promise<AuthResponse> {
+export async function loginWithPassword(
+  email: string,
+  password: string,
+): Promise<AuthResponse> {
   const payload = await request<AuthResponse>(
-    '/auth/login',
-    { method: 'POST', body: JSON.stringify({ email, password }) },
+    "/auth/login",
+    { method: "POST", body: JSON.stringify({ email, password }) },
     false,
   );
   saveTokens(payload);
   return payload;
 }
 
-export function logout(): void {
+export async function logout(): Promise<void> {
+  const token = getAccessToken();
+  try {
+    if (token) {
+      await fetch(`${API_BASE}/auth/logout`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    }
+  } catch {
+    // Clearing local credentials keeps the Mini App usable offline as well.
+  }
   clearTokens();
 }
 
-export const getProfile = () => request<ProfileUser>('/users/me');
+export const getProfile = () => request<ProfileUser>("/users/me");
 
-export const getMyDay = () => request<MyDayResponse>('/my-day');
+export const getMyDay = () => request<MyDayResponse>("/my-day");
 
 export const getWeekSchedule = (startDate: string, endDate: string) =>
-  request<Paginated<Lesson>>(`/schedule/my?startDate=${startDate}&endDate=${endDate}`);
+  request<Paginated<Lesson>>(
+    `/schedule/my?startDate=${startDate}&endDate=${endDate}`,
+  );
 
-export const getNotifications = () => request<Paginated<NotificationItem>>('/notifications?limit=50');
+export const getNotifications = () =>
+  request<Paginated<NotificationItem>>("/notifications?limit=50");
 
 export const getPairSpace = (lessonId: string) =>
   request<PairSpace>(`/pair-spaces/${encodeURIComponent(lessonId)}`);
 
 export const createAbsence = (input: AbsenceInput) =>
-  request<Absence>('/absences', { method: 'POST', body: JSON.stringify(input) });
+  request<Absence>("/absences", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });

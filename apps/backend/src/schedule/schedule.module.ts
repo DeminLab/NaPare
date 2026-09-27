@@ -1,21 +1,33 @@
-import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { HttpModule } from '@nestjs/axios';
+import { Module } from "@nestjs/common";
+import { TypeOrmModule } from "@nestjs/typeorm";
+import { HttpModule } from "@nestjs/axios";
 
-import { Lesson } from './entities/lesson.entity';
-import { LessonChange } from './entities/lesson-change.entity';
-import { ScheduleService } from './schedule.service';
-import { ScheduleController } from './schedule.controller';
-import { ChangeDetectorService } from './change-detector.service';
-import { ExcelConnectorService } from './connectors/excel-connector.service';
-import { SibitConnectorService } from './connectors/sibit-connector.service';
-import { RaspModule } from '../rasp/rasp.module';
-import { EventsModule } from '../events/events.module';
-import { LessonOccurrence } from '../academic/entities/lesson-occurrence.entity';
-import { ScheduleChange } from '../academic/entities/schedule-change.entity';
+import { Lesson } from "./entities/lesson.entity";
+import { LessonChange } from "./entities/lesson-change.entity";
+import { ScheduleService } from "./schedule.service";
+import { ScheduleController } from "./schedule.controller";
+import { ChangeDetectorService } from "./change-detector.service";
+import { ExcelConnectorService } from "./connectors/excel-connector.service";
+import { SibitConnectorService } from "./connectors/sibit-connector.service";
+import { RaspModule } from "../rasp/rasp.module";
+import { EventsModule } from "../events/events.module";
+import { LessonOccurrence } from "../academic/entities/lesson-occurrence.entity";
+import { ScheduleChange } from "../academic/entities/schedule-change.entity";
+import { Group } from "../users/entities/group.entity";
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Lesson, LessonChange, LessonOccurrence, ScheduleChange]), HttpModule, RaspModule, EventsModule],
+  imports: [
+    TypeOrmModule.forFeature([
+      Lesson,
+      LessonChange,
+      LessonOccurrence,
+      ScheduleChange,
+      Group,
+    ]),
+    HttpModule,
+    RaspModule,
+    EventsModule,
+  ],
   providers: [
     ScheduleService,
     ChangeDetectorService,

@@ -18,163 +18,134 @@
 
 ### HTTP Exception Filter
 
+Реальный фильтр (`common/filters/http-exception.filter.ts`) пишет лог, формирует
+**плоское** тело ответа и маппит HTTP-статус в код:
+
 ```typescript
 // common/filters/http-exception.filter.ts
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
+  private readonly logger = new Logger('ExceptionFilter');
+
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
-    const response = ctx.getResponse();
-    const request = ctx.getRequest();
+    const response = ctx.getResponse<Response>();
+    const request = ctx.getRequest<Request>();
 
-    const status = this.getStatusCode(exception);
-    const code = this.getErrorCode(exception);
-    const message = this.getMessage(exception);
-    const details = this.getDetails(exception);
+    let status = HttpStatus.INTERNAL_SERVER_ERROR;
+    let message = 'Internal server error';
+    let code = 'INTERNAL_SERVER_ERROR';
+    let details: string[] | undefined;
 
-    // Логируем ошибку
-    this.logger.error({
+    if (exception instanceof HttpException) {
+      status = exception.getStatus();
+      const exceptionResponse = exception.getResponse();
+      if (typeof exceptionResponse === 'string') {
+        message = exceptionResponse;
+      } else {
+        const body = exceptionResponse as ExceptionResponse;
+        if (Array.isArray(body.message)) {
+          details = body.message;
+          message = 'Validation failed';
+          code = 'VALIDATION_ERROR';
+        } else if (body.message) {
+          message = body.message;
+        }
+        code = body.code || code;
+      }
+
+      if (code === 'INTERNAL_SERVER_ERROR') {
+        code = this.codeForStatus(status);
+      }
+    }
+
+    this.logger.error(
+      `${request.method} ${request.url} - ${status}`,
+      exception instanceof Error ? exception.stack : '',
+    );
+
+    response.status(status).json({
       statusCode: status,
       code,
       message,
+      ...(details ? { details } : {}),
+      timestamp: new Date().toISOString(),
       path: request.url,
-      method: request.method,
-      userId: request.user?.id,
-      ip: request.ip,
-      userAgent: request.headers['user-agent'],
-      details,
-      stack: exception instanceof Error ? exception.stack : undefined,
-    });
-
-    // Отправляем в Sentry
-    if (status >= 500) {
-      Sentry.captureException(exception, {
-        extra: {
-          path: request.url,
-          userId: request.user?.id,
-        },
-      });
-    }
-
-    response.status(status).json({
-      error: {
-        code,
-        message,
-        ...(details && { details }),
-      },
     });
   }
+}
+```
 
-  private getStatusCode(exception: unknown): number {
-    if (exception instanceof HttpException) {
-      return exception.getStatus();
-    }
-    if (exception instanceof Prisma.PrismaClientKnownRequestError) {
-      return this.getPrismaStatusCode(exception);
-    }
-    return 500;
-  }
+Ответ (та же модель объявлена в `common/dto/api-error-response.dto.ts`):
 
-  private getErrorCode(exception: unknown): string {
-    if (exception instanceof HttpException) {
-      return this.getHttpErrorCode(exception);
-    }
-    if (exception instanceof Prisma.PrismaClientKnownRequestError) {
-      return this.getPrismaErrorCode(exception);
-    }
-    return 'INTERNAL_ERROR';
-  }
+```json
+{
+  "statusCode": 400,
+  "code": "VALIDATION_ERROR",
+  "message": "Validation failed",
+  "details": ["email must be an email"],
+  "timestamp": "2026-09-14T12:00:00.000Z",
+  "path": "/api/v1/auth/login"
 }
 ```
 
 ### Error Codes
 
-```typescript
-// common/errors/error-codes.ts
-export const ERROR_CODES = {
-  // Validation
-  VALIDATION_ERROR: { status: 400, message: 'Неверные входные данные' },
-  INVALID_PHONE: { status: 400, message: 'Неверный формат телефона' },
-  INVALID_EMAIL: { status: 400, message: 'Неверный формат email' },
-  INVALID_CODE: { status: 400, message: 'Неверный код' },
-  CODE_EXPIRED: { status: 400, message: 'Код истёк' },
+Файла `common/errors/error-codes.ts` нет — коды выводятся из статуса в
+`AllExceptionsFilter.codeForStatus()` и из `body.code`:
 
-  // Auth
-  UNAUTHORIZED: { status: 401, message: 'Не авторизован' },
-  INVALID_CREDENTIALS: { status: 401, message: 'Неверный email или пароль' },
-  TOKEN_EXPIRED: { status: 401, message: 'Токен истёк' },
-  TOKEN_INVALID: { status: 401, message: 'Невалидный токен' },
-
-  // Access
-  FORBIDDEN: { status: 403, message: 'Нет доступа' },
-  ACCOUNT_LOCKED: { status: 403, message: 'Аккаунт заблокирован' },
-
-  // Not Found
-  NOT_FOUND: { status: 404, message: 'Не найдено' },
-  USER_NOT_FOUND: { status: 404, message: 'Пользователь не найден' },
-  LESSON_NOT_FOUND: { status: 404, message: 'Пара не найдена' },
-  PAIR_SPACE_NOT_FOUND: { status: 404, message: 'Пространство пары не найдено' },
-
-  // Conflict
-  ALREADY_EXISTS: { status: 409, message: 'Уже существует' },
-  SCHEDULE_CONFLICT: { status: 409, message: 'Конфликт расписания' },
-
-  // Rate Limit
-  RATE_LIMIT_EXCEEDED: { status: 429, message: 'Слишком много запросов' },
-
-  // Internal
-  INTERNAL_ERROR: { status: 500, message: 'Внутренняя ошибка сервера' },
-  DATABASE_ERROR: { status: 500, message: 'Ошибка базы данных' },
-  EXTERNAL_SERVICE_ERROR: { status: 502, message: 'Ошибка внешнего сервиса' },
-} as const;
-```
+| Код | Когда |
+|-----|-------|
+| `VALIDATION_ERROR` | Ответ валидации NestJS пришёл массивом `message` (400) |
+| `BAD_REQUEST` | 400 без тела валидации |
+| `UNAUTHORIZED` | 401 |
+| `FORBIDDEN` | 403 |
+| `NOT_FOUND` | 404 |
+| `CONFLICT` | 409 |
+| `RATE_LIMITED` | 429 (Throttler) |
+| `HTTP_ERROR` | любой другой неизвестный статус 4xx/5xx |
+| `INTERNAL_SERVER_ERROR` | 500 и не-`HttpException` ошибки |
 
 ### Business Errors
 
-```typescript
-// common/errors/business-error.ts
-export class BusinessError extends Error {
-  constructor(
-    public readonly code: string,
-    message: string,
-    public readonly details?: Record<string, unknown>,
-  ) {
-    super(message);
-    this.name = 'BusinessError';
-  }
-}
-
-// Использование
-throw new BusinessError('SCHEDULE_CONFLICT', 'Две пары в одно время', {
-  lesson1Id: 'uuid1',
-  lesson2Id: 'uuid2',
-  time: '09:00',
-});
-```
-
-### Prisma Errors
+Своего класса `BusinessError` в коде нет — сервисы бросают стандартные
+исключения NestJS, фильтр приводит их к единому формату:
 
 ```typescript
-// common/errors/prisma-error.handler.ts
-export function handlePrismaError(error: Prisma.PrismaClientKnownRequestError): never {
-  switch (error.code) {
-    case 'P2002':
-      throw new ConflictException('Запись уже существует');
-    case 'P2025':
-      throw new NotFoundException('Запись не найдена');
-    case 'P2003':
-      throw new BadRequestException('Неверная ссылка на связанную запись');
-    case 'P2014':
-      throw new BadRequestException('Нарушено ограничение связей');
-    default:
-      throw new InternalServerErrorException('Ошибка базы данных');
-  }
+// admin/admin.service.ts
+if (await this.usersService.findByEmail(data.email.trim())) {
+  throw new ConflictException('Пользователь с такой почтой уже существует');
 }
+
+// schedule/schedule.service.ts
+throw new NotFoundException(`Lesson with id ${id} not found`);
+
+// common/guards/roles.guard.ts
+throw new ForbiddenException('Insufficient permissions');
 ```
+
+### Ошибки БД (TypeORM)
+
+Prisma в проекте не используется — ORM это TypeORM. Ошибки БД приходят как
+`QueryFailedError` и доходят до фильтра как не-`HttpException`, то есть получают
+статус 500 и код `INTERNAL_SERVER_ERROR` (стек пишется в лог через
+`logger.error`). Уникальные ограничения проверяются заранее в сервисах и
+превращаются в `ConflictException` (409 / `CONFLICT`) — например, проверка
+существования email в `admin.service.ts`.
+
+Следствия:
+
+- не нужно обрабатывать коды вроде `P2002` — их просто нет;
+- миграции выполняются TypeORM (`pnpm --filter @napare/backend typeorm:migration:run`),
+  а `synchronize: true` включается только вне production (`app.module.ts`).
 
 ---
 
 ## 3. Client Error Handling
+
+> Примечание: мобильного клиента (Flutter) в репозитории нет — см.
+> [mobile-architecture.md](mobile-architecture.md) (целевая спецификация).
+> Фрагменты ниже показывают разбор реального формата ответа API.
 
 ### Mobile (Flutter)
 
@@ -209,12 +180,13 @@ class ApiClient {
 
   ApiException _handleDioError(DioException e) {
     if (e.response?.data != null) {
-      final error = e.response!.data['error'];
+      // Тело ошибки плоское: { statusCode, code, message, details?, timestamp, path }
+      final data = e.response!.data as Map<String, dynamic>;
       return ApiException(
         statusCode: e.response!.statusCode!,
-        code: error['code'],
-        message: error['message'],
-        details: error['details']?.cast<Map<String, dynamic>>(),
+        code: data['code'] as String? ?? 'HTTP_ERROR',
+        message: data['message'] as String? ?? 'Ошибка',
+        details: (data['details'] as List?)?.cast<Map<String, dynamic>>(),
       );
     }
 
@@ -288,6 +260,10 @@ class ErrorWidget extends StatelessWidget {
 
 ### Web (Next.js)
 
+В веб-приложениях реальные клиенты (`apps/web-*/src/lib/api.ts`) работают на
+`fetch` и читают плоское поле `message` (`data?.message || fallback`).
+Иллюстративный axios-вариант разбора единого формата:
+
 ```typescript
 // lib/api-client.ts
 import axios, { AxiosError } from 'axios';
@@ -297,7 +273,7 @@ export class ApiError extends Error {
     public statusCode: number,
     public code: string,
     message: string,
-    public details?: Array<{ field: string; message: string }>,
+    public details?: string[],
   ) {
     super(message);
     this.name = 'ApiError';
@@ -310,9 +286,9 @@ export const apiClient = axios.create({
 
 apiClient.interceptors.response.use(
   (response) => response,
-  (error: AxiosError<{ error: { code: string; message: string; details?: any[] } }>) => {
-    if (error.response?.data?.error) {
-      const { code, message, details } = error.response.data.error;
+  (error: AxiosError<{ statusCode: number; code: string; message: string; details?: string[] }>) => {
+    if (error.response?.data?.code) {
+      const { code, message, details } = error.response.data;
       throw new ApiError(error.response.status, code, message, details);
     }
     throw new ApiError(0, 'UNKNOWN', 'Неизвестная ошибка');
@@ -330,7 +306,7 @@ export function useApi() {
           // Редирект на логин
           router.push('/login');
           break;
-        case 'RATE_LIMIT_EXCEEDED':
+        case 'RATE_LIMITED':
           toast.error('Слишком много запросов. Попробуйте позже.');
           break;
         default:
@@ -481,7 +457,7 @@ Sentry.init({
 | `http.server.errors` | Счётчик ошибок по коду | > 1% за 5 мин |
 | `http.server.latency` | Латентность | p95 > 1 сек |
 | `business.errors` | Бизнес-ошибки | > 10/мин |
-| `prisma.errors` | Ошибки БД | > 5/мин |
+| `orm.errors` | Ошибки запросов TypeORM | > 5/мин |
 
 ---
 

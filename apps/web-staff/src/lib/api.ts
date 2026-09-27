@@ -1,23 +1,23 @@
-const API_BASE = '/api/v1';
+const API_BASE = "/api/v1";
 
 export function getToken(): string | null {
-  if (typeof window === 'undefined') return null;
-  return window.localStorage.getItem('accessToken');
+  if (typeof window === "undefined") return null;
+  return window.localStorage.getItem("accessToken");
 }
 
 export function getRefreshToken(): string | null {
-  if (typeof window === 'undefined') return null;
-  return window.localStorage.getItem('refreshToken');
+  if (typeof window === "undefined") return null;
+  return window.localStorage.getItem("refreshToken");
 }
 
 export function saveTokens(accessToken: string, refreshToken: string): void {
-  window.localStorage.setItem('accessToken', accessToken);
-  window.localStorage.setItem('refreshToken', refreshToken);
+  window.localStorage.setItem("accessToken", accessToken);
+  window.localStorage.setItem("refreshToken", refreshToken);
 }
 
 export function clearTokens(): void {
-  window.localStorage.removeItem('accessToken');
-  window.localStorage.removeItem('refreshToken');
+  window.localStorage.removeItem("accessToken");
+  window.localStorage.removeItem("refreshToken");
 }
 
 let refreshPromise: Promise<boolean> | null = null;
@@ -37,15 +37,18 @@ interface User {
 }
 
 export async function getUser(): Promise<User> {
-  return apiFetch<User>('/users/me');
+  return apiFetch<User>("/users/me");
 }
 
-export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
+export async function apiFetch<T>(
+  path: string,
+  init: RequestInit = {},
+): Promise<T> {
   const token = getToken();
   const response = await fetch(`${API_BASE}${path}`, {
     ...init,
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...init.headers,
     },
@@ -58,7 +61,7 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
       const retryResponse = await fetch(`${API_BASE}${path}`, {
         ...init,
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
           ...(newToken ? { Authorization: `Bearer ${newToken}` } : {}),
           ...init.headers,
         },
@@ -68,17 +71,18 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
       return (await retryResponse.json()) as T;
     }
     clearTokens();
-    if (typeof window !== 'undefined') window.location.href = '/login';
-    throw new Error('Сессия истекла');
+    if (typeof window !== "undefined") window.location.href = "/login";
+    throw new Error("Сессия истекла");
   }
 
   if (!response.ok) {
     const data = await response.json().catch(() => null);
-    const fallback = response.status === 403
-      ? 'У вас нет доступа к этому разделу.'
-      : response.status === 404
-        ? 'Запрошенные данные не найдены или больше недоступны.'
-        : `Не удалось выполнить запрос (${response.status}).`;
+    const fallback =
+      response.status === 403
+        ? "У вас нет доступа к этому разделу."
+        : response.status === 404
+          ? "Запрошенные данные не найдены или больше недоступны."
+          : `Не удалось выполнить запрос (${response.status}).`;
     throw new Error(data?.message || fallback);
   }
 
@@ -91,13 +95,18 @@ export interface PaginatedResponse<T> {
   meta: { page: number; limit: number; total: number; totalPages: number };
 }
 
-export async function apiFetchList<T>(path: string, init: RequestInit = {}): Promise<T[]> {
+export async function apiFetchList<T>(
+  path: string,
+  init: RequestInit = {},
+): Promise<T[]> {
   return (await apiFetch<PaginatedResponse<T>>(path, init)).data;
 }
 
 async function toApiError(response: Response): Promise<Error> {
   const data = await response.json().catch(() => null);
-  return new Error(data?.message || `Не удалось выполнить запрос (${response.status}).`);
+  return new Error(
+    data?.message || `Не удалось выполнить запрос (${response.status}).`,
+  );
 }
 
 async function tryRefresh(): Promise<boolean> {
@@ -115,8 +124,8 @@ async function refreshTokens(): Promise<boolean> {
   if (!refreshToken) return false;
   try {
     const response = await fetch(`${API_BASE}/auth/refresh`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ refreshToken }),
     });
     if (!response.ok) return false;
@@ -130,36 +139,47 @@ async function refreshTokens(): Promise<boolean> {
 
 export async function login(email: string, password: string): Promise<void> {
   const response = await fetch(`${API_BASE}/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
   });
   if (!response.ok) {
     const data = await response.json().catch(() => null);
-    throw new Error(data?.message || 'Неверные учетные данные');
+    throw new Error(data?.message || "Неверные учетные данные");
   }
   const data = await response.json();
   saveTokens(data.accessToken, data.refreshToken);
 }
 
-export function logout(): void {
+export async function logout(): Promise<void> {
+  const token = getToken();
+  try {
+    if (token) {
+      await fetch(`${API_BASE}/auth/logout`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    }
+  } catch {
+    // Local token removal is still necessary if the network is unavailable.
+  }
   clearTokens();
-  if (typeof window !== 'undefined') window.location.href = '/login';
+  if (typeof window !== "undefined") window.location.href = "/login";
 }
 
 export async function getNotifications(): Promise<any[]> {
-  return apiFetchList('/notifications');
+  return apiFetchList("/notifications");
 }
 
 export async function getUnreadCount(): Promise<number> {
-  const data = await apiFetch<{ count: number }>('/notifications/unread-count');
+  const data = await apiFetch<{ count: number }>("/notifications/unread-count");
   return data.count;
 }
 
 export async function markNotificationRead(id: string): Promise<void> {
-  await apiFetch(`/notifications/${id}/read`, { method: 'PATCH' });
+  await apiFetch(`/notifications/${id}/read`, { method: "PATCH" });
 }
 
 export async function markAllRead(): Promise<void> {
-  await apiFetch('/notifications/read-all', { method: 'POST' });
+  await apiFetch("/notifications/read-all", { method: "POST" });
 }

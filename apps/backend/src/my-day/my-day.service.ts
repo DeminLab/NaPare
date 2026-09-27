@@ -1,11 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable } from "@nestjs/common";
 
-import { ScheduleService } from '../schedule/schedule.service';
-import { PairSpaceService } from '../pair-space/pair-space.service';
-import { AbsencesService } from '../absences/absences.service';
-import { NotificationsService } from '../notifications/notifications.service';
-import { UserRole } from '../auth/interfaces/user-role';
-import { PairSpace } from '../pair-space/entities/pair-space.entity';
+import { ScheduleService } from "../schedule/schedule.service";
+import { PairSpaceService } from "../pair-space/pair-space.service";
+import { AbsencesService } from "../absences/absences.service";
+import { NotificationsService } from "../notifications/notifications.service";
+import { UserRole } from "../auth/interfaces/user-role";
+import { PairSpace } from "../pair-space/entities/pair-space.entity";
 
 @Injectable()
 export class MyDayService {
@@ -16,27 +16,44 @@ export class MyDayService {
     private readonly notificationsService: NotificationsService,
   ) {}
 
-  async getMyDay(userId: string, universityId: string, role: UserRole, groupId?: string | null) {
-    const today = new Date().toISOString().split('T')[0];
+  async getMyDay(
+    userId: string,
+    universityId: string,
+    role: UserRole,
+    groupId?: string | null,
+  ) {
+    const today = new Date().toISOString().split("T")[0];
 
     // Get today's schedule
     let lessons;
     if (role === UserRole.STUDENT) {
-      lessons = (await this.scheduleService.findForStudentDate(universityId, groupId, today)).data;
+      lessons = (
+        await this.scheduleService.findForStudentDate(
+          universityId,
+          groupId,
+          today,
+        )
+      ).data;
     } else if (role === UserRole.TEACHER) {
-      lessons = (await this.scheduleService.findByTeacher(universityId, userId, today)).data;
+      lessons = (
+        await this.scheduleService.findByTeacher(universityId, userId, today)
+      ).data;
     } else {
-      lessons = (await this.scheduleService.findByDate(universityId, today)).data;
+      lessons = (await this.scheduleService.findByDate(universityId, today))
+        .data;
     }
 
     // Get PairSpaces for today's lessons
     const pairSpaces: PairSpace[] = [];
     for (const lesson of lessons) {
       try {
-        const pairSpace = await this.pairSpaceService.findByLesson(lesson.id);
+        const pairSpace = await this.pairSpaceService.getOrCreateByLesson(
+          lesson.id,
+          universityId,
+        );
         pairSpaces.push(pairSpace);
       } catch {
-        // PairSpace not created yet
+        // A lesson outside the current role scope is intentionally omitted.
       }
     }
 
@@ -51,7 +68,7 @@ export class MyDayService {
       lessons,
       pairSpaces,
       absences: absences.filter(
-        (a) => new Date(a.startDate).toISOString().split('T')[0] === today,
+        (a) => new Date(a.startDate).toISOString().split("T")[0] === today,
       ),
       notifications: {
         unreadCount,

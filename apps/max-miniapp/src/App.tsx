@@ -1,5 +1,5 @@
-import { FormEvent, useEffect, useState } from 'react';
-import { getInitData, initializeMax } from './lib/max-bridge';
+import { FormEvent, useEffect, useState } from "react";
+import { getInitData, initializeMax } from "./lib/max-bridge";
 import {
   ApiError,
   AuthUser,
@@ -9,6 +9,7 @@ import {
   PairSpace,
   ProfileUser,
   createAbsence,
+  canLinkAbsenceToLesson,
   getMyDay,
   getNotifications,
   getPairSpace,
@@ -18,40 +19,71 @@ import {
   loginWithMax,
   loginWithPassword,
   logout,
-} from './lib/api';
+} from "./lib/api";
 
-type Tab = 'today' | 'schedule' | 'lessons' | 'notifications' | 'profile';
-type Phase = 'boot' | 'login' | 'ready';
+type Tab = "today" | "schedule" | "lessons" | "notifications" | "profile";
+type Phase = "boot" | "login" | "ready";
 
 const navigation: Array<{ id: Tab; icon: string; label: string }> = [
-  { id: 'today', icon: '⌂', label: 'Сегодня' },
-  { id: 'schedule', icon: '□', label: 'Расписание' },
-  { id: 'lessons', icon: '♧', label: 'Пары' },
-  { id: 'notifications', icon: '◌', label: 'Уведомления' },
-  { id: 'profile', icon: '♙', label: 'Профиль' },
+  { id: "today", icon: "⌂", label: "Сегодня" },
+  { id: "schedule", icon: "□", label: "Расписание" },
+  { id: "lessons", icon: "♧", label: "Пары" },
+  { id: "notifications", icon: "◌", label: "Уведомления" },
+  { id: "profile", icon: "♙", label: "Профиль" },
 ];
 
 const ROLE_LABELS: Record<string, string> = {
-  student: 'Студент',
-  teacher: 'Преподаватель',
-  curator: 'Куратор',
-  faculty_dean: 'Деканат',
-  department_head: 'Заведующий кафедрой',
-  university_admin: 'Администратор вуза',
-  superadmin: 'Суперадмин',
-  developer: 'Разработчик',
+  student: "Студент",
+  teacher: "Преподаватель",
+  curator: "Куратор",
+  faculty_dean: "Деканат",
+  department_head: "Заведующий кафедрой",
+  university_admin: "Администратор вуза",
+  superadmin: "Суперадмин",
+  developer: "Разработчик",
 };
 
-const WEEKDAYS_FULL = ['воскресенье', 'понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота'];
-const WEEKDAYS_SHORT = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
-const MONTHS_GENITIVE = [
-  'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
-  'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря',
+const WEEKDAYS_FULL = [
+  "воскресенье",
+  "понедельник",
+  "вторник",
+  "среда",
+  "четверг",
+  "пятница",
+  "суббота",
 ];
-const MONTHS_SHORT = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+const WEEKDAYS_SHORT = ["вс", "пн", "вт", "ср", "чт", "пт", "сб"];
+const MONTHS_GENITIVE = [
+  "января",
+  "февраля",
+  "марта",
+  "апреля",
+  "мая",
+  "июня",
+  "июля",
+  "августа",
+  "сентября",
+  "октября",
+  "ноября",
+  "декабря",
+];
+const MONTHS_SHORT = [
+  "янв",
+  "фев",
+  "мар",
+  "апр",
+  "мая",
+  "июн",
+  "июл",
+  "авг",
+  "сен",
+  "окт",
+  "ноя",
+  "дек",
+];
 
 function pad(value: number): string {
-  return String(value).padStart(2, '0');
+  return String(value).padStart(2, "0");
 }
 
 function toDateInput(date: Date): string {
@@ -87,7 +119,7 @@ function localDateKey(value?: string): string | null {
 }
 
 function parseDateKey(dateKey: string): Date {
-  const [year, month, day] = dateKey.split('-').map(Number);
+  const [year, month, day] = dateKey.split("-").map(Number);
   return new Date(year || 1970, (month || 1) - 1, day || 1);
 }
 
@@ -110,7 +142,7 @@ function formatWeekRange(start: Date): string {
 }
 
 function formatDuration(minutes: number): string {
-  if (minutes < 1) return 'меньше минуты';
+  if (minutes < 1) return "меньше минуты";
   if (minutes < 60) return `${minutes} мин`;
   const hours = Math.floor(minutes / 60);
   const rest = minutes % 60;
@@ -123,8 +155,11 @@ function errorMessage(error: unknown, fallback: string): string {
 }
 
 function initialsOf(user: AuthUser | null): string {
-  if (!user) return '·';
-  return `${user.firstName?.[0] ?? ''}${user.lastName?.[0] ?? ''}`.toUpperCase() || '?';
+  if (!user) return "·";
+  return (
+    `${user.firstName?.[0] ?? ""}${user.lastName?.[0] ?? ""}`.toUpperCase() ||
+    "?"
+  );
 }
 
 interface UpcomingLesson {
@@ -145,15 +180,19 @@ function findUpcomingLesson(lessons: Lesson[]): UpcomingLesson | null {
     if (start === null || end === null || end <= nowMinutes) continue;
     if (start < bestStart) {
       bestStart = start;
-      best = { lesson, startsInMinutes: start - nowMinutes, ongoing: start <= nowMinutes };
+      best = {
+        lesson,
+        startsInMinutes: start - nowMinutes,
+        ongoing: start <= nowMinutes,
+      };
     }
   }
   return best;
 }
 
 export function App() {
-  const [phase, setPhase] = useState<Phase>('boot');
-  const [tab, setTab] = useState<Tab>('today');
+  const [phase, setPhase] = useState<Phase>("boot");
+  const [tab, setTab] = useState<Tab>("today");
   const [user, setUser] = useState<AuthUser | null>(null);
   const [insideMax, setInsideMax] = useState(false);
   const [bootError, setBootError] = useState<string | null>(null);
@@ -196,7 +235,7 @@ export function App() {
           const profileData = await getProfile();
           if (cancelled) return;
           setUser(profileData);
-          setPhase('ready');
+          setPhase("ready");
           return;
         }
         const initData = getInitData();
@@ -204,17 +243,23 @@ export function App() {
           const auth = await loginWithMax(initData);
           if (cancelled) return;
           setUser(auth.user);
-          setPhase('ready');
+          setPhase("ready");
           return;
         }
-        if (!cancelled) setPhase('login');
+        if (!cancelled) setPhase("login");
       } catch (error) {
         if (cancelled) return;
-        setPhase('login');
-        if (error instanceof ApiError && !error.code.startsWith('MAX_') && error.status === 401) {
+        setPhase("login");
+        if (
+          error instanceof ApiError &&
+          !error.code.startsWith("MAX_") &&
+          error.status === 401
+        ) {
           setBootError(null);
         } else {
-          setBootError(errorMessage(error, 'Не удалось войти. Проверьте соединение.'));
+          setBootError(
+            errorMessage(error, "Не удалось войти. Проверьте соединение."),
+          );
         }
       }
     })();
@@ -224,7 +269,7 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    if (phase !== 'ready' || tab !== 'today') return;
+    if (phase !== "ready" || tab !== "today") return;
     let cancelled = false;
     setTodayError(null);
     getMyDay()
@@ -232,7 +277,10 @@ export function App() {
         if (!cancelled) setMyDay(data);
       })
       .catch((error: unknown) => {
-        if (!cancelled) setTodayError(errorMessage(error, 'Не удалось загрузить сегодняшний день'));
+        if (!cancelled)
+          setTodayError(
+            errorMessage(error, "Не удалось загрузить сегодняшний день"),
+          );
       });
     return () => {
       cancelled = true;
@@ -240,7 +288,7 @@ export function App() {
   }, [phase, tab, refreshKey]);
 
   useEffect(() => {
-    if (phase !== 'ready' || (tab !== 'schedule' && tab !== 'lessons')) return;
+    if (phase !== "ready" || (tab !== "schedule" && tab !== "lessons")) return;
     let cancelled = false;
     setWeekError(null);
     getWeekSchedule(toDateInput(weekStart), toDateInput(addDays(weekStart, 6)))
@@ -248,7 +296,8 @@ export function App() {
         if (!cancelled) setWeekLessons(response.data);
       })
       .catch((error: unknown) => {
-        if (!cancelled) setWeekError(errorMessage(error, 'Не удалось загрузить расписание'));
+        if (!cancelled)
+          setWeekError(errorMessage(error, "Не удалось загрузить расписание"));
       });
     return () => {
       cancelled = true;
@@ -256,7 +305,7 @@ export function App() {
   }, [phase, tab, weekStart, refreshKey]);
 
   useEffect(() => {
-    if (phase !== 'ready' || !selectedLesson) return;
+    if (phase !== "ready" || !selectedLesson) return;
     let cancelled = false;
     setSpaceLoading(true);
     setSpaceError(null);
@@ -270,7 +319,9 @@ export function App() {
         if (error instanceof ApiError && error.status === 404) {
           setPairSpace(null);
         } else {
-          setSpaceError(errorMessage(error, 'Не удалось загрузить пространство пары'));
+          setSpaceError(
+            errorMessage(error, "Не удалось загрузить пространство пары"),
+          );
         }
       })
       .finally(() => {
@@ -282,7 +333,7 @@ export function App() {
   }, [phase, selectedLesson]);
 
   useEffect(() => {
-    if (phase !== 'ready' || tab !== 'notifications') return;
+    if (phase !== "ready" || tab !== "notifications") return;
     let cancelled = false;
     setInboxError(null);
     getNotifications()
@@ -290,7 +341,10 @@ export function App() {
         if (!cancelled) setInbox(response.data);
       })
       .catch((error: unknown) => {
-        if (!cancelled) setInboxError(errorMessage(error, 'Не удалось загрузить уведомления'));
+        if (!cancelled)
+          setInboxError(
+            errorMessage(error, "Не удалось загрузить уведомления"),
+          );
       });
     return () => {
       cancelled = true;
@@ -298,7 +352,7 @@ export function App() {
   }, [phase, tab, refreshKey]);
 
   useEffect(() => {
-    if (phase !== 'ready' || tab !== 'profile') return;
+    if (phase !== "ready" || tab !== "profile") return;
     let cancelled = false;
     setProfileError(null);
     getProfile()
@@ -306,7 +360,8 @@ export function App() {
         if (!cancelled) setProfile(data);
       })
       .catch((error: unknown) => {
-        if (!cancelled) setProfileError(errorMessage(error, 'Не удалось загрузить профиль'));
+        if (!cancelled)
+          setProfileError(errorMessage(error, "Не удалось загрузить профиль"));
       });
     return () => {
       cancelled = true;
@@ -316,8 +371,8 @@ export function App() {
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    const email = String(form.get('email') ?? '').trim();
-    const password = String(form.get('password') ?? '');
+    const email = String(form.get("email") ?? "").trim();
+    const password = String(form.get("password") ?? "");
 
     setLoginBusy(true);
     setLoginError(null);
@@ -328,33 +383,53 @@ export function App() {
         : await loginWithPassword(email, password);
       setUser(auth.user);
       setBootError(null);
-      setPhase('ready');
+      setPhase("ready");
     } catch (error) {
-      setLoginError(errorMessage(error, 'Не удалось войти'));
+      setLoginError(errorMessage(error, "Не удалось войти"));
     } finally {
       setLoginBusy(false);
     }
   }
 
-  function handleLogout() {
-    logout();
+  async function handleMaxLogin() {
+    const initData = getInitData();
+    if (!initData) return;
+
+    setLoginBusy(true);
+    setLoginError(null);
+    try {
+      const auth = await loginWithMax(initData);
+      setUser(auth.user);
+      setBootError(null);
+      setPhase("ready");
+    } catch (error) {
+      setLoginError(errorMessage(error, "Не удалось войти через MAX"));
+    } finally {
+      setLoginBusy(false);
+    }
+  }
+
+  async function handleLogout() {
+    await logout();
     setUser(null);
     setProfile(null);
     setMyDay(null);
     setWeekLessons(null);
     setInbox(null);
     setSelectedLesson(null);
-    setTab('today');
-    setPhase('login');
+    setTab("today");
+    setPhase("login");
   }
 
   function openLesson(lesson: Lesson) {
     setSelectedLesson(lesson);
-    setTab('lessons');
+    setTab("lessons");
   }
 
   function openAbsence(lesson?: Lesson | null) {
-    setAbsenceLessonId(lesson?.id || null);
+    setAbsenceLessonId(
+      canLinkAbsenceToLesson(lesson) ? lesson?.id || null : null,
+    );
     setAbsenceOpen(true);
     setAbsenceSent(false);
     setAbsenceError(null);
@@ -363,31 +438,33 @@ export function App() {
   async function handleAbsenceSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    const comment = String(form.get('comment') ?? '').trim();
+    const comment = String(form.get("comment") ?? "").trim();
     setAbsenceBusy(true);
     setAbsenceError(null);
     try {
       await createAbsence({
-        type: String(form.get('type')),
-        startDate: String(form.get('startDate')),
-        endDate: String(form.get('endDate')),
+        type: String(form.get("type")),
+        startDate: String(form.get("startDate")),
+        endDate: String(form.get("endDate")),
         ...(comment ? { comment } : {}),
         ...(absenceLessonId ? { lessonId: absenceLessonId } : {}),
       });
       setAbsenceSent(true);
       setRefreshKey((key) => key + 1);
     } catch (error) {
-      setAbsenceError(errorMessage(error, 'Не удалось отправить заявку'));
+      setAbsenceError(errorMessage(error, "Не удалось отправить заявку"));
     } finally {
       setAbsenceBusy(false);
     }
   }
 
-  const isStudent = user?.role === 'student';
-  const todayDateKey = localDateKey(myDay?.date ? `${myDay.date}T12:00:00` : undefined) ?? toDateInput(new Date());
+  const isStudent = user?.role === "student";
+  const todayDateKey =
+    localDateKey(myDay?.date ? `${myDay.date}T12:00:00` : undefined) ??
+    toDateInput(new Date());
   const upcoming = myDay ? findUpcomingLesson(myDay.lessons) : null;
 
-  if (phase === 'boot') {
+  if (phase === "boot") {
     return (
       <main className="app-shell boot-screen">
         <p className="brand">НаПаре</p>
@@ -396,7 +473,8 @@ export function App() {
     );
   }
 
-  if (phase === 'login') {
+  if (phase === "login") {
+    const maxLoginAvailable = Boolean(getInitData());
     return (
       <main className="app-shell">
         <header className="topbar">
@@ -408,27 +486,54 @@ export function App() {
         <section className="screen login-screen">
           <div className="screen-heading">
             <h1>Вход</h1>
-            <p>Используйте учётную запись университета</p>
+            <p>
+              {maxLoginAvailable
+                ? "Войдите через MAX или используйте учётную запись университета"
+                : "Используйте учётную запись университета"}
+            </p>
           </div>
           {bootError && <p className="error-banner">{bootError}</p>}
+          {maxLoginAvailable && (
+            <button
+              className="max-login"
+              type="button"
+              onClick={handleMaxLogin}
+              disabled={loginBusy}
+            >
+              {loginBusy ? "Проверяем MAX…" : "Войти через MAX"}
+            </button>
+          )}
           <form className="login-form" onSubmit={handleLogin}>
             <label>
               Электронная почта
-              <input name="email" type="email" required autoComplete="username" placeholder="student@sibit.ru" />
+              <input
+                name="email"
+                type="email"
+                required
+                autoComplete="username"
+                placeholder="student@sibit.ru"
+              />
             </label>
             <label>
               Пароль
-              <input name="password" type="password" required minLength={6} autoComplete="current-password" placeholder="••••••" />
+              <input
+                name="password"
+                type="password"
+                required
+                minLength={6}
+                autoComplete="current-password"
+                placeholder="••••••"
+              />
             </label>
             {loginError && <p className="error-banner">{loginError}</p>}
             <button className="primary" type="submit" disabled={loginBusy}>
-              {loginBusy ? 'Входим…' : 'Войти'}
+              {loginBusy ? "Входим…" : "Войти"}
             </button>
           </form>
           <p className="bridge-state">
             {insideMax
-              ? 'MAX Bridge подключён. После первого входа аккаунт MAX привязывается — дальше открывается автоматически.'
-              : 'Режим браузера: после привязки аккаунта открывайте мини-приложение из MAX для быстрого входа.'}
+              ? "MAX Bridge подключён. После первой привязки используйте вход через MAX — пароль повторно не понадобится."
+              : "Режим браузера: после привязки аккаунта открывайте мини-приложение из MAX для быстрого входа."}
           </p>
         </section>
       </main>
@@ -442,23 +547,32 @@ export function App() {
           <p className="brand">НаПаре</p>
           <p className="subtitle">Всё важное о твоих парах</p>
         </div>
-        <button className="avatar" aria-label="Открыть профиль" onClick={() => setTab('profile')}>
+        <button
+          className="avatar"
+          aria-label="Открыть профиль"
+          onClick={() => setTab("profile")}
+        >
           {initialsOf(user)}
         </button>
       </header>
 
-      {tab === 'today' && (
+      {tab === "today" && (
         <section className="screen" aria-labelledby="today-title">
           <div className="screen-heading">
             <h1 id="today-title">Сегодня</h1>
             <p>{formatDayHeading(todayDateKey)}</p>
           </div>
 
-          {!myDay && !todayError && <p className="empty-state">Загружаем расписание…</p>}
+          {!myDay && !todayError && (
+            <p className="empty-state">Загружаем расписание…</p>
+          )}
           {todayError && (
             <p className="error-banner">
-              {todayError}{' '}
-              <button className="inline-retry" onClick={() => setRefreshKey((key) => key + 1)}>
+              {todayError}{" "}
+              <button
+                className="inline-retry"
+                onClick={() => setRefreshKey((key) => key + 1)}
+              >
                 Повторить
               </button>
             </p>
@@ -469,7 +583,9 @@ export function App() {
               {upcoming ? (
                 <article className="next-lesson">
                   <div className="lesson-status">
-                    <span>{upcoming.ongoing ? 'Сейчас идёт' : 'Следующая пара'}</span>
+                    <span>
+                      {upcoming.ongoing ? "Сейчас идёт" : "Следующая пара"}
+                    </span>
                     <span>
                       {upcoming.ongoing
                         ? `до ${upcoming.lesson.endTime}`
@@ -478,12 +594,21 @@ export function App() {
                   </div>
                   <h2>{upcoming.lesson.subject}</h2>
                   <div className="lesson-details">
-                    <span>◷ {upcoming.lesson.startTime} — {upcoming.lesson.endTime}</span>
-                    {upcoming.lesson.room && <span>⌖ {upcoming.lesson.room}</span>}
-                    {upcoming.lesson.teacherName && <span>♙ {upcoming.lesson.teacherName}</span>}
+                    <span>
+                      ◷ {upcoming.lesson.startTime} — {upcoming.lesson.endTime}
+                    </span>
+                    {upcoming.lesson.room && (
+                      <span>⌖ {upcoming.lesson.room}</span>
+                    )}
+                    {upcoming.lesson.teacherName && (
+                      <span>♙ {upcoming.lesson.teacherName}</span>
+                    )}
                   </div>
                   {isStudent && (
-                    <button className="absence-button" onClick={() => openAbsence(upcoming.lesson)}>
+                    <button
+                      className="absence-button"
+                      onClick={() => openAbsence(upcoming.lesson)}
+                    >
                       Сообщить об отсутствии
                     </button>
                   )}
@@ -494,27 +619,39 @@ export function App() {
                     <span>Свободный день</span>
                   </div>
                   <p className="empty-state">
-                    {myDay.lessons.length ? 'Все пары на сегодня уже закончились.' : 'Сегодня пар нет.'}
+                    {myDay.lessons.length
+                      ? "Все пары на сегодня уже закончились."
+                      : "Сегодня пар нет."}
                   </p>
                   {isStudent && (
-                    <button className="absence-button" onClick={() => openAbsence()}>
+                    <button
+                      className="absence-button"
+                      onClick={() => openAbsence()}
+                    >
                       Сообщить об отсутствии
                     </button>
                   )}
                 </article>
               )}
 
-              <section className="schedule-section" aria-labelledby="schedule-title">
+              <section
+                className="schedule-section"
+                aria-labelledby="schedule-title"
+              >
                 <div className="section-title">
                   <h2 id="schedule-title">Сегодня в расписании</h2>
-                  <button onClick={() => setTab('schedule')}>Все пары →</button>
+                  <button onClick={() => setTab("schedule")}>Все пары →</button>
                 </div>
                 {myDay.lessons.length === 0 ? (
                   <p className="empty-state">На сегодня занятий нет.</p>
                 ) : (
                   <div className="lesson-list">
                     {myDay.lessons.map((lesson) => (
-                      <button className="lesson-row" key={lesson.id} onClick={() => openLesson(lesson)}>
+                      <button
+                        className="lesson-row"
+                        key={lesson.id}
+                        onClick={() => openLesson(lesson)}
+                      >
                         <time>
                           {lesson.startTime}
                           <small>{lesson.endTime}</small>
@@ -522,7 +659,11 @@ export function App() {
                         <span className="divider" />
                         <span className="lesson-copy">
                           <strong>{lesson.subject}</strong>
-                          <small>{[lesson.room, lesson.teacherName].filter(Boolean).join(' · ') || '—'}</small>
+                          <small>
+                            {[lesson.room, lesson.teacherName]
+                              .filter(Boolean)
+                              .join(" · ") || "—"}
+                          </small>
                         </span>
                         {lesson.isChanged && <em>Изменено</em>}
                       </button>
@@ -531,7 +672,10 @@ export function App() {
                 )}
               </section>
               {isStudent && myDay.absences.length > 0 && (
-                <section className="schedule-section" aria-labelledby="absence-status-title">
+                <section
+                  className="schedule-section"
+                  aria-labelledby="absence-status-title"
+                >
                   <div className="section-title">
                     <h2 id="absence-status-title">Мои обращения</h2>
                     <span>{myDay.absences.length}</span>
@@ -541,10 +685,18 @@ export function App() {
                       <article className="lesson-row" key={absence.id}>
                         <span className="divider" />
                         <span className="lesson-copy">
-                          <strong>{absence.confirmationRequired ? 'Ожидает подтверждения' : 'Подтверждено'}</strong>
-                          <small>{absence.comment || 'Отсутствие зарегистрировано'}</small>
+                          <strong>
+                            {absence.confirmationRequired
+                              ? "Ожидает подтверждения"
+                              : "Подтверждено"}
+                          </strong>
+                          <small>
+                            {absence.comment || "Отсутствие зарегистрировано"}
+                          </small>
                         </span>
-                        <em>{absence.confirmationRequired ? 'В работе' : 'Готово'}</em>
+                        <em>
+                          {absence.confirmationRequired ? "В работе" : "Готово"}
+                        </em>
                       </article>
                     ))}
                   </div>
@@ -555,22 +707,40 @@ export function App() {
         </section>
       )}
 
-      {tab === 'schedule' && (
-        <section className="screen secondary-screen" aria-labelledby="schedule-screen-title">
+      {tab === "schedule" && (
+        <section
+          className="screen secondary-screen"
+          aria-labelledby="schedule-screen-title"
+        >
           <div className="screen-heading">
             <h1 id="schedule-screen-title">Расписание</h1>
             <p>Учебная неделя</p>
           </div>
           <div className="week-nav">
-            <button onClick={() => setWeekStart((start) => addDays(start, -7))} aria-label="Предыдущая неделя">←</button>
+            <button
+              onClick={() => setWeekStart((start) => addDays(start, -7))}
+              aria-label="Предыдущая неделя"
+            >
+              ←
+            </button>
             <span>{formatWeekRange(weekStart)}</span>
-            <button onClick={() => setWeekStart((start) => addDays(start, 7))} aria-label="Следующая неделя">→</button>
+            <button
+              onClick={() => setWeekStart((start) => addDays(start, 7))}
+              aria-label="Следующая неделя"
+            >
+              →
+            </button>
           </div>
-          {!weekLessons && !weekError && <p className="empty-state">Загружаем расписание…</p>}
+          {!weekLessons && !weekError && (
+            <p className="empty-state">Загружаем расписание…</p>
+          )}
           {weekError && (
             <p className="error-banner">
-              {weekError}{' '}
-              <button className="inline-retry" onClick={() => setRefreshKey((key) => key + 1)}>
+              {weekError}{" "}
+              <button
+                className="inline-retry"
+                onClick={() => setRefreshKey((key) => key + 1)}
+              >
                 Повторить
               </button>
             </p>
@@ -582,7 +752,7 @@ export function App() {
             <div className="day-groups">
               {Array.from(
                 weekLessons.reduce((groups, lesson) => {
-                  const key = localDateKey(lesson.startDate) ?? 'без-даты';
+                  const key = localDateKey(lesson.startDate) ?? "без-даты";
                   const bucket = groups.get(key);
                   if (bucket) bucket.push(lesson);
                   else groups.set(key, [lesson]);
@@ -591,11 +761,18 @@ export function App() {
               ).map(([dateKey, lessons]) => (
                 <section className="schedule-section" key={dateKey}>
                   <div className="section-title">
-                    <h2>{dateKey === todayDateKey ? 'Сегодня · ' : ''}{formatDayHeading(dateKey)}</h2>
+                    <h2>
+                      {dateKey === todayDateKey ? "Сегодня · " : ""}
+                      {formatDayHeading(dateKey)}
+                    </h2>
                   </div>
                   <div className="lesson-list">
                     {lessons.map((lesson) => (
-                      <button className="lesson-row" key={lesson.id} onClick={() => openLesson(lesson)}>
+                      <button
+                        className="lesson-row"
+                        key={lesson.id}
+                        onClick={() => openLesson(lesson)}
+                      >
                         <time>
                           {lesson.startTime}
                           <small>{lesson.endTime}</small>
@@ -603,7 +780,11 @@ export function App() {
                         <span className="divider" />
                         <span className="lesson-copy">
                           <strong>{lesson.subject}</strong>
-                          <small>{[lesson.room, lesson.teacherName].filter(Boolean).join(' · ') || '—'}</small>
+                          <small>
+                            {[lesson.room, lesson.teacherName]
+                              .filter(Boolean)
+                              .join(" · ") || "—"}
+                          </small>
                         </span>
                         {lesson.isChanged && <em>Изменено</em>}
                       </button>
@@ -616,33 +797,50 @@ export function App() {
         </section>
       )}
 
-      {tab === 'lessons' && (
-        <section className="screen secondary-screen" aria-labelledby="lessons-title">
+      {tab === "lessons" && (
+        <section
+          className="screen secondary-screen"
+          aria-labelledby="lessons-title"
+        >
           <div className="screen-heading">
             <h1 id="lessons-title">Пары</h1>
-            <p>{selectedLesson ? selectedLesson.subject : 'Открой пару, материалы и задания'}</p>
+            <p>
+              {selectedLesson
+                ? selectedLesson.subject
+                : "Открой пару, материалы и подготовку"}
+            </p>
           </div>
 
           {selectedLesson ? (
             <>
-              <button className="link-back" onClick={() => setSelectedLesson(null)}>← К расписанию</button>
+              <button
+                className="link-back"
+                onClick={() => setSelectedLesson(null)}
+              >
+                ← К расписанию
+              </button>
               <article className="lesson-space">
                 <h2>{selectedLesson.subject}</h2>
                 <p>
                   {[
-                    selectedLesson.pairNumber ? `${selectedLesson.pairNumber} пара` : null,
+                    selectedLesson.pairNumber
+                      ? `${selectedLesson.pairNumber} пара`
+                      : null,
                     `${selectedLesson.startTime} — ${selectedLesson.endTime}`,
                     selectedLesson.room,
                     selectedLesson.teacherName,
                   ]
                     .filter(Boolean)
-                    .join(' · ')}
+                    .join(" · ")}
                 </p>
-                {spaceLoading && <p className="empty-state">Загружаем пространство пары…</p>}
+                {spaceLoading && (
+                  <p className="empty-state">Загружаем пространство пары…</p>
+                )}
                 {spaceError && <p className="error-banner">{spaceError}</p>}
                 {!spaceLoading && !spaceError && !pairSpace && (
                   <p className="empty-state">
-                    Для этой пары ещё нет пространства. Материалы, объявления и задания появятся здесь, когда их добавит преподаватель.
+                    Для этой пары ещё нет пространства. Материалы, объявления и
+                    подготовка появится здесь, когда её добавит преподаватель.
                   </p>
                 )}
                 {pairSpace && (
@@ -659,15 +857,19 @@ export function App() {
                     )}
                     {pairSpace.homeworks?.length > 0 && (
                       <section className="space-section">
-                        <h3>Задания</h3>
+                        <h3>Подготовка к паре</h3>
                         <ul className="space-list">
                           {pairSpace.homeworks.map((item) => (
                             <li key={item.id}>
                               <strong>{item.title}</strong>
                               {item.deadline && (
-                                <small>до {new Date(item.deadline).toLocaleDateString('ru-RU')}</small>
+                                <small>
+                                  до{" "}
+                                  {new Date(item.deadline).toLocaleDateString(
+                                    "ru-RU",
+                                  )}
+                                </small>
                               )}
-                              {item.isCompleted && <em>Выполнено</em>}
                             </li>
                           ))}
                         </ul>
@@ -679,31 +881,48 @@ export function App() {
                         <ul className="space-list file-list">
                           {pairSpace.files.map((file) => (
                             <li key={file.id}>
-                              <a href={file.fileUrl} download={file.fileName}>{file.fileName}</a>
-                              <small>{Math.max(1, Math.round(file.size / 1024))} КБ</small>
+                              <a href={file.fileUrl} download={file.fileName}>
+                                {file.fileName}
+                              </a>
+                              <small>
+                                {Math.max(1, Math.round(file.size / 1024))} КБ
+                              </small>
                             </li>
                           ))}
                         </ul>
                       </section>
                     )}
-                    {!pairSpace.announcements?.length && !pairSpace.homeworks?.length && !pairSpace.files?.length && (
-                      <p className="empty-state">По паре пока нет материалов.</p>
-                    )}
+                    {!pairSpace.announcements?.length &&
+                      !pairSpace.homeworks?.length &&
+                      !pairSpace.files?.length && (
+                        <p className="empty-state">
+                          По паре пока нет материалов.
+                        </p>
+                      )}
                   </>
                 )}
               </article>
             </>
           ) : (
             <>
-              {!weekLessons && !weekError && <p className="empty-state">Загружаем пары недели…</p>}
+              {!weekLessons && !weekError && (
+                <p className="empty-state">Загружаем пары недели…</p>
+              )}
               {weekError && <p className="error-banner">{weekError}</p>}
-              {weekLessons && weekLessons.length === 0 && <p className="empty-state">На этой неделе пар нет.</p>}
+              {weekLessons && weekLessons.length === 0 && (
+                <p className="empty-state">На этой неделе пар нет.</p>
+              )}
               {weekLessons && weekLessons.length > 0 && (
                 <div className="lesson-list">
                   {weekLessons.map((lesson) => {
-                    const lessonDateKey = localDateKey(lesson.startDate) ?? todayDateKey;
+                    const lessonDateKey =
+                      localDateKey(lesson.startDate) ?? todayDateKey;
                     return (
-                      <button className="lesson-row" key={lesson.id} onClick={() => openLesson(lesson)}>
+                      <button
+                        className="lesson-row"
+                        key={lesson.id}
+                        onClick={() => openLesson(lesson)}
+                      >
                         <time>
                           {WEEKDAYS_SHORT[parseDateKey(lessonDateKey).getDay()]}
                           <small>{lesson.startTime}</small>
@@ -711,7 +930,11 @@ export function App() {
                         <span className="divider" />
                         <span className="lesson-copy">
                           <strong>{lesson.subject}</strong>
-                          <small>{[formatShortDate(lessonDateKey), lesson.room].filter(Boolean).join(' · ')}</small>
+                          <small>
+                            {[formatShortDate(lessonDateKey), lesson.room]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </small>
                         </span>
                       </button>
                     );
@@ -723,15 +946,22 @@ export function App() {
         </section>
       )}
 
-      {tab === 'notifications' && (
-        <section className="screen secondary-screen" aria-labelledby="notifications-title">
+      {tab === "notifications" && (
+        <section
+          className="screen secondary-screen"
+          aria-labelledby="notifications-title"
+        >
           <div className="screen-heading">
             <h1 id="notifications-title">Уведомления</h1>
             <p>Изменения расписания и новости пар</p>
           </div>
-          {!inbox && !inboxError && <p className="empty-state">Загружаем уведомления…</p>}
+          {!inbox && !inboxError && (
+            <p className="empty-state">Загружаем уведомления…</p>
+          )}
           {inboxError && <p className="error-banner">{inboxError}</p>}
-          {inbox && inbox.length === 0 && <p className="empty-state">Новых уведомлений нет.</p>}
+          {inbox && inbox.length === 0 && (
+            <p className="empty-state">Новых уведомлений нет.</p>
+          )}
           {inbox && inbox.length > 0 && (
             <div className="notification-list">
               {inbox.map((item) => (
@@ -739,16 +969,18 @@ export function App() {
                   <div className="section-title">
                     <h3>{item.title}</h3>
                     <time dateTime={item.createdAt}>
-                      {new Date(item.createdAt).toLocaleString('ru-RU', {
-                        day: 'numeric',
-                        month: 'short',
-                        hour: '2-digit',
-                        minute: '2-digit',
+                      {new Date(item.createdAt).toLocaleString("ru-RU", {
+                        day: "numeric",
+                        month: "short",
+                        hour: "2-digit",
+                        minute: "2-digit",
                       })}
                     </time>
                   </div>
                   <p>{item.body}</p>
-                  {!item.isRead && <span className="unread-dot" aria-label="Не прочитано" />}
+                  {!item.isRead && (
+                    <span className="unread-dot" aria-label="Не прочитано" />
+                  )}
                 </article>
               ))}
             </div>
@@ -756,21 +988,26 @@ export function App() {
         </section>
       )}
 
-      {tab === 'profile' && (
-        <section className="screen secondary-screen" aria-labelledby="profile-title">
+      {tab === "profile" && (
+        <section
+          className="screen secondary-screen"
+          aria-labelledby="profile-title"
+        >
           <div className="screen-heading">
             <h1 id="profile-title">Профиль</h1>
             <p>Учётная запись университета</p>
           </div>
           {profileError && <p className="error-banner">{profileError}</p>}
           <article className="profile-card">
-            <div className="avatar-big" aria-hidden="true">{initialsOf(user)}</div>
-            <h2>{user ? `${user.firstName} ${user.lastName}`.trim() : ''}</h2>
+            <div className="avatar-big" aria-hidden="true">
+              {initialsOf(user)}
+            </div>
+            <h2>{user ? `${user.firstName} ${user.lastName}`.trim() : ""}</h2>
             <p className="profile-email">{user?.email}</p>
             <dl className="profile-facts">
               <div>
                 <dt>Роль</dt>
-                <dd>{user ? ROLE_LABELS[user.role] ?? user.role : '—'}</dd>
+                <dd>{user ? (ROLE_LABELS[user.role] ?? user.role) : "—"}</dd>
               </div>
               {profile?.groupId && (
                 <div>
@@ -780,12 +1017,19 @@ export function App() {
               )}
               <div>
                 <dt>Вход</dt>
-                <dd>{insideMax ? 'Через MAX' : 'По паролю'}</dd>
+                <dd>{insideMax ? "Через MAX" : "По паролю"}</dd>
               </div>
             </dl>
-            <button className="absence-button" onClick={handleLogout}>Выйти</button>
+            <button className="absence-button" onClick={handleLogout}>
+              Выйти
+            </button>
           </article>
-          {insideMax && <p className="bridge-state">MAX Bridge подключён. Данные запуска не используются как учётная запись.</p>}
+          {insideMax && (
+            <p className="bridge-state">
+              MAX Bridge подключён. Данные запуска не используются как учётная
+              запись.
+            </p>
+          )}
         </section>
       )}
 
@@ -793,7 +1037,7 @@ export function App() {
         {navigation.map((item) => (
           <button
             key={item.id}
-            className={tab === item.id ? 'active' : ''}
+            className={tab === item.id ? "active" : ""}
             onClick={() => setTab(item.id)}
           >
             <span aria-hidden="true">{item.icon}</span>
@@ -804,13 +1048,33 @@ export function App() {
 
       {absenceOpen && (
         <div className="dialog-backdrop" role="presentation">
-          <section className="absence-dialog" role="dialog" aria-modal="true" aria-labelledby="absence-title">
-            <button className="close" aria-label="Закрыть" onClick={() => setAbsenceOpen(false)}>×</button>
+          <section
+            className="absence-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="absence-title"
+          >
+            <button
+              className="close"
+              aria-label="Закрыть"
+              onClick={() => setAbsenceOpen(false)}
+            >
+              ×
+            </button>
             {absenceSent ? (
               <>
                 <h2 id="absence-title">Заявка отправлена</h2>
-                <p>{absenceLessonId ? 'Преподаватель и куратор увидят отсутствие по этой паре.' : 'Куратор увидит период отсутствия и комментарий.'}</p>
-                <button className="primary" onClick={() => setAbsenceOpen(false)}>Готово</button>
+                <p>
+                  {absenceLessonId
+                    ? "Преподаватель и куратор увидят отсутствие по этой паре."
+                    : "Куратор увидит период отсутствия и комментарий."}
+                </p>
+                <button
+                  className="primary"
+                  onClick={() => setAbsenceOpen(false)}
+                >
+                  Готово
+                </button>
               </>
             ) : (
               <form onSubmit={handleAbsenceSubmit}>
@@ -826,20 +1090,38 @@ export function App() {
                 <div className="date-grid">
                   <label>
                     С
-                    <input type="date" name="startDate" required defaultValue={todayDateKey} />
+                    <input
+                      type="date"
+                      name="startDate"
+                      required
+                      defaultValue={todayDateKey}
+                    />
                   </label>
                   <label>
                     По
-                    <input type="date" name="endDate" required defaultValue={todayDateKey} />
+                    <input
+                      type="date"
+                      name="endDate"
+                      required
+                      defaultValue={todayDateKey}
+                    />
                   </label>
                 </div>
                 <label>
                   Комментарий
-                  <textarea name="comment" maxLength={500} placeholder="Необязательно" />
+                  <textarea
+                    name="comment"
+                    maxLength={500}
+                    placeholder="Необязательно"
+                  />
                 </label>
                 {absenceError && <p className="error-banner">{absenceError}</p>}
-                <button className="primary" type="submit" disabled={absenceBusy}>
-                  {absenceBusy ? 'Отправляем…' : 'Отправить заявку'}
+                <button
+                  className="primary"
+                  type="submit"
+                  disabled={absenceBusy}
+                >
+                  {absenceBusy ? "Отправляем…" : "Отправить заявку"}
                 </button>
               </form>
             )}
@@ -848,7 +1130,9 @@ export function App() {
       )}
 
       {getInitData() && (
-        <span className="sr-only">Данные запуска MAX доступны для безопасной проверки на сервере</span>
+        <span className="sr-only">
+          Данные запуска MAX доступны для безопасной проверки на сервере
+        </span>
       )}
     </main>
   );

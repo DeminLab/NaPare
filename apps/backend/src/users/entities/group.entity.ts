@@ -7,42 +7,50 @@ import {
   ManyToOne,
   JoinColumn,
   Index,
-} from 'typeorm';
+} from "typeorm";
 
-import { University } from './university.entity';
-import { Faculty } from './faculty.entity';
+import { University } from "./university.entity";
+import { Faculty } from "./faculty.entity";
 
-@Entity('groups')
-@Index('IDX_groups_university_name', ['universityId', 'name'])
-@Index('IDX_groups_faculty_id', ['facultyId'])
+@Entity("groups")
+@Index("IDX_groups_university_name", ["universityId", "name"])
+@Index("UQ_groups_university_external_id", ["universityId", "externalId"], {
+  unique: true,
+  where: '"externalId" IS NOT NULL',
+})
+@Index("IDX_groups_faculty_id", ["facultyId"])
 export class Group {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id: string;
 
-  @Column({ type: 'uuid' })
+  @Column({ type: "uuid" })
   facultyId: string;
 
   @ManyToOne(() => Faculty, (faculty) => faculty.groups)
-  @JoinColumn({ name: 'facultyId' })
+  @JoinColumn({ name: "facultyId" })
   faculty: Faculty;
 
-  @Column({ type: 'uuid' })
+  @Column({ type: "uuid" })
   universityId: string;
 
   @ManyToOne(() => University, (university) => university.groups)
-  @JoinColumn({ name: 'universityId' })
+  @JoinColumn({ name: "universityId" })
   university: University;
 
   @Column()
   name: string;
 
-  @Column({ type: 'int' })
+  /** Stable identifier from an external university source, for example SIBIT. */
+  @Column({ type: "varchar", nullable: true })
+  externalId: string | null;
+
+  @Column({ type: "int" })
   curriculumYear: number;
 
   @Column({ nullable: true })
   specialization: string;
 
-  @Column({ type: 'uuid', nullable: true })
+  @Column({ type: "uuid", nullable: true })
   curatorId: string;
 
   @CreateDateColumn()

@@ -2,19 +2,23 @@
 
 ## 1. Цель и границы
 
-**Цель:** Регистрация, вход, управление сессиями, JWT, ролевой доступ.
+**Цель:** Вход, управление сессиями, JWT, ролевой доступ, публичные справочники для онбординга.
 
-**Не делает:** Управление структурой вуза (admin), уведомления (notifications).
+**Не делает:** Управление структурой вуза и создание учётных записей (admin), уведомления (notifications), расписание (schedule).
+
+> Актуально по коду: самостоятельная регистрация отключена (`POST /auth/register` → 403), SMS/телефонного входа в бэкенде нет.
 
 ---
 
 ## 2. Сущности
 
-| Сущность | Описание | Ключевые поля |
-|----------|----------|---------------|
-| User | Пользователь | id, phone, email, password_hash, first_name, last_name, roles[], university_id, group_id, max_user_id |
-| DeviceToken | Токен устройства для push | id, user_id, platform, token |
-| AuditLog | Лог действий | id, user_id, action, entity, entity_id, ip |
+| Сущность    | Описание                  | Ключевые поля                                                                                                                                                                      |
+| ----------- | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| User        | Пользователь              | id, email, password_hash, first_name, last_name, phone, avatar_url, **role** (одно значение enum), university_id, group_id, max_user_id, is_active, session_version, last_login_at |
+| DeviceToken | Токен устройства для push | id, user_id, platform, token, device_name, is_active                                                                                                                               |
+| AuditLog    | Лог действий              | id, user_id, action, entity, entity_id, old_values, new_values, ip, user_agent                                                                                                     |
+
+Роли (`users.role`, enum, одна роль на пользователя): `student`, `teacher`, `curator`, `faculty_dean`, `department_head`, `university_admin`, `superadmin`, `developer`.
 
 Подробнее: [architecture/data-model.md](../architecture/data-model.md).
 
@@ -22,18 +26,25 @@
 
 ## 3. API
 
-| Endpoint | Метод | Описание |
-|----------|-------|----------|
-| `/api/v1/auth/request-code` | POST | Запрос SMS/email кода |
-| `/api/v1/auth/verify-code` | POST | Проверка кода, выдача JWT |
-| `/api/v1/auth/login` | POST | Вход по email/паролю |
-| `/api/v1/auth/max` | POST | Вход через MAX Mini App (валидация initData, привязка аккаунта) |
-| `/api/v1/auth/refresh` | POST | Обновление access token |
-| `/api/v1/auth/logout` | POST | Выход (инвалидация refresh) |
-| `/api/v1/users/me` | GET | Текущий пользователь |
-| `/api/v1/users/me` | PATCH | Обновление профиля |
-| `/api/v1/users/me/bind-group` | POST | Привязка к группе |
-| `/api/v1/users/me` | DELETE | Удаление аккаунта |
+| Endpoint                      | Метод  | Описание                                                                                                                |
+| ----------------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------- |
+| `/api/v1/auth/login`          | POST   | Вход по email/паролю                                                                                                    |
+| `/api/v1/auth/max`            | POST   | Вход через MAX Mini App (валидация initData, привязка аккаунта)                                                         |
+| `/api/v1/auth/portal-login`   | POST   | Единый вход в кабинеты; возвращает `workspace`: `student` \| `staff` \| `admin` (для `developer` — 403, отдельный вход) |
+| `/api/v1/auth/register`       | POST   | **Всегда 403** — самостоятельная регистрация отключена (аккаунты создаёт университет)                                   |
+| `/api/v1/auth/universities`   | GET    | Список активных вузов (публичный; сейчас отдаёт только пилотный СИБИТ)                                                  |
+| `/api/v1/auth/rasp-groups`    | GET    | Группы с rasp.sano.ru (публичный, `year` опционально)                                                                   |
+| `/api/v1/auth/rasp-years`     | GET    | Учебные годы с rasp.sano.ru (публичный)                                                                                 |
+| `/api/v1/auth/rasp-schedule`  | GET    | Расписание группы с rasp.sano.ru (публичный, `groupId` обязателен)                                                      |
+| `/api/v1/auth/rasp-catalog`   | GET    | Полный каталог СИБИТа с rasp.sano.ru (публичный)                                                                        |
+| `/api/v1/auth/refresh`        | POST   | Обновление access token (тело: `refreshToken`)                                                                          |
+| `/api/v1/auth/logout`         | POST   | Выход со всех устройств: повышает `sessionVersion`, инвалидируя выданные access/refresh JWT                             |
+| `/api/v1/users/me`            | GET    | Текущий пользователь                                                                                                    |
+| `/api/v1/users/me`            | PATCH  | Обновление профиля                                                                                                      |
+| `/api/v1/users/me`            | DELETE | Удаление аккаунта (деактивация)                                                                                         |
+| `/api/v1/users/me/bind-group` | POST   | Привязка к группе                                                                                                       |
+
+SMS/кодовых эндпоинтов (`request-code`, `verify-code`) **нет**.
 
 Полный OpenAPI: [api/README.md](../api/README.md).
 
@@ -41,13 +52,14 @@
 
 ## 4. Права доступа
 
-| Действие | Роль | Ограничение |
-|----------|------|-------------|
-| Регистрация | Любая | — |
-| Вход | Любая | — |
-| Просмотр профиля | Любая | Только свой профиль |
-| Назначение ролей | university_admin, superadmin | — |
-| Удаление аккаунта | Любая | Только свой аккаунт |
+| Действие                         | Роль                         | Ограничение                                                                                                         |
+| -------------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Вход (login, max, portal-login)  | Любая                        | —                                                                                                                   |
+| Регистрация                      | —                            | Отключена: `POST /auth/register` → 403; аккаунт создаёт `university_admin` / `superadmin` через `POST /admin/users` |
+| Просмотр профиля                 | Любая                        | Только свой профиль (`/users/me`)                                                                                   |
+| Назначение ролей                 | university_admin, superadmin | Иерархия ролей: можно назначить только роль нижнего уровня (`admin.service.canManageRole`)                          |
+| Удаление аккаунта                | Любая                        | Только свой аккаунт; деактивация `isActive=false`                                                                   |
+| Публичные rasp.\* / universities | Без аутентификации           | —                                                                                                                   |
 
 Матрица прав: [architecture/roles-and-permissions.md](../architecture/roles-and-permissions.md).
 
@@ -57,71 +69,69 @@
 
 - S01. Splash / Загрузка — [ui/screens-student.md](../ui/screens-student.md)
 - S02. Welcome (первый запуск)
-- S03. Ввод телефона
-- S04. Ввод SMS-кода
+- S03. Ввод телефона — **спека UI, бэкенд-эндпоинтов SMS-входа нет**
+- S04. Ввод SMS-кода — **спека UI, не реализовано на API**
 - S05. Согласие на ПДн
-- S06. Выбор вуза
+- S06. Выбор вуза (реальный источник — `GET /auth/universities`, rasp.\* справочники)
 - S07. Выбор факультета → курса → группы
 - S08. Профиль (имя + аватар)
 
 **Критичные UX-требования:**
-- Регистрация студента ≤ 2 минуты
-- Вход ≤ 10 секунд
+
+- Вход ≤ 10 секунд (email/пароль, MAX)
 - Согласие на ПДн обязательно
+- `portal-login` определяет, в какой кабинет (`workspace`) попадает пользователь
 
 ---
 
 ## 6. Бизнес-правила и edge-cases
 
-1. **Несколько ролей:** один пользователь может иметь `teacher` + `curator`
-2. **Ожидание назначения роли:** преподаватель регистрируется → видит «Ожидание» → админ назначает роль
-3. **Rate limiting:** SMS — 1 запрос в 60 сек, попытки входа — 5 в минуту
-4. **Refresh token:** mobile — Secure Storage, web — HttpOnly cookie
-5. **Удаление аккаунта:** soft-delete + 30 дней на восстановление
-6. **Восстановление пароля:** по email, ссылка с TTL 24 часа
+1. **Одна роль на пользователя:** `users.role` — enum-колонка; `RolesGuard` сравнивает `requiredRoles.includes(user.role)` — комбинаций `teacher + curator` не бывает (`apps/backend/src/users/entities/user.entity.ts`, `apps/backend/src/common/guards/roles.guard.ts`).
+2. **Создание и восстановление аккаунтов:** админ `POST /admin/users` создаёт запись (email, пароль ≥ 10 символов, имя, роль, опционально группа); `POST /admin/users/:id/reset-password` заменяет пароль только управляемого пользователя своего ВУЗа. В обоих случаях сервер хранит bcrypt-хеш, а интерфейс не сохраняет временный пароль после отправки. Приглашение/саморегистрация недоступны.
+3. **Rate limiting:** `ThrottlerModule` сконфигурирован в `app.module.ts` (100 запросов / 60 сек), но `ThrottlerGuard` нигде не подключён (`APP_GUARD` отсутствует) — лимитов на API фактически нет. SMS-лимитов (3/час, блокировка после 5) не существует вместе с SMS-входом.
+4. **Токены и отзыв:** пара `accessToken` + `refreshToken` подписывается с `JWT_ACCESS_EXPIRATION` / `JWT_REFRESH_EXPIRATION` (`apps/backend/src/config/configuration.ts`), а также содержит текущий `sessionVersion` пользователя. `POST /auth/logout`, блокировка/разблокировка, смена роли и сброс пароля повышают версию: JWT, выданные до этого, перестают проходить и на refresh, и на защищённых маршрутах. Refresh принимает токен в теле `POST /auth/refresh` — отдельной refresh-стратегии/гарда в коде нет. Хранение на клиенте: Secure Storage (mobile) / куки или storage (web).
+5. **Удаление аккаунта:** `DELETE /users/me` → `usersService.deactivate()` — немедленное `isActive=false` (`apps/backend/src/users/users.service.ts:114`). Окна восстановления 30 дней нет; деактивированный пользователь не проходит `login`/`portalLogin`/`maxAuth`.
+6. **Восстановление пароля:** эндпоинта нет (TODO).
 7. **Вход через MAX:** `POST /auth/max` проверяет подпись `initData` токеном `MAX_BOT_TOKEN`; `users.maxUserId` (unique) хранит привязку. Без токена — ответ 503 `MAX_NOT_CONFIGURED`. Непривязанный MAX-аккаунт получает 401 `MAX_ACCOUNT_NOT_LINKED` и привязывается при первом входе по email/паролю. Свежесть `initData` ограничена `MAX_INIT_DATA_TTL_SECONDS` (по умолчанию 1 час).
+8. **Portal login:** `POST /auth/portal-login` → `{ ...auth, workspace }`; маппинг: `student` → student, `teacher`/`curator`/`faculty_dean`/`department_head` → staff, `university_admin`/`superadmin` → admin, `developer` → 403.
+9. **Публичные rasp.\* эндпоинты:** отдают данные rasp.sano.ru (кэш 15 мин, таймаут 15 сек) через `RaspScraperService` (`apps/backend/src/auth/rasp-scraper.service.ts`), экспортируемый из `apps/backend/src/rasp/rasp.module.ts`. `SibitUniversityBootstrapService` (`apps/backend/src/auth/sibit-university-bootstrap.service.ts`) при старте приложения создаёт/активирует пилотный вуз.
 
 ---
 
 ## 7. События и уведомления
 
-| Событие | Тип уведомления | Получатель |
-|---------|-----------------|------------|
-| Успешная регистрация | In-app онбординг | Студент |
-| Назначение роли | Push | Преподаватель / куратор |
-| Удаление аккаунта | Email | Пользователь |
+Модуль не публикует событий на шину `EventBusService` (`apps/backend/src/events/event-bus.service.ts`): ни вход, ни выдача роли, ни деактивация событий не генерируют. Событие «назначение роли → push» в коде не реализовано.
 
 ---
 
 ## 8. Нефункциональные требования
 
-| Требование | Значение |
-|------------|----------|
-| Latency | p95 ≤ 200 мс |
-| Offline | Работает без сети (кэш токенов) |
-| Rate limits | SMS: 1/60с, login: 5/мин |
+| Требование  | Значение                                                 |
+| ----------- | -------------------------------------------------------- |
+| Latency     | p95 ≤ 200 мс                                             |
+| Offline     | Работает без сети (кэш токенов)                          |
+| Rate limits | Не настроены: `ThrottlerGuard` не подключён (см. п. 6.3) |
 
 ---
 
 ## 9. Критерии приёмки
 
-- [ ] Студент регистрируется за ≤ 2 минуты и попадает на «Мой день»
-- [ ] После регистрации видны только данные своей группы
+- [x] Самостоятельная регистрация отключена: `POST /auth/register` всегда возвращает 403; аккаунт выдаётся админом (`POST /admin/users`) — чек-лист «студент регистрируется за ≤ 2 минуты» неприменим
+- [x] `POST /auth/portal-login` возвращает `workspace` и редиректит в нужный кабинет
+- [ ] После входа видны только данные своей группы (tenant + group scope)
 - [ ] Преподаватель не видит чужие пары
 - [ ] Куратор видит только свою группу
-- [ ] Согласие на ПДн обязательно и сохраняется
-- [ ] Можно удалить аккаунт
-- [ ] Вход по email/паролю работает для преподавателей
+- [ ] Вход по email/паролю работает для всех выданных аккаунтов
 - [x] MAX auth через initData работает (эндпоинт реализован и покрыт тестами; для прогона в MAX задайте `MAX_BOT_TOKEN`)
 - [ ] Refresh token автоматически обновляет access token
-- [ ] Rate limiting работает
+- [ ] Рейт-лимиты на вход — не реализованы (`ThrottlerGuard` не подключён)
 
 ---
 
 ## 10. Зависимости
 
 **Зависит от:** —
-**Зависимость от:** notifications (для push при назначении роли), admin (для назначения ролей)
+**Зависимость от:** notifications (для push при назначении роли), admin (для создания учёток и назначения ролей), rasp (справочники групп/лет/расписания)
 
 ---
 
@@ -129,3 +139,14 @@
 
 - [ ] Вход через Госуслуги (после MVP)
 - [ ] Двухфакторная аутентификация (после MVP)
+- [ ] Восстановление пароля по email (эндпоинта нет)
+
+---
+
+## 12. Новое в коде (не описано ранее)
+
+- `POST /auth/portal-login` с полем `workspace` (`auth.service.portalLogin`).
+- Публичные `rasp.*` эндпоинты + `apps/backend/src/rasp/rasp.module.ts` + `apps/backend/src/auth/sibit-university-bootstrap.service.ts` (автосоздание пилотного вуза).
+- Слой разрешений: `apps/backend/src/common/authorization/permissions.ts` (`PERMISSIONS`, `ROLE_PERMISSIONS`, `hasPermission`) + `@RequiresPermission` / `PermissionsGuard` — применяется на всех `/academic` маршрутах; остальные контроллеры используют `@Roles` + `RolesGuard`.
+- Изоляция тенанта: глобальный `apps/backend/src/common/tenant/tenant-context.module.ts` (`TenantContext.assertAccess`) и `apps/backend/src/common/guards/university.guard.ts`; `universityId` кладётся в JWT payload.
+- Аудит: сущность `apps/backend/src/common/entities/audit-log.entity.ts`, чтение через `GET /admin/audit-log` (запись в коде пока не реализована).

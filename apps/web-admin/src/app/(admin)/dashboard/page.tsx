@@ -12,6 +12,7 @@ interface Lesson { id: string; startTime?: string; endTime?: string; subject?: s
 interface Notice { id?: string; title?: string; body?: string; type?: string; createdAt?: string; isRead?: boolean; }
 interface Sync { status?: string; lastSync?: string | null; }
 interface PendingAbsences { meta?: { total?: number }; }
+interface UniversityStats { totalUsers: number; totalStudents: number; totalTeachers: number; totalLessons: number; activeToday: number; }
 type BackendStatus = 'online' | 'offline' | 'unknown';
 
 const dateKey = (value: Date) => value.toISOString().split('T')[0];
@@ -34,6 +35,7 @@ export default function DashboardPage() {
   const [notices, setNotices] = useState<Notice[]>([]);
   const [sync, setSync] = useState<Sync | null>(null);
   const [pendingAbsences, setPendingAbsences] = useState(0);
+  const [stats, setStats] = useState<UniversityStats | null>(null);
   const [backend, setBackend] = useState<BackendStatus>('unknown');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -52,6 +54,7 @@ export default function DashboardPage() {
       apiFetchList<Notice>('/notifications'),
       apiFetch<Sync>('/admin/schedule/sync-status'),
       apiFetch<PendingAbsences>('/absences/pending?limit=1'),
+      apiFetch<UniversityStats>('/admin/stats'),
       apiFetch<{ status: string }>('/health'),
     ]).then((results) => {
       const failed: string[] = [];
@@ -68,8 +71,9 @@ export default function DashboardPage() {
       setNotices(value(4, 'уведомления', []));
       setSync(value<Sync | null>(5, 'синхронизация', null));
       setPendingAbsences(value<PendingAbsences>(6, 'обращения об отсутствии', {}).meta?.total || 0);
-      setBackend(results[7].status === 'fulfilled' ? 'online' : 'offline');
-      if (results[7].status === 'rejected') failed.push('статус backend');
+      setStats(value<UniversityStats | null>(7, 'статистика ВУЗа', null));
+      setBackend(results[8].status === 'fulfilled' ? 'online' : 'offline');
+      if (results[8].status === 'rejected') failed.push('статус backend');
       setPartial(failed);
       if (failed.length === results.length) setError('Не удалось загрузить операционную сводку.');
     }).finally(() => setLoading(false));
@@ -78,9 +82,9 @@ export default function DashboardPage() {
   useEffect(() => { setToday(dateKey(new Date())); load(); }, [load]);
 
   const currentDate = today ? new Date(`${today}T12:00:00`).toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : 'Сегодня';
-  const students = users.filter((user) => role(user) === 'student').length;
-  const teachers = users.filter((user) => role(user) === 'teacher').length;
-  const activeToday = today ? users.filter((user) => user.lastLoginAt?.slice(0, 10) === today).length : 0;
+  const students = stats?.totalStudents ?? users.filter((user) => role(user) === 'student').length;
+  const teachers = stats?.totalTeachers ?? users.filter((user) => role(user) === 'teacher').length;
+  const activeToday = stats?.activeToday ?? (today ? users.filter((user) => user.lastLoginAt?.slice(0, 10) === today).length : 0);
   const unread = notices.filter((notice) => notice.isRead === false).length;
   const nextLesson = lessons.filter(isUpcoming).sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''))[0];
   const nextLessons = lessons.filter((lesson) => lesson.id !== nextLesson?.id).slice(0, 4);
@@ -112,7 +116,7 @@ export default function DashboardPage() {
     <section aria-labelledby="today-title" className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(18rem,.8fr)]"><Card padding="sm"><div className="flex items-center justify-between gap-3 border-b pb-3"><div><h2 id="today-title" className="ds-card-title">Расписание ВУЗа на сегодня</h2><p className="mt-1 text-sm text-[var(--color-text-secondary)]">Ближайшие занятия и изменения, требующие внимания.</p></div><Badge variant="slate">{lessons.length} занятий</Badge></div>{nextLessons.length ? <div className="divide-y">{nextLessons.map((lesson) => <div key={lesson.id} className="flex gap-4 py-4"><div className="w-16 shrink-0 text-sm font-semibold text-[var(--color-brand)]">{time(lesson.startTime)}</div><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold text-[var(--color-text)]">{lesson.subject || 'Без названия'}</p><p className="mt-1 truncate text-xs text-[var(--color-text-secondary)]">{lesson.groupName || 'Группа не указана'} · ауд. {lesson.room || 'не назначена'}</p></div>{lesson.isChanged && <Badge variant="amber">Изменено</Badge>}</div>)}</div> : <EmptyState title="Расписание свободно" description="Нет других занятий для отображения." />}</Card><div className="space-y-6"><Card padding="sm"><div className="flex items-center justify-between"><h2 className="ds-card-title">События ВУЗа</h2><Badge variant={unread ? 'red' : 'slate'}>{unread}</Badge></div>{notices.length ? <div className="mt-2 divide-y">{notices.slice(0, 3).map((notice, index) => <Link key={notice.id || index} href="/notifications" className="block py-3 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-brand-soft)]"><p className="truncate text-sm font-medium text-[var(--color-text)]">{notice.title || 'Системное событие'}</p><p className="mt-1 truncate text-xs text-[var(--color-text-secondary)]">{notice.body || 'Открыть уведомление для подробностей'}</p></Link>)}</div> : <p className="mt-3 text-sm text-[var(--color-text-secondary)]">Новых событий нет.</p>}<Link href="/notifications" className="mt-3 block text-sm font-semibold text-[var(--color-brand)]">Открыть все события →</Link></Card>
       <Card padding="sm"><h2 className="ds-card-title">Быстрые действия</h2><div className="mt-3 grid gap-2 sm:grid-cols-3 lg:grid-cols-1"><Link href="/absences"><Button variant="secondary" fullWidth>Обращения об отсутствии{pendingAbsences ? ` · ${pendingAbsences}` : ''}</Button></Link><Link href="/users"><Button variant="secondary" fullWidth>Пользователи</Button></Link><Link href="/connectors"><Button variant="secondary" fullWidth>Коннекторы</Button></Link><Link href="/audit-log"><Button variant="secondary" fullWidth>Журнал аудита</Button></Link></div></Card></div></section>
 
-    <section aria-labelledby="secondary-title"><div className="mb-3 flex items-center justify-between"><div><h2 id="secondary-title" className="text-sm font-semibold uppercase tracking-[.1em] text-[var(--color-text-secondary)]">Контур ВУЗа</h2><p className="mt-1 text-sm text-[var(--color-text-secondary)]">Базовые показатели доступности и структуры.</p></div><Link href="/structure" className="text-sm font-semibold text-[var(--color-brand)]">Открыть структуру →</Link></div><div className="grid grid-cols-2 gap-3 md:grid-cols-4">{[{ label: 'Пользователи', value: users.length }, { label: 'Активны сегодня', value: activeToday }, { label: 'Студенты', value: students }, { label: 'Преподаватели', value: teachers }, { label: 'Группы', value: groups.length }, { label: 'Факультеты', value: faculties.length }, { label: 'Непрочитанные', value: unread }, { label: 'Синхронизация', value: syncLabel }].map((metric) => <Card key={metric.label} padding="sm"><p className="truncate text-xs text-[var(--color-text-secondary)]">{metric.label}</p><p className="mt-2 truncate text-xl font-bold text-[var(--color-text)]">{typeof metric.value === 'number' ? displayNumber(metric.value) : metric.value}</p></Card>)}</div></section>
+    <section aria-labelledby="secondary-title"><div className="mb-3 flex items-center justify-between"><div><h2 id="secondary-title" className="text-sm font-semibold uppercase tracking-[.1em] text-[var(--color-text-secondary)]">Контур ВУЗа</h2><p className="mt-1 text-sm text-[var(--color-text-secondary)]">Базовые показатели доступности и структуры.</p></div><Link href="/structure" className="text-sm font-semibold text-[var(--color-brand)]">Открыть структуру →</Link></div><div className="grid grid-cols-2 gap-3 md:grid-cols-4">{[{ label: 'Пользователи', value: stats?.totalUsers ?? users.length }, { label: 'Активны сегодня', value: activeToday }, { label: 'Студенты', value: students }, { label: 'Преподаватели', value: teachers }, { label: 'Группы', value: groups.length }, { label: 'Факультеты', value: faculties.length }, { label: 'Занятия в базе', value: stats?.totalLessons ?? '—' }, { label: 'Непрочитанные', value: unread }, { label: 'Синхронизация', value: syncLabel }].map((metric) => <Card key={metric.label} padding="sm"><p className="truncate text-xs text-[var(--color-text-secondary)]">{metric.label}</p><p className="mt-2 truncate text-xl font-bold text-[var(--color-text)]">{typeof metric.value === 'number' ? displayNumber(metric.value) : metric.value}</p></Card>)}</div></section>
 
     {deadlines.length > 0 && <section aria-labelledby="deadlines-title"><h2 id="deadlines-title" className="mb-3 text-sm font-semibold uppercase tracking-[.1em] text-[var(--color-text-secondary)]">Важные сроки и подсказки</h2><div className="grid gap-3 md:grid-cols-3">{deadlines.map((notice, index) => <Link key={notice.id || index} href="/notifications" className="rounded-[var(--radius-md)] border bg-[var(--color-surface)] p-4 transition-colors hover:border-[var(--color-brand)]"><p className="text-sm font-semibold text-[var(--color-text)]">{notice.title || 'Проверьте событие'}</p><p className="mt-1 text-xs text-[var(--color-text-secondary)]">{notice.createdAt ? formatDate(notice.createdAt) : 'Требует проверки'}</p></Link>)}</div></section>}
 

@@ -2,27 +2,31 @@
 
 ## Сводная таблица
 
+> Статус: строки **Mobile** — целевой стек, `apps/mobile` и Flutter/Dart-кода в репозитории нет
+> (см. [mobile-architecture.md](mobile-architecture.md) — спецификация, не реализация).
+> Строки Redis, S3, Push и PostHog описывают инфраструктуру/планы: в коде backend этих интеграций нет.
+
 | Слой | Технология | Версия | Обоснование |
 |------|------------|--------|-------------|
-| **Mobile** | Flutter | 3.x | Один кодобаза iOS + Android, нативная производительность |
-| **Mobile State** | Riverpod | 2.x | Простой, тестируемый стейт-менеджмент |
-| **Mobile Router** | go_router | latest | Декларативная навигация, deep links |
-| **Mobile HTTP** | dio | latest | Interceptors, retry, cancel |
-| **Web** | Next.js | 14+ (App Router) | SSR, отличный DX, адаптивность |
-| **Web State** | TanStack Query | 5.x | Кэширование, оптимистичные обновления |
-| **Web Styling** | Tailwind CSS | 3.x | Утилитарный CSS, быстрая разработка |
-| **MAX Mini-App** | React + Vite | latest | Стандарт для мини-приложений MAX |
+| **Mobile** (целевой, не реализован) | Flutter | 3.x | Один кодобаза iOS + Android, нативная производительность |
+| **Mobile State** (целевой) | Riverpod | 2.x | Простой, тестируемый стейт-менеджмент |
+| **Mobile Router** (целевой) | go_router | latest | Декларативная навигация, deep links |
+| **Mobile HTTP** (целевой) | dio | latest | Interceptors, retry, cancel |
+| **Web** | Next.js | 15.5.x (App Router) | SSR, отличный DX, адаптивность; все 6 Next-приложений на 15.5.24 |
+| **Web State** | React state + localStorage | — | Рабочие пространства работают на `useState`/`useEffect`; TanStack Query, Zustand и axios есть только в legacy `apps/web` |
+| **Web Styling** | Tailwind CSS | 3.x | Утилитарный CSS; токены — `packages/design-tokens` (preset + `styles.css`) |
+| **MAX Mini-App** | React + Vite | 5.x | Стандарт для мини-приложений MAX, порт 3005 |
 | **Backend** | NestJS | 10+ | Модульный монолит, OpenAPI из коробки |
-| **ORM** | TypeORM | 0.3+ | Миграции, декораторы, интеграция с NestJS |
+| **ORM** | TypeORM | 0.3+ | Миграции, декораторы, интеграция с NestJS (Prisma не используется) |
 | **БД** | PostgreSQL | 16 | Надёжность, JSONB, полнотекстовый поиск, RLS |
-| **Кэш / очереди** | Redis | 7 | Сессии, очереди уведомлений, rate limiting |
-| **Файлы** | S3-совместимое | — | Yandex Object Storage / MinIO для файлов ДЗ |
-| **Push (Android)** | Firebase Cloud Messaging | — | Стандарт |
-| **Push (iOS)** | Apple Push Notification | — | Стандарт |
-| **Auth** | JWT (access + refresh) | — | Stateless, см. [ADR-0004](../decisions/0004-jwt-auth.md) |
-| **API Docs** | OpenAPI 3 (Swagger) | — | Генерируется из кода = source of truth |
-| **Аналитика** | PostHog | — | Продуктовые события |
-| **Мониторинг ошибок** | Sentry | — | Ошибки на всех клиентах |
+| **Кэш / очереди** | Redis | 7 | Контейнер и `REDIS_URL` есть в Docker Compose; клиент Redis в коде backend не подключён, rate limiting — `ThrottlerModule` без guard'а |
+| **Файлы** | S3-совместимое | — | Только переменные `STORAGE_*` в `apps/backend/.env.example`; SDK в коде не используется |
+| **Push (Android)** | Firebase Cloud Messaging | — | Целевой канал; device token регистрируется (`POST /devices/token`), отправка не реализована |
+| **Push (iOS)** | Apple Push Notification | — | Целевой канал, отправка не реализована |
+| **Auth** | JWT (access + refresh) | — | Stateless, см. [ADR-0003](../decisions/0003-jwt-auth.md) |
+| **API Docs** | OpenAPI 3 (Swagger) | — | Генерируется из кода = source of truth, `/api/v1/docs` |
+| **Аналитика** | PostHog | — | Не подключён (ни в backend, ни в клиентах) |
+| **Мониторинг ошибок** | Sentry | 7.x | `@sentry/node` в `apps/backend/src/main.ts` при наличии `SENTRY_DSN` |
 | **CI/CD** | GitHub Actions | — | Lint → Test → Build → Deploy |
 | **Контейнеризация** | Docker + Docker Compose | — | Локальная разработка + деплой |
 | **Оркестрация** | Kubernetes | — | Production (после пилота) |
@@ -32,24 +36,31 @@
 1. **TypeScript везде** где возможно (web + backend + max-miniapp)
 2. **Модульный монолит** на старте — см. [ADR-0001](../decisions/0001-modular-monolith.md)
 3. **OpenAPI из кода** — генерируется, не рисуется вручную
-4. **Мультивузовость** через `university_id` — см. [ADR-0005](../decisions/0005-multitenancy-university-id.md)
+4. **Мультивузовость** через `university_id` — см. [ADR-0002](../decisions/0002-multitenancy-university-id.md)
 
 ## Монорепозиторий
 
 ```
 napare/
 ├── apps/
-│   ├── backend/        # NestJS
-│   ├── mobile/         # Flutter
-│   ├── web/            # Next.js
-│   └── max-miniapp/    # React + Vite
+│   ├── backend/        # NestJS API (порт 3000)
+│   ├── web-portal/     # Next.js 15.5 — единый вход (порт 3006)
+│   ├── web-student/    # Next.js 15.5 — студент, basePath /student (порт 3001)
+│   ├── web-staff/      # Next.js 15.5 — преподаватель, basePath /staff (порт 3002)
+│   ├── web-admin/      # Next.js 15.5 — деканат, basePath /deanery (порт 3003)
+│   ├── web-developer/  # Next.js 15.5 — диагностика (порт 3004)
+│   ├── web/            # Next.js 15.5 — legacy-лендинг, не деплоится
+│   └── max-miniapp/    # React + Vite (порт 3005)
 ├── packages/
-│   ├── shared/         # Общие типы, константы
-│   ├── ui/             # Общие UI-компоненты
-│   └── api-client/     # Сгенерированный API-клиент
+│   ├── shared/         # Общие типы и константы (приложениями пока не импортируется)
+│   ├── api-client/     # API-клиент (приложениями пока не импортируется)
+│   ├── design-tokens/  # Tailwind preset, styles.css, src/index.ts
+│   └── ui/             # Общие UI-компоненты (index.tsx, icons.tsx, WorkspaceShell.tsx)
 ├── docs/               # Документация
-├── infrastructure/     # Docker, K8s
-└── scripts/            # Утилиты
+├── infrastructure/     # Docker, nginx
+├── deploy/             # Примеры nginx-конфигов
+├── scripts/            # Утилиты
+└── docker-compose{,.dev,.prod}.yml
 ```
 
 Альтернатива для команды из 2 человек — отдельные репозитории (см. [architecture/system-overview.md](system-overview.md)).

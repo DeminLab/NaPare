@@ -1,16 +1,16 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { Injectable, NotFoundException } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { In, Repository } from "typeorm";
 
-import { User } from './entities/user.entity';
-import { CreateUserDto } from './dto/create-user.dto';
-import { TenantContext } from '../common/tenant/tenant-context';
-import { UserRole } from '../auth/interfaces/user-role';
+import { User } from "./entities/user.entity";
+import { CreateUserDto } from "./dto/create-user.dto";
+import { TenantContext } from "../common/tenant/tenant-context";
+import { UserRole } from "../auth/interfaces/user-role";
 import {
   PaginatedResponse,
   PaginationQueryDto,
   toPaginatedResponse,
-} from '../common/dto/pagination-query.dto';
+} from "../common/dto/pagination-query.dto";
 
 @Injectable()
 export class UsersService {
@@ -34,8 +34,8 @@ export class UsersService {
 
   async findByEmail(email: string): Promise<User | null> {
     return this.usersRepository
-      .createQueryBuilder('user')
-      .where('LOWER(user.email) = LOWER(:email)', { email: email.trim() })
+      .createQueryBuilder("user")
+      .where("LOWER(user.email) = LOWER(:email)", { email: email.trim() })
       .getOne();
   }
 
@@ -52,7 +52,7 @@ export class UsersService {
     this.tenantContext.assertAccess(universityId);
     const [data, total] = await this.usersRepository.findAndCount({
       where: { universityId, ...(roles?.length ? { role: In(roles) } : {}) },
-      order: { createdAt: 'DESC' },
+      order: { createdAt: "DESC" },
       skip: (pagination.page - 1) * pagination.limit,
       take: pagination.limit,
     });
@@ -67,7 +67,7 @@ export class UsersService {
     this.tenantContext.assertAccess(universityId);
     const [data, total] = await this.usersRepository.findAndCount({
       where: { groupId, universityId },
-      order: { lastName: 'ASC', firstName: 'ASC' },
+      order: { lastName: "ASC", firstName: "ASC" },
       skip: (pagination.page - 1) * pagination.limit,
       take: pagination.limit,
     });
@@ -78,15 +78,18 @@ export class UsersService {
     this.tenantContext.assertAccess(universityId);
     return this.usersRepository.find({
       where: { universityId, isActive: true },
-      order: { lastName: 'ASC', firstName: 'ASC' },
+      order: { lastName: "ASC", firstName: "ASC" },
     });
   }
 
-  async findActiveByGroupId(universityId: string, groupId: string): Promise<User[]> {
+  async findActiveByGroupId(
+    universityId: string,
+    groupId: string,
+  ): Promise<User[]> {
     this.tenantContext.assertAccess(universityId);
     return this.usersRepository.find({
       where: { universityId, groupId, isActive: true },
-      order: { lastName: 'ASC', firstName: 'ASC' },
+      order: { lastName: "ASC", firstName: "ASC" },
     });
   }
 
@@ -109,6 +112,12 @@ export class UsersService {
     const user = await this.findById(id);
     if (!user) return;
     await this.usersRepository.update(user.id, { lastLoginAt: new Date() });
+  }
+
+  async invalidateSessions(id: string): Promise<void> {
+    const user = await this.findById(id);
+    if (!user) throw new NotFoundException(`User with id ${id} not found`);
+    await this.usersRepository.increment({ id: user.id }, "sessionVersion", 1);
   }
 
   async deactivate(id: string): Promise<void> {

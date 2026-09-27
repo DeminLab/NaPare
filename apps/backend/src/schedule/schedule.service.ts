@@ -1,25 +1,32 @@
-import { ForbiddenException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, FindManyOptions, Repository, Between } from 'typeorm';
-import { EventEmitter2 } from '@nestjs/event-emitter';
+import {
+  ForbiddenException,
+  Injectable,
+  Logger,
+  NotFoundException,
+  Optional,
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { DataSource, FindManyOptions, Repository, Between } from "typeorm";
+import { EventEmitter2 } from "@nestjs/event-emitter";
 
-import { Lesson } from './entities/lesson.entity';
-import { LessonChange } from './entities/lesson-change.entity';
-import { CreateLessonDto } from './dto/create-lesson.dto';
-import { UpdateLessonDto } from './dto/update-lesson.dto';
-import { TenantContext } from '../common/tenant/tenant-context';
-import { getDayRange } from './utils/date-range';
-import { JsonObject } from '../common/types/json-value.type';
-import { EventBusService } from '../events/event-bus.service';
-import { LessonOccurrence } from '../academic/entities/lesson-occurrence.entity';
-import { ScheduleChange } from '../academic/entities/schedule-change.entity';
-import { RaspLesson, RaspScraperService } from '../auth/rasp-scraper.service';
-import { UserRole } from '../auth/interfaces/user-role';
+import { Lesson } from "./entities/lesson.entity";
+import { LessonChange } from "./entities/lesson-change.entity";
+import { CreateLessonDto } from "./dto/create-lesson.dto";
+import { UpdateLessonDto } from "./dto/update-lesson.dto";
+import { TenantContext } from "../common/tenant/tenant-context";
+import { getDayRange } from "./utils/date-range";
+import { JsonObject } from "../common/types/json-value.type";
+import { EventBusService } from "../events/event-bus.service";
+import { LessonOccurrence } from "../academic/entities/lesson-occurrence.entity";
+import { ScheduleChange } from "../academic/entities/schedule-change.entity";
+import { RaspLesson, RaspScraperService } from "../auth/rasp-scraper.service";
+import { Group } from "../users/entities/group.entity";
+import { UserRole } from "../auth/interfaces/user-role";
 import {
   PaginatedResponse,
   PaginationQueryDto,
   toPaginatedResponse,
-} from '../common/dto/pagination-query.dto';
+} from "../common/dto/pagination-query.dto";
 
 @Injectable()
 export class ScheduleService {
@@ -33,12 +40,17 @@ export class ScheduleService {
     private readonly eventEmitter: EventEmitter2,
     private readonly tenantContext: TenantContext,
     private readonly dataSource: DataSource,
-    @Optional() @InjectRepository(LessonOccurrence)
+    @Optional()
+    @InjectRepository(LessonOccurrence)
     private readonly occurrenceRepository?: Repository<LessonOccurrence>,
-    @Optional() @InjectRepository(ScheduleChange)
+    @Optional()
+    @InjectRepository(ScheduleChange)
     private readonly academicChangeRepository?: Repository<ScheduleChange>,
     @Optional() private readonly eventBus?: EventBusService,
     @Optional() private readonly raspScraperService?: RaspScraperService,
+    @Optional()
+    @InjectRepository(Group)
+    private readonly groupRepository?: Repository<Group>,
   ) {}
 
   async findById(id: string): Promise<Lesson> {
@@ -54,7 +66,12 @@ export class ScheduleService {
 
   async findAccessibleById(
     id: string,
-    user: { id: string; universityId: string; role: UserRole; groupId?: string | null },
+    user: {
+      id: string;
+      universityId: string;
+      role: UserRole;
+      groupId?: string | null;
+    },
   ): Promise<Lesson> {
     const lesson = await this.lessonRepository.findOne({
       where: { id, universityId: user.universityId },
@@ -62,11 +79,18 @@ export class ScheduleService {
     if (!lesson) {
       throw new NotFoundException(`Lesson with id ${id} not found`);
     }
-    if (user.role === UserRole.STUDENT && (!user.groupId || lesson.groupId !== user.groupId)) {
-      throw new ForbiddenException('Students can only access lessons for their own group');
+    if (
+      user.role === UserRole.STUDENT &&
+      (!user.groupId || lesson.groupId !== user.groupId)
+    ) {
+      throw new ForbiddenException(
+        "Students can only access lessons for their own group",
+      );
     }
     if (user.role === UserRole.TEACHER && lesson.teacherId !== user.id) {
-      throw new ForbiddenException('Teachers can only access their own lessons');
+      throw new ForbiddenException(
+        "Teachers can only access their own lessons",
+      );
     }
     return lesson;
   }
@@ -78,7 +102,7 @@ export class ScheduleService {
     await this.findById(lessonId);
     const [data, total] = await this.lessonChangeRepository.findAndCount({
       where: { lessonId },
-      order: { createdAt: 'DESC' },
+      order: { createdAt: "DESC" },
       skip: (pagination.page - 1) * pagination.limit,
       take: pagination.limit,
     });
@@ -93,13 +117,16 @@ export class ScheduleService {
     this.tenantContext.assertAccess(universityId);
     const { startDate, endDate } = getDayRange(date);
 
-    return this.findPaginated({
-      where: {
-        universityId,
-        startDate: Between(startDate, endDate),
+    return this.findPaginated(
+      {
+        where: {
+          universityId,
+          startDate: Between(startDate, endDate),
+        },
+        order: { pairNumber: "ASC" },
       },
-      order: { pairNumber: 'ASC' },
-    }, pagination);
+      pagination,
+    );
   }
 
   async findByDateRange(
@@ -109,13 +136,16 @@ export class ScheduleService {
     pagination: PaginationQueryDto = new PaginationQueryDto(),
   ): Promise<PaginatedResponse<Lesson>> {
     this.tenantContext.assertAccess(universityId);
-    return this.findPaginated({
-      where: {
-        universityId,
-        startDate: Between(new Date(startDate), new Date(endDate)),
+    return this.findPaginated(
+      {
+        where: {
+          universityId,
+          startDate: Between(new Date(startDate), new Date(endDate)),
+        },
+        order: { startDate: "ASC", pairNumber: "ASC" },
       },
-      order: { startDate: 'ASC', pairNumber: 'ASC' },
-    }, pagination);
+      pagination,
+    );
   }
 
   async findForStudentDateRange(
@@ -125,24 +155,36 @@ export class ScheduleService {
     endDate: string,
     pagination: PaginationQueryDto = new PaginationQueryDto(),
   ): Promise<PaginatedResponse<Lesson>> {
-    if (groupId && /^\d+$/.test(groupId) && this.raspScraperService) {
-      const sourceLessons = await this.raspScraperService.getSchedule(groupId);
+    const resolvedGroupId = await this.resolveStudentGroupId(
+      universityId,
+      groupId,
+    );
+    if (
+      resolvedGroupId &&
+      /^\d+$/.test(resolvedGroupId) &&
+      this.raspScraperService
+    ) {
+      const sourceLessons =
+        await this.raspScraperService.getSchedule(resolvedGroupId);
       const lessons = sourceLessons
         .filter((lesson) => lesson.date >= startDate && lesson.date <= endDate)
         .map((lesson) => this.mapRaspLesson(lesson, universityId));
       return toPaginatedResponse(lessons, lessons.length, pagination);
     }
-    if (!groupId) {
+    if (!resolvedGroupId) {
       return toPaginatedResponse([], 0, pagination);
     }
-    return this.findPaginated({
-      where: {
-        universityId,
-        groupId,
-        startDate: Between(new Date(startDate), new Date(endDate)),
+    return this.findPaginated(
+      {
+        where: {
+          universityId,
+          groupId: resolvedGroupId,
+          startDate: Between(new Date(startDate), new Date(endDate)),
+        },
+        order: { startDate: "ASC", pairNumber: "ASC" },
       },
-      order: { startDate: 'ASC', pairNumber: 'ASC' },
-    }, pagination);
+      pagination,
+    );
   }
 
   async findForStudentDate(
@@ -151,17 +193,44 @@ export class ScheduleService {
     date: string,
     pagination: PaginationQueryDto = new PaginationQueryDto(),
   ): Promise<PaginatedResponse<Lesson>> {
-    if (groupId && /^\d+$/.test(groupId) && this.raspScraperService) {
-      const sourceLessons = await this.raspScraperService.getSchedule(groupId);
+    const resolvedGroupId = await this.resolveStudentGroupId(
+      universityId,
+      groupId,
+    );
+    if (
+      resolvedGroupId &&
+      /^\d+$/.test(resolvedGroupId) &&
+      this.raspScraperService
+    ) {
+      const sourceLessons =
+        await this.raspScraperService.getSchedule(resolvedGroupId);
       const lessons = sourceLessons
         .filter((lesson) => lesson.date === date)
         .map((lesson) => this.mapRaspLesson(lesson, universityId));
       return toPaginatedResponse(lessons, lessons.length, pagination);
     }
-    if (!groupId) {
+    if (!resolvedGroupId) {
       return toPaginatedResponse([], 0, pagination);
     }
-    return this.findByGroup(universityId, groupId, date, pagination);
+    return this.findByGroup(universityId, resolvedGroupId, date, pagination);
+  }
+
+  /**
+   * Students who registered before a SIBIT sync can still carry the numeric
+   * source id in an unexpired token. Resolve it to the imported local group so
+   * downstream actions receive persisted lesson UUIDs immediately.
+   */
+  private async resolveStudentGroupId(
+    universityId: string,
+    groupId: string | null | undefined,
+  ): Promise<string | null | undefined> {
+    if (!groupId || !/^\d+$/.test(groupId) || !this.groupRepository) {
+      return groupId;
+    }
+    const group = await this.groupRepository.findOne({
+      where: { universityId, externalId: groupId },
+    });
+    return group?.id ?? groupId;
   }
 
   private mapRaspLesson(lesson: RaspLesson, universityId: string): Lesson {
@@ -174,11 +243,11 @@ export class ScheduleService {
       courseId: null,
       seriesId: null,
       occurrenceId: null,
-      teacherId: lesson.teacherId || '',
+      teacherId: lesson.teacherId || "",
       subject: lesson.subject,
-      subjectType: lesson.subjectType || '',
-      room: lesson.room || '',
-      building: '',
+      subjectType: lesson.subjectType || "",
+      room: lesson.room || "",
+      building: "",
       dayOfWeek: lesson.dayOfWeek,
       startTime: lesson.startTime,
       endTime: lesson.endTime,
@@ -186,19 +255,21 @@ export class ScheduleService {
       weekType: lesson.weekType,
       startDate,
       endDate,
-      teacherName: lesson.teacher || '',
+      teacherName: lesson.teacher || "",
       groupName: lesson.groupName,
-      subgroup: lesson.subgroup || '',
-      department: '',
-      faculty: '',
-      notes: lesson.isReplacement ? 'Замена' : '',
+      subgroup: lesson.subgroup || "",
+      department: "",
+      faculty: "",
+      notes: lesson.isReplacement ? "Замена" : "",
       isChanged: lesson.isReplacement,
-      changeDescription: lesson.isReplacement ? 'Занятие изменено в источнике расписания' : '',
-      source: 'rasp.sano.ru',
+      changeDescription: lesson.isReplacement
+        ? "Занятие изменено в источнике расписания"
+        : "",
+      source: "rasp.sano.ru",
       externalId: lesson.lessonId,
       lastSyncedAt: null,
       sourceVersion: null,
-      syncStatus: 'synced',
+      syncStatus: "synced",
       createdAt: startDate,
       updatedAt: startDate,
     };
@@ -213,14 +284,17 @@ export class ScheduleService {
     this.tenantContext.assertAccess(universityId);
     const { startDate, endDate } = getDayRange(date);
 
-    return this.findPaginated({
-      where: {
-        universityId,
-        groupId,
-        startDate: Between(startDate, endDate),
+    return this.findPaginated(
+      {
+        where: {
+          universityId,
+          groupId,
+          startDate: Between(startDate, endDate),
+        },
+        order: { pairNumber: "ASC" },
       },
-      order: { pairNumber: 'ASC' },
-    }, pagination);
+      pagination,
+    );
   }
 
   async findByTeacher(
@@ -232,14 +306,17 @@ export class ScheduleService {
     this.tenantContext.assertAccess(universityId);
     const { startDate, endDate } = getDayRange(date);
 
-    return this.findPaginated({
-      where: {
-        universityId,
-        teacherId,
-        startDate: Between(startDate, endDate),
+    return this.findPaginated(
+      {
+        where: {
+          universityId,
+          teacherId,
+          startDate: Between(startDate, endDate),
+        },
+        order: { pairNumber: "ASC" },
       },
-      order: { pairNumber: 'ASC' },
-    }, pagination);
+      pagination,
+    );
   }
 
   async findByTeacherDateRange(
@@ -250,23 +327,31 @@ export class ScheduleService {
     pagination: PaginationQueryDto = new PaginationQueryDto(),
   ): Promise<PaginatedResponse<Lesson>> {
     this.tenantContext.assertAccess(universityId);
-    return this.findPaginated({
-      where: {
-        universityId,
-        teacherId,
-        startDate: Between(new Date(startDate), new Date(endDate)),
+    return this.findPaginated(
+      {
+        where: {
+          universityId,
+          teacherId,
+          startDate: Between(new Date(startDate), new Date(endDate)),
+        },
+        order: { startDate: "ASC", pairNumber: "ASC" },
       },
-      order: { startDate: 'ASC', pairNumber: 'ASC' },
-    }, pagination);
+      pagination,
+    );
   }
 
-  async getTeacherGroupIds(universityId: string, teacherId: string): Promise<string[]> {
+  async getTeacherGroupIds(
+    universityId: string,
+    teacherId: string,
+  ): Promise<string[]> {
     this.tenantContext.assertAccess(universityId);
     const lessons = await this.lessonRepository.find({
-      select: ['groupId'],
+      select: ["groupId"],
       where: { universityId, teacherId },
     });
-    return [...new Set(lessons.map((lesson) => lesson.groupId).filter(Boolean))];
+    return [
+      ...new Set(lessons.map((lesson) => lesson.groupId).filter(Boolean)),
+    ];
   }
 
   async create(createLessonDto: CreateLessonDto): Promise<Lesson> {
@@ -274,15 +359,21 @@ export class ScheduleService {
       this.tenantContext.assertAccess(createLessonDto.universityId);
     }
     const actor = this.tenantContext.getUser();
-    if (actor?.role === UserRole.TEACHER && createLessonDto.teacherId && createLessonDto.teacherId !== actor.id) {
-      throw new ForbiddenException('Teachers can only create lessons for themselves');
+    if (
+      actor?.role === UserRole.TEACHER &&
+      createLessonDto.teacherId &&
+      createLessonDto.teacherId !== actor.id
+    ) {
+      throw new ForbiddenException(
+        "Teachers can only create lessons for themselves",
+      );
     }
     const lesson = this.lessonRepository.create({
       ...createLessonDto,
       ...(actor?.role === UserRole.TEACHER ? { teacherId: actor.id } : {}),
-      source: createLessonDto.source ?? 'manual',
+      source: createLessonDto.source ?? "manual",
       lastSyncedAt: createLessonDto.source ? new Date() : null,
-      syncStatus: createLessonDto.source ? 'synced' : 'unknown',
+      syncStatus: createLessonDto.source ? "synced" : "unknown",
     });
     return this.lessonRepository.save(lesson);
   }
@@ -304,16 +395,22 @@ export class ScheduleService {
       const savedLesson = await manager.getRepository(Lesson).save(lesson);
       await manager.getRepository(LessonChange).save({
         lessonId: lesson.id,
-        changeType: 'moved',
+        changeType: "moved",
         oldValues: oldValue,
         newValues: lessonChangeValues(savedLesson),
         changedBy: actor?.id ?? null,
-        reason: updateLessonDto.changeDescription ?? 'Lesson updated',
-        source: updateLessonDto.source ?? 'manual',
+        reason: updateLessonDto.changeDescription ?? "Lesson updated",
+        source: updateLessonDto.source ?? "manual",
       });
 
-      if (lesson.occurrenceId && this.occurrenceRepository && this.academicChangeRepository) {
-        const occurrence = await manager.getRepository(LessonOccurrence).findOne({ where: { id: lesson.occurrenceId } });
+      if (
+        lesson.occurrenceId &&
+        this.occurrenceRepository &&
+        this.academicChangeRepository
+      ) {
+        const occurrence = await manager
+          .getRepository(LessonOccurrence)
+          .findOne({ where: { id: lesson.occurrenceId } });
         if (occurrence) {
           const occurrenceOriginal = occurrenceSnapshot(occurrence);
           Object.assign(occurrence, {
@@ -321,19 +418,22 @@ export class ScheduleService {
             building: savedLesson.building,
             startsAt: savedLesson.startDate,
             endsAt: savedLesson.endDate,
-            status: savedLesson.isChanged ? 'rescheduled' : occurrence.status,
+            status: savedLesson.isChanged ? "rescheduled" : occurrence.status,
             changeReason: savedLesson.changeDescription,
           });
-          const occurrenceUpdated = await manager.getRepository(LessonOccurrence).save(occurrence);
+          const occurrenceUpdated = await manager
+            .getRepository(LessonOccurrence)
+            .save(occurrence);
           await manager.getRepository(ScheduleChange).save({
             universityId: occurrenceUpdated.universityId,
             occurrenceId: occurrenceUpdated.id,
             legacyLessonId: lesson.id,
             originalValue: occurrenceOriginal,
             newValue: occurrenceSnapshot(occurrenceUpdated),
-            reason: updateLessonDto.changeDescription ?? 'Legacy lesson updated',
+            reason:
+              updateLessonDto.changeDescription ?? "Legacy lesson updated",
             actorId: actor?.id ?? null,
-            source: updateLessonDto.source ?? 'legacy',
+            source: updateLessonDto.source ?? "legacy",
             timestamp: new Date(),
           });
         }
@@ -343,7 +443,7 @@ export class ScheduleService {
     });
 
     // Emit change event
-    this.eventEmitter.emit('lesson.changed', {
+    this.eventEmitter.emit("lesson.changed", {
       universityId: lesson.universityId,
       lessonId: lesson.id,
       oldValue,
@@ -351,16 +451,18 @@ export class ScheduleService {
     });
 
     const updatedValues = lessonChangeValues(updatedLesson);
-    const eventType = oldValue.room !== updatedValues.room
-      ? 'room.changed'
-      : oldValue.startTime !== updatedValues.startTime || oldValue.endTime !== updatedValues.endTime
-        ? 'lesson.rescheduled'
-        : 'lesson.changed';
+    const eventType =
+      oldValue.room !== updatedValues.room
+        ? "room.changed"
+        : oldValue.startTime !== updatedValues.startTime ||
+            oldValue.endTime !== updatedValues.endTime
+          ? "lesson.rescheduled"
+          : "lesson.changed";
     await this.eventBus?.publish({
       type: eventType,
       universityId: lesson.universityId,
       actor: this.eventActor(),
-      target: { type: 'lesson', id: lesson.id },
+      target: { type: "lesson", id: lesson.id },
       payload: {
         oldValue,
         newValue: updatedValues,
@@ -368,7 +470,7 @@ export class ScheduleService {
         teacherId: lesson.teacherId,
         deepLink: `/week?date=${lesson.startDate.toISOString().slice(0, 10)}`,
       },
-      priority: eventType === 'lesson.changed' ? 'normal' : 'high',
+      priority: eventType === "lesson.changed" ? "normal" : "high",
     });
 
     return updatedLesson;
@@ -379,24 +481,26 @@ export class ScheduleService {
     this.assertTeacherCanManageLesson(lesson);
     await this.lessonRepository.delete(lesson.id);
     await this.eventBus?.publish({
-      type: 'lesson.cancelled',
+      type: "lesson.cancelled",
       universityId: lesson.universityId,
       actor: this.eventActor(),
-      target: { type: 'lesson', id: lesson.id },
+      target: { type: "lesson", id: lesson.id },
       payload: {
         oldValue: lessonChangeValues(lesson),
         groupId: lesson.groupId,
         teacherId: lesson.teacherId,
         deepLink: `/week?date=${lesson.startDate.toISOString().slice(0, 10)}`,
       },
-      priority: 'high',
+      priority: "high",
     });
   }
 
   private assertTeacherCanManageLesson(lesson: Lesson): void {
     const user = this.tenantContext.getUser();
     if (user?.role === UserRole.TEACHER && lesson.teacherId !== user.id) {
-      throw new ForbiddenException('Teachers can only manage their own lessons');
+      throw new ForbiddenException(
+        "Teachers can only manage their own lessons",
+      );
     }
   }
 
@@ -429,12 +533,15 @@ export class ScheduleService {
       }
     } catch (error) {
       await this.eventBus?.publish({
-        type: 'sync.failed',
+        type: "sync.failed",
         universityId,
         actor: this.eventActor(),
-        target: { type: 'schedule', id: universityId },
-        payload: { message: error instanceof Error ? error.message : 'Schedule import failed' },
-        priority: 'urgent',
+        target: { type: "schedule", id: universityId },
+        payload: {
+          message:
+            error instanceof Error ? error.message : "Schedule import failed",
+        },
+        priority: "urgent",
       });
       throw error;
     }
@@ -445,12 +552,12 @@ export class ScheduleService {
 
     const result = { imported, updated };
     await this.eventBus?.publish({
-      type: 'sync.completed',
+      type: "sync.completed",
       universityId,
       actor: this.eventActor(),
-      target: { type: 'schedule', id: universityId },
+      target: { type: "schedule", id: universityId },
       payload: result,
-      priority: 'normal',
+      priority: "normal",
     });
     return result;
   }
@@ -463,14 +570,17 @@ export class ScheduleService {
     this.tenantContext.assertAccess(universityId);
     const { startDate, endDate } = getDayRange(date);
 
-    return this.findPaginated({
-      where: {
-        universityId,
-        startDate: Between(startDate, endDate),
-        isChanged: true,
+    return this.findPaginated(
+      {
+        where: {
+          universityId,
+          startDate: Between(startDate, endDate),
+          isChanged: true,
+        },
+        order: { pairNumber: "ASC" },
       },
-      order: { pairNumber: 'ASC' },
-    }, pagination);
+      pagination,
+    );
   }
 
   private async findPaginated(
@@ -487,7 +597,9 @@ export class ScheduleService {
 
   private eventActor() {
     const user = this.tenantContext.getUser();
-    return user ? { id: user.id, type: 'user' as const, role: user.role } : { type: 'system' as const };
+    return user
+      ? { id: user.id, type: "user" as const, role: user.role }
+      : { type: "system" as const };
   }
 }
 

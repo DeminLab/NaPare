@@ -1,22 +1,29 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException, Optional } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between, ArrayContains, In } from 'typeorm';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+  Optional,
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository, Between, ArrayContains, In } from "typeorm";
 
-import { Absence } from './entities/absence.entity';
-import { CreateAbsenceDto } from './dto/create-absence.dto';
-import { UpdateAbsenceDto } from './dto/update-absence.dto';
-import { TenantContext } from '../common/tenant/tenant-context';
-import { UserRole } from '../auth/interfaces/user-role';
+import { Absence } from "./entities/absence.entity";
+import { CreateAbsenceDto } from "./dto/create-absence.dto";
+import { UpdateAbsenceDto } from "./dto/update-absence.dto";
+import { TenantContext } from "../common/tenant/tenant-context";
+import { UserRole } from "../auth/interfaces/user-role";
 import {
   PaginatedResponse,
   PaginationQueryDto,
   toPaginatedResponse,
-} from '../common/dto/pagination-query.dto';
-import { EventBusService } from '../events/event-bus.service';
-import { AttendanceRecord } from './entities/attendance-record.entity';
-import { MarkAttendanceDto } from './dto/mark-attendance.dto';
-import { Lesson } from '../schedule/entities/lesson.entity';
-import { User } from '../users/entities/user.entity';
+} from "../common/dto/pagination-query.dto";
+import { EventBusService } from "../events/event-bus.service";
+import { AttendanceRecord } from "./entities/attendance-record.entity";
+import { MarkAttendanceDto } from "./dto/mark-attendance.dto";
+import { Lesson } from "../schedule/entities/lesson.entity";
+import { User } from "../users/entities/user.entity";
+import { Group } from "../users/entities/group.entity";
 
 export const ABSENCE_STAFF_ROLES: UserRole[] = [
   UserRole.TEACHER,
@@ -28,7 +35,7 @@ export const ABSENCE_STAFF_ROLES: UserRole[] = [
 ];
 
 export type PendingAbsence = Absence & {
-  student: Pick<User, 'id' | 'firstName' | 'lastName' | 'groupId'> | null;
+  student: Pick<User, "id" | "firstName" | "lastName" | "groupId"> | null;
 };
 
 @Injectable()
@@ -43,6 +50,9 @@ export class AbsencesService {
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     private readonly tenantContext: TenantContext,
+    @Optional()
+    @InjectRepository(Group)
+    private readonly groupRepository?: Repository<Group>,
     @Optional() private readonly eventBus?: EventBusService,
   ) {}
 
@@ -51,11 +61,13 @@ export class AbsencesService {
     pagination: PaginationQueryDto = new PaginationQueryDto(),
   ): Promise<PaginatedResponse<Absence>> {
     const user = this.tenantContext.getUser();
+    if (user) await this.assertStudentReadScope(studentId, user.universityId);
     const [data, total] = await this.absenceRepository.findAndCount({
-      where: user && user.role !== UserRole.SUPERADMIN
-        ? { studentId, universityId: user.universityId }
-        : { studentId },
-      order: { createdAt: 'DESC' },
+      where:
+        user && user.role !== UserRole.SUPERADMIN
+          ? { studentId, universityId: user.universityId }
+          : { studentId },
+      order: { createdAt: "DESC" },
       skip: (pagination.page - 1) * pagination.limit,
       take: pagination.limit,
     });
@@ -67,18 +79,22 @@ export class AbsencesService {
     pagination: PaginationQueryDto = new PaginationQueryDto(),
   ): Promise<PaginatedResponse<Absence>> {
     const user = this.tenantContext.getUser();
-    const lesson = await this.lessonRepository.findOne({ where: { id: lessonId } });
-    if (!lesson) throw new NotFoundException(`Lesson with id ${lessonId} not found`);
+    const lesson = await this.lessonRepository.findOne({
+      where: { id: lessonId },
+    });
+    if (!lesson)
+      throw new NotFoundException(`Lesson with id ${lessonId} not found`);
     this.assertStaffAccess(lesson.universityId);
     this.assertTeacherOwnsLesson(lesson);
     const [data, total] = await this.absenceRepository.findAndCount({
-      where: user && user.role !== UserRole.SUPERADMIN
-        ? {
-            affectedLessonIds: ArrayContains([lessonId]),
-            universityId: user.universityId,
-          }
-        : { affectedLessonIds: ArrayContains([lessonId]) },
-      order: { createdAt: 'DESC' },
+      where:
+        user && user.role !== UserRole.SUPERADMIN
+          ? {
+              affectedLessonIds: ArrayContains([lessonId]),
+              universityId: user.universityId,
+            }
+          : { affectedLessonIds: ArrayContains([lessonId]) },
+      order: { createdAt: "DESC" },
       skip: (pagination.page - 1) * pagination.limit,
       take: pagination.limit,
     });
@@ -97,17 +113,20 @@ export class AbsencesService {
         universityId,
         startDate: Between(new Date(startDate), new Date(endDate)),
       },
-      order: { createdAt: 'DESC' },
+      order: { createdAt: "DESC" },
       skip: (pagination.page - 1) * pagination.limit,
       take: pagination.limit,
     });
     return toPaginatedResponse(data, total, pagination);
   }
 
-  async create(createAbsenceDto: CreateAbsenceDto, universityId: string): Promise<Absence> {
+  async create(
+    createAbsenceDto: CreateAbsenceDto,
+    universityId: string,
+  ): Promise<Absence> {
     const user = this.tenantContext.getUser();
     if (!user || user.role !== UserRole.STUDENT) {
-      throw new ForbiddenException('Only students can create absences');
+      throw new ForbiddenException("Only students can create absences");
     }
     this.tenantContext.assertAccess(universityId);
     const startDate = new Date(createAbsenceDto.startDate);
@@ -118,9 +137,16 @@ export class AbsencesService {
       lesson = await this.lessonRepository.findOne({
         where: { id: createAbsenceDto.lessonId, universityId },
       });
-      if (!lesson) throw new NotFoundException('Занятие не найдено в текущем ВУЗе.');
-      if (user.groupId && lesson.groupId !== user.groupId) {
-        throw new ForbiddenException('Можно сообщить об отсутствии только на занятии своей группы.');
+      if (!lesson)
+        throw new NotFoundException("Занятие не найдено в текущем ВУЗе.");
+      const groupId = await this.resolveStudentGroupId(
+        universityId,
+        user.groupId,
+      );
+      if (groupId && lesson.groupId !== groupId) {
+        throw new ForbiddenException(
+          "Можно сообщить об отсутствии только на занятии своей группы.",
+        );
       }
     }
     const absence = this.absenceRepository.create({
@@ -130,16 +156,26 @@ export class AbsencesService {
       startDate,
       endDate,
       comment: createAbsenceDto.comment,
-      source: 'manual',
-      syncStatus: 'synced',
-      ...(lesson ? { affectedLessonIds: [lesson.id], affectedLessonsCount: 1 } : {}),
+      source: "manual",
+      syncStatus: "synced",
+      ...(lesson
+        ? { affectedLessonIds: [lesson.id], affectedLessonsCount: 1 }
+        : {}),
     });
     const saved = await this.absenceRepository.save(absence);
-    await this.publishAbsence('absence.created', saved, 'normal', lesson?.teacherId);
+    await this.publishAbsence(
+      "absence.created",
+      saved,
+      "normal",
+      lesson?.teacherId,
+    );
     return saved;
   }
 
-  async update(id: string, updateAbsenceDto: UpdateAbsenceDto): Promise<Absence> {
+  async update(
+    id: string,
+    updateAbsenceDto: UpdateAbsenceDto,
+  ): Promise<Absence> {
     const absence = await this.absenceRepository.findOne({ where: { id } });
 
     if (!absence) {
@@ -147,8 +183,12 @@ export class AbsencesService {
     }
     this.assertCanMutate(absence);
 
-    const startDate = updateAbsenceDto.startDate ? new Date(updateAbsenceDto.startDate) : absence.startDate;
-    const endDate = updateAbsenceDto.endDate ? new Date(updateAbsenceDto.endDate) : absence.endDate;
+    const startDate = updateAbsenceDto.startDate
+      ? new Date(updateAbsenceDto.startDate)
+      : absence.startDate;
+    const endDate = updateAbsenceDto.endDate
+      ? new Date(updateAbsenceDto.endDate)
+      : absence.endDate;
     this.assertValidDateRange(startDate, endDate);
 
     Object.assign(absence, {
@@ -157,7 +197,7 @@ export class AbsencesService {
       ...(updateAbsenceDto.endDate && { endDate }),
     });
     const saved = await this.absenceRepository.save(absence);
-    await this.publishAbsence('absence.updated', saved, 'normal');
+    await this.publishAbsence("absence.updated", saved, "normal");
     return saved;
   }
 
@@ -167,13 +207,15 @@ export class AbsencesService {
     pagination: PaginationQueryDto = new PaginationQueryDto(),
   ): Promise<PaginatedResponse<Absence>> {
     this.tenantContext.assertAccess(universityId);
-    const where: { universityId: string; confirmationRequired?: boolean } = { universityId };
-    if (status === 'pending') {
+    const where: { universityId: string; confirmationRequired?: boolean } = {
+      universityId,
+    };
+    if (status === "pending") {
       where.confirmationRequired = true;
     }
     const [data, total] = await this.absenceRepository.findAndCount({
       where,
-      order: { createdAt: 'DESC' },
+      order: { createdAt: "DESC" },
       skip: (pagination.page - 1) * pagination.limit,
       take: pagination.limit,
     });
@@ -185,12 +227,12 @@ export class AbsencesService {
   ): Promise<PaginatedResponse<PendingAbsence>> {
     const user = this.tenantContext.getUser();
     if (!user || !ABSENCE_STAFF_ROLES.includes(user.role)) {
-      throw new ForbiddenException('Staff role required');
+      throw new ForbiddenException("Staff role required");
     }
     this.tenantContext.assertAccess(user.universityId);
     const [data, total] = await this.absenceRepository.findAndCount({
       where: { universityId: user.universityId, confirmationRequired: true },
-      order: { createdAt: 'DESC' },
+      order: { createdAt: "DESC" },
       skip: (pagination.page - 1) * pagination.limit,
       take: pagination.limit,
     });
@@ -204,7 +246,9 @@ export class AbsencesService {
           },
         })
       : [];
-    const studentsById = new Map(students.map((student) => [student.id, student]));
+    const studentsById = new Map(
+      students.map((student) => [student.id, student]),
+    );
     const items: PendingAbsence[] = data.map((absence) => {
       const student = studentsById.get(absence.studentId);
       return {
@@ -222,7 +266,11 @@ export class AbsencesService {
     return toPaginatedResponse(items, total, pagination);
   }
 
-  async confirm(id: string, curatorId: string, comment?: string): Promise<Absence> {
+  async confirm(
+    id: string,
+    curatorId: string,
+    comment?: string,
+  ): Promise<Absence> {
     const absence = await this.absenceRepository.findOne({ where: { id } });
 
     if (!absence) {
@@ -236,7 +284,7 @@ export class AbsencesService {
       absence.comment = comment;
     }
     const saved = await this.absenceRepository.save(absence);
-    await this.publishAbsence('absence.updated', saved, 'normal');
+    await this.publishAbsence("absence.updated", saved, "normal");
     return saved;
   }
 
@@ -256,7 +304,7 @@ export class AbsencesService {
     absence.comment = reason;
     absence.confirmationRequired = false;
     const saved = await this.absenceRepository.save(absence);
-    await this.publishAbsence('absence.updated', saved, 'high');
+    await this.publishAbsence("absence.updated", saved, "high");
     return saved;
   }
 
@@ -276,6 +324,7 @@ export class AbsencesService {
     studentId: string,
   ): Promise<{ total: number; byType: Record<string, number> }> {
     this.tenantContext.assertAccess(universityId);
+    await this.assertStudentReadScope(studentId, universityId);
     const absences = await this.absenceRepository.find({
       where: { universityId, studentId },
     });
@@ -293,13 +342,16 @@ export class AbsencesService {
     lessonId: string,
     pagination: PaginationQueryDto = new PaginationQueryDto(),
   ): Promise<PaginatedResponse<AttendanceRecord>> {
-    const lesson = await this.lessonRepository.findOne({ where: { id: lessonId } });
-    if (!lesson) throw new NotFoundException(`Lesson with id ${lessonId} not found`);
+    const lesson = await this.lessonRepository.findOne({
+      where: { id: lessonId },
+    });
+    if (!lesson)
+      throw new NotFoundException(`Lesson with id ${lessonId} not found`);
     this.assertStaffAccess(lesson.universityId);
     this.assertTeacherOwnsLesson(lesson);
     const [data, total] = await this.attendanceRepository.findAndCount({
       where: { lessonId, universityId: lesson.universityId },
-      order: { updatedAt: 'DESC' },
+      order: { updatedAt: "DESC" },
       skip: (pagination.page - 1) * pagination.limit,
       take: pagination.limit,
     });
@@ -314,11 +366,16 @@ export class AbsencesService {
     this.assertStaffAccess(universityId);
     const studentIds = dto.entries.map((entry) => entry.studentId);
     if (new Set(studentIds).size !== studentIds.length) {
-      throw new BadRequestException('Один студент не может быть отмечен дважды в одной паре.');
+      throw new BadRequestException(
+        "Один студент не может быть отмечен дважды в одной паре.",
+      );
     }
 
-    const lesson = await this.lessonRepository.findOne({ where: { id: dto.lessonId, universityId } });
-    if (!lesson) throw new NotFoundException('Занятие не найдено в текущем ВУЗе.');
+    const lesson = await this.lessonRepository.findOne({
+      where: { id: dto.lessonId, universityId },
+    });
+    if (!lesson)
+      throw new NotFoundException("Занятие не найдено в текущем ВУЗе.");
     this.assertTeacherOwnsLesson(lesson);
 
     const students = await this.userRepository.find({
@@ -330,31 +387,39 @@ export class AbsencesService {
       },
     });
     if (students.length !== studentIds.length) {
-      throw new BadRequestException('В отметках есть студенты не из группы выбранного занятия.');
+      throw new BadRequestException(
+        "В отметках есть студенты не из группы выбранного занятия.",
+      );
     }
 
     const existing = await this.attendanceRepository.find({
       where: { lessonId: lesson.id, studentId: In(studentIds) },
     });
-    const existingByStudent = new Map(existing.map((record) => [record.studentId, record]));
-    const records = dto.entries.map((entry) => this.attendanceRepository.create({
-      ...existingByStudent.get(entry.studentId),
-      universityId,
-      lessonId: lesson.id,
-      studentId: entry.studentId,
-      status: entry.status,
-      comment: entry.comment?.trim() || null,
-      markedById,
-    }));
+    const existingByStudent = new Map(
+      existing.map((record) => [record.studentId, record]),
+    );
+    const records = dto.entries.map((entry) =>
+      this.attendanceRepository.create({
+        ...existingByStudent.get(entry.studentId),
+        universityId,
+        lessonId: lesson.id,
+        studentId: entry.studentId,
+        status: entry.status,
+        comment: entry.comment?.trim() || null,
+        markedById,
+      }),
+    );
     const saved = await this.attendanceRepository.save(records);
     const user = this.tenantContext.getUser();
     await this.eventBus?.publish({
-      type: 'attendance.updated',
+      type: "attendance.updated",
       universityId,
-      actor: user ? { id: user.id, type: 'user', role: user.role } : { id: markedById, type: 'user' },
-      target: { type: 'lesson', id: lesson.id },
+      actor: user
+        ? { id: user.id, type: "user", role: user.role }
+        : { id: markedById, type: "user" },
+      target: { type: "lesson", id: lesson.id },
       payload: { lessonId: lesson.id, records: saved.length },
-      priority: 'normal',
+      priority: "normal",
       recipients: studentIds,
     });
     return saved;
@@ -363,24 +428,28 @@ export class AbsencesService {
   private assertCanMutate(absence: Absence): void {
     const user = this.tenantContext.getUser();
     if (!user) {
-      throw new ForbiddenException('User not authenticated');
+      throw new ForbiddenException("User not authenticated");
     }
     this.tenantContext.assertAccess(absence.universityId);
     if (user.role === UserRole.STUDENT && absence.studentId !== user.id) {
-      throw new ForbiddenException('Students can only mutate their own absences');
+      throw new ForbiddenException(
+        "Students can only mutate their own absences",
+      );
     }
   }
 
   private assertValidDateRange(startDate: Date, endDate: Date): void {
     if (endDate.getTime() < startDate.getTime()) {
-      throw new BadRequestException('Дата окончания отсутствия не может быть раньше даты начала.');
+      throw new BadRequestException(
+        "Дата окончания отсутствия не может быть раньше даты начала.",
+      );
     }
   }
 
   private assertStaffAccess(universityId: string): void {
     const user = this.tenantContext.getUser();
     if (!user || !ABSENCE_STAFF_ROLES.includes(user.role)) {
-      throw new ForbiddenException('Staff role required');
+      throw new ForbiddenException("Staff role required");
     }
     this.tenantContext.assertAccess(universityId);
   }
@@ -388,7 +457,9 @@ export class AbsencesService {
   private assertTeacherOwnsLesson(lesson: Lesson): void {
     const user = this.tenantContext.getUser();
     if (user?.role === UserRole.TEACHER && lesson.teacherId !== user.id) {
-      throw new ForbiddenException('Teachers can only access attendance for their own lessons');
+      throw new ForbiddenException(
+        "Teachers can only access attendance for their own lessons",
+      );
     }
   }
 
@@ -397,20 +468,76 @@ export class AbsencesService {
     if (user?.role !== UserRole.TEACHER) return;
     const lessonId = absence.affectedLessonIds?.[0];
     if (!lessonId) {
-      throw new ForbiddenException('Teachers can only review absences linked to their own lessons');
+      throw new ForbiddenException(
+        "Teachers can only review absences linked to their own lessons",
+      );
     }
     const lesson = await this.lessonRepository.findOne({
-      where: { id: lessonId, universityId: absence.universityId, teacherId: user.id },
+      where: {
+        id: lessonId,
+        universityId: absence.universityId,
+        teacherId: user.id,
+      },
     });
     if (!lesson) {
-      throw new ForbiddenException('Teachers can only review absences linked to their own lessons');
+      throw new ForbiddenException(
+        "Teachers can only review absences linked to their own lessons",
+      );
     }
   }
 
+  private async assertStudentReadScope(
+    studentId: string,
+    universityId: string,
+  ): Promise<void> {
+    const user = this.tenantContext.getUser();
+    if (!user) return;
+    this.tenantContext.assertAccess(universityId);
+    if (user.role === UserRole.STUDENT) {
+      if (studentId !== user.id) {
+        throw new ForbiddenException(
+          "Students can only view their own absences",
+        );
+      }
+      return;
+    }
+    if (user.role !== UserRole.TEACHER) return;
+
+    const student = await this.userRepository.findOne({
+      where: { id: studentId, universityId, role: UserRole.STUDENT },
+    });
+    if (!student?.groupId) {
+      throw new ForbiddenException(
+        "Teachers can only view students from their own lesson groups",
+      );
+    }
+    const lesson = await this.lessonRepository.findOne({
+      where: { universityId, teacherId: user.id, groupId: student.groupId },
+    });
+    if (!lesson) {
+      throw new ForbiddenException(
+        "Teachers can only view students from their own lesson groups",
+      );
+    }
+  }
+
+  private async resolveStudentGroupId(
+    universityId: string,
+    groupId: string | null | undefined,
+  ): Promise<string | null | undefined> {
+    if (!groupId || !/^\d+$/.test(groupId) || !this.groupRepository) {
+      return groupId;
+    }
+    const group = await this.groupRepository.findOne({
+      where: { universityId, externalId: groupId },
+    });
+    return group?.id ?? groupId;
+  }
+
   private async publishAbsence(
-    type: 'absence.created' | 'absence.updated',
+    type: "absence.created" | "absence.updated",
     absence: Absence,
-    priority: 'normal' | 'high',
+    priority: "normal" | "high",
     teacherId?: string | null,
   ): Promise<void> {
     const user = this.tenantContext.getUser();
@@ -428,28 +555,43 @@ export class AbsencesService {
     });
     const lessonId = absence.affectedLessonIds?.[0];
     const recipientDeepLinks: Record<string, string> = {
-      [absence.studentId]: '/today',
-      ...Object.fromEntries(universityReviewers.map((reviewer) => [reviewer.id, `/absences?absence=${absence.id}`])),
+      [absence.studentId]: "/today",
+      ...Object.fromEntries(
+        universityReviewers.map((reviewer) => [
+          reviewer.id,
+          `/absences?absence=${absence.id}`,
+        ]),
+      ),
     };
     if (teacherId) {
       recipientDeepLinks[teacherId] = lessonId
         ? `/attendance?lesson=${lessonId}&absence=${absence.id}`
-        : '/inbox';
+        : "/inbox";
     }
     await this.eventBus?.publish({
       type,
       universityId: absence.universityId,
-      actor: user ? { id: user.id, type: 'user', role: user.role } : { type: 'system' },
-      target: { type: 'absence', id: absence.id },
+      actor: user
+        ? { id: user.id, type: "user", role: user.role }
+        : { type: "system" },
+      target: { type: "absence", id: absence.id },
       payload: {
         studentId: absence.studentId,
         startDate: absence.startDate.toISOString(),
         endDate: absence.endDate.toISOString(),
-        deepLink: '/notifications',
+        deepLink: "/notifications",
         recipientDeepLinks,
       },
       priority,
-      recipients: [...new Set([absence.studentId, teacherId, ...universityReviewers.map((reviewer) => reviewer.id)].filter((id): id is string => Boolean(id)))],
+      recipients: [
+        ...new Set(
+          [
+            absence.studentId,
+            teacherId,
+            ...universityReviewers.map((reviewer) => reviewer.id),
+          ].filter((id): id is string => Boolean(id)),
+        ),
+      ],
     });
   }
 }

@@ -18,6 +18,11 @@ Choose the card matching the task area, read the canonical source and then follo
 - [121 — `apps/max-miniapp/src/lib/api.ts`](121-apps-max-miniapp-src-lib-api-ts.md)
 - [122 — `apps/max-miniapp/src/lib/api.test.ts`](122-apps-max-miniapp-src-lib-api-test-ts.md)
 
+- [123 — `apps/backend/src/admin/dto/create-university-user.dto.ts`](123-apps-backend-src-admin-dto-create-university-user-dto-ts.md)
+- [124 — `apps/backend/src/admin/dto/update-university-user-status.dto.ts`](124-apps-backend-src-admin-dto-update-university-user-status-dto-ts.md)
+- [125 — `apps/backend/src/admin/dto/reset-university-user-password.dto.ts`](125-apps-backend-src-admin-dto-reset-university-user-password-dto-ts.md)
+- [126 — `apps/backend/src/health.controller.ts`](126-apps-backend-src-health-controller-ts.md)
+
 - [001 — `apps/web-admin/src/app/(admin)/connectors/page.tsx`](001-apps-web-admin-src-app-admin-connectors-page-tsx.md)
 - [002 — `apps/web-admin/src/app/(admin)/dashboard/page.tsx`](002-apps-web-admin-src-app-admin-dashboard-page-tsx.md)
 - [003 — `apps/web-admin/src/app/(admin)/faculties/page.tsx`](003-apps-web-admin-src-app-admin-faculties-page-tsx.md)
@@ -133,3 +138,6 @@ Choose the card matching the task area, read the canonical source and then follo
 - [113 — `apps/backend/src/common/guards/university.guard.spec.ts`](113-apps-backend-src-common-guards-university-guard-spec-ts.md)
 - [114 — `apps/backend/src/common/guards/university.guard.ts`](114-apps-backend-src-common-guards-university-guard-ts.md)
 - [115 — `apps/backend/src/common/tenant/tenant-context.module.ts`](115-apps-backend-src-common-tenant-tenant-context-module-ts.md)
+- [127 — `apps/backend/src/admin/dto/configure-moodle-connector.dto.ts`](127-apps-backend-src-admin-dto-configure-moodle-connector-dto-ts.md)
+- [128 — `apps/backend/src/moodle/moodle-connector.service.ts`](128-apps-backend-src-moodle-moodle-connector-service-ts.md)
+- [129 — `apps/backend/src/moodle/moodle.module.ts`](129-apps-backend-src-moodle-moodle-module-ts.md)

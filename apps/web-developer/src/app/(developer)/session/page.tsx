@@ -1,55 +1,200 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import Card from '@/components/ui/Card';
-import Button from '@/components/ui/Button';
-import { getToken } from '@/lib/api';
+import { useEffect, useState } from "react";
+import Button from "@/components/ui/Button";
+import Card from "@/components/ui/Card";
+import { getToken, logout } from "@/lib/api";
+
+type SessionStatus = "Active" | "Expired";
 
 interface SessionRecord {
   device: string;
-  ip: string;
-  location: string;
   created: string;
-  activity: string;
-  status: 'Active' | 'Expired' | 'Revoked';
-  current?: boolean;
+  expiresAt: string;
+  status: SessionStatus;
 }
 
-function Status({ value }: { value: SessionRecord['status'] }) {
-  const styles = {
-    Active: 'border-emerald-400/20 bg-emerald-400/10 text-emerald-300',
-    Expired: 'border-amber-400/20 bg-amber-400/10 text-amber-300',
-    Revoked: 'border-red-400/20 bg-red-400/10 text-red-300',
-  };
-  const labels: Record<SessionRecord['status'], string> = { Active: 'Активна', Expired: 'Истекла', Revoked: 'Отозвана' };
-  return <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium ${styles[value]}`}><span className="h-1.5 w-1.5 rounded-full bg-current" />{labels[value]}</span>;
+interface JwtTimestampClaims {
+  exp?: number;
+  iat?: number;
+}
+
+function formatTimestamp(timestamp?: number) {
+  if (!timestamp || !Number.isFinite(timestamp)) return "Недоступно";
+
+  return new Date(timestamp * 1000).toLocaleString("ru-RU", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+}
+
+function readLocalSession(token: string): SessionRecord {
+  const device = /Mobile|Android|iPhone|iPad/i.test(navigator.userAgent)
+    ? "Мобильный браузер"
+    : "Браузер на компьютере";
+
+  try {
+    const encodedPayload = token.split(".")[1];
+    if (!encodedPayload) throw new Error("JWT payload is missing");
+
+    const normalizedPayload = encodedPayload
+      .replace(/-/g, "+")
+      .replace(/_/g, "/");
+    const claims = JSON.parse(atob(normalizedPayload)) as JwtTimestampClaims;
+    const expired =
+      typeof claims.exp === "number" && claims.exp * 1000 <= Date.now();
+
+    return {
+      device,
+      created: formatTimestamp(claims.iat),
+      expiresAt: formatTimestamp(claims.exp),
+      status: expired ? "Expired" : "Active",
+    };
+  } catch {
+    return {
+      device,
+      created: "Недоступно",
+      expiresAt: "Недоступно",
+      status: "Active",
+    };
+  }
+}
+
+function StatusBadge({ status }: { status: SessionStatus }) {
+  const active = status === "Active";
+
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium ${
+        active
+          ? "border-emerald-400/20 bg-emerald-400/10 text-emerald-300"
+          : "border-amber-400/20 bg-amber-400/10 text-amber-300"
+      }`}
+    >
+      <span className="h-1.5 w-1.5 rounded-full bg-current" />
+      {active ? "Активна" : "Истекла"}
+    </span>
+  );
 }
 
 export default function SessionPage() {
   const [session, setSession] = useState<SessionRecord | null>(null);
-  const [notice, setNotice] = useState('');
 
   useEffect(() => {
     const token = getToken();
-    const userAgent = navigator.userAgent;
-    const device = userAgent.includes('Edg') ? 'Microsoft Edge' : userAgent.includes('Chrome') ? 'Google Chrome' : userAgent.includes('Firefox') ? 'Firefox' : 'Текущий браузер';
-    setSession(token ? { device, ip: 'Недоступно', location: 'Локальный браузер', created: 'Недоступно', activity: new Intl.DateTimeFormat('ru-RU', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date()), status: 'Active', current: true } : null);
+    setSession(token ? readLocalSession(token) : null);
   }, []);
 
-  const announceUnavailable = (action: string) => setNotice(`${action} недоступно: backend не предоставляет endpoint управления сессиями.`);
+  return (
+    <div className="min-h-full bg-[#0b0e14] px-4 py-6 text-white sm:px-6 lg:px-8 lg:py-8">
+      <div className="mx-auto max-w-5xl space-y-7">
+        <div className="flex items-center gap-2 text-xs text-white/40">
+          Разработчик <span>/</span>{" "}
+          <span className="text-white/80">Сессия</span>
+        </div>
 
-  return <div className="min-h-full bg-[#0b0e14] px-4 py-6 text-white sm:px-6 lg:px-8 lg:py-8"><div className="mx-auto max-w-7xl space-y-7">
-    <div className="flex items-center gap-2 text-xs text-white/40">Разработчик <span>/</span> <span className="text-white/80">Сессии</span></div>
-    <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end"><div><h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Сессии</h1><p className="mt-1 text-sm text-white/45">Управляйте вошедшими браузерами и защищайте доступ к аккаунту разработчика.</p></div><Button variant="secondary" onClick={() => announceUnavailable('Отзыв всех остальных сессий')}>Отозвать остальные</Button></div>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+            Текущая сессия
+          </h1>
+          <p className="mt-1 max-w-2xl text-sm text-white/45">
+            Здесь показан токен, сохранённый в этом браузере. Выход безопасно
+            отзовёт все активные токены аккаунта.
+          </p>
+        </div>
 
-    <div className="grid grid-cols-3 gap-3"><Card className="border-white/10 bg-white/[0.04]"><p className="text-xs text-white/40">Активные</p><p className="mt-2 text-2xl font-bold text-emerald-300">{session ? '1' : '—'}</p></Card><Card className="border-white/10 bg-white/[0.04]"><p className="text-xs text-white/40">Истекшие</p><p className="mt-2 text-2xl font-bold text-white">—</p></Card><Card className="border-white/10 bg-white/[0.04]"><p className="text-xs text-white/40">Отозванные</p><p className="mt-2 text-2xl font-bold text-white">—</p></Card></div>
+        <section
+          className="grid grid-cols-1 gap-3 sm:grid-cols-3"
+          aria-label="Статус сессии"
+        >
+          <Card className="border-white/10 bg-white/[0.04]">
+            <p className="text-xs text-white/40">Сессия на устройстве</p>
+            <p className="mt-2 text-2xl font-bold text-white">
+              {session ? "1" : "0"}
+            </p>
+            <span className="mt-1 block text-xs text-white/35">
+              {session ? "локальный токен найден" : "токен не найден"}
+            </span>
+          </Card>
+          <Card className="border-white/10 bg-white/[0.04]">
+            <p className="text-xs text-white/40">Статус</p>
+            <p className="mt-2 text-2xl font-bold text-emerald-300">
+              {session?.status === "Expired"
+                ? "Истекла"
+                : session
+                  ? "Активна"
+                  : "—"}
+            </p>
+            <span className="mt-1 block text-xs text-white/35">
+              проверяется по данным JWT
+            </span>
+          </Card>
+          <Card className="border-white/10 bg-white/[0.04]">
+            <p className="text-xs text-white/40">Отзыв токенов</p>
+            <p className="mt-2 text-2xl font-bold text-emerald-300">Включён</p>
+            <span className="mt-1 block text-xs text-white/35">
+              для всех устройств аккаунта
+            </span>
+          </Card>
+        </section>
 
-    {notice && <div role="status" className="rounded-xl border border-amber-400/20 bg-amber-400/[0.08] px-4 py-3 text-sm text-amber-200">{notice}</div>}
-    <section className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03]"><div className="flex items-center justify-between border-b border-white/10 px-5 py-4 sm:px-6"><div><h2 className="text-base font-semibold">Активные сессии</h2><p className="mt-1 text-xs text-white/35">От текущего API аутентификации доступна только сессия этого браузера.</p></div><span className="text-xs text-white/30">{session ? '1 сессия' : 'Нет активных сессий'}</span></div>
-      <div className="hidden overflow-x-auto md:block"><table className="w-full min-w-[760px] text-left text-sm"><thead className="bg-black/10 text-[11px] uppercase tracking-wider text-white/35"><tr><th className="px-6 py-3 font-medium">Устройство</th><th className="px-4 py-3 font-medium">IP</th><th className="px-4 py-3 font-medium">Расположение</th><th className="px-4 py-3 font-medium">Создана</th><th className="px-4 py-3 font-medium">Последняя активность</th><th className="px-4 py-3 font-medium">Статус</th><th className="px-6 py-3" /></tr></thead><tbody className="divide-y divide-white/10">{session ? <tr className="text-white/65"><td className="px-6 py-4"><div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-lg bg-sky-400/10 text-sky-300">▣</span><div><p className="font-medium text-white/85">{session.device}</p><span className="mt-1 inline-flex rounded-md bg-sky-400/10 px-1.5 py-0.5 text-[10px] font-medium text-sky-300">Текущая сессия</span></div></div></td><td className="px-4 py-4 font-mono text-xs text-white/40">{session.ip}</td><td className="px-4 py-4">{session.location}</td><td className="px-4 py-4 text-white/40">{session.created}</td><td className="px-4 py-4 text-white/55">{session.activity}</td><td className="px-4 py-4"><Status value={session.status} /></td><td className="px-6 py-4 text-right"><button type="button" onClick={() => announceUnavailable('Отзыв')} className="text-xs text-white/35 hover:text-red-300">Отозвать</button></td></tr> : <tr><td colSpan={7} className="px-6 py-12 text-center text-sm text-white/40">Нет активной сессии в этом браузере.</td></tr>}</tbody></table></div>
-      <div className="space-y-3 p-4 md:hidden">{session ? <div className="rounded-xl border border-white/10 bg-black/10 p-4"><div className="flex items-start justify-between gap-3"><div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-lg bg-sky-400/10 text-sky-300">▣</span><div><p className="font-medium text-white/85">{session.device}</p><span className="mt-1 inline-flex rounded-md bg-sky-400/10 px-1.5 py-0.5 text-[10px] font-medium text-sky-300">Текущая сессия</span></div></div><Status value={session.status} /></div><dl className="mt-4 grid grid-cols-2 gap-3 text-xs"><div><dt className="text-white/30">IP</dt><dd className="mt-1 font-mono text-white/55">{session.ip}</dd></div><div><dt className="text-white/30">Расположение</dt><dd className="mt-1 text-white/55">{session.location}</dd></div><div><dt className="text-white/30">Создана</dt><dd className="mt-1 text-white/55">{session.created}</dd></div><div><dt className="text-white/30">Последняя активность</dt><dd className="mt-1 text-white/55">{session.activity}</dd></div></dl><button type="button" onClick={() => announceUnavailable('Отзыв')} className="mt-4 w-full rounded-lg border border-white/10 px-3 py-2 text-xs text-white/45 hover:border-red-400/30 hover:text-red-300">Отозвать</button></div> : <p className="py-8 text-center text-sm text-white/40">Нет активной сессии в этом браузере.</p>}</div>
-    </section>
+        {session ? (
+          <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 sm:p-6">
+            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
+              <div>
+                <p className="text-xs uppercase tracking-wider text-white/35">
+                  Это устройство
+                </p>
+                <h2 className="mt-1 text-lg font-semibold">{session.device}</h2>
+              </div>
+              <StatusBadge status={session.status} />
+            </div>
 
-    <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 sm:p-6"><div className="flex items-start gap-4"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-400/10 text-amber-300">!</span><div><h2 className="text-base font-semibold">Информация по безопасности</h2><p className="mt-2 max-w-3xl text-sm leading-6 text-white/45">Регулярно проверяйте активные сессии. Если видите незнакомый браузер, сразу отзовите его и обновите данные доступа. IP-адрес, расположение, история сессий и удалённый отзыв требуют отдельного API сессий, которого в бэкенде сейчас нет.</p></div></div></section>
-  </div></div>;
+            <dl className="mt-6 grid gap-4 border-y border-white/10 py-5 text-sm sm:grid-cols-2">
+              <div>
+                <dt className="text-xs text-white/35">Создана</dt>
+                <dd className="mt-1 text-white/75">{session.created}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-white/35">Истекает</dt>
+                <dd className="mt-1 text-white/75">{session.expiresAt}</dd>
+              </div>
+            </dl>
+
+            <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="max-w-xl text-sm leading-6 text-white/45">
+                Сервер отзовёт access- и refresh-токены на всех устройствах,
+                затем текущий браузер вернётся на страницу входа.
+              </p>
+              <Button variant="secondary" onClick={logout}>
+                Выйти на всех устройствах
+              </Button>
+            </div>
+          </section>
+        ) : (
+          <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 sm:p-6">
+            <h2 className="text-lg font-semibold">
+              Активная локальная сессия не найдена
+            </h2>
+            <p className="mt-2 text-sm text-white/45">
+              Войдите в кабинет разработчика, чтобы увидеть данные текущего
+              токена.
+            </p>
+          </section>
+        )}
+
+        <section className="rounded-2xl border border-amber-400/20 bg-amber-400/[0.06] p-5 sm:p-6">
+          <h2 className="text-base font-semibold text-amber-100">
+            Что пока недоступно
+          </h2>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-amber-100/70">
+            Сервер не хранит список устройств, поэтому здесь нельзя показать
+            каждую отдельную сессию и отозвать только одну из них. Сейчас
+            доступен безопасный глобальный выход: он инвалидирует все ранее
+            выданные токены аккаунта.
+          </p>
+        </section>
+      </div>
+    </div>
+  );
 }

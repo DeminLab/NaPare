@@ -5,15 +5,15 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   Index,
-} from 'typeorm';
-import { Exclude } from 'class-transformer';
-import { UserRole } from '../../auth/interfaces/user-role';
+} from "typeorm";
+import { Exclude } from "class-transformer";
+import { UserRole } from "../../auth/interfaces/user-role";
 
-@Entity('users')
-@Index('IDX_users_university_id', ['universityId'])
-@Index('IDX_users_max_user_id', ['maxUserId'], { unique: true })
+@Entity("users")
+@Index("IDX_users_university_id", ["universityId"])
+@Index("IDX_users_max_user_id", ["maxUserId"], { unique: true })
 export class User {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id: string;
 
   @Column({ unique: true })
@@ -36,23 +36,30 @@ export class User {
   avatarUrl: string;
 
   @Column({
-    type: 'enum',
+    type: "enum",
     enum: UserRole,
     default: UserRole.STUDENT,
   })
   role: UserRole;
 
-  @Column({ type: 'uuid' })
+  @Column({ type: "uuid" })
   universityId: string;
 
-  @Column({ type: 'varchar', nullable: true })
+  @Column({ type: "varchar", nullable: true })
   groupId: string;
 
-  @Column({ type: 'varchar', nullable: true })
+  @Column({ type: "varchar", nullable: true })
   maxUserId: string | null;
 
   @Column({ default: true })
   isActive: boolean;
+
+  /**
+   * Invalidates every access and refresh token issued before the latest bump.
+   * The value is embedded in JWTs and checked for every authenticated request.
+   */
+  @Column({ type: "integer", default: 0 })
+  sessionVersion: number;
 
   @Column({ nullable: true })
   lastLoginAt: Date;

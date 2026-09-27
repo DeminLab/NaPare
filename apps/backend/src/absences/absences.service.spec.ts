@@ -1,22 +1,27 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { AbsencesService } from './absences.service';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { Absence } from './entities/absence.entity';
-import { AttendanceRecord } from './entities/attendance-record.entity';
-import { Lesson } from '../schedule/entities/lesson.entity';
-import { User } from '../users/entities/user.entity';
-import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
-import { TenantContext } from '../common/tenant/tenant-context';
-import { UserRole } from '../auth/interfaces/user-role';
+import { Test, TestingModule } from "@nestjs/testing";
+import { AbsencesService } from "./absences.service";
+import { getRepositoryToken } from "@nestjs/typeorm";
+import { Absence } from "./entities/absence.entity";
+import { AttendanceRecord } from "./entities/attendance-record.entity";
+import { Lesson } from "../schedule/entities/lesson.entity";
+import { User } from "../users/entities/user.entity";
+import { Group } from "../users/entities/group.entity";
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from "@nestjs/common";
+import { TenantContext } from "../common/tenant/tenant-context";
+import { UserRole } from "../auth/interfaces/user-role";
 
-describe('AbsencesService', () => {
+describe("AbsencesService", () => {
   let service: AbsencesService;
 
   const mockRepo = {
     find: jest.fn().mockResolvedValue([]),
     findAndCount: jest.fn().mockResolvedValue([[], 0]),
     findOne: jest.fn().mockResolvedValue(null),
-    create: jest.fn().mockImplementation((dto) => ({ id: '1', ...dto })),
+    create: jest.fn().mockImplementation((dto) => ({ id: "1", ...dto })),
     save: jest.fn().mockImplementation((entity) => Promise.resolve(entity)),
     delete: jest.fn(),
     count: jest.fn().mockResolvedValue(0),
@@ -28,20 +33,30 @@ describe('AbsencesService', () => {
   const mockAttendanceRepository = {
     find: jest.fn().mockResolvedValue([]),
     findAndCount: jest.fn().mockResolvedValue([[], 0]),
-    create: jest.fn().mockImplementation((dto) => ({ id: 'attendance-1', ...dto })),
+    create: jest
+      .fn()
+      .mockImplementation((dto) => ({ id: "attendance-1", ...dto })),
     save: jest.fn().mockImplementation((records) => Promise.resolve(records)),
   };
   const mockLessonRepository = { findOne: jest.fn().mockResolvedValue(null) };
-  const mockUserRepository = { find: jest.fn().mockResolvedValue([]) };
+  const mockUserRepository = {
+    find: jest.fn().mockResolvedValue([]),
+    findOne: jest.fn().mockResolvedValue(null),
+  };
+  const mockGroupRepository = { findOne: jest.fn().mockResolvedValue(null) };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AbsencesService,
         { provide: getRepositoryToken(Absence), useValue: mockRepo },
-        { provide: getRepositoryToken(AttendanceRecord), useValue: mockAttendanceRepository },
+        {
+          provide: getRepositoryToken(AttendanceRecord),
+          useValue: mockAttendanceRepository,
+        },
         { provide: getRepositoryToken(Lesson), useValue: mockLessonRepository },
         { provide: getRepositoryToken(User), useValue: mockUserRepository },
+        { provide: getRepositoryToken(Group), useValue: mockGroupRepository },
         { provide: TenantContext, useValue: mockTenantContext },
       ],
     }).compile();
@@ -53,239 +68,439 @@ describe('AbsencesService', () => {
     mockAttendanceRepository.find.mockResolvedValue([]);
     mockLessonRepository.findOne.mockResolvedValue(null);
     mockUserRepository.find.mockResolvedValue([]);
+    mockUserRepository.findOne.mockResolvedValue(null);
+    mockGroupRepository.findOne.mockResolvedValue(null);
   });
 
-  it('should be defined', () => {
+  it("should be defined", () => {
     expect(service).toBeDefined();
   });
 
-  describe('findByStudent', () => {
-    it('should return absences for student', async () => {
-      const absences = [{ id: '1', studentId: 's1' }];
+  describe("findByStudent", () => {
+    it("should return absences for student", async () => {
+      const absences = [{ id: "1", studentId: "s1" }];
       mockRepo.findAndCount.mockResolvedValue([absences, 1]);
-      const result = await service.findByStudent('s1');
+      const result = await service.findByStudent("s1");
       expect(result).toEqual({
         data: absences,
         meta: { page: 1, limit: 50, total: 1, totalPages: 1 },
       });
     });
-  });
 
-  describe('confirm', () => {
-    it('should throw NotFoundException if absence not found', async () => {
-      mockRepo.findOne.mockResolvedValue(null);
-      await expect(service.confirm('nonexistent', 'curator-1')).rejects.toThrow(NotFoundException);
-    });
-
-    it('should confirm absence', async () => {
-      const absence = { id: '1', universityId: 'uni-1', confirmationRequired: true };
-      mockRepo.findOne.mockResolvedValue(absence);
+    it("does not expose a student history to a teacher without a lesson for that group", async () => {
       mockTenantContext.getUser.mockReturnValue({
-        id: 'curator-1',
-        role: UserRole.CURATOR,
-        universityId: 'uni-1',
+        id: "teacher-1",
+        role: UserRole.TEACHER,
+        universityId: "uni-1",
       });
-      const result = await service.confirm('1', 'curator-1');
-      expect(result.confirmationRequired).toBe(false);
-    });
-
-    it('rejects a student confirmation attempt', async () => {
-      mockRepo.findOne.mockResolvedValue({ id: '1', universityId: 'uni-1' });
-      mockTenantContext.getUser.mockReturnValue({
-        id: 'student-1',
+      mockUserRepository.findOne.mockResolvedValue({
+        id: "student-1",
+        universityId: "uni-1",
+        groupId: "group-2",
         role: UserRole.STUDENT,
-        universityId: 'uni-1',
-      });
-
-      await expect(service.confirm('1', 'student-1')).rejects.toThrow(ForbiddenException);
-    });
-
-    it('rejects a teacher confirmation for a colleague\'s lesson', async () => {
-      mockRepo.findOne.mockResolvedValue({
-        id: 'absence-1', universityId: 'uni-1', confirmationRequired: true, affectedLessonIds: ['lesson-1'],
-      });
-      mockTenantContext.getUser.mockReturnValue({
-        id: 'teacher-1', role: UserRole.TEACHER, universityId: 'uni-1',
       });
       mockLessonRepository.findOne.mockResolvedValue(null);
 
-      await expect(service.confirm('absence-1', 'teacher-1')).rejects.toThrow(ForbiddenException);
+      await expect(service.findByStudent("student-1")).rejects.toThrow(
+        ForbiddenException,
+      );
+      expect(mockRepo.findAndCount).not.toHaveBeenCalled();
+    });
+
+    it("allows a teacher to read a student history only for a taught group", async () => {
+      mockTenantContext.getUser.mockReturnValue({
+        id: "teacher-1",
+        role: UserRole.TEACHER,
+        universityId: "uni-1",
+      });
+      mockUserRepository.findOne.mockResolvedValue({
+        id: "student-1",
+        universityId: "uni-1",
+        groupId: "group-1",
+        role: UserRole.STUDENT,
+      });
+      mockLessonRepository.findOne.mockResolvedValue({
+        id: "lesson-1",
+        universityId: "uni-1",
+        groupId: "group-1",
+        teacherId: "teacher-1",
+      });
+
+      await expect(service.findByStudent("student-1")).resolves.toMatchObject({
+        meta: expect.objectContaining({ total: 0 }),
+      });
+      expect(mockRepo.findAndCount).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { studentId: "student-1", universityId: "uni-1" },
+        }),
+      );
+    });
+  });
+
+  describe("confirm", () => {
+    it("should throw NotFoundException if absence not found", async () => {
+      mockRepo.findOne.mockResolvedValue(null);
+      await expect(service.confirm("nonexistent", "curator-1")).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it("should confirm absence", async () => {
+      const absence = {
+        id: "1",
+        universityId: "uni-1",
+        confirmationRequired: true,
+      };
+      mockRepo.findOne.mockResolvedValue(absence);
+      mockTenantContext.getUser.mockReturnValue({
+        id: "curator-1",
+        role: UserRole.CURATOR,
+        universityId: "uni-1",
+      });
+      const result = await service.confirm("1", "curator-1");
+      expect(result.confirmationRequired).toBe(false);
+    });
+
+    it("rejects a student confirmation attempt", async () => {
+      mockRepo.findOne.mockResolvedValue({ id: "1", universityId: "uni-1" });
+      mockTenantContext.getUser.mockReturnValue({
+        id: "student-1",
+        role: UserRole.STUDENT,
+        universityId: "uni-1",
+      });
+
+      await expect(service.confirm("1", "student-1")).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+
+    it("rejects a teacher confirmation for a colleague's lesson", async () => {
+      mockRepo.findOne.mockResolvedValue({
+        id: "absence-1",
+        universityId: "uni-1",
+        confirmationRequired: true,
+        affectedLessonIds: ["lesson-1"],
+      });
+      mockTenantContext.getUser.mockReturnValue({
+        id: "teacher-1",
+        role: UserRole.TEACHER,
+        universityId: "uni-1",
+      });
+      mockLessonRepository.findOne.mockResolvedValue(null);
+
+      await expect(service.confirm("absence-1", "teacher-1")).rejects.toThrow(
+        ForbiddenException,
+      );
       expect(mockRepo.save).not.toHaveBeenCalled();
     });
   });
 
-  describe('findPendingForCurrentUniversity', () => {
-    it('includes a minimal student identity for university reviewers', async () => {
+  describe("findPendingForCurrentUniversity", () => {
+    it("includes a minimal student identity for university reviewers", async () => {
       mockTenantContext.getUser.mockReturnValue({
-        id: 'admin-1', role: UserRole.UNIVERSITY_ADMIN, universityId: 'uni-1',
+        id: "admin-1",
+        role: UserRole.UNIVERSITY_ADMIN,
+        universityId: "uni-1",
       });
-      mockRepo.findAndCount.mockResolvedValue([[{
-        id: 'absence-1', studentId: 'student-1', universityId: 'uni-1', confirmationRequired: true,
-      }], 1]);
-      mockUserRepository.find.mockResolvedValue([{
-        id: 'student-1', firstName: 'Ирина', lastName: 'Иванова', groupId: 'group-1',
-      }]);
+      mockRepo.findAndCount.mockResolvedValue([
+        [
+          {
+            id: "absence-1",
+            studentId: "student-1",
+            universityId: "uni-1",
+            confirmationRequired: true,
+          },
+        ],
+        1,
+      ]);
+      mockUserRepository.find.mockResolvedValue([
+        {
+          id: "student-1",
+          firstName: "Ирина",
+          lastName: "Иванова",
+          groupId: "group-1",
+        },
+      ]);
 
       const result = await service.findPendingForCurrentUniversity();
 
-      expect(result.data[0]).toEqual(expect.objectContaining({
-        id: 'absence-1',
-        student: { id: 'student-1', firstName: 'Ирина', lastName: 'Иванова', groupId: 'group-1' },
-      }));
-      expect(mockUserRepository.find).toHaveBeenCalledWith(expect.objectContaining({
-        where: expect.objectContaining({ universityId: 'uni-1', role: UserRole.STUDENT }),
-      }));
+      expect(result.data[0]).toEqual(
+        expect.objectContaining({
+          id: "absence-1",
+          student: {
+            id: "student-1",
+            firstName: "Ирина",
+            lastName: "Иванова",
+            groupId: "group-1",
+          },
+        }),
+      );
+      expect(mockUserRepository.find).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            universityId: "uni-1",
+            role: UserRole.STUDENT,
+          }),
+        }),
+      );
     });
   });
 
-  describe('reject', () => {
-    it('resolves the pending queue while preserving the decision comment', async () => {
-      const absence = { id: 'absence-1', universityId: 'uni-1', confirmationRequired: true, comment: null };
+  describe("reject", () => {
+    it("resolves the pending queue while preserving the decision comment", async () => {
+      const absence = {
+        id: "absence-1",
+        universityId: "uni-1",
+        confirmationRequired: true,
+        comment: null,
+      };
       mockRepo.findOne.mockResolvedValue(absence);
       mockTenantContext.getUser.mockReturnValue({
-        id: 'curator-1', role: UserRole.CURATOR, universityId: 'uni-1',
+        id: "curator-1",
+        role: UserRole.CURATOR,
+        universityId: "uni-1",
       });
 
-      const result = await service.reject('absence-1', 'curator-1', 'Нужна справка деканата');
+      const result = await service.reject(
+        "absence-1",
+        "curator-1",
+        "Нужна справка деканата",
+      );
 
-      expect(result).toEqual(expect.objectContaining({
-        confirmationRequired: false,
-        comment: 'Нужна справка деканата',
-      }));
+      expect(result).toEqual(
+        expect.objectContaining({
+          confirmationRequired: false,
+          comment: "Нужна справка деканата",
+        }),
+      );
     });
   });
 
-  describe('create', () => {
-    it('persists the date-range absence fields for the authenticated student', async () => {
+  describe("create", () => {
+    it("persists the date-range absence fields for the authenticated student", async () => {
       mockTenantContext.getUser.mockReturnValue({
-        id: 'student-1',
+        id: "student-1",
         role: UserRole.STUDENT,
-        universityId: 'uni-1',
+        universityId: "uni-1",
       });
       const dto = {
-        type: 'sick',
-        startDate: '2026-09-16',
-        endDate: '2026-09-18',
-        comment: 'Medical leave',
-      } as unknown as import('./dto/create-absence.dto').CreateAbsenceDto;
+        type: "sick",
+        startDate: "2026-09-16",
+        endDate: "2026-09-18",
+        comment: "Medical leave",
+      } as unknown as import("./dto/create-absence.dto").CreateAbsenceDto;
 
-      await service.create(dto, 'uni-1');
+      await service.create(dto, "uni-1");
 
       expect(mockRepo.create).toHaveBeenCalledWith({
-        studentId: 'student-1',
-        universityId: 'uni-1',
-        type: 'sick',
-        startDate: new Date('2026-09-16'),
-        endDate: new Date('2026-09-18'),
-        comment: 'Medical leave',
-        source: 'manual',
-        syncStatus: 'synced',
+        studentId: "student-1",
+        universityId: "uni-1",
+        type: "sick",
+        startDate: new Date("2026-09-16"),
+        endDate: new Date("2026-09-18"),
+        comment: "Medical leave",
+        source: "manual",
+        syncStatus: "synced",
       });
     });
 
-    it('links a student absence to their own lesson and notifies its teacher', async () => {
+    it("links a student absence to their own lesson and notifies its teacher", async () => {
       mockTenantContext.getUser.mockReturnValue({
-        id: 'student-1',
+        id: "student-1",
         role: UserRole.STUDENT,
-        universityId: 'uni-1',
-        groupId: 'group-1',
+        universityId: "uni-1",
+        groupId: "group-1",
       });
       mockLessonRepository.findOne.mockResolvedValue({
-        id: 'lesson-1', universityId: 'uni-1', groupId: 'group-1', teacherId: 'teacher-1',
+        id: "lesson-1",
+        universityId: "uni-1",
+        groupId: "group-1",
+        teacherId: "teacher-1",
       });
 
-      await service.create({
-        type: 'learning', startDate: '2026-09-26', endDate: '2026-09-26', lessonId: 'lesson-1',
-      }, 'uni-1');
+      await service.create(
+        {
+          type: "learning",
+          startDate: "2026-09-26",
+          endDate: "2026-09-26",
+          lessonId: "lesson-1",
+        },
+        "uni-1",
+      );
 
-      expect(mockRepo.create).toHaveBeenCalledWith(expect.objectContaining({
-        affectedLessonIds: ['lesson-1'], affectedLessonsCount: 1,
-      }));
+      expect(mockRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          affectedLessonIds: ["lesson-1"],
+          affectedLessonsCount: 1,
+        }),
+      );
     });
 
-    it('rejects an absence whose end date is before its start date', async () => {
-      mockTenantContext.getUser.mockReturnValue({ id: 'student-1', role: UserRole.STUDENT, universityId: 'uni-1' });
+    it("links an imported lesson when the student token still has a numeric SIBIT group id", async () => {
+      mockTenantContext.getUser.mockReturnValue({
+        id: "student-1",
+        role: UserRole.STUDENT,
+        universityId: "uni-1",
+        groupId: "12136",
+      });
+      mockGroupRepository.findOne.mockResolvedValue({ id: "group-uuid" });
+      mockLessonRepository.findOne.mockResolvedValue({
+        id: "lesson-1",
+        universityId: "uni-1",
+        groupId: "group-uuid",
+        teacherId: "teacher-1",
+      });
 
-      await expect(service.create({
-        type: 'sick', startDate: '2026-09-20', endDate: '2026-09-19',
-      }, 'uni-1')).rejects.toThrow(BadRequestException);
+      await expect(
+        service.create(
+          {
+            type: "learning",
+            startDate: "2026-09-26",
+            endDate: "2026-09-26",
+            lessonId: "lesson-1",
+          },
+          "uni-1",
+        ),
+      ).resolves.toMatchObject({ id: "1" });
+      expect(mockGroupRepository.findOne).toHaveBeenCalledWith({
+        where: { universityId: "uni-1", externalId: "12136" },
+      });
+    });
+
+    it("rejects an absence whose end date is before its start date", async () => {
+      mockTenantContext.getUser.mockReturnValue({
+        id: "student-1",
+        role: UserRole.STUDENT,
+        universityId: "uni-1",
+      });
+
+      await expect(
+        service.create(
+          {
+            type: "sick",
+            startDate: "2026-09-20",
+            endDate: "2026-09-19",
+          },
+          "uni-1",
+        ),
+      ).rejects.toThrow(BadRequestException);
       expect(mockRepo.create).not.toHaveBeenCalled();
     });
   });
 
-  describe('update', () => {
-    it('rejects a student update of another student\'s absence', async () => {
+  describe("update", () => {
+    it("rejects a student update of another student's absence", async () => {
       mockRepo.findOne.mockResolvedValue({
-        id: 'absence-1',
-        studentId: 'student-2',
-        universityId: 'uni-1',
+        id: "absence-1",
+        studentId: "student-2",
+        universityId: "uni-1",
       });
       mockTenantContext.getUser.mockReturnValue({
-        id: 'student-1',
+        id: "student-1",
         role: UserRole.STUDENT,
-        universityId: 'uni-1',
+        universityId: "uni-1",
       });
 
-      await expect(service.update('absence-1', {})).rejects.toThrow(ForbiddenException);
+      await expect(service.update("absence-1", {})).rejects.toThrow(
+        ForbiddenException,
+      );
       expect(mockRepo.save).not.toHaveBeenCalled();
     });
   });
 
-  describe('markAttendance', () => {
-    it('persists every selected attendance status for students in the lesson group', async () => {
+  describe("markAttendance", () => {
+    it("persists every selected attendance status for students in the lesson group", async () => {
       mockTenantContext.getUser.mockReturnValue({
-        id: 'teacher-1',
+        id: "teacher-1",
         role: UserRole.TEACHER,
-        universityId: 'uni-1',
+        universityId: "uni-1",
       });
-      mockLessonRepository.findOne.mockResolvedValue({ id: 'lesson-1', universityId: 'uni-1', groupId: 'group-1', teacherId: 'teacher-1' });
-      mockUserRepository.find.mockResolvedValue([{ id: 'student-1' }, { id: 'student-2' }]);
+      mockLessonRepository.findOne.mockResolvedValue({
+        id: "lesson-1",
+        universityId: "uni-1",
+        groupId: "group-1",
+        teacherId: "teacher-1",
+      });
+      mockUserRepository.find.mockResolvedValue([
+        { id: "student-1" },
+        { id: "student-2" },
+      ]);
 
-      const result = await service.markAttendance('uni-1', 'teacher-1', {
-        lessonId: 'lesson-1',
+      const result = await service.markAttendance("uni-1", "teacher-1", {
+        lessonId: "lesson-1",
         entries: [
-          { studentId: 'student-1', status: 'present' },
-          { studentId: 'student-2', status: 'late', comment: 'Пришёл после начала пары' },
+          { studentId: "student-1", status: "present" },
+          {
+            studentId: "student-2",
+            status: "late",
+            comment: "Пришёл после начала пары",
+          },
         ],
       });
 
       expect(result).toHaveLength(2);
-      expect(mockAttendanceRepository.save).toHaveBeenCalledWith(expect.arrayContaining([
-        expect.objectContaining({ studentId: 'student-1', status: 'present', markedById: 'teacher-1' }),
-        expect.objectContaining({ studentId: 'student-2', status: 'late', comment: 'Пришёл после начала пары' }),
-      ]));
+      expect(mockAttendanceRepository.save).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({
+            studentId: "student-1",
+            status: "present",
+            markedById: "teacher-1",
+          }),
+          expect.objectContaining({
+            studentId: "student-2",
+            status: "late",
+            comment: "Пришёл после начала пары",
+          }),
+        ]),
+      );
     });
 
-    it('rejects a teacher trying to mark another teacher\'s lesson', async () => {
-      mockTenantContext.getUser.mockReturnValue({ id: 'teacher-1', role: UserRole.TEACHER, universityId: 'uni-1' });
-      mockLessonRepository.findOne.mockResolvedValue({ id: 'lesson-1', universityId: 'uni-1', groupId: 'group-1', teacherId: 'teacher-2' });
+    it("rejects a teacher trying to mark another teacher's lesson", async () => {
+      mockTenantContext.getUser.mockReturnValue({
+        id: "teacher-1",
+        role: UserRole.TEACHER,
+        universityId: "uni-1",
+      });
+      mockLessonRepository.findOne.mockResolvedValue({
+        id: "lesson-1",
+        universityId: "uni-1",
+        groupId: "group-1",
+        teacherId: "teacher-2",
+      });
 
-      await expect(service.markAttendance('uni-1', 'teacher-1', {
-        lessonId: 'lesson-1', entries: [{ studentId: 'student-1', status: 'present' }],
-      })).rejects.toThrow(ForbiddenException);
+      await expect(
+        service.markAttendance("uni-1", "teacher-1", {
+          lessonId: "lesson-1",
+          entries: [{ studentId: "student-1", status: "present" }],
+        }),
+      ).rejects.toThrow(ForbiddenException);
       expect(mockAttendanceRepository.save).not.toHaveBeenCalled();
     });
   });
 
-  describe('delete', () => {
-    it('should throw NotFoundException if absence not found', async () => {
+  describe("delete", () => {
+    it("should throw NotFoundException if absence not found", async () => {
       mockRepo.findOne.mockResolvedValue(null);
-      await expect(service.delete('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(service.delete("nonexistent")).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
-    it('rejects a student deletion of another student\'s absence', async () => {
+    it("rejects a student deletion of another student's absence", async () => {
       mockRepo.findOne.mockResolvedValue({
-        id: 'absence-1',
-        studentId: 'student-2',
-        universityId: 'uni-1',
+        id: "absence-1",
+        studentId: "student-2",
+        universityId: "uni-1",
       });
       mockTenantContext.getUser.mockReturnValue({
-        id: 'student-1',
+        id: "student-1",
         role: UserRole.STUDENT,
-        universityId: 'uni-1',
+        universityId: "uni-1",
       });
 
-      await expect(service.delete('absence-1')).rejects.toThrow(ForbiddenException);
+      await expect(service.delete("absence-1")).rejects.toThrow(
+        ForbiddenException,
+      );
       expect(mockRepo.delete).not.toHaveBeenCalled();
     });
   });

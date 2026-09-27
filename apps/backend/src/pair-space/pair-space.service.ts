@@ -1,27 +1,34 @@
-import { ForbiddenException, Injectable, NotFoundException, Optional } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+  Optional,
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
 
-import { PairSpace } from './entities/pair-space.entity';
-import { Announcement } from './entities/announcement.entity';
-import { Homework } from './entities/homework.entity';
-import { FileAttachment } from './entities/file-attachment.entity';
-import { DiscussionMessage } from './entities/discussion-message.entity';
-import { HomeworkSubmission } from './entities/homework-submission.entity';
-import { CreateAnnouncementDto } from './dto/create-announcement.dto';
-import { CreateHomeworkDto } from './dto/create-homework.dto';
-import { SubmitHomeworkDto } from './dto/submit-homework.dto';
-import { CreateMessageDto } from './dto/create-message.dto';
-import { CreateFileDto } from './dto/create-file.dto';
-import { TenantContext } from '../common/tenant/tenant-context';
-import { EventBusService } from '../events/event-bus.service';
-import { Lesson } from '../schedule/entities/lesson.entity';
-import { UserRole } from '../auth/interfaces/user-role';
+import { PairSpace } from "./entities/pair-space.entity";
+import { Announcement } from "./entities/announcement.entity";
+import { Homework } from "./entities/homework.entity";
+import { FileAttachment } from "./entities/file-attachment.entity";
+import { DiscussionMessage } from "./entities/discussion-message.entity";
+import { HomeworkSubmission } from "./entities/homework-submission.entity";
+import { CreateAnnouncementDto } from "./dto/create-announcement.dto";
+import { CreateHomeworkDto } from "./dto/create-homework.dto";
+import { SubmitHomeworkDto } from "./dto/submit-homework.dto";
+import { CreateMessageDto } from "./dto/create-message.dto";
+import { CreateFileDto } from "./dto/create-file.dto";
+import { TenantContext } from "../common/tenant/tenant-context";
+import { EventBusService } from "../events/event-bus.service";
+import { Lesson } from "../schedule/entities/lesson.entity";
+import { Group } from "../users/entities/group.entity";
+import { University } from "../users/entities/university.entity";
+import { UserRole } from "../auth/interfaces/user-role";
 import {
   PaginatedResponse,
   PaginationQueryDto,
   toPaginatedResponse,
-} from '../common/dto/pagination-query.dto';
+} from "../common/dto/pagination-query.dto";
 
 const CONTENT_AUTHOR_ROLES: UserRole[] = [
   UserRole.TEACHER,
@@ -31,6 +38,8 @@ const CONTENT_AUTHOR_ROLES: UserRole[] = [
   UserRole.UNIVERSITY_ADMIN,
   UserRole.SUPERADMIN,
 ];
+
+export type PairSpaceResponse = PairSpace & { moodleUrl?: string };
 
 @Injectable()
 export class PairSpaceService {
@@ -48,15 +57,22 @@ export class PairSpaceService {
     @InjectRepository(HomeworkSubmission)
     private readonly submissionRepository: Repository<HomeworkSubmission>,
     private readonly tenantContext: TenantContext,
-    @Optional() @InjectRepository(Lesson)
+    @Optional()
+    @InjectRepository(Lesson)
     private readonly lessonRepository?: Repository<Lesson>,
+    @Optional()
+    @InjectRepository(Group)
+    private readonly groupRepository?: Repository<Group>,
+    @Optional()
+    @InjectRepository(University)
+    private readonly universityRepository?: Repository<University>,
     @Optional() private readonly eventBus?: EventBusService,
   ) {}
 
-  async findById(id: string): Promise<PairSpace> {
+  async findById(id: string): Promise<PairSpaceResponse> {
     const pairSpace = await this.pairSpaceRepository.findOne({
       where: { id },
-      relations: ['announcements', 'homeworks', 'files', 'messages'],
+      relations: ["announcements", "homeworks", "files", "messages"],
     });
 
     if (!pairSpace) {
@@ -64,13 +80,16 @@ export class PairSpaceService {
     }
     await this.assertRoleScopedAccess(pairSpace);
 
-    return pairSpace;
+    return this.attachMoodleUrl(pairSpace);
   }
 
-  async findByLesson(lessonId: string, universityId?: string): Promise<PairSpace> {
+  async findByLesson(
+    lessonId: string,
+    universityId?: string,
+  ): Promise<PairSpaceResponse> {
     const pairSpace = await this.pairSpaceRepository.findOne({
       where: universityId ? { lessonId, universityId } : { lessonId },
-      relations: ['announcements', 'homeworks', 'files', 'messages'],
+      relations: ["announcements", "homeworks", "files", "messages"],
     });
 
     if (!pairSpace) {
@@ -78,7 +97,61 @@ export class PairSpaceService {
     }
     await this.assertRoleScopedAccess(pairSpace);
 
-    return pairSpace;
+    return this.attachMoodleUrl(pairSpace);
+  }
+
+  /**
+   * Creates the operational context from an already-authorized lesson on first
+   * access. The unique lesson index keeps the operation idempotent across
+   * concurrent teacher requests.
+   */
+  async getOrCreateByLesson(
+    lessonId: string,
+    universityId?: string,
+  ): Promise<PairSpaceResponse> {
+    try {
+      return await this.findByLesson(lessonId, universityId);
+    } catch (error) {
+      if (!(error instanceof NotFoundException)) throw error;
+    }
+
+    const user = this.tenantContext.getUser();
+    const scopedUniversityId = universityId ?? user?.universityId;
+    if (!scopedUniversityId || !this.lessonRepository) {
+      throw new NotFoundException(`Lesson ${lessonId} not found`);
+    }
+    this.tenantContext.assertAccess(scopedUniversityId);
+
+    const lesson = await this.lessonRepository.findOne({
+      where: { id: lessonId, universityId: scopedUniversityId },
+    });
+    if (!lesson) throw new NotFoundException(`Lesson ${lessonId} not found`);
+    await this.assertLessonScopedAccess(lesson);
+
+    try {
+      await this.pairSpaceRepository.save(
+        this.pairSpaceRepository.create({
+          universityId: lesson.universityId,
+          lessonId: lesson.id,
+          courseId: lesson.courseId,
+          lessonOccurrenceId: lesson.occurrenceId,
+          subject: lesson.subject,
+          date: lesson.startDate,
+          pairNumber: lesson.pairNumber,
+          teacherName: lesson.teacherName,
+          group: lesson.groupName,
+          room: lesson.room,
+          source: "manual",
+          syncStatus: "synced",
+        }),
+      );
+    } catch (error) {
+      const code = (error as { driverError?: { code?: string } }).driverError
+        ?.code;
+      if (code !== "23505") throw error;
+    }
+
+    return this.findByLesson(lessonId, scopedUniversityId);
   }
 
   async createAnnouncement(
@@ -91,24 +164,24 @@ export class PairSpaceService {
       ...createAnnouncementDto,
       pairSpaceId,
       authorId,
-      source: 'manual',
-      syncStatus: 'synced',
+      source: "manual",
+      syncStatus: "synced",
     });
 
     const saved = await this.announcementRepository.save(announcement);
     const pairSpace = await this.findById(pairSpaceId);
     await this.eventBus?.publish({
-      type: 'announcement.created',
+      type: "announcement.created",
       universityId: pairSpace.universityId,
       actor: this.eventActor(authorId),
-      target: { type: 'announcement', id: saved.id },
+      target: { type: "announcement", id: saved.id },
       payload: {
         pairSpaceId,
         ...(await this.lessonContext(pairSpace)),
         groupName: pairSpace.group ?? null,
         deepLink: `/pair-space/${pairSpace.lessonId}`,
       },
-      priority: 'normal',
+      priority: "normal",
     });
     return saved;
   }
@@ -117,7 +190,7 @@ export class PairSpaceService {
     await this.assertPairSpaceAccess(pairSpaceId);
     return this.announcementRepository.find({
       where: { pairSpaceId },
-      order: { isPinned: 'DESC', createdAt: 'DESC' },
+      order: { isPinned: "DESC", createdAt: "DESC" },
     });
   }
 
@@ -131,17 +204,17 @@ export class PairSpaceService {
       ...createHomeworkDto,
       pairSpaceId,
       authorId,
-      source: 'manual',
-      syncStatus: 'synced',
+      source: "manual",
+      syncStatus: "synced",
     });
 
     const saved = await this.homeworkRepository.save(homework);
     const pairSpace = await this.findById(pairSpaceId);
     await this.eventBus?.publish({
-      type: 'homework.created',
+      type: "homework.created",
       universityId: pairSpace.universityId,
       actor: this.eventActor(authorId),
-      target: { type: 'homework', id: saved.id },
+      target: { type: "homework", id: saved.id },
       payload: {
         pairSpaceId,
         ...(await this.lessonContext(pairSpace)),
@@ -149,7 +222,7 @@ export class PairSpaceService {
         deadline: saved.deadline?.toISOString() ?? null,
         deepLink: `/pair-space/${pairSpace.lessonId}`,
       },
-      priority: 'normal',
+      priority: "normal",
     });
     return saved;
   }
@@ -158,7 +231,7 @@ export class PairSpaceService {
     await this.assertPairSpaceAccess(pairSpaceId);
     return this.homeworkRepository.find({
       where: { pairSpaceId },
-      order: { deadline: 'ASC' },
+      order: { deadline: "ASC" },
     });
   }
 
@@ -187,7 +260,7 @@ export class PairSpaceService {
     await this.assertPairSpaceAccess(pairSpaceId);
     const [data, total] = await this.messageRepository.findAndCount({
       where: { pairSpaceId },
-      order: { createdAt: 'ASC' },
+      order: { createdAt: "ASC" },
       skip: (pagination.page - 1) * pagination.limit,
       take: pagination.limit,
     });
@@ -211,17 +284,17 @@ export class PairSpaceService {
     const saved = await this.messageRepository.save(message);
     const eventPairSpace = await this.findById(pairSpaceId);
     await this.eventBus?.publish({
-      type: 'message.created',
+      type: "message.created",
       universityId: eventPairSpace.universityId,
       actor: this.eventActor(userId),
-      target: { type: 'message', id: saved.id },
+      target: { type: "message", id: saved.id },
       payload: {
         pairSpaceId,
         ...(await this.lessonContext(eventPairSpace)),
         groupName: eventPairSpace.group ?? null,
         deepLink: `/pair-space/${eventPairSpace.lessonId}`,
       },
-      priority: 'normal',
+      priority: "normal",
     });
     return saved;
   }
@@ -233,14 +306,16 @@ export class PairSpaceService {
   ): Promise<HomeworkSubmission> {
     const homework = await this.homeworkRepository.findOne({
       where: { id: homeworkId },
-      relations: ['pairSpace'],
+      relations: ["pairSpace"],
     });
     if (!homework) {
       throw new NotFoundException(`Homework with id ${homeworkId} not found`);
     }
     const user = this.tenantContext.getUser();
     if (!user || user.role !== UserRole.STUDENT || user.id !== studentId) {
-      throw new ForbiddenException('Only the authenticated student can submit homework');
+      throw new ForbiddenException(
+        "Only the authenticated student can submit homework",
+      );
     }
     await this.assertRoleScopedAccess(homework.pairSpace);
 
@@ -249,7 +324,7 @@ export class PairSpaceService {
     });
 
     if (existing) {
-      existing.status = 'submitted';
+      existing.status = "submitted";
       existing.submittedAt = new Date();
       if (submitHomeworkDto.fileUrl) {
         existing.fileUrl = submitHomeworkDto.fileUrl;
@@ -263,7 +338,7 @@ export class PairSpaceService {
     const submission = this.submissionRepository.create({
       homeworkId,
       studentId,
-      status: 'submitted',
+      status: "submitted",
       submittedAt: new Date(),
       fileUrl: submitHomeworkDto.fileUrl,
       comment: submitHomeworkDto.comment,
@@ -275,7 +350,7 @@ export class PairSpaceService {
   async completeHomework(homeworkId: string): Promise<Homework> {
     const homework = await this.homeworkRepository.findOne({
       where: { id: homeworkId },
-      relations: ['pairSpace'],
+      relations: ["pairSpace"],
     });
 
     if (!homework) {
@@ -286,22 +361,24 @@ export class PairSpaceService {
     homework.isCompleted = true;
     const saved = await this.homeworkRepository.save(homework);
     await this.eventBus?.publish({
-      type: 'homework.updated',
+      type: "homework.updated",
       universityId: homework.pairSpace.universityId,
       actor: this.eventActor(),
-      target: { type: 'homework', id: saved.id },
+      target: { type: "homework", id: saved.id },
       payload: {
         pairSpaceId: homework.pairSpaceId,
         ...(await this.lessonContext(homework.pairSpace)),
         deepLink: `/pair-space/${homework.pairSpace.lessonId}`,
       },
-      priority: 'normal',
+      priority: "normal",
     });
     return saved;
   }
 
   private async assertPairSpaceAccess(pairSpaceId: string): Promise<PairSpace> {
-    const pairSpace = await this.pairSpaceRepository.findOne({ where: { id: pairSpaceId } });
+    const pairSpace = await this.pairSpaceRepository.findOne({
+      where: { id: pairSpaceId },
+    });
     if (!pairSpace) {
       throw new NotFoundException(`PairSpace with id ${pairSpaceId} not found`);
     }
@@ -314,34 +391,104 @@ export class PairSpaceService {
     const user = this.tenantContext.getUser();
     if (!user || user.role !== UserRole.STUDENT) return;
     if (!user.groupId || !this.lessonRepository) {
-      throw new ForbiddenException('Student group access cannot be established');
+      throw new ForbiddenException(
+        "Student group access cannot be established",
+      );
     }
     const lesson = await this.lessonRepository.findOne({
       where: { id: pairSpace.lessonId, universityId: pairSpace.universityId },
     });
-    if (!lesson || lesson.groupId !== user.groupId) {
-      throw new ForbiddenException('Students can only access pair spaces for their own group');
+    const groupId = await this.resolveStudentGroupId(
+      pairSpace.universityId,
+      user.groupId,
+    );
+    if (!lesson || lesson.groupId !== groupId) {
+      throw new ForbiddenException(
+        "Students can only access pair spaces for their own group",
+      );
     }
   }
 
-  private async assertCanPublishContent(pairSpaceId: string, actorId: string): Promise<PairSpace> {
+  private async assertLessonScopedAccess(lesson: Lesson): Promise<void> {
+    const user = this.tenantContext.getUser();
+    if (!user) throw new ForbiddenException("Authenticated user required");
+    const groupId = await this.resolveStudentGroupId(
+      lesson.universityId,
+      user.groupId,
+    );
+    if (user.role === UserRole.STUDENT && lesson.groupId !== groupId) {
+      throw new ForbiddenException(
+        "Students can only access pair spaces for their own group",
+      );
+    }
+    if (user.role === UserRole.TEACHER && lesson.teacherId !== user.id) {
+      throw new ForbiddenException(
+        "Teachers can only access their own lesson spaces",
+      );
+    }
+  }
+
+  private async resolveStudentGroupId(
+    universityId: string,
+    groupId: string | null | undefined,
+  ): Promise<string | null | undefined> {
+    if (!groupId || !/^\d+$/.test(groupId) || !this.groupRepository) {
+      return groupId;
+    }
+    const group = await this.groupRepository.findOne({
+      where: { universityId, externalId: groupId },
+    });
+    return group?.id ?? groupId;
+  }
+
+  private async attachMoodleUrl(
+    pairSpace: PairSpace,
+  ): Promise<PairSpaceResponse> {
+    if (!this.universityRepository) return pairSpace;
+    const university = await this.universityRepository.findOne({
+      where: { id: pairSpace.universityId },
+    });
+    const baseUrl = university?.connectorConfig?.baseUrl;
+    if (
+      university?.connectorType !== "moodle" ||
+      university.connectorConfig?.status !== "active" ||
+      typeof baseUrl !== "string" ||
+      !baseUrl.startsWith("https://")
+    ) {
+      return pairSpace;
+    }
+    return { ...pairSpace, moodleUrl: baseUrl };
+  }
+
+  private async assertCanPublishContent(
+    pairSpaceId: string,
+    actorId: string,
+  ): Promise<PairSpace> {
     const user = this.tenantContext.getUser();
     if (!user || !CONTENT_AUTHOR_ROLES.includes(user.role)) {
-      throw new ForbiddenException('Staff role required to publish pair space content');
+      throw new ForbiddenException(
+        "Staff role required to publish pair space content",
+      );
     }
     if (user.id !== actorId) {
-      throw new ForbiddenException('Users can only publish pair space content as themselves');
+      throw new ForbiddenException(
+        "Users can only publish pair space content as themselves",
+      );
     }
     const pairSpace = await this.assertPairSpaceAccess(pairSpaceId);
     await this.assertTeacherOwnsPairSpace(pairSpace);
     return pairSpace;
   }
 
-  private async assertTeacherOwnsPairSpace(pairSpace: PairSpace): Promise<void> {
+  private async assertTeacherOwnsPairSpace(
+    pairSpace: PairSpace,
+  ): Promise<void> {
     const user = this.tenantContext.getUser();
     if (user?.role !== UserRole.TEACHER) return;
     if (!this.lessonRepository) {
-      throw new ForbiddenException('Teacher lesson access cannot be established');
+      throw new ForbiddenException(
+        "Teacher lesson access cannot be established",
+      );
     }
     const lesson = await this.lessonRepository.findOne({
       where: {
@@ -351,18 +498,30 @@ export class PairSpaceService {
       },
     });
     if (!lesson) {
-      throw new ForbiddenException('Teachers can only access their own lesson spaces');
+      throw new ForbiddenException(
+        "Teachers can only access their own lesson spaces",
+      );
     }
   }
 
   private eventActor(id?: string) {
     const user = this.tenantContext.getUser();
-    return user ? { id: user.id, type: 'user' as const, role: user.role } : id ? { id, type: 'user' as const } : { type: 'system' as const };
+    return user
+      ? { id: user.id, type: "user" as const, role: user.role }
+      : id
+        ? { id, type: "user" as const }
+        : { type: "system" as const };
   }
 
-  private async lessonContext(pairSpace: PairSpace): Promise<{ groupId?: string; teacherId?: string }> {
+  private async lessonContext(
+    pairSpace: PairSpace,
+  ): Promise<{ groupId?: string; teacherId?: string }> {
     if (!this.lessonRepository) return {};
-    const lesson = await this.lessonRepository.findOne({ where: { id: pairSpace.lessonId } });
-    return lesson ? { groupId: lesson.groupId, teacherId: lesson.teacherId } : {};
+    const lesson = await this.lessonRepository.findOne({
+      where: { id: pairSpace.lessonId },
+    });
+    return lesson
+      ? { groupId: lesson.groupId, teacherId: lesson.teacherId }
+      : {};
   }
 }

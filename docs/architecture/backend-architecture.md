@@ -2,193 +2,250 @@
 
 ## Общая структура
 
+Дерево сгенерировано по `apps/backend/src` (файлы `*.spec.ts` опущены — см. раздел «Тестирование»).
+
 ```
 apps/backend/src/
-├── main.ts                          # Точка входа
-├── app.module.ts                    # Корневой модуль
+├── main.ts                               # Bootstrap: prefix, Swagger, ValidationPipe, фильтры, CORS, Sentry
+├── app.module.ts                         # Корневой модуль: Config, TypeORM, EventEmitter, Throttler
+├── app.controller.ts                     # GET /api/v1/app
+├── health.controller.ts                  # GET /api/v1/health
 │
-├── common/                          # Общие компоненты
+├── common/                               # Общие компоненты
+│   ├── authorization/
+│   │   ├── permissions.ts                # PERMISSIONS / ROLE_PERMISSIONS / hasPermission()
+│   │   ├── permissions.decorator.ts      # @RequiresPermission(...)
+│   │   └── permissions.guard.ts          # Проверка прав по роли user.role
 │   ├── decorators/
-│   │   ├── roles.decorator.ts       # @Roles('teacher')
-│   │   ├── current-user.decorator.ts # @CurrentUser()
-│   │   └── university.decorator.ts  # @UniversityId()
+│   │   └── roles.decorator.ts            # @Roles(...)
 │   ├── guards/
-│   │   ├── jwt-auth.guard.ts        # JWT авторизация
-│   │   ├── roles.guard.ts           # Проверка ролей
-│   │   └── university.guard.ts      # Фильтрация по university_id
+│   │   ├── jwt-auth.guard.ts             # Passport 'jwt' + TenantContext.setUser()
+│   │   ├── roles.guard.ts                # Доступ по единственной роли user.role
+│   │   └── university.guard.ts           # Доступ к данным своего вуза
 │   ├── interceptors/
-│   │   ├── transform.interceptor.ts # Единый формат ответа
-│   │   ├── logging.interceptor.ts   # Логирование запросов
-│   │   └── cache.interceptor.ts     # Кэширование
+│   │   └── transform.interceptor.ts      # Лог длительности HTTP-запроса
 │   ├── filters/
-│   │   └── http-exception.filter.ts # Единый формат ошибок
-│   ├── pipes/
-│   │   ├── validation.pipe.ts       # Валидация DTO
-│   │   └── parse-uuid.pipe.ts       # Парсинг UUID
+│   │   └── http-exception.filter.ts      # Единый формат ошибок
 │   ├── dto/
-│   │   ├── pagination.dto.ts        # { page, limit, sort, order }
-│   │   ├── id-param.dto.ts          # { id: UUID }
-│   │   └── date-range.dto.ts        # { startDate, endDate }
-│   ├── interfaces/
-│   │   ├── jwt-payload.interface.ts # Payload JWT
-│   │   └── request-with-user.ts     # Request с пользователем
-│   ├── types/
-│   │   └── express.d.ts             # Типы Express
-│   └── utils/
-│       ├── date.utils.ts            # Утилиты дат
-│       └── crypto.utils.ts          # Шифрование
+│   │   ├── pagination-query.dto.ts       # PaginationQueryDto + toPaginatedResponse()
+│   │   ├── date-range-query.dto.ts
+│   │   └── api-error-response.dto.ts     # Модель ошибки для Swagger
+│   ├── tenant/
+│   │   ├── tenant-context.ts             # AsyncLocalStorage + assertAccess()
+│   │   └── tenant-context.module.ts
+│   ├── entities/
+│   │   └── audit-log.entity.ts
+│   └── types/
+│       └── json-value.type.ts
 │
-├── config/                          # Конфигурация
-│   ├── app.config.ts                # Общие настройки
-│   ├── database.config.ts           # PostgreSQL
-│   ├── jwt.config.ts                # JWT секреты
-│   ├── redis.config.ts              # Redis
-│   ├── s3.config.ts                 # S3 хранилище
-│   └── push.config.ts               # FCM/APNs
+├── config/                               # Конфигурация
+│   ├── configuration.ts                  # nodeEnv, auth.jwt.*, max.*
+│   ├── database.config.ts                # DataSource для CLI TypeORM (миграции)
+│   └── validate-environment.ts           # Проверка обязательных ENV-переменных
 │
-├── auth/                            # Модуль авторизации
+├── auth/                                 # Модуль авторизации
 │   ├── auth.module.ts
-│   ├── auth.controller.ts           # /api/v1/auth/*
+│   ├── auth.controller.ts                # /api/v1/auth/*
 │   ├── auth.service.ts
+│   ├── max-init-data.ts                  # Проверка initData MAX (HMAC)
+│   ├── rasp-scraper.service.ts           # Живой источник rasp.sano.ru
+│   ├── sibit-university-bootstrap.service.ts # Пилотный вуз при старте
 │   ├── strategies/
-│   │   ├── jwt.strategy.ts          # Passport JWT
-│   │   └── jwt-refresh.strategy.ts  # Refresh token
+│   │   └── jwt.strategy.ts               # Passport JWT
 │   ├── dto/
-│   │   ├── request-code.dto.ts      # { phone } или { email }
-│   │   ├── verify-code.dto.ts       # { code, phone/email }
-│   │   ├── refresh.dto.ts           # { refreshToken }
-│   │   └── max-auth.dto.ts          # { initData }
+│   │   ├── login.dto.ts
+│   │   ├── register.dto.ts
+│   │   ├── refresh-token.dto.ts
+│   │   └── max-auth.dto.ts
 │   └── interfaces/
-│       └── auth-result.interface.ts # { accessToken, refreshToken, user }
+│       ├── authenticated-user.interface.ts
+│       ├── auth-response.interface.ts
+│       ├── jwt-payload.interface.ts
+│       └── user-role.ts                  # enum UserRole (8 значений)
 │
-├── users/                           # Модуль пользователей
+├── users/                                # Модуль пользователей
 │   ├── users.module.ts
-│   ├── users.controller.ts          # /api/v1/users/*
+│   ├── users.controller.ts               # /api/v1/users/*
 │   ├── users.service.ts
 │   ├── entities/
-│   │   ├── user.entity.ts           # Сущность пользователя
-│   │   └── preference.entity.ts     # Настройки
-│   ├── dto/
-│   │   ├── update-profile.dto.ts    # { firstName, lastName, avatarUrl }
-│   │   ├── bind-group.dto.ts        # { universityId, groupId }
-│   │   └── user-response.dto.ts     # Ответ с пользователем
-│   └── interfaces/
-│       └── user-with-roles.ts       # Пользователь с ролями
-│
-├── schedule/                        # Модуль расписания
-│   ├── schedule.module.ts
-│   ├── schedule.controller.ts       # /api/v1/schedule/*
-│   ├── schedule.service.ts
-│   ├── change-detector.service.ts   # Детект изменений
-│   ├── entities/
-│   │   ├── lesson.entity.ts         # Пара
-│   │   ├── lesson-change.entity.ts  # Изменение пары
-│   │   └── university.entity.ts     # Вуз (с connector_config)
-│   ├── connectors/
-│   │   ├── schedule-connector.interface.ts # Интерфейс коннектора
-│   │   ├── normalized-lesson.interface.ts  # Нормализованная пара
-│   │   ├── excel.connector.ts       # Excel/CSV импорт
-│   │   ├── sibit.connector.ts       # Парсер СИБИТ
-│   │   └── connector.factory.ts     # Фабрика коннекторов
+│   │   ├── user.entity.ts                # users: role (enum), university_id, group_id
+│   │   ├── university.entity.ts
+│   │   ├── faculty.entity.ts
+│   │   ├── group.entity.ts
+│   │   └── teacher.entity.ts
 │   └── dto/
-│       ├── schedule-query.dto.ts    # { startDate, endDate, groupId }
-│       ├── upload-schedule.dto.ts   # Загрузка файла
-│       └── schedule-response.dto.ts # Ответ с расписанием
+│       ├── create-user.dto.ts
+│       ├── update-user.dto.ts
+│       └── bind-group.dto.ts
 │
-├── pair-space/                      # Модуль пространства пары
+├── universities/
+│   └── entities/
+│       └── university.entity.ts          # re-export users/entities/university.entity
+│
+├── schedule/                             # Модуль расписания
+│   ├── schedule.module.ts
+│   ├── schedule.controller.ts            # /api/v1/schedule/*
+│   ├── schedule.service.ts
+│   ├── change-detector.service.ts        # Детект изменений пар
+│   ├── connectors/
+│   │   ├── excel-connector.service.ts    # Excel-импорт (xlsx)
+│   │   └── sibit-connector.service.ts    # Расписание СИБИТ через rasp-scraper
+│   ├── entities/
+│   │   ├── lesson.entity.ts
+│   │   └── lesson-change.entity.ts
+│   ├── dto/
+│   │   ├── create-lesson.dto.ts
+│   │   ├── update-lesson.dto.ts
+│   │   └── schedule-query.dto.ts
+│   └── utils/
+│       └── date-range.ts
+│
+├── pair-space/                           # Модуль пространства пары
 │   ├── pair-space.module.ts
-│   ├── pair-space.controller.ts     # /api/v1/pair-spaces/*
+│   ├── pair-space.controller.ts          # /api/v1/pair-spaces/*
 │   ├── pair-space.service.ts
 │   ├── entities/
-│   │   ├── pair-space.entity.ts     # Пространство пары
-│   │   ├── announcement.entity.ts   # Объявление
-│   │   ├── homework.entity.ts       # Домашнее задание
-│   │   ├── homework-submission.entity.ts # Статус сдачи
-│   │   ├── file-attachment.entity.ts # Файл
-│   │   └── discussion-message.entity.ts # Сообщение обсуждения
+│   │   ├── pair-space.entity.ts
+│   │   ├── announcement.entity.ts
+│   │   ├── homework.entity.ts
+│   │   ├── homework-submission.entity.ts
+│   │   ├── file-attachment.entity.ts
+│   │   └── discussion-message.entity.ts
 │   └── dto/
 │       ├── create-announcement.dto.ts
 │       ├── create-homework.dto.ts
 │       ├── submit-homework.dto.ts
 │       ├── create-message.dto.ts
-│       └── file-upload.dto.ts
+│       └── create-file.dto.ts
 │
-├── absences/                        # Модуль отсутствий
+├── absences/                             # Модуль отсутствий и посещаемости
 │   ├── absences.module.ts
-│   ├── absences.controller.ts       # /api/v1/absences/*, /api/v1/curator/*
+│   ├── absences.controller.ts            # /api/v1/absences/*
+│   ├── curator.controller.ts             # /api/v1/curator/*
 │   ├── absences.service.ts
 │   ├── entities/
-│   │   ├── absence-status.entity.ts # Статус отсутствия
-│   │   └── absence-confirmation.entity.ts # Подтверждение куратора
+│   │   ├── absence.entity.ts
+│   │   ├── absence-confirmation.entity.ts
+│   │   └── attendance-record.entity.ts
 │   └── dto/
 │       ├── create-absence.dto.ts
 │       ├── confirm-absence.dto.ts
-│       └── absence-query.dto.ts
+│       ├── reject-absence.dto.ts
+│       ├── mark-attendance.dto.ts
+│       ├── update-absence.dto.ts
+│       └── absence-list-query.dto.ts
 │
-├── notifications/                   # Модуль уведомлений
+├── academic/                             # Учебный контекст (курсы, серии, занятия)
+│   ├── academic.module.ts
+│   ├── academic.controller.ts            # Права через @RequiresPermission
+│   ├── academic.service.ts
+│   ├── academic.types.ts
+│   ├── entities/                         # 7 entity (course, lesson-series, lesson-occurrence, ...)
+│   └── dto/                              # 7 DTO
+│
+├── notifications/                        # Модуль уведомлений
 │   ├── notifications.module.ts
-│   ├── notifications.controller.ts  # /api/v1/notifications/*
+│   ├── notifications.controller.ts       # /api/v1/notifications/*
+│   ├── devices.controller.ts             # /api/v1/devices/*
 │   ├── notifications.service.ts
-│   ├── push.service.ts              # Отправка push
+│   ├── events/
+│   │   └── notification-event.handler.ts # @OnEvent('napare.event')
 │   ├── entities/
-│   │   ├── notification.entity.ts   # Уведомление
-│   │   └── device-token.entity.ts   # Токен устройства
-│   └── dto/
-│       ├── notification-query.dto.ts
-│       ├── register-token.dto.ts
-│       └── notification-settings.dto.ts
+│   │   ├── notification.entity.ts
+│   │   ├── inbox-item.entity.ts
+│   │   ├── device-token.entity.ts
+│   │   └── notification-preference.entity.ts
+│   └── dto/                              # 5 DTO
 │
-├── admin/                           # Модуль администрирования
+├── events/                               # Шина событий (EventBusService + SSE)
+│   ├── events.module.ts
+│   ├── events.controller.ts
+│   ├── event-bus.service.ts              # Публикация/реплей, идемпотентность
+│   ├── event.types.ts                    # EventEnvelope, NAPARE_EVENT_TYPES
+│   └── entities/
+│       └── event-record.entity.ts
+│
+├── my-day/                               # «Мой день»
+│   ├── my-day.module.ts
+│   ├── my-day.controller.ts
+│   └── my-day.service.ts
+│
+├── admin/                                # Администрирование
 │   ├── admin.module.ts
-│   ├── admin.controller.ts          # /api/v1/admin/*
+│   ├── admin.controller.ts               # /api/v1/admin/*
+│   ├── superadmin.controller.ts          # /api/v1/superadmin/*
 │   ├── admin.service.ts
-│   ├── superadmin.controller.ts     # /api/v1/superadmin/*
 │   ├── superadmin.service.ts
-│   └── dto/
-│       ├── university.dto.ts
-│       ├── faculty.dto.ts
-│       ├── group.dto.ts
-│       ├── assign-roles.dto.ts
-│       └── stats-query.dto.ts
+│   └── dto/                              # 12 DTO
 │
-└── database/                        # Модуль БД
-    ├── database.module.ts
-    └── seed.service.ts              # Seed data
+├── rasp/
+│   └── rasp.module.ts
+│
+├── database/
+│   ├── database.module.ts                # forFeature по всем entity, экспорт репозиториев
+│   └── init.sql                          # SQL-инициализация (не выполняется модулем)
+│
+└── migrations/                           # TypeORM-миграции (8 файлов)
+    ├── 1700000000000-InitialSchema.ts
+    ├── 1700000000001-NormalizeUserRole.ts
+    ├── 1700000000002-OptimizeTenantQueriesAndIntegrity.ts
+    ├── 1700000000003-EventDrivenNotifications.ts
+    ├── 1700000000004-AcademicContext.ts
+    ├── 1700000000005-EventIdempotency.ts
+    ├── 1700000000006-MaxUserLink.ts
+    └── 1700000000007-AttendanceRecords.ts
 ```
+
+## Ключевые настройки bootstrap
+
+| Что | Где | Значение |
+|-----|-----|----------|
+| Глобальный префикс | `main.ts:66` | `app.setGlobalPrefix('api/v1')` |
+| Swagger | `main.ts:79` | `http://localhost:3000/api/v1/docs` |
+| ValidationPipe | `main.ts:30-36` | `whitelist: true`, `forbidNonWhitelisted: true`, `transform: true` |
+| Глобальный фильтр | `main.ts:39` | `AllExceptionsFilter` |
+| Глобальный интерцептор | `main.ts:42` | `TransformInterceptor` (лог длительности) |
+| Sentry | `main.ts:20-27` | инициализируется только если задан `SENTRY_DSN` |
+| TypeORM | `app.module.ts:35-63` | `synchronize: true` вне production, `migrationsRun: true` в production |
+| Обязательные ENV | `config/validate-environment.ts` | `NODE_ENV`, `JWT_SECRET`, `JWT_REFRESH_SECRET`, `JWT_ACCESS_EXPIRATION`, `JWT_REFRESH_EXPIRATION` |
 
 ## Паттерны
 
 ### 1. Repository Pattern
 
 ```typescript
-// entities/user.entity.ts
+// users/entities/user.entity.ts
 @Entity('users')
+@Index('IDX_users_university_id', ['universityId'])
 export class User {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ nullable: true, unique: true })
-  phone: string;
-
-  @Column({ nullable: true, unique: true })
+  @Column({ unique: true })
   email: string;
 
-  @Column('text', { array: true, default: ['student'] })
-  roles: Role[];
+  @Column()
+  @Exclude()
+  passwordHash: string;
 
-  @Column({ nullable: true })
+  @Column()
+  firstName: string;
+
+  @Column()
+  lastName: string;
+
+  // Единственная роль пользователя (enum), не массив
+  @Column({ type: 'enum', enum: UserRole, default: UserRole.STUDENT })
+  role: UserRole;
+
+  @Column({ type: 'uuid' })
   universityId: string;
 
-  @Column({ nullable: true })
-  groupId: string;
+  @Column({ type: 'varchar', nullable: true })
+  groupId: string | null;
 
-  @ManyToOne(() => University)
-  @JoinColumn({ name: 'university_id' })
-  university: University;
-
-  @ManyToOne(() => Group)
-  @JoinColumn({ name: 'group_id' })
-  group: Group;
+  @Column({ default: true })
+  isActive: boolean;
 
   @CreateDateColumn()
   createdAt: Date;
@@ -201,93 +258,109 @@ export class User {
 ### 2. Service Pattern
 
 ```typescript
-// users.service.ts
+// users/users.service.ts
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
+    private readonly usersRepository: Repository<User>,
+    private readonly tenantContext: TenantContext,
   ) {}
 
-  async findById(id: string): Promise<User> {
-    const user = await this.userRepository.findOne({ where: { id } });
-    if (!user) {
-      throw new BusinessError('USER_NOT_FOUND', 'Пользователь не найден');
-    }
+  async findById(id: string): Promise<User | null> {
+    const user = await this.usersRepository.findOne({ where: { id } });
+    if (user) this.tenantContext.assertAccess(user.universityId);
     return user;
   }
 
-  async findByUniversity(universityId: string): Promise<User[]> {
-    return this.userRepository.find({ where: { universityId } });
-  }
-
-  async updateProfile(userId: string, dto: UpdateProfileDto): Promise<User> {
-    const user = await this.findById(userId);
-    Object.assign(user, dto);
-    return this.userRepository.save(user);
+  async findByUniversityId(
+    universityId: string,
+    pagination: PaginationQueryDto = new PaginationQueryDto(),
+    roles?: UserRole[],
+  ): Promise<PaginatedResponse<User>> {
+    this.tenantContext.assertAccess(universityId);
+    const [data, total] = await this.usersRepository.findAndCount({
+      where: { universityId, ...(roles?.length ? { role: In(roles) } : {}) },
+      order: { createdAt: 'DESC' },
+      skip: (pagination.page - 1) * pagination.limit,
+      take: pagination.limit,
+    });
+    return toPaginatedResponse(data, total, pagination);
   }
 }
 ```
+
+Бизнесные ошибки бросаются стандартными исключениями NestJS
+(`NotFoundException`, `ConflictException`, `ForbiddenException`) —
+`AllExceptionsFilter` приводит их к единому формату ответа.
 
 ### 3. Controller Pattern
 
 ```typescript
-// users.controller.ts
-@ApiTags('Users')
-@Controller('api/v1/users')
-@UseGuards(JwtAuthGuard, UniversityGuard)
+// users/users.controller.ts
+@ApiTags('users')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
+@UseInterceptors(ClassSerializerInterceptor)
+@Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Get('me')
-  @ApiOperation({ summary: 'Получить профиль текущего пользователя' })
-  async getProfile(@CurrentUser() user: JwtPayload): Promise<UserResponseDto> {
-    return this.usersService.findById(user.userId);
+  async getProfile(@Request() req) {
+    return this.usersService.findById(req.user.id);
   }
 
   @Patch('me')
-  @ApiOperation({ summary: 'Обновить профиль' })
-  async updateProfile(
-    @CurrentUser() user: JwtPayload,
-    @Body() dto: UpdateProfileDto,
-  ): Promise<UserResponseDto> {
-    return this.usersService.updateProfile(user.userId, dto);
+  async updateProfile(@Request() req, @Body() updateUserDto: UpdateUserDto) {
+    return this.usersService.update(req.user.id, updateUserDto);
   }
 }
 ```
+
+Пользователь в запросе появляется через `JwtAuthGuard`
+(`common/guards/jwt-auth.guard.ts`) — декоратора `@CurrentUser()` в кодовой базе нет.
 
 ### 4. DTO Pattern
 
 ```typescript
-// dto/update-profile.dto.ts
-export class UpdateProfileDto {
-  @ApiProperty({ example: 'Иван' })
-  @IsString()
+// users/dto/update-user.dto.ts
+export class UpdateUserDto {
+  @ApiPropertyOptional({ example: 'Иван' })
   @IsOptional()
+  @IsString()
   firstName?: string;
 
-  @ApiProperty({ example: 'Иванов' })
-  @IsString()
+  @ApiPropertyOptional({ example: 'Иванов' })
   @IsOptional()
+  @IsString()
   lastName?: string;
 
-  @ApiProperty({ example: 'https://...' })
-  @IsUrl()
+  @ApiPropertyOptional({ example: '+7 999 123 4567' })
   @IsOptional()
+  @IsString()
+  phone?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
   avatarUrl?: string;
 }
 ```
 
+Незнакомые поля DTO отклоняются: глобальный `ValidationPipe` включает
+`whitelist` + `forbidNonWhitelisted` (`main.ts:30-36`).
+
 ### 5. Guard Pattern
 
 ```typescript
-// guards/roles.guard.ts
+// common/guards/roles.guard.ts
 @Injectable()
 export class RolesGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
-    const requiredRoles = this.reflector.getAllAndOverride<Role[]>('roles', [
+    const requiredRoles = this.reflector.getAllAndOverride<UserRole[]>(ROLES_KEY, [
       context.getHandler(),
       context.getClass(),
     ]);
@@ -296,224 +369,254 @@ export class RolesGuard implements CanActivate {
       return true;
     }
 
-    const { user } = context.switchToHttp().getRequest();
-    return requiredRoles.some((role) => user.roles?.includes(role));
+    const { user }: { user?: AuthenticatedUser } = context.switchToHttp().getRequest();
+
+    if (!user) {
+      throw new ForbiddenException('User not authenticated');
+    }
+
+    const hasRole = requiredRoles.includes(user.role);
+    if (!hasRole) {
+      throw new ForbiddenException('Insufficient permissions');
+    }
+
+    return true;
   }
 }
 ```
 
+У пользователя **одна** роль (`user.role`), поэтому guard сравнивает её с
+списком допустимых ролей напрямую — иерархии ролей в коде нет.
+
 ### 6. Interceptor Pattern
 
 ```typescript
-// interceptors/transform.interceptor.ts
+// common/interceptors/transform.interceptor.ts
 @Injectable()
-export class TransformInterceptor<T> implements NestInterceptor<T, Response<T>> {
-  intercept(context: ExecutionContext, next: CallHandler): Observable<Response<T>> {
+export class TransformInterceptor implements NestInterceptor {
+  private readonly logger = new Logger('HTTP');
+
+  intercept<T>(context: ExecutionContext, next: CallHandler<T>): Observable<T> {
+    const request = context.switchToHttp().getRequest();
+    const { method, url } = request;
+    const now = Date.now();
+
     return next.handle().pipe(
-      map((data) => ({
-        data,
-        meta: {
-          timestamp: new Date().toISOString(),
-        },
-      })),
+      tap(() => {
+        const elapsed = Date.now() - now;
+        this.logger.log(`${method} ${url} - ${elapsed}ms`);
+      }),
     );
   }
 }
 ```
 
+Интерцептор **не оборачивает ответ** — он только пишет лог длительности.
+Конверт `{ data, meta }` формируют хелперы пагинации
+(`toPaginatedResponse()` в `common/dto/pagination-query.dto.ts`), а единый формат
+ошибок — `AllExceptionsFilter` (см. [error-handling.md](error-handling.md)).
+
 ## Межмодульное взаимодействие
 
 ### 1. Прямые вызовы (предпочтительно)
 
+Модули импортируют друг друга напрямую, `forwardRef` в кодовой базе не используется:
+
 ```typescript
-// schedule.module.ts
+// schedule/schedule.module.ts
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Lesson, LessonChange]),
-    forwardRef(() => NotificationsModule),
+    TypeOrmModule.forFeature([Lesson, LessonChange, LessonOccurrence, ScheduleChange]),
+    HttpModule,
+    RaspModule,
+    EventsModule,
   ],
   controllers: [ScheduleController],
-  providers: [ScheduleService, ChangeDetectorService],
-  exports: [ScheduleService],
+  providers: [
+    ScheduleService,
+    ChangeDetectorService,
+    ExcelConnectorService,
+    SibitConnectorService,
+  ],
+  exports: [ScheduleService, SibitConnectorService],
 })
 export class ScheduleModule {}
-
-// pair-space.service.ts
-@Injectable()
-export class PairSpaceService {
-  constructor(
-    @InjectRepository(PairSpace)
-    private readonly pairSpaceRepository: Repository<PairSpace>,
-    @Inject(forwardRef(() => ScheduleService))
-    private readonly scheduleService: ScheduleService,
-  ) {}
-
-  async createForLesson(lessonId: string): Promise<PairSpace> {
-    const lesson = await this.scheduleService.findLessonById(lessonId);
-    const pairSpace = this.pairSpaceRepository.create({
-      lessonId,
-      activeUntil: new Date(lesson.endDate.getTime() + 45 * 24 * 60 * 60 * 1000),
-    });
-    return this.pairSpaceRepository.save(pairSpace);
-  }
-}
 ```
 
 ### 2. Event Bus (для уведомлений)
 
+Публикация события из сервиса:
+
 ```typescript
-// notifications/events/schedule-changed.event.ts
-export class ScheduleChangedEvent {
-  constructor(
-    public readonly lessonId: string,
-    public readonly universityId: string,
-    public readonly changeType: LessonChangeType,
-    public readonly oldValues: Record<string, unknown>,
-    public readonly newValues: Record<string, unknown>,
-  ) {}
-}
+// schedule/schedule.service.ts
+await this.eventBus?.publish({
+  type: eventType, // 'lesson.changed' | 'room.changed' | 'lesson.rescheduled' | ...
+  universityId: lesson.universityId,
+  actor: this.eventActor(),
+  target: { type: 'lesson', id: lesson.id },
+  payload: {
+    oldValue,
+    newValue: updatedValues,
+    groupId: lesson.groupId,
+    teacherId: lesson.teacherId,
+    deepLink: `/week?date=${lesson.startDate.toISOString().slice(0, 10)}`,
+  },
+  priority: eventType === 'lesson.changed' ? 'normal' : 'high',
+});
+```
 
-// schedule.service.ts
+`EventBusService.publish()` (`events/event-bus.service.ts`) сохраняет `EventRecord`
+(поле `idempotencyKey` делает повторные публикации идемпотентными), рассылает
+сообщение в открытые SSE-потоки и эмитит `napare.event` через `EventEmitter2`.
+Дополнительно часть сервисов напрямую вызывает `eventEmitter.emit('lesson.changed', …)`.
+
+Потребитель:
+
+```typescript
+// notifications/events/notification-event.handler.ts
 @Injectable()
-export class ScheduleService {
-  constructor(
-    private readonly eventEmitter: EventEmitter2,
-  ) {}
-
-  async detectChanges(lessonId: string, newData: NormalizedLesson[]): Promise<void> {
-    const changes = await this.changeDetector.detect(lessonId, newData);
-    
-    for (const change of changes) {
-      await this.saveChange(change);
-      
-      this.eventEmitter.emit('schedule.changed', new ScheduleChangedEvent(
-        lessonId,
-        change.universityId,
-        change.changeType,
-        change.oldValues,
-        change.newValues,
-      ));
-    }
-  }
-}
-
-// notifications.module.ts
-@Module({
-  imports: [
-    EventEmitter2.forRoot(),
-  ],
-})
-export class NotificationsModule implements OnModuleInit {
-  constructor(private readonly eventEmitter: EventEmitter2) {}
-
-  onModuleInit() {
-    this.eventEmitter.on('schedule.changed', this.handleScheduleChanged.bind(this));
+export class NotificationEventHandler {
+  @OnEvent('napare.event', { async: true })
+  async handle(event: EventEnvelope): Promise<void> {
+    const recipientIds = await this.resolveRecipients(event);
+    if (recipientIds.length === 0) return;
+    await this.notificationsService.processEvent(event, recipientIds);
   }
 }
 ```
+
+Список типов событий — `NAPARE_EVENT_TYPES` в `events/event.types.ts`.
 
 ## Middleware
 
-```typescript
-// common/middleware/university.middleware.ts
-@Injectable()
-export class UniversityMiddleware implements NestMiddleware {
-  use(req: Request, res: Response, next: NextFunction) {
-    const user = req.user as JwtPayload;
-    if (user?.universityId) {
-      req.query.university_id = user.universityId;
-    }
-    next();
-  }
-}
+`AppModule.configure()` пуст — middleware не регистрируется:
 
+```typescript
 // app.module.ts
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer
-      .apply(UniversityMiddleware)
-      .forRoutes('*');
+    // Middleware can be added here
   }
 }
 ```
 
+Мультитенантность и правила доступа реализованы на уровне guard'ов и сервисов:
+
+- `JwtAuthGuard` сохраняет пользователя в `TenantContext` (`AsyncLocalStorage`);
+- `TenantContext.assertAccess(universityId)` (`common/tenant/tenant-context.ts`) кидает
+  `ForbiddenException`, если пользователь не из этого вуза (кроме `superadmin`);
+- `UniversityGuard` сверяет `params.universityId || params.id` с `user.universityId`.
+
 ## Конфигурация
+
+Runtime-подключение задаётся в `app.module.ts` (поддерживаются и `DATABASE_URL`, и `DB_*`):
+
+```typescript
+// app.module.ts (фрагмент)
+const databaseUrl = configService.get<string>('DATABASE_URL');
+if (databaseUrl) {
+  return {
+    type: 'postgres' as const,
+    url: databaseUrl,
+    autoLoadEntities: true,
+    migrations: [join(__dirname, 'migrations/*.{js,ts}')],
+    migrationsRun: configService.getOrThrow('nodeEnv') === 'production',
+    synchronize: configService.getOrThrow('nodeEnv') !== 'production',
+  };
+}
+// иначе — host/port/username/password/database из DB_* с теми же
+// migrations / migrationsRun / synchronize
+```
+
+Отдельный `DataSource` для CLI миграций — `config/database.config.ts`:
 
 ```typescript
 // config/database.config.ts
-import { TypeOrmModuleOptions } from '@nestjs/typeorm';
-
-export const databaseConfig = (): TypeOrmModuleOptions => ({
+export default new DataSource({
   type: 'postgres',
   host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT, 10) || 5432,
-  username: process.env.DB_USERNAME || 'napare',
-  password: process.env.DB_PASSWORD || 'napare',
+  port: parseInt(process.env.DB_PORT || '5432', 10),
+  username: process.env.DB_USERNAME || 'postgres',
+  password: process.env.DB_PASSWORD || 'postgres',
   database: process.env.DB_NAME || 'napare',
-  entities: [__dirname + '/../**/*.entity{.ts,.js}'],
+  entities: ['src/**/*.entity.ts'],
+  migrations: ['src/migrations/*.ts'],
   synchronize: false,
-  logging: process.env.NODE_ENV === 'development',
 });
+```
+
+Команды (корень `apps/backend/package.json`):
+
+```bash
+pnpm --filter @napare/backend typeorm:migration:generate
+pnpm --filter @napare/backend typeorm:migration:run
+pnpm --filter @napare/backend typeorm:migration:revert
 ```
 
 ## Тестирование
 
+Юнит-тесты лежат рядом с кодом — `src/**/*.spec.ts` (26 файлов), в `test/` только один
+e2e-тест и его конфигурация:
+
 ```
-apps/backend/test/
-├── auth/
-│   ├── auth.service.spec.ts
-│   └── auth.controller.e2e-spec.ts
-├── schedule/
-│   ├── schedule.service.spec.ts
-│   └── change-detector.service.spec.ts
-├── pair-space/
-│   ├── pair-space.service.spec.ts
-│   └── pair-space.controller.e2e-spec.ts
-├── absences/
-│   ├── absences.service.spec.ts
-│   └── absence-validator.spec.ts
-├── notifications/
-│   └── notifications.service.spec.ts
-└── fixtures/
-    ├── user.fixture.ts
-    ├── lesson.fixture.ts
-    └── university.fixture.ts
+apps/backend/
+├── src/
+│   ├── api-contract.spec.ts
+│   ├── absences/absences.controller.spec.ts
+│   ├── absences/absences.service.spec.ts
+│   ├── auth/auth.controller.spec.ts
+│   ├── auth/auth.service.spec.ts
+│   ├── common/**/**.spec.ts            # permissions, guards, filter, tenant, dto
+│   └── ... (всего 26 файлов *.spec.ts)
+└── test/
+    ├── app.e2e-spec.ts                 # GET /api/v1/health, GET /api/v1/app
+    └── jest-e2e.json                   # конфигурация e2e-запуска
+```
+
+```bash
+pnpm test:unit                # jest --ci --runInBand (только backend)
+pnpm test:e2e                 # jest --config ./test/jest-e2e.json
+pnpm --filter @napare/backend test:cov
 ```
 
 ## ENV переменные
 
+Обязательные — их отсутствие валит приложение при старте
+(`config/validate-environment.ts` + `config/configuration.ts`):
+
 ```env
-# Database
+NODE_ENV=development            # development | test | production
+JWT_SECRET=...
+JWT_REFRESH_SECRET=...
+JWT_ACCESS_EXPIRATION=15m
+JWT_REFRESH_EXPIRATION=30d
+```
+
+Остальные переменные, которые читает код backend:
+
+```env
+# Сервер и CORS
+PORT=3000
+CORS_ORIGIN=http://localhost:3001
+
+# Database (достаточно DATABASE_URL либо группы DB_*)
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/napare
 DB_HOST=localhost
 DB_PORT=5432
-DB_USERNAME=napare
-DB_PASSWORD=napare
+DB_USERNAME=postgres
+DB_PASSWORD=postgres
 DB_NAME=napare
 
-# JWT
-JWT_SECRET=your-secret-key
-JWT_ACCESS_EXPIRY=15m
-JWT_REFRESH_EXPIRY=60d
+# Sentry (инициализируется только при заданном SENTRY_DSN, main.ts:20-27)
+SENTRY_DSN=
+SENTRY_TRACES_SAMPLE_RATE=0.1
 
-# Redis
-REDIS_HOST=localhost
-REDIS_PORT=6379
-
-# S3
-S3_ENDPOINT=localhost:9000
-S3_BUCKET=napare
-S3_ACCESS_KEY=napare_minio
-S3_SECRET_KEY=napare_minio_secret
-
-# Push
-FCM_PROJECT_ID=your-project-id
-FCM_PRIVATE_KEY=your-private-key
-APNS_KEY_ID=your-key-id
-APNS_TEAM_ID=your-team-id
-
-# Sentry
-SENTRY_DSN=https://your-sentry-dsn
-
-# PostHog
-POSTHOG_API_KEY=your-api-key
+# MAX Mini App
+MAX_BOT_TOKEN=
+MAX_INIT_DATA_TTL_SECONDS=3600
 ```
+
+`REDIS_*`, `FCM_*`, `STORAGE_*`, `RATE_LIMIT_*` объявлены в `.env.example` и
+`docker-compose.prod.yml`, но код backend их не читает (лимитер — статический
+`ThrottlerModule` в `app.module.ts`, push-сервиса нет). Полный состав переменных —
+в разделе [config-files.md](config-files.md).
