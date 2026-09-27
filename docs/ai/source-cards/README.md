@@ -141,3 +141,5 @@ Choose the card matching the task area, read the canonical source and then follo
 - [127 — `apps/backend/src/admin/dto/configure-moodle-connector.dto.ts`](127-apps-backend-src-admin-dto-configure-moodle-connector-dto-ts.md)
 - [128 — `apps/backend/src/moodle/moodle-connector.service.ts`](128-apps-backend-src-moodle-moodle-connector-service-ts.md)
 - [129 — `apps/backend/src/moodle/moodle.module.ts`](129-apps-backend-src-moodle-moodle-module-ts.md)
+- [130 — `infrastructure/docker/web.Dockerfile`](130-infrastructure-docker-web-dockerfile.md)
+- [131 — `apps/web-portal/src/app/page.tsx`](131-apps-web-portal-src-app-page-tsx.md)

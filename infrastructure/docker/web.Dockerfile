@@ -43,6 +43,8 @@ RUN --mount=type=cache,target=/root/.local/share/pnpm/store pnpm install --filte
 COPY ${APP_DIR}/ ./${APP_DIR}/
 COPY packages/design-tokens ./packages/design-tokens
 COPY packages/ui ./packages/ui
+RUN mkdir -p /tmp/public-assets \
+    && if [ -d "/app/${APP_DIR}/public" ]; then cp -a "/app/${APP_DIR}/public/." /tmp/public-assets/; fi
 ENV BACKEND_URL=${BACKEND_URL}
 ENV NEXT_PUBLIC_STUDENT_URL=${NEXT_PUBLIC_STUDENT_URL}
 ENV NEXT_PUBLIC_TEACHER_URL=${NEXT_PUBLIC_TEACHER_URL}
@@ -60,6 +62,7 @@ ENV APP_DIR=${APP_DIR}
 
 COPY --chown=node:node --from=builder /app/${APP_DIR}/.next/standalone ./
 COPY --chown=node:node --from=builder /app/${APP_DIR}/.next/static ./${APP_DIR}/.next/static
+COPY --chown=node:node --from=builder /tmp/public-assets ./${APP_DIR}/public
 
 EXPOSE 3000
 

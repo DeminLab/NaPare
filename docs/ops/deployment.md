@@ -25,6 +25,8 @@ The local Compose stack contains PostgreSQL, Redis and MinIO. Its published port
 
 `docker-compose.prod.yml` runs nginx, the backend, `web-portal`, `web-student`, `web-staff`, `web-admin`, `web-developer`, PostgreSQL and Redis. PostgreSQL and Redis have no host ports, while Docker Nginx and the frontend ports bind to loopback only (`127.0.0.1:8080` and `127.0.0.1:3001`–`3005`). `web-portal` serves the shared main page and login; the student, staff and deanery workspaces are available at `/student/`, `/staff/` and `/deanery/` on the same origin. System Nginx templates in `deploy/nginx/` are configured separately on the host.
 
+The shared web image copies each app's `public/` directory into the standalone runtime when that directory exists. This is required for portal brand images and favicon files to resolve in production.
+
 Create a private `.env` file on the deployment host from the tracked template. Never commit the filled file:
 
 ```bash
