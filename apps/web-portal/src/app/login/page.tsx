@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { FormEvent, useState } from 'react';
 
 type Workspace = 'student' | 'staff' | 'admin';
@@ -55,8 +56,8 @@ export default function LoginPage() {
 
   return (
     <main className="login-layout">
-      <section className="login-aside"><Link href="/" className="brand light"><span>Н</span>НаПаре</Link><div><p className="eyebrow">Единый вход</p><h1>Один аккаунт.<br />Свой кабинет.</h1><p>После входа НаПаре определит вашу роль и откроет нужное рабочее пространство.</p></div><small>Учётные данные выдаёт университет.</small></section>
-      <section className="login-panel"><div className="login-card"><Link href="/" className="brand mobile-brand"><span>Н</span>НаПаре</Link><h2>С возвращением</h2><p className="muted">Введите email и пароль, выданные университетом.</p><form onSubmit={submit} className="login-form" noValidate>{error && <p className="error" role="alert">{error}</p>}<label>Email<input name="email" type="email" autoComplete="username" value={email} onChange={(event) => setEmail(event.target.value)} required /></label><label>Пароль<input name="password" type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required /></label><button type="submit" disabled={loading}>{loading ? 'Входим…' : 'Войти'}</button></form><p className="support">Нет учётных данных? Обратитесь в учебную часть или к администратору университета.</p></div></section>
+      <section className="login-aside"><Link href="/" className="brand light"><Image src="/brand/np-mark.png" alt="" width={34} height={34} priority unoptimized />НаПаре</Link><div><p className="eyebrow">Единый вход</p><h1>Один аккаунт.<br />Свой кабинет.</h1><p>После входа НаПаре определит вашу роль и откроет нужное рабочее пространство.</p></div><small>Учётные данные выдаёт университет.</small></section>
+      <section className="login-panel"><div className="login-card"><Link href="/" className="brand mobile-brand"><Image src="/brand/np-mark.png" alt="" width={34} height={34} priority unoptimized />НаПаре</Link><h2>С возвращением</h2><p className="muted">Введите email и пароль, выданные университетом.</p><form onSubmit={submit} className="login-form" noValidate>{error && <p className="error" role="alert">{error}</p>}<label>Email<input name="email" type="email" autoComplete="username" value={email} onChange={(event) => setEmail(event.target.value)} required /></label><label>Пароль<input name="password" type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required /></label><button type="submit" disabled={loading}>{loading ? 'Входим…' : 'Войти'}</button></form><p className="support">Нет учётных данных? Обратитесь в учебную часть или к администратору университета.</p></div></section>
     </main>
   );
 }

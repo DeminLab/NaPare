@@ -6,17 +6,18 @@
 
 ## Scope
 
-Public NaPare landing page. The hero uses a single full-bleed campus image behind the copy; lower informational sections stay text and interface-led. The NP mark is the only separate brand image.
+Public NaPare landing page. The hero uses one full-bleed campus image with readable copy over a dark overlay; a responsive cabinet mockup appears in the next product-focused section. Lower informational sections remain text and interface-led, without an image gallery.
 
 ## Related source
 
 - `apps/web-portal/src/app/portal.css` controls responsive hero placement, overlays, and typography.
+- `apps/web-portal/src/components/ProductShowcase.tsx` renders the sample schedule, preparation notice, notification, teacher, attendance statistic, and personal-cabinet UI below the hero.
 - `apps/web-portal/src/app/layout.tsx` provides the site metadata and favicon paths.
 - `infrastructure/docker/web.Dockerfile` must include public assets in the production runtime.
 
 ## Change boundary
 
-Keep the hero image decorative and preserve readable contrast over it. Avoid adding image galleries or extra photo sections without a new design direction.
+Keep the campus photo confined to the hero and the mockup data clearly demonstrative, accessible, and readable at narrow widths. Do not imply that assignment submission or grading replaces Moodle.
 
 ## Verification
 
@@ -24,4 +25,4 @@ Keep the hero image decorative and preserve readable contrast over it. Avoid add
 pnpm --filter @napare/web-portal exec tsc --noEmit
 ```
 
-When reviewing the landing page, confirm the hero image and logo load, the hero copy fits on desktop and mobile, and the production image includes `apps/web-portal/public/`.
+When reviewing the landing page, confirm the hero image and logo load, the hero copy and mockup fit on desktop and mobile, and the production image includes `apps/web-portal/public/`.

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Icon, type IconName } from "@napare/ui";
+import { ProductShowcase } from "../components/ProductShowcase";
 
 const roles = [
   {
@@ -110,6 +111,7 @@ export default function HomePage() {
             width={34}
             height={34}
             priority
+            unoptimized
           />
           НаПаре
         </Link>
@@ -134,6 +136,7 @@ export default function HomePage() {
           fill
           priority
           sizes="100vw"
+          unoptimized
         />
         <div className="hero-inner">
           <div className="hero-copy">
@@ -172,19 +175,41 @@ export default function HomePage() {
       <section className="proof-strip" aria-label="Ценность платформы">
         <div>
           <strong>1</strong>
-          <span>единый учебный день</span>
+          <span>понятный контур вместо разрозненных сервисов</span>
         </div>
         <div>
-          <strong>3+</strong>
-          <span>рабочие роли в одной системе</span>
+          <strong>3</strong>
+          <span>кабинета: студент, преподаватель и ВУЗ</span>
         </div>
         <div>
-          <strong>0</strong>
-          <span>потерянных изменений в чатах</span>
+          <strong>Pair</strong>
+          <span>объявления и подготовка привязаны к занятию</span>
         </div>
         <div>
-          <strong>24/7</strong>
-          <span>доступ к актуальному контексту</span>
+          <strong>LMS</strong>
+          <span>сдача заданий и оценки остаются в Moodle</span>
+        </div>
+      </section>
+
+      <section className="product-overview section">
+        <div className="section-inner product-overview-inner">
+          <div className="product-overview-copy">
+            <p className="eyebrow">Интерфейс продукта</p>
+            <h2 className="section-title">
+              Учебный день — в одном понятном окне
+            </h2>
+            <p className="section-lead">
+              Расписание, изменения аудиторий, подготовка к занятию и
+              посещаемость связаны с конкретной парой. Сдача работ и оценки
+              остаются в Moodle.
+            </p>
+            <ul className="product-overview-points">
+              <li>Актуальное расписание на сегодня</li>
+              <li>Объявления преподавателей рядом с парой</li>
+              <li>Понятный личный кабинет без лишних экранов</li>
+            </ul>
+          </div>
+          <ProductShowcase />
         </div>
       </section>
 
@@ -388,7 +413,7 @@ export default function HomePage() {
       <footer>
         <div className="footer-row">
           <Link href="/" className="brand footer-brand">
-            <Image src="/brand/np-mark.png" alt="" width={34} height={34} />
+            <Image src="/brand/np-mark.png" alt="" width={34} height={34} unoptimized />
             НаПаре
           </Link>
           <p>

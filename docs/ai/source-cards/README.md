@@ -143,3 +143,4 @@ Choose the card matching the task area, read the canonical source and then follo
 - [129 — `apps/backend/src/moodle/moodle.module.ts`](129-apps-backend-src-moodle-moodle-module-ts.md)
 - [130 — `infrastructure/docker/web.Dockerfile`](130-infrastructure-docker-web-dockerfile.md)
 - [131 — `apps/web-portal/src/app/page.tsx`](131-apps-web-portal-src-app-page-tsx.md)
+- [132 — `apps/web-portal/src/components/ProductShowcase.tsx`](132-apps-web-portal-src-components-productshowcase-tsx.md)
