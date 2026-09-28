@@ -10,7 +10,7 @@ This repository prepares the Docker side of the deployment. The production serve
 | `napare.sano.ru/student/` | Student workspace (`127.0.0.1:3002`) |
 | `napare.sano.ru/staff/` | Teacher/staff workspace (`127.0.0.1:3003`) |
 | `napare.sano.ru/deanery/` | Deanery workspace (`127.0.0.1:3004`) |
-| `developer.napare.sano.ru` | Developer (`127.0.0.1:3005`) |
+| `napare.sano.ru/developer/` | Developer workspace (`127.0.0.1:3005`, routed by Docker Nginx) |
 | `napare.sano.ru/admin/` | Cockpit (`127.0.0.1:9090`) |
 
 `napare.sano.ru/deanery/` is intentionally distinct from the host-owned Cockpit location at `napare.sano.ru/admin/`.
@@ -19,7 +19,7 @@ This repository prepares the Docker side of the deployment. The production serve
 
 Create these `A` records at the DNS provider, all pointing to the production server IP:
 
-`napare.sano.ru`, `www.napare.sano.ru`, `developer.napare.sano.ru`.
+`napare.sano.ru` and `www.napare.sano.ru`.
 
 DNS changes are not performed by this project.
 
@@ -38,7 +38,7 @@ curl -fsS http://127.0.0.1:3001/
 curl -fsS http://127.0.0.1:3002/student/today
 curl -fsS http://127.0.0.1:3003/staff/today
 curl -fsS http://127.0.0.1:3004/deanery/dashboard
-curl -fsS http://127.0.0.1:3005/
+curl -fsS http://127.0.0.1:3005/developer/login
 ```
 
 Do not use `docker compose down -v`, `docker system prune`, or any command that removes volumes. The Compose file keeps PostgreSQL and Redis on internal networks and binds the web ports to loopback only.
@@ -56,7 +56,7 @@ The templates cover HTTPS and HTTP-to-HTTPS redirects. Obtain/renew certificates
 
 - `docker compose ps` shows healthy backend, web apps and Docker Nginx.
 - `https://napare.sano.ru/` loads the main page and `https://napare.sano.ru/login` is the only public login.
-- Role credentials redirect to `https://napare.sano.ru/student/`, `/staff/` or `/deanery/`; developer login remains on `https://developer.napare.sano.ru/`.
+- All role credentials use the shared `https://napare.sano.ru/login`; developer accounts redirect to `/developer/api` on the same domain.
 - Each workspace can call same-origin `/api/v1/health`/API routes and refresh/logout returns to the shared login.
 - `https://napare.sano.ru/admin/` remains Cockpit, while `https://napare.sano.ru/deanery/` reaches the deanery frontend.
 - Browser devtools show no requests to Docker-only names, `localhost`, `127.0.0.1` or ports `3000`–`3005`.

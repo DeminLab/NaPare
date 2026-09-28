@@ -77,7 +77,7 @@ export class AuthController {
     description: "Вход выполнен, определён кабинет пользователя",
   })
   @ApiResponse({ status: 401, description: "Неверные учетные данные" })
-  @ApiResponse({ status: 403, description: "Роль использует отдельный вход" })
+  @ApiResponse({ status: 403, description: "Для роли не настроен кабинет" })
   async portalLogin(@Body() loginDto: LoginDto) {
     return this.authService.portalLogin(loginDto);
   }

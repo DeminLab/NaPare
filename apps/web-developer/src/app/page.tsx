@@ -28,7 +28,7 @@ export default function Home() {
           </p>
 
           <div className="mt-10 flex items-center justify-center gap-4">
-            <Link
+            <a
               href="/login"
               className="inline-flex items-center gap-2 rounded-xl bg-white px-8 py-3.5 text-sm font-semibold text-slate-900 shadow-lg shadow-black/25 transition-all hover:bg-slate-50 hover:shadow-xl"
             >
@@ -36,7 +36,7 @@ export default function Home() {
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
               </svg>
-            </Link>
+            </a>
           </div>
         </div>
       </section>

@@ -105,11 +105,10 @@ body {
   --color-brand-soft: #eef2ff;
 }
 
-html, body { min-width: 320px; overflow-x: hidden; }
+html, body { min-width: 320px; }
 img, svg, video { max-width: 100%; }
 button, input, select, textarea { max-width: 100%; }
 nav[aria-label="Мобильная навигация"] { padding-bottom: max(0.375rem, env(safe-area-inset-bottom)); }
 @media (max-width: 639px) {
   .grid.min-h-\[320px\] { grid-template-columns: minmax(0, 1fr); }
-  .grid-cols-3 { grid-template-columns: minmax(0, 1fr); }
 }

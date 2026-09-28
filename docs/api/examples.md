@@ -35,7 +35,7 @@ Content-Type: application/json
 }
 ```
 
-Для единых кабинетов используйте `POST /api/v1/auth/portal-login` — то же тело, но в ответ добавляется `workspace` (`student` | `staff` | `admin`).
+Для единых кабинетов используйте `POST /api/v1/auth/portal-login` — то же тело, но в ответ добавляется `workspace` (`student` | `staff` | `admin` | `developer`). Все роли, включая разработчика, входят через общую форму; developer workspace открывается по `/developer/` того же домена.
 
 ### Шаг 2: Привязка к группе
 

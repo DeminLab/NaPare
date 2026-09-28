@@ -4,13 +4,14 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { FormEvent, useState } from 'react';
 
-type Workspace = 'student' | 'staff' | 'admin';
+type Workspace = 'student' | 'staff' | 'admin' | 'developer';
 type LoginResponse = { accessToken: string; refreshToken: string; workspace: Workspace };
 
 const destinations: Record<Workspace, string> = {
   student: '/student/today',
   staff: '/staff/today',
   admin: '/deanery/dashboard',
+  developer: '/developer/api',
 };
 
 export default function LoginPage() {
@@ -38,7 +39,7 @@ export default function LoginPage() {
       const payload = await response.json().catch(() => null);
       if (!response.ok) {
         if (response.status === 401) throw new Error('Неверный email или пароль. Используйте учётные данные, выданные университетом.');
-        if (response.status === 403) throw new Error(payload?.message || 'Для этой роли используется отдельный вход.');
+        if (response.status === 403) throw new Error(payload?.message || 'Для этой роли пока не настроен доступ к кабинету.');
         throw new Error(payload?.message || `Не удалось выполнить вход (${response.status}).`);
       }
 

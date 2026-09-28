@@ -16,7 +16,7 @@ Shared NaPare main-site login. It stores the existing token pair only after `POS
 
 ## Change boundary
 
-Do not pass access or refresh tokens in a URL. Developer access intentionally uses its separate login.
+Do not pass access or refresh tokens in a URL. All account roles, including developer, use this shared form and are redirected to their same-origin workspace.
 
 ## Verification
 

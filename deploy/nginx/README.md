@@ -4,9 +4,9 @@ These files are templates for the **system Nginx on the production host**. They 
 
 Before enabling them:
 
-1. Create DNS `A` records for `napare.sano.ru`, `www.napare.sano.ru` and `developer.napare.sano.ru` pointing to the server IP. The former student, teacher and admin host templates only redirect old bookmarks to the shared origin.
+1. Create DNS `A` records for `napare.sano.ru` and `www.napare.sano.ru` pointing to the server IP. The former student, teacher and admin host templates only redirect old bookmarks to the shared origin. All workspaces, including developer, are path-routed on `napare.sano.ru` by Docker Nginx.
 2. Copy the matching `.conf.example` files to the host's Nginx configuration directory, remove the `.example` suffix, and adjust paths if the distribution uses a different layout.
-3. Install certificates for the apex, `www` and developer names. Keep the legacy names in a certificate only while their redirect templates remain enabled. A wildcard `*.napare.sano.ru` does not cover the apex `napare.sano.ru`, so include both names in the certificate request.
+3. Install certificates for the apex and `www` names. Keep legacy names in a certificate only while their redirect templates remain enabled. A wildcard `*.napare.sano.ru` does not cover the apex `napare.sano.ru`, so include both names in the certificate request.
 4. Replace the certificate paths in the templates, then run `sudo nginx -t` and `sudo systemctl reload nginx`.
 
 The Docker stack binds only to loopback:
@@ -17,6 +17,8 @@ The Docker stack binds only to loopback:
 - `127.0.0.1:3003` — teacher/staff;
 - `127.0.0.1:3004` — deanery;
 - `127.0.0.1:3005` — developer.
+
+The public developer workspace is `https://napare.sano.ru/developer/`; the apex system-Nginx template forwards it to Docker Nginx, which routes it to `web-developer`. No developer subdomain or separate DNS/TLS entry is needed.
 
 The `/admin/` location in the apex template is reserved for Cockpit at `127.0.0.1:9090` and is intentionally separate from `admin.napare.sano.ru`.
 

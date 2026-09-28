@@ -144,3 +144,5 @@ Choose the card matching the task area, read the canonical source and then follo
 - [130 — `infrastructure/docker/web.Dockerfile`](130-infrastructure-docker-web-dockerfile.md)
 - [131 — `apps/web-portal/src/app/page.tsx`](131-apps-web-portal-src-app-page-tsx.md)
 - [132 — `apps/web-portal/src/components/ProductShowcase.tsx`](132-apps-web-portal-src-components-productshowcase-tsx.md)
+- [133 — `apps/web-developer/next.config.js`](133-apps-web-developer-next-config-js.md)
+- [134 — `infrastructure/nginx/nginx.conf`](134-infrastructure-nginx-nginx-conf.md)

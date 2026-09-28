@@ -68,7 +68,7 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
       return (await retryResponse.json()) as T;
     }
     clearTokens();
-    if (typeof window !== 'undefined') window.location.href = '/login';
+    if (typeof window !== 'undefined') window.location.href = '/student/login';
     throw new Error('Сессия истекла');
   }
 
@@ -187,7 +187,7 @@ export async function getRaspGroups(year?: string): Promise<RaspGroup[]> {
 
 export function logout(): void {
   clearTokens();
-  if (typeof window !== 'undefined') window.location.href = '/login';
+  if (typeof window !== 'undefined') window.location.href = '/student/login';
 }
 
 export async function getNotifications(): Promise<any[]> {

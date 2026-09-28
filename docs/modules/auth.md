@@ -2,7 +2,7 @@
 
 ## 1. Цель и границы
 
-**Цель:** Вход, управление сессиями, JWT, ролевой доступ, публичные справочники для онбординга.
+**Цель:** Общий вход для всех ролей, управление сессиями, JWT, ролевой доступ, публичные справочники для онбординга.
 
 **Не делает:** Управление структурой вуза и создание учётных записей (admin), уведомления (notifications), расписание (schedule).
 
@@ -30,7 +30,7 @@
 | ----------------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------- |
 | `/api/v1/auth/login`          | POST   | Вход по email/паролю                                                                                                    |
 | `/api/v1/auth/max`            | POST   | Вход через MAX Mini App (валидация initData, привязка аккаунта)                                                         |
-| `/api/v1/auth/portal-login`   | POST   | Единый вход в кабинеты; возвращает `workspace`: `student` \| `staff` \| `admin` (для `developer` — 403, отдельный вход) |
+| `/api/v1/auth/portal-login`   | POST   | Единый вход в кабинеты; возвращает `workspace`: `student` \| `staff` \| `admin` \| `developer` |
 | `/api/v1/auth/register`       | POST   | **Всегда 403** — самостоятельная регистрация отключена (аккаунты создаёт университет)                                   |
 | `/api/v1/auth/universities`   | GET    | Список активных вузов (публичный; сейчас отдаёт только пилотный СИБИТ)                                                  |
 | `/api/v1/auth/rasp-groups`    | GET    | Группы с rasp.sano.ru (публичный, `year` опционально)                                                                   |
@@ -93,7 +93,7 @@ SMS/кодовых эндпоинтов (`request-code`, `verify-code`) **нет
 5. **Удаление аккаунта:** `DELETE /users/me` → `usersService.deactivate()` — немедленное `isActive=false` (`apps/backend/src/users/users.service.ts:114`). Окна восстановления 30 дней нет; деактивированный пользователь не проходит `login`/`portalLogin`/`maxAuth`.
 6. **Восстановление пароля:** эндпоинта нет (TODO).
 7. **Вход через MAX:** `POST /auth/max` проверяет подпись `initData` токеном `MAX_BOT_TOKEN`; `users.maxUserId` (unique) хранит привязку. Без токена — ответ 503 `MAX_NOT_CONFIGURED`. Непривязанный MAX-аккаунт получает 401 `MAX_ACCOUNT_NOT_LINKED` и привязывается при первом входе по email/паролю. Свежесть `initData` ограничена `MAX_INIT_DATA_TTL_SECONDS` (по умолчанию 1 час).
-8. **Portal login:** `POST /auth/portal-login` → `{ ...auth, workspace }`; маппинг: `student` → student, `teacher`/`curator`/`faculty_dean`/`department_head` → staff, `university_admin`/`superadmin` → admin, `developer` → 403.
+8. **Portal login:** `POST /auth/portal-login` → `{ ...auth, workspace }`; маппинг: `student` → student, `teacher`/`curator`/`faculty_dean`/`department_head` → staff, `university_admin`/`superadmin` → admin, `developer` → developer. Все роли используют общую форму входа; developer открывается под `/developer/` на основном домене.
 9. **Публичные rasp.\* эндпоинты:** отдают данные rasp.sano.ru (кэш 15 мин, таймаут 15 сек) через `RaspScraperService` (`apps/backend/src/auth/rasp-scraper.service.ts`), экспортируемый из `apps/backend/src/rasp/rasp.module.ts`. `SibitUniversityBootstrapService` (`apps/backend/src/auth/sibit-university-bootstrap.service.ts`) при старте приложения создаёт/активирует пилотный вуз.
 
 ---

@@ -122,6 +122,7 @@ describe("AuthService", () => {
       ["student", "student"],
       ["teacher", "staff"],
       ["university_admin", "admin"],
+      ["developer", "developer"],
     ])("assigns %s to the %s workspace", async (role, workspace) => {
       const passwordHash = await bcrypt.hash("correct-password", 4);
       (usersService.findByEmail as jest.Mock).mockResolvedValue({
@@ -143,26 +144,6 @@ describe("AuthService", () => {
       ).resolves.toMatchObject({ workspace });
     });
 
-    it("rejects the developer role because it has a separate login", async () => {
-      const passwordHash = await bcrypt.hash("correct-password", 4);
-      (usersService.findByEmail as jest.Mock).mockResolvedValue({
-        id: "developer-1",
-        email: "dev@sibit.ru",
-        passwordHash,
-        isActive: true,
-        firstName: "Тест",
-        lastName: "Разработчик",
-        role: "developer",
-        universityId: "uni-1",
-      });
-
-      await expect(
-        service.portalLogin({
-          email: "dev@sibit.ru",
-          password: "correct-password",
-        }),
-      ).rejects.toThrow(ForbiddenException);
-    });
   });
 
   describe("refreshToken", () => {

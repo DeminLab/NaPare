@@ -20,7 +20,7 @@ import { UserRole } from "./interfaces/user-role";
 import { User } from "../users/entities/user.entity";
 import { validateMaxInitData } from "./max-init-data";
 
-export type PortalWorkspace = "student" | "staff" | "admin";
+export type PortalWorkspace = "student" | "staff" | "admin" | "developer";
 
 @Injectable()
 export class AuthService {
@@ -59,7 +59,7 @@ export class AuthService {
 
     if (!workspace) {
       throw new ForbiddenException(
-        "Для разработчиков используется отдельный вход.",
+        "Для этой роли пока не настроен доступ к кабинету.",
       );
     }
 
@@ -212,6 +212,7 @@ export class AuthService {
 
   private getPortalWorkspace(role: UserRole): PortalWorkspace | null {
     if (role === UserRole.STUDENT) return "student";
+    if (role === UserRole.DEVELOPER) return "developer";
     if (
       [
         UserRole.TEACHER,
