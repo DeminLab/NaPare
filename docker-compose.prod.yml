@@ -261,7 +261,7 @@ services:
       max-miniapp:
         condition: service_healthy
     healthcheck:
-      test: ['CMD-SHELL', 'wget -q --spider http://127.0.0.1/ || exit 1']
+      test: ['CMD-SHELL', 'wget -q --spider http://127.0.0.1/nginx-health || exit 1']
       interval: 15s
       timeout: 5s
       retries: 5

@@ -17,7 +17,7 @@ Docker Nginx routing between the public portal, backend API, and role workspaces
 
 ## Change boundary
 
-Do not expose internal web ports publicly. Preserve the `/developer` path when proxying to Next.js so assets, pages, and same-origin API requests resolve correctly. For `/max/`, strip that prefix when proxying to the Mini App container because its Nginx serves the built files from `/`.
+Do not expose internal web ports publicly. Resolve Docker service names dynamically so Nginx follows container IP changes after a service recreation. Preserve the `/developer` path when proxying to Next.js so assets, pages, and same-origin API requests resolve correctly. For `/max/`, strip that prefix when proxying to the Mini App container because its Nginx serves the built files from `/`.
 
 ## Verification
 

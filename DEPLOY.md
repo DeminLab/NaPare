@@ -58,6 +58,7 @@ The templates cover HTTPS and HTTP-to-HTTPS redirects. Obtain/renew certificates
 ## Post-deploy checklist
 
 - `docker compose ps` shows healthy backend, web apps and Docker Nginx.
+- Docker Nginx health is checked through `/nginx-health`; separately check `/` and `/max/` so an application error is not mistaken for an Nginx process failure.
 - `https://napare.sano.ru/` loads the main page and `https://napare.sano.ru/login` is the only public login.
 - All role credentials use the shared `https://napare.sano.ru/login`; developer accounts redirect to `/developer/api` on the same domain.
 - Each workspace can call same-origin `/api/v1/health`/API routes and refresh/logout returns to the shared login.
