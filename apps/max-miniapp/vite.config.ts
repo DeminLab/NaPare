@@ -3,6 +3,8 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
+  // The Mini App is served from the shared-origin /max/ path in production.
+  base: '/max/',
   server: {
     port: 3005,
     host: '0.0.0.0',

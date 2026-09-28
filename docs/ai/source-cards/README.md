@@ -146,3 +146,4 @@ Choose the card matching the task area, read the canonical source and then follo
 - [132 — `apps/web-portal/src/components/ProductShowcase.tsx`](132-apps-web-portal-src-components-productshowcase-tsx.md)
 - [133 — `apps/web-developer/next.config.js`](133-apps-web-developer-next-config-js.md)
 - [134 — `infrastructure/nginx/nginx.conf`](134-infrastructure-nginx-nginx-conf.md)
+- [135 — `apps/max-miniapp/vite.config.ts`](135-apps-max-miniapp-vite-config-ts.md)
