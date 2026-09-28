@@ -37,13 +37,13 @@ pnpm --filter @napare/max-miniapp build
 pnpm --filter @napare/max-miniapp test
 ```
 
-Docker Compose использует уже проверенный static build. В контейнере nginx проксирует `/api/` на `backend:3000` (сервис подключён к сети `app`). Перед `docker compose up` выполните `pnpm --filter @napare/max-miniapp build`.
+Docker Compose собирает static build в образе приложения; опубликованный на хосте порт контейнера — `127.0.0.1:3006`. Внутренний nginx проксирует `/api/` на `backend:3000` (сервис подключён к сети `app`).
 
 В production мини-приложение доступно по адресу `https://napare.sano.ru/max/`. Публичный Nginx передаёт этот путь Docker Nginx, который убирает префикс `/max/` перед запросом к контейнеру Mini App; Vite при этом генерирует ссылки на ресурсы с тем же префиксом. API остаётся на общем адресе `/api/v1`.
 
 Перед публикацией в MAX необходимо:
 
-1. Развернуть production Compose и проверить `https://napare.sano.ru/max/` и загрузку JS/CSS ресурсов.
+1. После обновления кода на production-сервере выполните `docker compose build max-miniapp`, `docker compose up -d max-miniapp` и `docker compose restart nginx`, затем проверьте `https://napare.sano.ru/max/` и загрузку JS/CSS ресурсов.
 2. Вписать `MAX_BOT_TOKEN` (токен бота MAX, который хостит мини-приложение) в `.env` — без него `POST /api/v1/auth/max` отвечает 503.
 3. Указать этот URL в настройках бота MAX и получить командный platform token.
 
