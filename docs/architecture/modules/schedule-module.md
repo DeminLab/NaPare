@@ -1,5 +1,7 @@
 # Backend Module: Schedule — Детальная реализация
 
+> **Исторический учебный пример.** Кодовые образцы и дерево ниже могут расходиться с текущим кодом. Используйте `apps/backend/src/schedule/` и [current schedule guide](../../modules/schedule.md).
+
 ## Структура модуля
 
 ```

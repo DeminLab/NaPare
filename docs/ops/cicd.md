@@ -34,6 +34,8 @@ There is deliberately no production deployment workflow. Production promotion mu
 
 ## Branch protection recommendations
 
+The checked-in workflows do not reveal whether these repository settings are enabled. Verify rules and Environment reviewers in GitHub settings before relying on them.
+
 Protect `main` with the following GitHub rules:
 
 1. Require pull requests before merging and at least one approving review.

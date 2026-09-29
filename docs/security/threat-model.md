@@ -1,100 +1,39 @@
-# Модель угроз
+# Threat model and implemented controls
 
-## Обзор
+**Repository review: 2026-09-29.** This is an implementation-oriented checklist, not a completed security assessment or legal certification. Deployment controls must be verified on the target host.
 
-Анализ потенциальных угроз для проекта НаПаре и мер по их предотвращению.
+## Implemented in source
 
-## Угрозы
+| Threat area | Current control | Source of truth |
+|---|---|---|
+| Password disclosure | Account passwords are hashed with bcrypt | `apps/backend/src/auth/` |
+| Forged/expired JWT | Passport JWT strategy validates signed tokens; token/session version checks are used where configured | `apps/backend/src/auth/` |
+| Role escalation | `RolesGuard` and controller role metadata restrict role-specific routes | `apps/backend/src/common/guards/roles.guard.ts` |
+| Cross-university/resource access | University context and resource checks in guards/services | `apps/backend/src/common/tenant/`, domain services |
+| Request abuse | Global Nest throttler uses configured request window/limit | `apps/backend/src/app.module.ts`, `apps/backend/src/config/configuration.ts` |
+| MAX identity spoofing/replay | Backend validates MAX initData signature and freshness before account linking | `apps/backend/src/auth/max-init-data.ts` |
+| Moodle token disclosure | Connector tokens are encrypted using AES-256-GCM when `CONNECTOR_ENCRYPTION_KEY` is configured | `apps/backend/src/moodle/` |
+| Migration/schema drift | TypeORM migrations are the schema source; production startup runs pending migrations | `apps/backend/src/migrations/`, `apps/backend/src/app.module.ts` |
 
-### 1. Несанкционированный доступ
+## Controls that are not provided by this repository
 
-| Угроза | Описание | Меры |
-|--------|----------|------|
-| **Brute force** | Подбор SMS/email кода | Rate limiting (3 попытки/час), блокировка после 5 неудачных попыток |
-| **JWT кража** | Украденный токен | Short-lived access tokens (15-30 мин), refresh token rotation |
-| **Session hijacking** | Перехват сессии | HTTPS everywhere, secure cookie flags |
-| **API key leak** | Утечка ключей | Environment variables, не в коде |
+- PostgreSQL Row Level Security policies are not enabled in migrations. Tenant isolation depends on application code and requires endpoint-level authorization review.
+- Redis is present in Compose, but backend Redis integration/queues are not connected.
+- S3 file adapter, FCM/APNs delivery, client-side Sentry, PostHog, Grafana, WAF/CDN, and Kubernetes controls are not configured here.
+- Production TLS certificates, host firewall, SSH policy, database backup encryption/retention, monitoring alerts, and disaster recovery are operator responsibilities and have not been verified by this repository review.
+- `docs/legal/` contains policy/terms templates with unfilled operator/date fields. Do not publish them until the service owner/legal reviewer completes them.
 
-### 2. Инъекции
+## Review checklist for changes
 
-| Угроза | Описание | Меры |
-|--------|----------|------|
-| **SQL injection** | SQL-инъекции | TypeORM параметризованные запросы, RLS |
-| **XSS** | Cross-site scripting | Input validation, output encoding, CSP headers |
-| **CSRF** | Cross-site request forgery | SameSite cookies, CSRF tokens |
-| **NoSQL injection** | NoSQL-инъекции | Валидация входных данных |
+1. Identify the authenticated principal, tenant and resource scope at every new endpoint.
+2. Add both allowed and denied tests for changes to authorization boundaries.
+3. Validate and bound external input; avoid logging credentials, tokens or sensitive absence details.
+4. Keep secrets in runtime secret storage/environment, never source control.
+5. Review migration `up` and `down`, backup/rollback requirements, and production startup behavior.
+6. Verify TLS, health, container exposure, logs and backups in the target environment before claiming release readiness.
 
-### 3. Утечка данных
+## Related documents
 
-| Угроза | Описание | Меры |
-|--------|----------|------|
-| **Data exposure** | Данные видны лишним | Role-based access, university_id isolation |
-| **Log leak** | ПДн в логах | Минимизация данных в логах |
-| **Backup leak** | Бэкапы без шифрования | Шифрование бэкапов |
-| **S3 bucket** | Открытые бакеты | ACL, policies |
-
-### 4. Доступность
-
-| Угроза | Описание | Меры |
-|--------|----------|------|
-| **DDoS** | Отказ в обслуживании | Rate limiting, CDN, WAF |
-| **Service outage** | Падение сервиса | Health checks, auto-restart |
-| **Data loss** | Потеря данных | Ежедневные бэкапы, replication |
-
-### 5. Социальная инженерия
-
-| Угроза | Описание | Меры |
-|--------|----------|------|
-| **Phishing** | Фишинговые атаки | Уведомления о входе с нового устройства |
-| **Account takeover** | Захват аккаунта | 2FA (после MVP), уведомления |
-
-## Приоритеты
-
-| Приоритет | Угроза | Влияние | Вероятность |
-|-----------|--------|---------|-------------|
-| **Критический** | SQL injection | Высокое | Низкая |
-| **Критический** | JWT кража | Высокое | Средняя |
-| **Высокий** | Brute force | Среднее | Высокая |
-| **Высокий** | Data exposure | Высокое | Средняя |
-| **Средний** | XSS | Среднее | Средняя |
-| **Средний** | DDoS | Среднее | Низкая |
-
-## Меры защиты
-
-### Аутентификация
-- SMS/email коды с rate limiting
-- JWT с коротким сроком жизни
-- Refresh token rotation
-- Уведомления о входе с нового устройства
-
-### Авторизация
-- Role-based access control (RBAC)
-- University_id isolation
-- Row Level Security (RLS) в PostgreSQL
-- Guards в NestJS
-
-### Шифрование
-- HTTPS everywhere (TLS 1.3)
-- Шифрование паролей (argon2)
-- Шифрование причин отсутствий (AES-256)
-- Шифрование бэкапов
-
-### Мониторинг
-- Sentry для ошибок
-- Аудит критичных действий
-- Логирование подозрительной активности
-- Уведомления админу
-
-## Инцидент-процедура
-
-1. **Обнаружение** — мониторинг, алерты, жалобы пользователей
-2. **Оценка** — определение серьёзности и объёма
-3. **Реагирование** — блокировка, изоляция, исправление
-4. **Расследование** — анализ причин, логов
-5. **Восстановление** — восстановление сервисов
-6. **Отчёт** — документирование инцидента
-
-## Связанные документы
-
-- [152-fz.md](152-fz.md) — соответствие 152-ФЗ
-- [architecture/roles-and-permissions.md](../architecture/roles-and-permissions.md) — матрица прав
+- [Role boundaries](../architecture/roles-and-permissions.md)
+- [152-FZ implementation notes](152-fz.md)
+- [Deployment runbook](../../DEPLOY.md)

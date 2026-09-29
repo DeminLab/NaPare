@@ -1,30 +1,25 @@
 # Contributing
 
+Команды ниже относятся к текущему pnpm monorepo. Актуальный deployment/runbook имеет приоритет над историческими планами.
+
 ## Development Setup
 
 ```bash
 # 1. Клонировать
-git clone https://github.com/napare/napare.git
-cd napare
+git clone https://github.com/DeminLab/NaPare.git
+cd NaPare
 
 # 2. Инфраструктура
-docker compose up -d
+docker compose -f docker-compose.dev.yml up -d
 
 # 3. Backend
+pnpm install
 cd apps/backend
 cp .env.example .env
-pnpm install
-pnpm run start:dev
-
-# 4. Web
-cd ../web
-pnpm install
 pnpm run dev
 
-# 5. Mobile
-cd ../mobile
-flutter pub get
-flutter run
+# 4. Active Next.js apps (run from repository root in a separate terminal)
+pnpm dev
 ```
 
 ---
@@ -57,13 +52,13 @@ flutter run
 
 ## PR Process
 
-1. Создать branch от `develop`
+1. Создать branch от актуального `main` или от явно выбранной базовой ветки
 2. Написать код
 3. Написать/обновить тесты
 4. Обновить документацию модуля (`modules/*.md`)
 5. Обновить OpenAPI (если изменился API)
-6. Submit PR в `develop`
-7. Получить ≥ 1 review
+6. Submit PR в `main`
+7. Пройти CI и review requirements, настроенные в GitHub
 8. Merge (squash)
 
 ---
@@ -84,7 +79,7 @@ flutter run
 | Язык | Инструмент |
 |------|------------|
 | TypeScript | ESLint + Prettier |
-| Flutter | dartfmt + pana |
+| Flutter | Не применяется: native Flutter app отсутствует |
 
 ---
 

@@ -1,36 +1,25 @@
 # Совместная работа над НаПаре
 
-## Источник правды
+## Источники правды
 
-- Навигация и правила выбора документа: `docs/DEVELOPER_GUIDE.md`.
-- Функциональные требования: `docs/modules/*.md`.
-- Архитектурные решения: `docs/decisions/` и `docs/architecture/`.
-- План текущей поставки: `docs/superpowers/plans/`.
-- Принятый продуктовый дизайн: `docs/superpowers/specs/`.
-- Хронология изменений и проверок: `docs/project-log/`.
+- Репозиторные правила: root AGENTS.md и [AI_CONTEXT](../AI_CONTEXT.md).
+- Текущая архитектура/границы: [project map](ai/project-map.md), code, manifests, Compose и актуальные docs.
+- Текущие API contracts: NestJS Swagger /api/v1/docs-json; не использовать устаревший ручной endpoint catalogue.
+- Схема БД: TypeORM entities и migrations.
+- Операционный запуск: root DEPLOY.md.
+- superpowers/specs, superpowers/plans и project-log относятся к датированным инициативам и хронологии; сами по себе они не определяют текущий backlog или состояние production.
 
-## Обязательное правило для команды
+## Рабочий процесс
 
-Перед изменением контракта API, роли, схемы БД, пользовательского потока или Docker-конфигурации:
+Для изменения API, доступа или схемы обновляйте соответствующий контракт/описание и код в одной reviewable change. Добавляйте или корректируйте проверки поведения в соответствии с изменением. Для UI обновляйте актуальный экранный/клиентский документ. Для Docker, deployment или переменных окружения синхронизируйте DEPLOY.md, README/onboarding и workflow reference.
 
-1. Зафиксировать решение в актуальном spec/plan или ADR.
-2. Добавить или обновить регрессионный тест.
-3. Указать затронутые клиенты и маршрут API.
-4. Записать результат проверки в worklog текущей поставки.
+Перед push выполните обязательные repository checks из docs/ai/change-safety.md. В отчёте укажите команды и их реальные результаты; конфигурационная проверка не подтверждает production health.
 
-Перед передачей задачи другому разработчику зафиксировать точные файлы, команды проверки и незакрытые блокеры по шаблону из `DEVELOPER_GUIDE.md`.
+## Безопасная работа
 
-## Границы ответственности
+- Не добавляйте секреты, заполненные .env, диагностические bundles или build output.
+- Не меняйте protected paths вопреки root AGENTS.md.
+- Для изменения access control проверяйте позитивные и негативные cases.
+- Не публикуйте legal drafts как утверждённые документы.
 
-| Область | Ответственный результат |
-| --- | --- |
-| Backend/API | Роли, tenant/group/ownership, DTO, миграции и OpenAPI-контракт |
-| Student/MAX | Mobile-first UX, доступность, MAX Bridge, интеграция с API |
-| Staff/Admin/Infra | Рабочие процессы сотрудников, CI/CD, Docker, наблюдаемость |
-
-## Правила интеграции
-
-- Не дублировать API-типы: новые контракты добавляются в `packages/api-client` или `packages/shared`.
-- Не хранить секреты в документации, примерах или коммитах.
-- Любая новая пользовательская возможность должна иметь состояние loading, error и empty.
-- Любое изменение прав доступа должно иметь позитивный и негативный тест.
+См. [contributing](process/contributing.md), [definition of done](process/definition-of-done.md) и [documentation guide](DEVELOPER_GUIDE.md).

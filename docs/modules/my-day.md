@@ -143,7 +143,7 @@ summary    = { totalLessons, changedLessons (lessons.isChanged), totalAbsences (
 ## 11. Open questions / TODO
 
 - [ ] Виджет для home screen (mobile)
-- [ ] Кэширование на клиенте (offline-first)
+- Client stores an account-scoped snapshot/queue for supported preparation updates; this does not provide a general offline-first mode for all My Day data.
 
 ---
 

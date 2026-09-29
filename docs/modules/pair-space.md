@@ -1,5 +1,7 @@
 # Module: Pair Space (Пространство пары)
 
+> API and persisted fields below follow the current backend where source-linked. Timings, NFRs, acceptance checklist and target UX are not measured or evidence of full completion.
+
 ## 1. Цель и границы
 
 **Цель:** Ключевой дифференциатор продукта — у каждого занятия своя страница с объявлениями, материалами, обсуждением и ориентиром «что подготовить к паре». Сдача работ, проверка и оценки остаются в Moodle.
@@ -86,7 +88,7 @@ Multipart/FileInterceptor **нет**: `POST .../files` принимает обы
 5. **Файлы:** тип огранич enum'ом DTO (`pdf, doc, docx, ppt, pptx, jpg, png`); размер (`size`) — просто число, не валидируется; multipart-загрузки и ограничения «≤ 50 МБ» в коде нет.
 6. **Обсуждение:** тред, привязанный к паре (`parentId`); сообщения пагинируются.
 7. **Закрепление:** `isPinned` объявления; сортировка — pinned first, затем по дате.
-8. **Рейт-лимитов нет:** заявленное «10 сообщений/мин» не реализовано (`ThrottlerGuard` не подключён).
+8. **Rate limiting:** the global `ThrottlerGuard` applies to backend requests; this module does not define a separate Pair Space-specific quota such as 10 messages/minute.
 9. **События:** публикации уходят на шину `EventBusService` с типами `announcement.created`, `homework.created`, `homework.updated`, `message.created`.
 
 ---
@@ -95,8 +97,8 @@ Multipart/FileInterceptor **нет**: `POST .../files` принимает обы
 
 | Событие                                 | Тип уведомления                                         | Получатель                      |
 | --------------------------------------- | ------------------------------------------------------- | ------------------------------- |
-| `announcement.created`                  | Push/in-app (`new_announcement`)                        | Студенты группы + преподаватель |
-| `homework.created` / `homework.updated` | Push/in-app (`new_homework`, в интерфейсе «Подготовка») | Студенты группы + преподаватель |
+| `announcement.created`                  | In-app notification/event stream; no FCM/APNs push | Студенты группы + преподаватель |
+| `homework.created` / `homework.updated` | In-app notification/event stream; no FCM/APNs push | Студенты группы + преподаватель |
 | `message.created`                       | In-app (`other`)                                        | Студенты группы + преподаватель |
 
 ---
@@ -107,7 +109,7 @@ Multipart/FileInterceptor **нет**: `POST .../files` принимает обы
 | ----------- | -------------------------------------------- |
 | Latency     | p95 ≤ 300 мс                                 |
 | Offline     | Аккаунтный кэш посещённых Pair Space (занятие, материалы, подготовка, обсуждение, история изменений); только чтение офлайн, действия требуют сети. Subject timeline загружается с сервера и пока требует соединения |
-| Rate limits | Не настроены (лимита «10 сообщений/мин» нет) |
+| Rate limits | Global backend `ThrottlerGuard`; no module-specific quota. |
 
 ---
 

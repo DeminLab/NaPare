@@ -1,88 +1,36 @@
 # Runbooks
 
-## 1. Парсер расписания СИБИТ упал
+This file covers repository-backed Docker Compose checks. It does not describe production host access, DNS/TLS or provider dashboards; use the operator-specific instructions in root [DEPLOY.md](../../DEPLOY.md).
 
-**Симптом:** Алерт "Schedule sync failed", last_success > 24ч.
+## Check deployment health
 
-**Действия:**
-1. Проверить логи: `docker compose logs backend | grep connector`
-2. Проверить доступность источника: `curl https://rasp.sano.ru/api/Rasp/ListYears`
-3. Если источник сменил формат — обновить парсер в `apps/backend/src/schedule/connectors/sibit-connector.service.ts` и `apps/backend/src/auth/rasp-scraper.service.ts`
-4. Запустить ручной синк: `POST /api/v1/admin/schedule/sync`
-5. Если не помогает — временно переключить на ручной импорт
+```bash
+docker compose ps
+docker compose logs --tail 100 backend
+curl -fsS http://127.0.0.1:8080/api/v1/health
+```
 
----
+The public hostname and reverse proxy depend on server configuration. A successful loopback request verifies only the local Docker gateway.
 
-## 2. SMS не уходит
+## Backend does not become healthy
 
-**Симптом:** Студент не получает SMS-код.
+1. Inspect `docker compose ps` and `docker compose logs --tail 200 backend`.
+2. Check PostgreSQL with `docker compose logs --tail 100 postgres` and verify the configured database credentials.
+3. Check required production environment variables and `CORS_ORIGIN` on the host without copying secret values into tickets or logs.
+4. Review TypeORM migration startup messages. Production backend applies pending migrations at startup; take a database backup before rollout.
+5. If service-level checks pass but the public site fails, inspect host Nginx, DNS and TLS separately as described in `DEPLOY.md`.
 
-**Действия:**
-1. Проверить баланс SMS-провайдера
-2. Проверить логи: `docker compose logs backend | grep sms`
-3. Проверить rate limiting: не превышен ли лимит
-4. Проверить номер телефона (формат +7XXXXXXXXXX)
-5. Если провайдер упал — временно переключить на email-код
+## PostgreSQL capacity or restore
 
----
+Use the database provider/host's supported backup and restore process. Do not run destructive cleanup SQL based on example table names; verify actual retention policy, table ownership and a restorable backup first. Database access is environment-specific and is not exposed as a public Compose port.
 
-## 3. Push не доставляется
+## Schedule source or Moodle connector issue
 
-**Симптом:** Студент не получает push-уведомления.
+1. Inspect backend logs for the relevant connector and timestamp.
+2. Confirm the upstream service is reachable from the deployment host.
+3. Compare its current response with the adapter implementation and tests before changing mappings.
+4. For Moodle, verify configured HTTPS URL and Web Services permissions. The connector's test call only checks site information; it does not synchronize course content.
 
-**Действия:**
-1. Проверить Firebase/APNs консоль (статус доставки)
-2. Проверить device_token в БД: `SELECT * FROM device_tokens WHERE user_id = '...'`
-3. Проверить логи Notification Service
-4. ПроверитьFCM/APNs credentials
-5. Проверить Deep link в уведомлении
+## Not current operational runbooks
 
----
-
-## 4. БД: мало места
-
-**Симптом:** Алерт "Disk space > 85%".
-
-**Действия:**
-1. Проверить размер: `docker exec postgres psql -c "SELECT pg_database_size('napare')"`
-2. Очистить audit_logs старше 1 года: `DELETE FROM audit_logs WHERE created_at < NOW() - INTERVAL '1 year'`
-3. Очистить notifications старше 60 дней
-4. Очистить старые бэкапы
-5. Расширить диск если нужно
-
----
-
-## 5. Redis: память заканчивается
-
-**Симптом:** Алерт "Redis memory > 80%".
-
-**Действия:**
-1. Проверить размер: `redis-cli INFO memory`
-2. Очистить устаревшие ключи: `redis-cli --scan --pattern "session:*" | xargs -L 1 redis-cli DEL`
-3. Проверить rate limiting keys
-4. При необходимости — увеличить maxmemory
-
----
-
-## 6. Backend не отвечает
-
-**Симптом:** API возвращает 502/503.
-
-**Действия:**
-1. Проверить контейнер: `docker ps | grep backend`
-2. Проверить логи: `docker compose logs backend --tail 100`
-3. Проверить health check: `curl http://localhost:3000/api/v1/health`
-4. Перезапустить: `docker compose restart backend`
-5. Если не помогает — проверить БД и Redis
-
----
-
-## Общая информация
-
-| Сервис | Порт | Health check |
-|--------|------|--------------|
-| Backend | 3000 | `GET /api/v1/health` |
-| Web | 3001 | `GET /` |
-| PostgreSQL | 5432 | `pg_isready` |
-| Redis | 6379 | `redis-cli ping` |
-| MinIO | 9000 | `GET /minio/health/live` |
+The repository does not configure SMS delivery, FCM/APNs push sending, Redis-backed queues/session storage, Grafana alerts or S3 file storage. Do not use old Firebase, Redis memory-cleanup, or SQL-retention instructions as production procedures. Their integration must be implemented and operated before adding a runbook.

@@ -10,5 +10,5 @@ Student and staff UIs open with `Ctrl/⌘K` or the floating search button. Persi
 
 - [Search controller](../../apps/backend/src/search/search.controller.ts)
 - [Search service](../../apps/backend/src/search/search.service.ts)
-- [Student Spotlight](../../apps/web-student/src/app/(student)/StudentSpotlight.tsx)
-- [Staff Spotlight](../../apps/web-staff/src/app/(staff)/StaffSpotlight.tsx)
+- [Student Spotlight](../../apps/web-student/src/app/%28student%29/StudentSpotlight.tsx)
+- [Staff Spotlight](../../apps/web-staff/src/app/%28staff%29/StaffSpotlight.tsx)

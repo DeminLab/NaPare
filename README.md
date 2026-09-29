@@ -6,7 +6,7 @@
 [![Node.js 20](https://img.shields.io/badge/Node.js-20+-green.svg)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue.svg)](https://www.typescriptlang.org/)
 [![NestJS](https://img.shields.io/badge/NestJS-10-red.svg)](https://nestjs.com/)
-[![Next.js](https://img.shields.io/badge/Next.js-14-black.svg)](https://nextjs.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-15-black.svg)](https://nextjs.org/)
 
 ---
 
@@ -45,8 +45,11 @@
 
 | Приложение | Платформа | Аудитория | Приоритет |
 |------------|-----------|-----------|-----------|
-| **Web App** | Браузер (Next.js) | Студенты, преподаватели, кураторы и администрация | Критический |
-| **MAX WebApp** | MAX открывает существующий сайт (`web-portal`) | Все пользователи NaPare | Высокий |
+| **Student web/PWA** | Next.js | Студенты | Текущая web-поверхность |
+| **Staff web** | Next.js | Преподаватели и сотрудники | Текущая web-поверхность |
+| **University admin web** | Next.js | Администраторы, деканы, заведующие кафедрами | Текущая web-поверхность |
+| **Developer web** | Next.js | Платформенные разработчики | Текущая web-поверхность |
+| **Portal / MAX entry** | Next.js `web-portal` | Вход и привязка аккаунта | MAX требует настроенного бота и проверки на платформе |
 
 Нативного iOS/Android-приложения в этой версии репозитория нет; продукт и кейс доступны через сайт и MAX WebApp.
 
@@ -103,15 +106,16 @@ MAX bot (Open) ──> MAX WebView ──> `/` or `/max/` ──> web-portal
 
 web-student ─┐
 web-staff ───┼──> NestJS API (/api/v1) ──> PostgreSQL
-web-admin ───┤              │
-web-developer┘              ├────────────> Redis
-                             └────────────> S3-compatible file storage
+web-admin ───┤
+web-developer┘
 ```
+
+Redis присутствует в Compose, но backend client/queues не подключены. S3-adapter нет; PostgreSQL — прикладное хранилище данных.
 
 ### Архитектурные принципы
 
 1. **Модульный монолит** — единый NestJS-процесс с чёткими границами модулей
-2. **Мультивузовость** — изоляция данных через `university_id` + Row Level Security
+2. **Мультивузовость** — tenant и resource-scope checks в backend guards и сервисах; PostgreSQL RLS policies не настроены
 3. **OpenAPI как source of truth** — спецификация генерируется из кода
 4. **TypeScript в активных приложениях** — web + backend; MAX запускает существующий `web-portal`
 5. **AI-first** — документы ≤ 500 строк, чёткие заголовки, таблицы
@@ -166,6 +170,7 @@ napare/
 | `@napare/web-staff` | Рабочее пространство персонала | `http://localhost:3002` |
 | `@napare/web-admin` | Администрирование вуза | `http://localhost:3003` |
 | `@napare/web-developer` | Консоль разработчика | `http://localhost:3004` |
+| `@napare/web-portal` | Публичный сайт и MAX Bridge вход | `http://localhost:3006` |
 | `@napare/api-client` | Общий TypeScript API-клиент | — |
 | `@napare/shared` | Общие доменные типы и константы | — |
 
@@ -175,24 +180,23 @@ napare/
 
 | Слой | Технология | Версия | Обоснование |
 |------|------------|--------|-------------|
-| **Web** | Next.js | 14+ (App Router) | SSR, отличный DX, адаптивность |
-| **Web State** | TanStack Query | 5.x | Кэширование, оптимистичные обновления |
+| **Web** | Next.js | 15.5.x (App Router) | SSR, адаптивные role workspaces |
+| **Web State** | React state + `localStorage` в соответствующих экранах | — | TanStack Query используется только в сохранённом legacy `apps/web` |
 | **Web Styling** | Tailwind CSS | 3.x | Утилитарный CSS, быстрая разработка |
 | **MAX WebApp** | `web-portal` + MAX Bridge | — | Открывает существующий сайт; сервер проверяет `initData` и связывает учётную запись |
 | **Backend** | NestJS | 10+ | Модульный монолит, OpenAPI из коробки |
 | **ORM** | TypeORM | 0.3+ | Миграции, декораторы, интеграция с NestJS |
-| **БД** | PostgreSQL | 16 | Надёжность, JSONB, полнотекстовый поиск, RLS |
-| **Кэш / очереди** | Redis | 7 | Сессии, очереди уведомлений, rate limiting |
-| **Файлы** | S3-совместимое | — | Yandex Object Storage / MinIO для файлов ДЗ |
-| **Push (Android)** | Firebase Cloud Messaging | — | Стандарт |
-| **Push (iOS)** | Apple Push Notification | — | Стандарт |
+| **БД** | PostgreSQL | 16 | Основное хранилище; TypeORM tenant/resource checks в приложении |
+| **Redis** | Redis | 7 | Есть локальный/production контейнер; backend Redis client/queue пока не подключён |
+| **Файлы** | S3/MinIO | — | Переменные-заготовки есть; фактический storage adapter не подключён |
+| **Push** | FCM/APNs | — | Отправка не реализована; device token endpoint не означает доставку push |
 | **Auth** | JWT (access + refresh) | — | Stateless авторизация |
 | **API Docs** | OpenAPI 3 (Swagger) | — | Генерируется из кода = source of truth |
-| **Аналитика** | PostHog | — | Продуктовые события |
-| **Мониторинг ошибок** | Sentry | — | Ошибки на всех клиентах |
-| **CI/CD** | GitHub Actions | — | Lint → Test → Build → Deploy |
+| **Аналитика** | PostHog | — | Не подключён |
+| **Мониторинг ошибок** | Sentry | — | Backend при заданном `SENTRY_DSN` |
+| **CI/CD** | GitHub Actions | — | PR checks; push `main` запускает staging workflow |
 | **Контейнеризация** | Docker + Docker Compose | — | Локальная разработка + деплой |
-| **Оркестрация** | Kubernetes | — | Production (после пилота) |
+| **Оркестрация** | Docker Compose | — | Текущий production deployment; Kubernetes не настроен |
 
 ---
 
@@ -208,8 +212,8 @@ napare/
 
 ```powershell
 # 1. Клонировать репозиторий
-git clone https://github.com/napare/napare.git
-cd napare
+git clone https://github.com/DeminLab/NaPare.git
+cd NaPare
 
 # 2. Установить зависимости
 pnpm install
@@ -235,6 +239,7 @@ pnpm dev:student
 pnpm dev:staff
 pnpm dev:admin
 pnpm dev:developer
+pnpm dev:portal
 ```
 
 ### URLs при запуске
@@ -247,6 +252,7 @@ pnpm dev:developer
 | Web Staff | `http://localhost:3002` |
 | Web Admin | `http://localhost:3003` |
 | Web Developer | `http://localhost:3004` |
+| Web Portal | `http://localhost:3006` |
 | PostgreSQL | `localhost:5432` |
 | Redis | `localhost:6379` |
 | MinIO Console | `http://localhost:9001` |
@@ -282,8 +288,8 @@ Development Compose файл (`docker-compose.dev.yml`) включает:
 | Сервис | Порт | Описание |
 |--------|------|----------|
 | PostgreSQL 16 | 5432 | Основная база данных |
-| Redis 7 | 6379 | Кэш и очереди |
-| MinIO | 9000/9001 | S3-совместимое хранилище файлов |
+| Redis 7 | 6379 | Development container; backend client/queues не подключены |
+| MinIO | 9000/9001 | S3-compatible dev service; backend storage adapter не подключён |
 
 ### Запуск инфраструктуры
 
@@ -305,76 +311,9 @@ docker compose -f docker-compose.dev.yml down -v
 
 ## Переменные окружения
 
-### Backend (.env)
+### Файлы окружения
 
-Скопируйте `apps/backend/.env.example` в `apps/backend/.env`:
-
-```env
-# ===========================================
-# Окружение
-# ===========================================
-NODE_ENV=development
-PORT=3000
-
-# ===========================================
-# База данных
-# ===========================================
-DB_HOST=localhost
-DB_PORT=5432
-DB_USERNAME=napare
-DB_PASSWORD=napare
-DB_NAME=napare
-
-# ===========================================
-# JWT
-# ===========================================
-JWT_SECRET=your-super-secret-jwt-key-change-in-production
-JWT_REFRESH_SECRET=your-super-secret-refresh-key-change-in-production
-JWT_ACCESS_EXPIRY=15m
-JWT_REFRESH_EXPIRY=60d
-
-# ===========================================
-# Redis
-# ===========================================
-REDIS_HOST=localhost
-REDIS_PORT=6379
-
-# ===========================================
-# S3 / MinIO
-# ===========================================
-S3_ENDPOINT=localhost:9000
-S3_BUCKET=napare
-S3_ACCESS_KEY=napare_minio
-S3_SECRET_KEY=napare_minio_secret
-S3_REGION=us-east-1
-
-# ===========================================
-# Push-уведомления
-# ===========================================
-# Firebase (Android)
-FCM_PROJECT_ID=
-FCM_PRIVATE_KEY=
-FCM_CLIENT_EMAIL=
-
-# Apple (iOS)
-APNS_KEY_ID=
-APNS_TEAM_ID=
-APNS_BUNDLE_ID=ru.napare.mobile
-APNS_USE_SANDBOX=true
-
-# ===========================================
-# Мониторинг
-# ===========================================
-SENTRY_DSN=
-POSTHOG_API_KEY=
-POSTHOG_HOST=https://app.posthog.com
-
-# ===========================================
-# Frontend
-# ===========================================
-NEXT_PUBLIC_API_URL=http://localhost:3000
-NEXT_PUBLIC_APP_NAME=НаПаре
-```
+Для локального backend скопируйте `apps/backend/.env.example` в `apps/backend/.env`. Корневой `.env.example` предназначен для production Compose: скопируйте его в корневой `.env` только на сервере и замените все `replace-with-*` значения. Эти шаблоны различаются по назначению; источник обязательных backend-переменных — `apps/backend/src/config/validate-environment.ts`.
 
 ### Описание переменных
 
@@ -382,18 +321,18 @@ NEXT_PUBLIC_APP_NAME=НаПаре
 |------------|----------------|----------|
 | `NODE_ENV` | Да | `development`, `test` или `production` |
 | `PORT` | Нет | Порт API; по умолчанию `3000` |
-| `DATABASE_URL` | Да | Полный URL подключения PostgreSQL |
+| `DATABASE_URL` | Если используется вместо отдельных полей | Полный URL подключения PostgreSQL |
 | `DB_HOST`, `DB_PORT`, `DB_USERNAME`, `DB_PASSWORD`, `DB_NAME` | При отсутствии `DATABASE_URL` | Поля подключения PostgreSQL |
 | `JWT_SECRET` | Да | Секрет для подписи access-токенов |
 | `JWT_REFRESH_SECRET` | Да | Секрет для подписи refresh-токенов |
 | `JWT_ACCESS_EXPIRATION` | Да | Время жизни access-токена (например, `15m`) |
 | `JWT_REFRESH_EXPIRATION` | Да | Время жизни refresh-токена (например, `30d`) |
-| `REDIS_HOST`, `REDIS_PORT` или `REDIS_URL` | Зависит от среды | Подключение к Redis |
+| `REDIS_HOST`, `REDIS_PORT` | Заготовки локальной конфигурации | Backend Redis client не подключён; не считать variables активной интеграцией |
 | `CORS_ORIGIN` | Production | Разрешённый web-оригин |
 | `MAX_BOT_TOKEN` | Для входа в сайт из MAX WebApp | Токен бота MAX; без него `POST /api/v1/auth/max` отвечает 503 |
 | `MAX_INIT_DATA_TTL_SECONDS` | Нет | Срок действия `initData` MAX; по умолчанию `900` |
 | `SENTRY_DSN` | Нет | DSN Sentry |
-| `STORAGE_ENDPOINT`, `STORAGE_BUCKET`, `STORAGE_ACCESS_KEY`, `STORAGE_SECRET_KEY`, `STORAGE_USE_SSL` | Для хранилища файлов | Конфигурация S3-хранилища |
+| `CONNECTOR_ENCRYPTION_KEY` | Для Moodle connector | Base64 от 32 случайных bytes для шифрования token; фактическое значение задаётся секретно |
 
 > **Важно:** Никогда не коммитьте заполненные файлы `.env` в репозиторий.
 
@@ -407,10 +346,10 @@ PostgreSQL является системой записи. TypeORM сущнос�
 
 ```powershell
 # Применить миграции
-pnpm --filter @napare/backend typeorm:migration:run
+pnpm --filter @napare/backend run typeorm:migration:run
 
 # Откатить последнюю миграцию
-pnpm --filter @napare/backend typeorm:migration:revert
+pnpm --filter @napare/backend run typeorm:migration:revert
 ```
 
 ### Модель данных
@@ -452,8 +391,8 @@ Notification / DeviceToken / AuditLog
 | Среда | URL |
 |-------|-----|
 | Local | `http://localhost:3000/api/v1/docs` |
-| Staging | `https://staging.napare.ru/api/v1/docs` |
-| Production | `https://api.napare.ru/api/v1/docs` |
+| Staging | GitHub Environment secret `STAGING_URL` + `/api/v1/docs` |
+| Production | `https://napare.sano.ru/api/v1/docs` |
 
 ### Ключевые группы endpoints
 
@@ -468,29 +407,20 @@ Notification / DeviceToken / AuditLog
 
 ### Формат ошибок
 
-Единый формат для всех ошибок:
+Формат ошибки плоский; точные поля и коды описаны в [API guide](docs/api/README.md) и генерируемом Swagger/OpenAPI контракте (`/api/v1/docs-json`):
 
 ```json
 {
-  "error": {
-    "code": "VALIDATION_ERROR",
-    "message": "Неверные входные данные",
-    "details": [
-      { "field": "email", "message": "Неверный формат email" }
-    ]
-  }
+  "statusCode": 400,
+  "code": "VALIDATION_ERROR",
+  "message": "Validation failed",
+  "details": ["email must be an email"],
+  "timestamp": "2026-09-26T10:00:00.000Z",
+  "path": "/api/v1/auth/login"
 }
 ```
 
-| Код | HTTP Status | Описание |
-|-----|-------------|----------|
-| `VALIDATION_ERROR` | 400 | Неверные входные данные |
-| `INVALID_CODE` | 400 | Неверный SMS/email код |
-| `UNAUTHORIZED` | 401 | Не авторизован |
-| `FORBIDDEN` | 403 | Нет доступа |
-| `NOT_FOUND` | 404 | Не найдено |
-| `RATE_LIMIT_EXCEEDED` | 429 | Слишком много запросов |
-| `INTERNAL_ERROR` | 500 | Внутренняя ошибка |
+Validation `details` contains class-validator messages and appears only when provided by the exception filter.
 
 ### Пагинация
 
@@ -526,22 +456,9 @@ GET /api/v1/schedule/my?page=1&limit=20&sort=startTime&order=asc
 | Зав. кафедрой | `department_head` | Управление кафедрой, расписание |
 | Админ вуза | `university_admin` | Управление вузом, роли, расписание |
 | Суперадмин | `superadmin` | Управление платформой |
-| Разработчик | `developer` | Доступ к staging, не production |
+| Разработчик | `developer` | Технические ресурсы; доступ определяется backend policy |
 
-> Один пользователь может иметь **несколько ролей** (например, `teacher` + `curator`).
-
-### Матрица прав (ключевые действия)
-
-| Действие | Студент | Преподаватель | Куратор | Админ |
-|----------|---------|---------------|---------|-------|
-| Смотреть своё расписание | ✅ | ✅ | ❌ | ❌ |
-| Смотреть расписание группы | ✅ | ✅ (свои пары) | ✅ (своя группа) | ✅ |
-| Публиковать ДЗ | ❌ | ✅ (свои пары) | ❌ | ✅ |
-| Публиковать объявления | ❌ | ✅ (свои пары) | ❌ | ✅ |
-| Загружать файлы | ❌ | ✅ (свои пары) | ❌ | ✅ |
-| Управлять расписанием | ❌ | ❌ | ❌ | ✅ |
-| Подтверждать отсутствия | ❌ | ❌ | ✅ (своя группа) | ✅ |
-| Назначать роли | ❌ | ❌ | ❌ | ✅ |
+Текущая модель хранит одну роль в `users.role`. Проверяйте действие и resource scope по [реальным backend policies](docs/architecture/roles-and-permissions.md); краткая матрица здесь намеренно не дублируется, чтобы не расходиться с route permissions.
 
 ### Разграничение данных по ролям
 
@@ -655,37 +572,33 @@ docker compose --env-file <secure-env-file> -f docker-compose.prod.yml up -d
 
 ### Аутентификация
 
-- SMS/email коды с rate limiting (3 попытки/час)
-- JWT с коротким сроком жизни (access: 15–30 мин, refresh: 30–60 дней)
-- Refresh token rotation
-- Уведомления о входе с нового устройства
+- Вход по учетным данным; новые аккаунты создаёт университет, самостоятельная регистрация отключена
+- JWT access/refresh; время жизни задаётся backend environment configuration
+- Rate limiting применяется глобально и отдельными правилами к auth endpoints
+- Refresh token flow и logout реализованы в backend; уведомления о новом устройстве не заявляются
 
 ### Авторизация
 
 - Role-based access control (RBAC) — 8 ролей
-- University_id изоляция — каждый запрос фильтруется по вузу
-- Row Level Security (RLS) в PostgreSQL
-- Guards в NestJS
+- Tenant и role/resource scope проверяются backend guards и сервисами
+- PostgreSQL RLS policies в миграциях не настроены
 
 ### Шифрование
 
-- HTTPS everywhere (TLS 1.3)
-- Шифрование паролей (argon2)
-- Шифрование причин отсутствий (AES-256)
-- Шифрование бэкапов
+- TLS задаётся production reverse proxy и сертификатом сервера
+- Moodle connector tokens шифруются AES-256-GCM при настроенном ключе
+- Шифрование резервных копий зависит от процедуры оператора
 
-### Соответствие 152-ФЗ
+### Персональные данные
 
-- Политика обработки ПДн опубликована
-- Согласие на обработку ПДн при регистрации
-- Данные хранятся на территории РФ
-- Пользователь может запросить удаление данных
+Юридические документы в `docs/legal/` содержат незаполненные поля оператора и даты и требуют проверки владельцем сервиса до публикации. Репозиторий сам по себе не подтверждает юридическое соответствие, фактическое размещение production-данных или настроенный процесс удаления данных.
 
 ### Мониторинг
 
-- Sentry для ошибок на всех клиентах
-- Аудит критичных действий
-- Логирование подозрительной активности
+- Backend отправляет ошибки в Sentry только если задан `SENTRY_DSN`.
+- Веб-клиенты не подключают Sentry в текущей конфигурации.
+- Фактический аудит ограничен событиями, записываемыми соответствующим кодом.
+- [Ops monitoring guide](docs/ops/monitoring.md) отделяет текущие логи/health от целевой observability.
 
 ---
 
@@ -693,12 +606,12 @@ docker compose --env-file <secure-env-file> -f docker-compose.prod.yml up -d
 
 | Модуль | Ответственность | Документ |
 |--------|----------------|----------|
-| **Auth** | Регистрация, вход, JWT, роли | [docs/modules/auth.md](docs/modules/auth.md) |
+| **Auth** | Вход, JWT, роли и связь MAX/Telegram | [docs/modules/auth.md](docs/modules/auth.md) |
 | **Schedule** | Расписание, коннекторы, детект изменений | [docs/modules/schedule.md](docs/modules/schedule.md) |
 | **PairSpace** | Объявления, ДЗ, файлы, обсуждение | [docs/modules/pair-space.md](docs/modules/pair-space.md) |
 | **Absences** | Статусы отсутствий, подтверждения куратора | [docs/modules/absences.md](docs/modules/absences.md) |
 | **MyDay** | Агрегация данных для главного экрана | [docs/modules/my-day.md](docs/modules/my-day.md) |
-| **Notifications** | Push + in-app уведомления | [docs/modules/notifications.md](docs/modules/notifications.md) |
+| **Notifications** | In-app события, inbox и preferences; системная push-доставка не подключена | [docs/modules/notifications.md](docs/modules/notifications.md) |
 | **Admin** | Управление вузом, ролями, расписанием | [docs/modules/admin.md](docs/modules/admin.md) |
 
 ### Коннекторы расписания
@@ -770,15 +683,15 @@ docs/
 1. Прочитайте [docs/01_ONBOARDING.md](docs/01_ONBOARDING.md)
 2. Изучите [docs/02_GLOSSARY.md](docs/02_GLOSSARY.md)
 3. Прочитайте нужный модуль из `docs/modules/*.md`
-4. Найдите задачу с меткой **Open questions / TODO**
+4. Сверьте открытые вопросы с кодом и владельцем задачи; не считайте исторические TODO подтверждёнными дефектами
 
 ### Процесс PR
 
-1. Создайте branch от `develop`
+1. Создайте branch от `main`
 2. Напишите код и тесты
 3. Обновите документацию модуля (`docs/modules/*.md`)
 4. Обновите OpenAPI (если изменился API)
-5. Отправьте PR в `develop`
+5. Отправьте PR в `main`
 6. Получите ≥ 1 review
 
 ### PR Checklist
@@ -788,7 +701,7 @@ docs/
 - [ ] Документация модуля обновлена
 - [ ] OpenAPI обновлён (если API изменился)
 - [ ] Нет секретов в коде
-- [ ] Нет конфликтов с `develop`
+- [ ] Ветка синхронизирована с `main`
 - [ ] Не испольузется `synchronize` в production
 
 ### Code Style
@@ -820,29 +733,9 @@ docs/
 
 ---
 
-## Команда и пилот
+## Product planning
 
-### Команда
-
-| Роль | Описание |
-|------|----------|
-| CEO/Product | Продуктовая стратегия, встреча с вузами |
-| CTO | Архитектура, разработка, DevOps |
-
-### Пилот
-
-| Параметр | Значение |
-|----------|----------|
-| Вуз | СИБИТ (Омск) |
-| Группы | 1–2 реальные группы |
-| Цель | Доказать привычку ежедневного использования |
-| Метрики | WAU ≥ 60%, % преподавателей с контентом, NPS |
-
-### Стратегия роста
-
-1. **Фаза 0 (0–4 мес)** — MVP + пилот на СИБИТ
-2. **Фаза 1 (4–8 мес)** — Расширение внутри СИБИТ, первые платящие клиенты
-3. **Фаза 2 (8–14 мес)** — Региональный рост, 5–12 вузов
+Документы о целевых пользователях, пилоте, метриках и росте находятся в [product](docs/product/overview.md) и [strategy](docs/strategy/vision.md). Они описывают план и гипотезы; этот репозиторий не подтверждает действующие договорённости, состав команды, активный пилот или измеренные метрики. Проверьте эти сведения у владельца продукта перед внешним использованием.
 4. **Фаза 3 (14–24 мес)** — Национальный рост, интеграции, GDPR
 5. **Фаза 4 (24+ мес)** — Платформа, маркетплейс интеграций
 
@@ -862,8 +755,9 @@ docs/
 | Ресурс | URL |
 |--------|-----|
 | OpenAPI (локально) | `http://localhost:3000/api/v1/docs` |
-| OpenAPI (staging) | `https://staging.napare.ru/api/v1/docs` |
-| GitHub | `https://github.com/napare/napare` |
+| OpenAPI (production) | `https://napare.sano.ru/api/v1/docs` |
+| OpenAPI (staging) | `STAGING_URL` из GitHub Environment |
+| GitHub | `https://github.com/DeminLab/NaPare` |
 
 ---
 

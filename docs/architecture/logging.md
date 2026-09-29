@@ -1,5 +1,7 @@
 # Logging and Monitoring Strategy
 
+> **Проектная стратегия с примерами, не inventory действующих сервисов.** Backend Sentry включается при `SENTRY_DSN`; PostHog, Grafana/Loki и Flutter logging не подключены. См. [текущие сигналы](../ops/monitoring.md).
+
 Стратегия логирования и мониторинга для всего приложения.
 
 ---

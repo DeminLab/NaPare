@@ -1,5 +1,7 @@
 # AI Documentation Index Implementation Plan
 
+> **Датированный документ инициативы.** Его scope и checklist относятся к исходной задаче на дату файла; используйте актуальные проектные документы и код, чтобы определить текущий статус, и не считайте его текущим backlog.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` (recommended) or `superpowers:executing-plans` to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Make a fresh AI session reliably orient itself in NaPare before proposing changes, while maintaining more than 200 Markdown documents that map source ownership and verification paths.

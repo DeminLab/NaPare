@@ -10,7 +10,7 @@ Validates personal lesson note content and caps each note at 20,000 characters.
 
 ## Read sequence
 
-1. Read [the Pair Space module](../../../modules/pair-space.md).
+1. Read [the Pair Space module](../../modules/pair-space.md).
 2. Follow the DTO to the `PUT /pair-spaces/:lessonId/personal-note` controller route.
 
 ## Change boundary

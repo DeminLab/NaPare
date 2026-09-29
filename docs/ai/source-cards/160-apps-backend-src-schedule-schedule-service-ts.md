@@ -10,7 +10,7 @@ Tenant- and role-scoped schedule queries and manual lesson updates. Student date
 
 ## Read sequence
 
-1. Read [the Schedule module](../../../modules/schedule.md).
+1. Read [the Schedule module](../../modules/schedule.md).
 2. Follow manual updates to the event bus and notification formatter.
 
 ## Change boundary

@@ -2,7 +2,9 @@
 
 ## Regenerate source coverage
 
-Source cards are intentionally small and tied to real paths. When a source file is added, moved or deleted, add or update its card in `docs/ai/source-cards/` and refresh the source-card index.
+Source cards are intentionally small and tied to real paths. When a source file is added, moved or deleted, add or update its card in `docs/ai/source-cards/` and refresh the source-card index. Keep descriptions and verification commands current; a valid path alone does not validate the prose.
+
+For each documentation change, classify it as current implementation, operational procedure, target/specification, historical record or legal draft. Date snapshots and label future/legacy material so it cannot be mistaken for deployed behavior. Source code, current OpenAPI, migrations, package scripts, workflows and Compose files take precedence over older docs.
 
 ## Required checks
 
@@ -12,7 +14,7 @@ node scripts/verify-role-workspace-boundaries.cjs
 pnpm lint
 ```
 
-The documentation validator requires at least 200 Markdown files, validates root entry points and rejects cards whose canonical source no longer exists. Do not lower the count threshold to pass a temporary change.
+The documentation validator checks the minimum Markdown inventory, required entry points and canonical source paths. It does not verify factual freshness or local Markdown links; run a separate link check during broad documentation reviews. Do not lower the count threshold to pass a temporary change.
 
 ## Sharing archive
 

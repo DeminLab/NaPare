@@ -1,5 +1,7 @@
 # Shared Types Architecture
 
+> **Проектная архитектура, не гарантия текущего использования.** Сверяйте package exports и реальные imports прежде чем менять или описывать shared contracts; TypeScript-типы backend могут иметь отдельный authoritative source.
+
 ## Обзор
 
 Общие типы и интерфейсы для всего монорепо. Используются в backend, mobile, web и max-miniapp.

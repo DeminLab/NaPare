@@ -1,5 +1,7 @@
 # Архитектура MAX Mini-App (React + Vite)
 
+> **Историческая схема legacy app.** Отдельный `apps/max-miniapp` source сохранён, но исключён из обычных root dev/build и production Compose. MAX entry для текущего продукта находится в `apps/web-portal` и использует MAX Bridge; см. [current flow](../clients/max-miniapp.md).
+
 ## Общая структура
 
 ```

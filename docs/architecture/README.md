@@ -1,130 +1,43 @@
-# Архитектура проекта НаПаре
+# Архитектура NaPare
 
-## Обзор
+Этот раздел описывает текущий монорепозиторий и отделяет реализованные компоненты от проектных заметок.
 
-**НаПаре** — B2B2C SaaS операционная система учебного дня студента. Архитектура построена на принципах модульного монолита, мультивузовости и AI-first подхода.
+## Текущая система
 
-## Ключевые принципы
+| Область | Реализация | Источник |
+|---|---|---|
+| Backend API | NestJS modular monolith, PostgreSQL, TypeORM | [Backend architecture](backend-architecture.md), `apps/backend/src/app.module.ts` |
+| Web | Next.js 15.5 portal и четыре role workspaces | [Project map](../ai/project-map.md) |
+| MAX | Существующий `web-portal` + MAX Bridge; аккаунт связывается после серверной проверки `initData` | [MAX guide](../clients/max-miniapp.md) |
+| Tenant access | University context, role guards и resource checks в backend | [Roles and permissions](roles-and-permissions.md) |
+| Database | Entities и миграции TypeORM | [Schema overview](../database/schema-overview.md) |
+| Deployment | Docker Compose, shared-origin Nginx, GitHub Actions staging | [Deployment guide](../../DEPLOY.md), [CI/CD](../ops/cicd.md) |
 
-1. **Модульный монолит** — единый NestJS-процесс с чёткими границами модулей
-2. **Мультивузовость** — изоляция данных через `university_id` + RLS
-3. **OpenAPI как source of truth** — спецификация генерируется из кода
-4. **TypeScript везде** — web + backend; legacy `max-miniapp` не входит в production Compose
-5. **AI-first** — документы ≤ 500 строк, чёткие заголовки, таблицы
+PostgreSQL RLS policies не настроены. В production Compose есть Redis, но backend Redis client/queues не подключены. S3 storage adapter, FCM/APNs delivery, PostHog и Kubernetes deployment не являются реализованными компонентами.
 
-## Стек технологий
+## Документы
 
-| Слой | Технология |
-|------|------------|
-| Web | Next.js 14+, TanStack Query, Tailwind CSS |
-| Backend | NestJS 10+, TypeORM, PostgreSQL 16 |
-| Кэш | Redis 7 |
-| Файлы | S3-совместимое хранилище |
-| Push | FCM (Android) + APNs (iOS) |
-| CI/CD | GitHub Actions |
-| Мониторинг | Sentry + Grafana + PostHog |
+- [System overview](system-overview.md) — текущие runtime-связи и границы интеграций.
+- [Backend architecture](backend-architecture.md) — модули, конфигурация и миграции.
+- [Web architecture](web-architecture.md) — историческая архитектура legacy `apps/web`.
+- [MAX architecture](max-miniapp-architecture.md) — историческая отдельная Vite Mini App; текущий MAX flow описан в клиентском руководстве.
+- [Mobile architecture](mobile-architecture.md) — проектная заметка для отсутствующего нативного Flutter-клиента.
+- [Tech stack](tech-stack.md) — текущие версии библиотек и явно помеченные незадействованные технологии.
+- [Data model](data-model.md) и [database schema](../database/schema-overview.md) — доменная модель и схема.
+- [Roles and permissions](roles-and-permissions.md) — role enum, policy boundaries и ссылки на реализацию.
+- [Connectors](connectors.md) — расписание внешних источников и ограничения.
+- [Events](events.md), [error handling](error-handling.md) и [logging](logging.md) — backend runtime patterns.
+- [Configuration files](config-files.md) — карта текущих конфигураций; старые примеры помечены как исторические.
+- [Common components](common-components.md) и [shared types](shared-types.md) — общие backend/web abstractions.
 
-## Модули
+## Архитектурные решения
 
-| Модуль | Ответственность | Документ |
-|--------|----------------|----------|
-| Auth | Регистрация, вход, JWT, роли | [modules/auth.md](../modules/auth.md) |
-| Schedule | Расписание, коннекторы, детект изменений | [modules/schedule.md](../modules/schedule.md) |
-| PairSpace | Объявления, ДЗ, файлы, обсуждение | [modules/pair-space.md](../modules/pair-space.md) |
-| Absences | Статусы отсутствий, подтверждения куратора | [modules/absences.md](../modules/absences.md) |
-| Notifications | Push + in-app уведомления | [modules/notifications.md](../modules/notifications.md) |
-| Admin | Управление вузом, ролями, расписанием | [modules/admin.md](../modules/admin.md) |
-| MyDay | Агрегация данных для главного экрана | [modules/my-day.md](../modules/my-day.md) |
+Решения ADR фиксируют контекст и принятое направление на момент согласования. Код может реализовывать решение частично или позднее; актуальные implementation notes приведены в ADR и соответствующих runtime-документах.
 
-## Архитектурные решения (ADR)
-
-| ADR | Решение | Статус |
-|-----|---------|--------|
-| ADR-0001 | Модульный монолит | Принято |
-| ADR-0002 | Мультивузовость через university_id | Принято |
-| ADR-0003 | JWT-авторизация | Принято |
-| ADR-0004 | OpenAPI как source of truth | Принято |
-| ADR-0005 | Стек технологий | Принято |
-| ADR-0006 | Монорепозиторий | Принято |
-| ADR-0007 | Стратегия деплоя | Принято |
-
-## Архитектура кода
-
-| Компонент | Документ | Описание |
-|-----------|----------|----------|
-| Backend | [backend-architecture.md](backend-architecture.md) | NestJS: модули, сервисы, контроллеры, паттерны |
-| Mobile (not shipped) | [mobile-architecture.md](mobile-architecture.md) | Historical design notes; no mobile app source is included |
-| Web clients | [карта приложений](../ai/project-map.md) | Текущие Next.js-клиенты и MAX portal; [web-architecture.md](web-architecture.md) описывает legacy `apps/web` |
-| MAX login | [../clients/max-miniapp.md](../clients/max-miniapp.md) | Сайт + MAX Bridge; legacy miniapp architecture retained for reference |
-| Shared Types | [shared-types-architecture.md](shared-types-architecture.md) | Общие типы и интерфейсы |
-
-## Детальные реализации модулей
-
-| Модуль | Документ | Содержание |
-|--------|----------|------------|
-| Auth | [modules/auth-module.md](modules/auth-module.md) | Сервис, контроллер, JWT стратегии, DTO, тесты |
-| Schedule | [modules/schedule-module.md](modules/schedule-module.md) | Сущности, коннекторы, детект изменений |
-| PairSpace | [modules/pair-space-module.md](modules/pair-space-module.md) | Объявления, ДЗ, файлы, обсуждение |
-
-## Инфраструктура
-
-| Компонент | Документ | Содержание |
-|-----------|----------|------------|
-| Common | [common-components.md](common-components.md) | Guards, Interceptors, Filters, Decorators |
-| Docker & CI/CD | [docker-cicd.md](docker-cicd.md) | Docker Compose, Dockerfile, GitHub Actions |
-
-## Структура проекта
-
-```
-napare/
-├── apps/
-│   ├── backend/        # NestJS API
-│   ├── web-portal/     # Публичный сайт и MAX Bridge вход
-│   ├── web-student/    # Кабинет студента
-│   ├── web-staff/      # Кабинет преподавателя и куратора
-│   ├── web-admin/      # Кабинет университета
-│   ├── web-developer/  # Технический кабинет
-│   ├── web/            # Legacy монолит, не production
-│   └── max-miniapp/    # Legacy Vite клиент, не production
-├── packages/
-│   ├── shared/         # Общие типы, константы
-│   ├── ui/             # Общие UI-компоненты
-│   └── api-client/     # Сгенерированный API-клиент
-├── docs/               # Документация
-├── infrastructure/     # Docker, K8s
-└── scripts/            # Утилиты
-```
-
-## Модель данных
-
-Основные сущности:
-- **University** → **Faculty** → **Group** → **User**
-- **Lesson** → **PairSpace** → **Announcement/Homework/File/Discussion**
-- **AbsenceStatus** → **AbsenceConfirmation**
-- **Notification** / **DeviceToken** / **AuditLog**
-
-Подробно: [architecture/data-model.md](data-model.md)
-
-## Безопасность
-
-- JWT-авторизация (access + refresh tokens)
-- Role-based access control (8 ролей)
-- Row Level Security (RLS) в PostgreSQL
-- Шифрование чувствительных данных (AES-256)
-- Соответствие 152-ФЗ
-
-Подробно: [security/152-fz.md](../security/152-fz.md)
-
-## Деплой
-
-- **Local**: Docker Compose
-- **Staging**: Kubernetes (автоматический деплой из develop)
-- **Production**: Kubernetes (ручной деплой из main)
-
-Подробно: [ops/deployment.md](../ops/deployment.md)
-
-## Ссылки
-
-- [00_START_HERE.md](../00_START_HERE.md) — начало работы
-- [01_ONBOARDING.md](../01_ONBOARDING.md) — онбординг
-- [02_GLOSSARY.md](../02_GLOSSARY.md) — глоссарий
+- [ADR-0001: modular monolith](../decisions/0001-modular-monolith.md)
+- [ADR-0002: tenant isolation](../decisions/0002-multitenancy-university-id.md)
+- [ADR-0003: JWT](../decisions/0003-jwt-auth.md)
+- [ADR-0004: OpenAPI source](../decisions/0004-openapi-source-of-truth.md)
+- [ADR-0005: tech stack](../decisions/0005-tech-stack.md)
+- [ADR-0006: monorepo](../decisions/0006-monorepo-vs-polyrepo.md)
+- [ADR-0007: deployment](../decisions/0007-deployment-strategy.md)

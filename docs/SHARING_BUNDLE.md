@@ -1,40 +1,32 @@
-# Share bundle для разработчиков
+# Sharing a developer bundle
 
-## Назначение
+This guide describes a safe source handoff. No specific dated ZIP filename or prebuilt bundle is assumed to exist.
 
-Архив `NaPare-dev-bundle-2026-09-16.zip` содержит полный воспроизводимый исходный проект для передачи разработчикам: приложения, пакеты, документацию, Docker-конфигурацию, CI и lockfile зависимостей.
+## Include
 
-## Что включено
+- Application source, package manifests and pnpm lockfiles.
+- Documentation, source cards, CI configuration, deployment templates and scripts.
+- Docker Compose manifests, Dockerfiles and unfilled example environment files.
+- Git history through the configured Git remote when the recipient needs repository history.
 
-- `apps/`, `packages/`, `infrastructure/`, `docs/`, `.github/`, `scripts/`;
-- `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `turbo.json`, конфигурации lint/TypeScript;
-- `docker-compose.dev.yml`, `docker-compose.prod.yml`, `.env.example` и инструкции запуска.
+## Exclude
 
-## Что намеренно исключено
-
-| Исключение | Причина |
+| Exclude | Reason |
 | --- | --- |
-| `node_modules/`, `.next/`, `dist/`, `.turbo/`, `coverage/` | Генерируются локально, раздувают архив и не являются исходным кодом |
-| `.git/` | История должна передаваться через Git remote, а не копией каталога |
-| `.update_stage/` | Временная копия обновления, не часть рабочего проекта |
-| `.env`, `.env.*`, кроме `.env.example` | Могут содержать секреты и локальные учётные данные |
-| `*.zip` | Чтобы архив не включал себя и вложенные бандлы |
+| .git when making a source-only archive | Git history should be shared through the remote unless a snapshot archive is explicitly required |
+| node_modules, .next, dist, .turbo, coverage and other generated build/cache output | Regenerated from locked source and can be large |
+| Filled .env files, credentials and tokens | Secrets must be transferred through a secure channel |
+| Database dumps, Docker volumes and diagnostic bundles | May contain private or production data |
+| Temporary office locks, render scratch and editor temp files | Not source inputs; preserve user deliverables separately |
 
-## После распаковки
+Retain pnpm-lock.yaml, documentation and example environment templates. Check Git ignore rules and list the archive contents before sending it. Do not run a bulk deletion command against the workspace to prepare an archive.
 
-```powershell
-pnpm install
-Copy-Item .env.example .env.docker.local
-docker compose --env-file .env.docker.local -f docker-compose.prod.yml up -d --build
-```
+## After extraction
 
-MAX открывает существующий `web-portal`; отдельный static bundle `apps/max-miniapp` в текущий запуск не входит. Не собирайте его и не настраивайте бот на этот архивный клиент.
+1. Install the supported Node.js and pnpm versions from root package.json/README.
+2. Run pnpm install --frozen-lockfile.
+3. Copy an example environment file only when the chosen local/deployment workflow calls for it, then supply valid local values securely.
+4. Use docs/01_ONBOARDING.md for development or root DEPLOY.md for an authorized server deployment.
+5. MAX entry uses web-portal; the retained Vite apps/max-miniapp is not the deployed MAX client.
 
-Не передавайте `.env.docker.local`, access tokens, database dumps или содержимое Docker volumes через общий архив.
-
-## Проверка перед передачей
-
-```powershell
-pnpm --filter @napare/backend exec jest --runInBand
-docker compose --env-file .env.docker.local -f docker-compose.prod.yml ps
-```
+Never share the filled environment file or credentials alongside the bundle.

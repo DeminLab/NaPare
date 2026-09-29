@@ -10,7 +10,7 @@ Academic occurrence and course-space operations, including publishing schedule c
 
 ## Read sequence
 
-1. Read [the Schedule module](../../../modules/schedule.md) and academic domain docs.
+1. Read [the Schedule module](../../modules/schedule.md) and academic domain docs.
 2. Follow occurrence change events through `EventBusService` and `NotificationsService`.
 
 ## Change boundary

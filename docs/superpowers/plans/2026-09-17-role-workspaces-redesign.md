@@ -1,5 +1,7 @@
 # Role Workspaces Redesign Implementation Plan
 
+> **Датированный документ инициативы.** Его scope и checklist относятся к исходной задаче на дату файла; используйте актуальные проектные документы и код, чтобы определить текущий статус, и не считайте его текущим backlog.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` (recommended) or `superpowers:executing-plans` to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Deliver a cohesive, hackathon-ready Academic Command Center for staff, admin, and developer workspaces without changing the student app or navigation/avatar/logo work in progress.

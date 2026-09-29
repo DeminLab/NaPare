@@ -1,5 +1,14 @@
 # Changelog
 
+> Entries below preserve the original change history and may mention paths/components that were subsequently renamed, removed, or never implemented. Treat them as historical notes, not as a current file index. Current behavior is described by code/configuration and the docs linked from [00_START_HERE](00_START_HERE.md).
+
+## [Unreleased] — 2026-09-29
+
+### Documentation
+- Updated active onboarding, architecture, data model, role, client, security, operations, contribution and API guidance against current repository sources.
+- Marked proposal/historical documents and legal templates so they are not presented as live implementation or approved legal text.
+- Added project documentation audit inventory and corrected internal links.
+
 ## [2.1.0] — 2026-09-05
 
 ### Архитектура кода

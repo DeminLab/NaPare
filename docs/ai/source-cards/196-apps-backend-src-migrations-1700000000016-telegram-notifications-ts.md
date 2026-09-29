@@ -10,7 +10,7 @@ Adds the opt-in Telegram notification preference, disabled by default.
 
 ## Read sequence
 
-1. Read [the Notifications module](../../../modules/notifications.md).
+1. Read [the Notifications module](../../modules/notifications.md).
 2. Follow the preference entity and update DTO.
 
 ## Change boundary

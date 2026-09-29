@@ -1,66 +1,45 @@
-# Схема базы данных — обзор
+# Обзор схемы базы данных
 
-**Source of truth:** SQL-схема в репозитории (`prisma/schema.prisma` или `migrations/`).
+**Актуально на 2026-09-29.** PostgreSQL — основное хранилище backend. Источник схемы — TypeORM entities и миграции в `apps/backend/src`; Prisma-схемы в проекте нет. Изменения схемы оформляются новой миграцией, а не редактированием уже выпущенной.
 
-Полная SQL-схема: `docs/02_Technical/TZ_01_DATABASE_SCHEMA.md` (архив) или `prisma/schema.prisma` в коде.
+## Основные области данных
 
----
+| Область | Основные таблицы | Источник |
+|---|---|---|
+| Учётные записи и организация | `universities`, `faculties`, `groups`, `teachers`, `users` | `apps/backend/src/users/entities/`, начальная миграция |
+| Расписание | `lessons`, `lesson_changes` | `apps/backend/src/schedule/entities/` |
+| Пространство пары | `pair_spaces`, `announcements`, `homeworks`, `homework_submissions`, `file_attachments`, `discussion_messages` | `apps/backend/src/pair-space/entities/` |
+| Учёт отсутствий | `absences`, `absence_confirmations`, `attendance_records`, `attendance_qr_sessions` | `apps/backend/src/absences/` |
+| Уведомления и аудит | `notifications`, `notification_preferences`, `inbox_items`, `device_tokens`, `event_records`, `audit_logs` | `apps/backend/src/notifications/`, `apps/backend/src/events/` |
+| Учебный контекст | `academic_courses`, `lesson_series`, `lesson_occurrences`, `course_spaces`, `lesson_spaces`, `academic_events`, `academic_schedule_changes` | `apps/backend/src/academic/` и миграция `1700000000004-AcademicContext.ts` |
+| Дополнительные функции | `personal_lesson_notes`, `homework_progress`, `favorites`, Telegram link tables | профильные entities и миграции `1700000000010`–`1700000000016` |
 
-## Ключевые таблицы
+Точные столбцы, ограничения и индексы находятся в сущностях и миграциях. Этот обзор не заменяет их. Полный список миграций: `apps/backend/src/migrations/`.
 
-| Таблица | Описание | Индексы |
-|---------|----------|---------|
-| `users` | Пользователи | university_id, group_id, phone, email, roles (GIN) |
-| `universities` | Вузы | name (trigram), city, status |
-| `faculties` | Факультеты | university_id |
-| `groups` | Группы | faculty_id, (faculty_id, name) unique |
-| `teachers` | Преподаватели | user_id, university_id |
-| `lessons` | Пары | university_id, group_id, teacher_id, day_of_week+start_time |
-| `lesson_changes` | Изменения пар | lesson_id, change_type, created_at |
-| `pair_spaces` | Пространства пар | lesson_id (unique) |
-| `announcements` | Объявления | pair_space_id, author_id |
-| `homeworks` | ДЗ | pair_space_id |
-| `homework_submissions` | Статусы сдачи | homework_id, student_id |
-| `file_attachments` | Файлы | pair_space_id |
-| `discussion_messages` | Обсуждения | pair_space_id, parent_id |
-| `absence_statuses` | Статусы отсутствий | user_id, start_date, end_date |
-| `absence_confirmations` | Подтверждения | absence_id, curator_id |
-| `notifications` | Уведомления | user_id, is_read |
-| `device_tokens` | Токены устройств | user_id, platform |
-| `audit_logs` | Аудит | user_id, action, created_at |
-| `preferences` | Настройки | user_id |
+## Изоляция по университету
 
----
+Доступ к данным ограничивается backend-контекстом университета, guards и проверками области доступа в сервисах. В миграциях проекта нет включённых PostgreSQL Row Level Security policies; не полагайтесь на RLS как на дополнительный барьер. Для новых запросов проверяйте одновременно tenant и роль/resource scope.
 
-## Мультивузовость
+## Создание и применение миграций
 
-Все доменные таблицы имеют `university_id UUID REFERENCES universities(id)`.
+Для локальной разработки команды запускаются из корня монорепозитория:
 
-RLS (Row Level Security) в PostgreSQL как дополнительная защита:
-
-```sql
-ALTER TABLE lessons ENABLE ROW LEVEL SECURITY;
-CREATE POLICY university_isolation ON lessons
-  USING (university_id = current_setting('app.university_id')::uuid);
+```powershell
+pnpm --filter @napare/backend run typeorm:migration:generate -- src/migrations/DescribeChange
+pnpm --filter @napare/backend run typeorm:migration:run
+pnpm --filter @napare/backend run typeorm -- migration:show -d src/config/database.config.ts
 ```
 
----
+The TypeORM CLI DataSource reads individual `DB_*` values from the process environment. Set them in the shell before running CLI migrations; the CLI does not use the NestJS ConfigModule bootstrap.
 
-## Миграции
+Production-конфигурация backend включает `migrationsRun: true`, поэтому ожидающие миграции запускаются при старте контейнера. Перед production-релизом сделайте резервную копию БД, проверьте backend logs и убедитесь, что строки в таблице TypeORM `migrations` соответствуют выпущенным миграциям. Не используйте `synchronize` в production.
 
-- TypeORM миграции: `pnpm run typeorm:migration:run`
-- Просмотр: `pnpm run typeorm:migration:show`
-- Откат: `pnpm run typeorm:migration:revert`
+## Демо-данные
 
----
-
-## Seed data
-
-Для пилота на СИБИТ: [database/seed.md](seed.md).
-
----
+Локальная инфраструктура и подготовка данных описаны в [руководстве seed data](seed.md). Не запускайте команды подготовки демо на production базе.
 
 ## См. также
 
-- [architecture/data-model.md](../architecture/data-model.md) — ER-диаграмма
-- [architecture/system-overview.md](../architecture/system-overview.md) — архитектура
+- [Модель данных](../architecture/data-model.md)
+- [Backend architecture](../architecture/backend-architecture.md)
+- [Руководство по деплою](../../DEPLOY.md)

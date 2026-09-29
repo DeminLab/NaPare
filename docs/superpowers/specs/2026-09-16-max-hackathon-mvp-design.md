@@ -1,5 +1,7 @@
 # НаПаре MAX Hackathon MVP
 
+> **Датированный документ инициативы.** Его scope и checklist относятся к исходной задаче на дату файла; используйте актуальные проектные документы и код, чтобы определить текущий статус, и не считайте его текущим backlog.
+
 ## Goal
 
 Deliver an education-track demo that opens as a MAX Mini App and lets a student understand today's study context, open a lesson space, download lesson materials, and submit an absence.

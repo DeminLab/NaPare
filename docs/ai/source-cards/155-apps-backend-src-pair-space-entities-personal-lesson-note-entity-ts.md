@@ -10,7 +10,7 @@ Tenant-scoped personal notes keyed by Pair Space and user. A unique pair-space/u
 
 ## Read sequence
 
-1. Read [the Pair Space module](../../../modules/pair-space.md).
+1. Read [the Pair Space module](../../modules/pair-space.md).
 2. Follow the entity to `PairSpaceService.getPersonalNote` and `savePersonalNote` and the `PersonalLessonNotes` migration.
 
 ## Change boundary

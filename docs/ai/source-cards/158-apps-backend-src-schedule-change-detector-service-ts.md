@@ -10,7 +10,7 @@ Compares imported lessons with persisted schedule entries across date, time, loc
 
 ## Read sequence
 
-1. Read [the Schedule module](../../../modules/schedule.md) and [the Notifications module](../../../modules/notifications.md).
+1. Read [the Schedule module](../../modules/schedule.md) and [the Notifications module](../../modules/notifications.md).
 2. Follow the emitted event to `NotificationsService.processEvent` and its schedule change formatter.
 
 ## Change boundary

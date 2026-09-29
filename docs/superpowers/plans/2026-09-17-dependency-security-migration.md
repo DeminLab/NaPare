@@ -1,5 +1,7 @@
 # Dependency security migration — 2026-09-17
 
+> **Датированный документ инициативы.** Его scope и checklist относятся к исходной задаче на дату файла; используйте актуальные проектные документы и код, чтобы определить текущий статус, и не считайте его текущим backlog.
+
 ## Scope
 
 Isolated branch `codex/integrate-latest-main` only. Do not modify header, avatar, or logo sources.

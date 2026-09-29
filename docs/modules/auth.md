@@ -114,7 +114,7 @@ SMS/кодовых эндпоинтов (`request-code`, `verify-code`) **нет
 | Требование  | Значение                                                 |
 | ----------- | -------------------------------------------------------- |
 | Latency     | p95 ≤ 200 мс                                             |
-| Offline     | Работает без сети (кэш токенов)                          |
+| Offline     | No general offline auth mode; a retained session token does not make authenticated API calls available offline |
 | Rate limits | Глобально `RATE_LIMIT_MAX` / `RATE_LIMIT_WINDOW_MS`; auth endpoints — 10/60 сек на IP |
 
 ---

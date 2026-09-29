@@ -1,5 +1,7 @@
 # Error Handling Strategy
 
+> Примеры в этом документе — проектные/частично исторические. Текущий формат HTTP error response и backend handler описаны в [API guide](../api/README.md) и исходниках `apps/backend/src`; Flutter-примеры не относятся к реализованному клиенту.
+
 Единая стратегия обработки ошибок во всём приложении.
 
 ---

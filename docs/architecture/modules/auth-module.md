@@ -1,5 +1,7 @@
 # Backend Module: Auth — Детальная реализация
 
+> **Исторический учебный пример.** Кодовые образцы и дерево ниже не являются текущей реализацией. Используйте `apps/backend/src/auth/`, [current auth module guide](../../modules/auth.md) и Swagger contract.
+
 ## Структура модуля
 
 ```

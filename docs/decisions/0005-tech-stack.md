@@ -3,6 +3,8 @@
 ## Статус
 Принято
 
+> **Implementation status на 2026-09-29:** ADR сохраняет первоначальный выбор/намерения. Актуальная матрица реализованных и запланированных компонентов находится в [tech stack](../architecture/tech-stack.md). В частности, Flutter app, PostgreSQL RLS, Redis backend client/queues, S3, push delivery, PostHog и Grafana/Kubernetes не являются текущими подключёнными компонентами.
+
 ## Контекст
 Нужен стек для:
 - Mobile: iOS + Android (один код)

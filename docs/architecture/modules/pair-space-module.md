@@ -1,5 +1,7 @@
 # Backend Module: PairSpace — Детальная реализация
 
+> **Исторический учебный пример.** Кодовые образцы и дерево ниже не являются текущей реализацией. Используйте `apps/backend/src/pair-space/` и [current Pair Space guide](../../modules/pair-space.md).
+
 ## Структура модуля
 
 ```

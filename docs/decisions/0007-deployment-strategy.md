@@ -3,6 +3,8 @@
 ## Статус
 Принято
 
+> **Реализация на 2026-09-29:** используйте текущие Compose и [DEPLOY.md](../../DEPLOY.md), плюс [CI/CD workflow guide](../ops/cicd.md). Старые образцы Docker tags, `staging.napare.ru`, `api.napare.ru`, Kubernetes, Grafana/PostHog и backup расписания ниже не подтверждены конфигурацией этого репозитория; это плановые примеры исходного ADR.
+
 ## Контекст
 Нужна стратегия деплоя для:
 - Локальной разработки

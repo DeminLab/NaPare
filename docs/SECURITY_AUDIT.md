@@ -1,5 +1,7 @@
 # Security audit
 
+> **Historical snapshot from 2026-09-17.** Findings, patched versions and command results describe that dependency migration and branch only; this file is not the current vulnerability report. Verify present dependencies with the current lockfile and a fresh security audit before release.
+
 ## 2026-09-17 dependency migration
 
 Scope: isolated branch `codex/integrate-latest-main`. Header, avatar, and logo sources were not opened or changed.

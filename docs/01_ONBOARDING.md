@@ -1,104 +1,51 @@
-# Онбординг: новый разработчик / AI-агент
+# Онбординг разработчика
 
-**Цель:** начать вносить вклад в проект за ≤ 30 минут.
+Этот документ описывает текущий pnpm/Turborepo монорепозиторий. Для работы с ним нужны Node.js 20+, pnpm 9+ и Docker Compose v2. Нативный Flutter-клиент в репозитории отсутствует; `apps/web` и `apps/max-miniapp` — сохранённые legacy-проекты.
 
----
+## Сначала прочитайте
 
-## Путь 15 минут (минимум)
+1. [README](../README.md) — продукт, быстрый старт и команды.
+2. [AI context](../AI_CONTEXT.md) — обязательный порядок изучения репозитория для AI-инструментов.
+3. [Project map](ai/project-map.md) — приложения и границы runtime.
+4. [Architecture overview](architecture/README.md) и документ нужного модуля.
+5. [API guide](api/README.md), если задача меняет API.
+6. [Contributing](process/contributing.md) и [definition of done](process/definition-of-done.md) перед отправкой изменений.
 
-| Шаг | Время | Что сделать |
-|-----|-------|-------------|
-| 1 | 2 мин | Прочитать [00_START_HERE.md](00_START_HERE.md) — общее понимание |
-| 2 | 3 мин | Прочитать [02_GLOSSARY.md](02_GLOSSARY.md) — термины |
-| 3 | 5 мин | Прочитать [architecture/system-overview.md](architecture/system-overview.md) — архитектура + Mermaid |
-| 4 | 5 мин | Прочитать нужный `modules/*.md` — модуль для работы |
+## Настройка рабочего дерева
 
-**Готово.** Можно брать задачу.
-
----
-
-## Путь 30 минут (полный)
-
-| Шаг | Время | Что сделать |
-|-----|-------|-------------|
-| 1 | 2 мин | [00_START_HERE.md](00_START_HERE.md) |
-| 2 | 3 мин | [02_GLOSSARY.md](02_GLOSSARY.md) |
-| 3 | 5 мин | [architecture/system-overview.md](architecture/system-overview.md) |
-| 4 | 3 мин | [architecture/tech-stack.md](architecture/tech-stack.md) |
-| 5 | 3 мин | [architecture/roles-and-permissions.md](architecture/roles-and-permissions.md) |
-| 6 | 5 мин | [modules/*.md](modules/_TEMPLATE.md) — нужный модуль |
-| 7 | 5 мин | [api/README.md](api/README.md) — как смотреть OpenAPI |
-| 8 | 4 мин | [process/contributing.md](process/contributing.md) — PR-процесс |
-
----
-
-## Поднять проект локально
-
-```bash
-# 1. Клонировать репозиторий
-git clone https://github.com/napare/napare.git
-cd napare
-
-# 2. Поднять инфраструктуру
-docker compose up -d
-
-# 3. Backend
-cd apps/backend
-cp .env.example .env
+```powershell
+git clone https://github.com/DeminLab/NaPare.git
+Set-Location NaPare
 pnpm install
-pnpm run start:dev
-
-# 4. Web
-cd ../web
-pnpm install
-pnpm run dev
-
-# 5. Mobile (эмулятор)
-cd ../mobile
-flutter pub get
-flutter run
-
-# 6. MAX WebApp
-# Separate MAX client is not part of the deployed flow.
-# Run apps/web-portal as the website; MAX Bot opens the same public URL.
-# MAX_BOT_TOKEN must be configured in the backend to enable MAX authentication.
-# Optional Telegram linking uses TELEGRAM_BOT_TOKEN, TELEGRAM_BOT_USERNAME and
-# TELEGRAM_WEBHOOK_SECRET; see docs/clients/telegram-bot.md for webhook setup.
+Copy-Item apps/backend/.env.example apps/backend/.env
+# При необходимости замените локальные секреты-заглушки.
+docker compose -f docker-compose.dev.yml up -d
+pnpm dev
 ```
 
-**Требования:** Node.js 20+, pnpm, Flutter 3.22+, Docker + Docker Compose.
+Compose development поднимает только PostgreSQL, Redis и MinIO. Root `pnpm dev` запускает backend и активные web-приложения. Порты и отдельные команды перечислены в [README](../README.md#локальная-разработка). Не публикуйте development-данные и не используйте эти значения в production. Корневой `.env.example` предназначен для production Compose, а не для локального backend.
 
----
+Для отдельного приложения используйте `pnpm dev:portal`, `pnpm dev:student`, `pnpm dev:staff`, `pnpm dev:admin` или `pnpm dev:developer`. Backend можно запустить отдельно командой `pnpm --filter @napare/backend dev`.
 
-## Первый task
+## Изменение API или схемы
 
-Идеальный первый task для нового разработчика:
+- API-контракт генерируется из NestJS-контроллеров и DTO. Обновите код и профильную страницу в `docs/modules/`; OpenAPI доступен на `/api/v1/docs`.
+- Сущности и TypeORM-миграции находятся в `apps/backend/src`. В production Compose ожидающие миграции выполняются при запуске backend; перед выпуском проверьте миграцию и предусмотрите резервную копию БД.
+- При изменении маршрутов, переменных окружения, Compose или Nginx синхронизируйте `DEPLOY.md` и соответствующую страницу `docs/ops/`.
+- Не редактируйте сгенерированную OpenAPI-спецификацию вручную.
 
-1. Найти в `modules/*.md` пункт **Open questions / TODO**
-2. Выбрать один с низкой сложностью
-3. Создать branch `feature/<описание>`
-4. Реализовать + написать тесты
-5. Обновить `modules/*.md` если изменилась логика
-6. Отправить PR в `develop`
+## Перед отправкой изменений
 
----
+Выполните проверки, относящиеся к изменённым файлам. Для изменений документации запустите:
 
-## Как работает AI-агент
+```powershell
+node scripts/verify-ai-documentation.cjs
+node scripts/verify-role-workspace-boundaries.cjs
+pnpm lint
+```
 
-1. Прочитать [01_ONBOARDING.md](01_ONBOARDING.md) (этот файл)
-2. Определить модуль из задачи
-3. Прочитать `modules/<модуль>.md` целиком
-4. Следовать критериям приёмки из раздела 9 модуля
-5. Проверить по чеклисту из [process/definition-of-done.md](process/definition-of-done.md)
+Для backend дополнительно используйте тесты/проверки из [руководства тестирования](ops/testing.md); для production-поведения отдельно подтверждайте результат на целевом окружении.
 
----
+## Исторические материалы
 
-## Полезные ссылки
-
-| Ресурс | Где |
-|--------|-----|
-| OpenAPI (локально) | `http://localhost:3000/api/v1/docs` |
-| OpenAPI (staging) | `https://staging.napare.ru/api/v1/docs` |
-| Grafana | `https://grafana.napare.ru` |
-| Sentry | `https://sentry.napare.ru` |
-| GitHub | `https://github.com/napare/napare` |
+Документы в `docs/archive/`, датированные планы в `docs/superpowers/` и хронология в `docs/project-log/` объясняют прежние решения и поставки. Они не задают текущее состояние приложения. Для текущей реализации ориентируйтесь на код, [карту проекта](ai/project-map.md), актуальные документы модулей и [деплой-гайд](../DEPLOY.md).

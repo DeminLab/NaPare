@@ -1,5 +1,7 @@
 # Module: Schedule (Расписание)
 
+> API/data-flow details below describe the repository implementation where linked to current sources. UX/NFR/acceptance checklists and TODOs are goals; they do not prove runtime uptime, push delivery or measured performance.
+
 ## 1. Цель и границы
 
 **Цель:** Надёжное получение, хранение, обновление и отображение расписания + детект изменений.
@@ -92,9 +94,9 @@
 
 | Событие                        | Тип уведомления    | Получатель                     |
 | ------------------------------ | ------------------ | ------------------------------ |
-| Изменение расписания           | Push               | Студенты группы, преподаватель |
-| Недоступность коннектора > 24ч | Алерт в админке    | university_admin               |
-| Новая пара                     | Push (опционально) | Студенты группы                |
+| Изменение расписания           | In-app notification/event stream where a schedule event is produced; no FCM/APNs push | Студенты группы, преподаватель |
+| Недоступность коннектора > 24ч | Target alert policy; no automatic alert is established by this module guide | university_admin |
+| Новая пара                     | In-app event where emitted; no system push delivery | Студенты группы |
 
 ---
 
@@ -104,7 +106,7 @@
 | ----------- | --------------------------------- |
 | Latency     | p95 ≤ 300 мс для GET /schedule/my |
 | Offline     | Просмотренные неделя и месяц хранятся локально отдельно для аккаунта; детали пары и остальные экраны требуют сети |
-| Rate limits | Upload: 1/час на вуз              |
+| Rate limits | Upload quota of 1/hour per university is a target in this document; not confirmed in the current controller. |
 
 ---
 
@@ -123,7 +125,7 @@
 ## 10. Зависимости
 
 **Зависит от:** auth (JWT, roles), admin (загрузка расписания)
-**Зависимость от:** notifications (push при изменениях), pair-space (автосоздание PairSpace при новой паре)
+**Зависимость от:** notifications (in-app event handling, not FCM/APNs delivery), pair-space (context may be created lazily for an available lesson)
 
 ---
 

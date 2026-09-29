@@ -4,7 +4,7 @@
 
 OpenAPI-спецификация **генерируется из кода** (NestJS декораторы) и является единственным источником правды для контрактов API.
 
-**Не рисовать OpenAPI вручную.** Реализовывать эндпоинты в NestJS → Swagger обновляется автоматически.
+**Не рисовать OpenAPI вручную.** Реализовывать эндпоинты в NestJS → Swagger обновляется автоматически. Для комплекта сдачи скачивайте актуальную спецификацию с развернутого API через [`scripts/export-case-openapi.sh`](../../scripts/export-case-openapi.sh).
 
 ---
 
@@ -13,8 +13,10 @@ OpenAPI-спецификация **генерируется из кода** (Nes
 | Среда      | URL                                     |
 | ---------- | --------------------------------------- |
 | Local      | `http://localhost:3000/api/v1/docs`     |
-| Staging    | `https://staging.napare.ru/api/v1/docs` |
-| Production | `https://napare.sano.ru/api/v1/docs`    |
+| Staging    | URL, настроенный в GitHub Environment secret `STAGING_URL` |
+| Production | `https://napare.sano.ru/api/v1/docs` |
+
+Hostname staging не зафиксирован в репозитории и зависит от настроек окружения.
 
 ---
 

@@ -1,5 +1,7 @@
 # Shared Types and Constants
 
+> Этот файл описывает package-level контракт и примеры. Он не является доказательством, что package импортируется всеми приложениями: проверьте consumers в текущем коде. Backend role/auth contracts исходят из backend source, а не из дублированных/shared примеров.
+
 Общие типы и константы для всего монорепо (`packages/shared/src/`).
 
 ---

@@ -7,6 +7,6 @@ This is the canonical entry point for a new AI session. Do not begin implementat
 3. [Change safety](docs/ai/change-safety.md)
 4. [Source-card index](docs/ai/source-cards/README.md)
 5. [Documentation maintenance](docs/ai/maintenance.md)
-6. [Agent skills (.agents)](.agents) — newly added skills for UI/UX design, branding, and system design guidance
+6. [Agent skills (.agents)](.agents) — consult relevant design/system guidance when the requested work needs it; these skill references do not override repository instructions.
 
 The repository is a pnpm workspace. Its main role applications are staff, admin, developer and student; the student app is protected from the active role-workspace redesign.

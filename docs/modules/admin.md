@@ -1,8 +1,10 @@
 # Module: Admin (Администрирование)
 
+> API route list below is checked against `admin.controller.ts`. UX, latency and unchecked acceptance items are requirements/proposals, not proof of completed UI or operational performance.
+
 ## 1. Цель и границы
 
-**Цель:** Управление структурой вуза, ролями пользователей, загрузкой расписанием и базовая статистика.
+**Цель:** Управление структурой вуза, пользователями, настройками интеграций, расписанием и базовой статистикой.
 
 **Не делает:** Бизнес-логику модулей (только управляет данными).
 
@@ -80,7 +82,7 @@
 
 1. **Назначение ролей:** admin назначает teacher/curator, superadmin — все роли
 2. **Привязка преподавателя:** к конкретным парам / группам
-3. **Загрузка расписания:** Excel/CSV/iCal → маппинг → предпросмотр → импорт
+3. **Загрузка расписания:** backend upload endpoint uses the current spreadsheet parser/import path. Do not assume iCal, user-defined column mapping or a preview step without checking the controller/UI implementation.
 4. **Статистика:** количество активных студентов, % преподавателей с контентом, отсутствия
 5. **Суперадмин:** подключение вузов, управление коннекторами, общая аналитика
 6. **Moodle:** URL и Web Services token настраивает администратор ВУЗа. Token шифруется AES-256-GCM в `connectorConfig`, в API и UI возвращается только признак настройки. Moodle остаётся источником заданий, сдач и оценок; NaPare не дублирует их.
@@ -91,8 +93,8 @@
 
 | Событие             | Тип уведомления       | Получатель              |
 | ------------------- | --------------------- | ----------------------- |
-| Назначение роли     | Push                  | Преподаватель / куратор |
-| Загрузка расписания | Push (при изменениях) | Студенты, преподаватели |
+| Назначение роли     | No notification event is currently wired | — |
+| Загрузка/синхронизация расписания | In-app/event stream notification where schedule change events are produced; no FCM/APNs push | Affected users |
 
 ---
 
@@ -100,8 +102,8 @@
 
 | Требование          | Значение               |
 | ------------------- | ---------------------- |
-| Latency             | p95 ≤ 500 мс           |
-| Загрузка расписания | ≤ 10 сек для 10000 пар |
+| Latency target             | p95 ≤ 500 мс; unmeasured here |
+| Upload target | ≤ 10 сек для 10000 пар; not verified here |
 
 ---
 
@@ -118,7 +120,7 @@
 ## 10. Зависимости
 
 **Зависит от:** auth (JWT, roles)
-**Зависимость от:** schedule (загрузка расписания), notifications (push при назначении ролей)
+**Зависимость от:** schedule (загрузка/синхронизация расписания), notifications (in-app schedule events; role-assignment notification is not implemented)
 
 ---
 
@@ -126,4 +128,4 @@
 
 - [ ] Аудит действий админа (логирование)
 - [ ] Массовое создание пользователей (импорт)
-- [ ] Роли Dean и DepartmentHead (реализация после MVP)
+- Роли `faculty_dean` и `department_head` есть в enum; поддержка каждого действия определяется отдельными routes/permissions, не предполагается только по существованию роли.

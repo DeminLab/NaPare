@@ -10,7 +10,7 @@ Creates tenant-owned personal lesson notes with foreign keys, cascade cleanup, a
 
 ## Read sequence
 
-1. Read [the Pair Space module](../../../modules/pair-space.md).
+1. Read [the Pair Space module](../../modules/pair-space.md).
 2. Compare the migration with `PersonalLessonNote` and database migration configuration.
 
 ## Change boundary

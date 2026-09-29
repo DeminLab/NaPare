@@ -1,89 +1,44 @@
-# Модель данных
+# Data model
 
-## Обзор сущностей
+The operational schema is defined by TypeORM entities in `apps/backend/src/**/entities/` and the ordered migrations in `apps/backend/src/migrations/`. This page is a domain overview; it is not a generated SQL schema. For exact columns, indexes and constraints, read the entity and migration together.
 
-Все доменные сущности (кроме справочников) имеют `university_id` для мультивузовости.  
-Полная SQL-схема: [database/schema-full.sql](../database/schema-full.sql).
+## Domain areas
 
 ```mermaid
 erDiagram
-    University ||--o{ Faculty : has
-    Faculty ||--o{ Group : has
-    Group ||--o{ User : has
-    University ||--o{ User : has
-
-    User ||--o{ Teacher : "may be"
-    User ||--o{ Lesson : "may teach"
-    User ||--o{ AbsenceStatus : "may have"
-    User ||--o{ DeviceToken : "may have"
-
-    Lesson ||--|| PairSpace : has
-    Lesson ||--o{ LessonChange : may have
-    Lesson }o--|| Group : belongs_to
-    Lesson }o--o| Teacher : taught_by
-
-    PairSpace ||--o{ Announcement : has
-    PairSpace ||--o{ Homework : has
-    PairSpace ||--o{ FileAttachment : has
-    PairSpace ||--o{ DiscussionMessage : has
-
-    Homework ||--o{ HomeworkSubmission : has
-    Homework ||--o{ HomeworkProgress : has
-    User ||--o{ HomeworkProgress : tracks
-    AbsenceStatus ||--o| AbsenceConfirmation : may have
+    University ||--o{ Faculty : contains
+    Faculty ||--o{ Group : contains
+    University ||--o{ User : scopes
+    Group ||--o{ User : membership
+    Lesson ||--o| PairSpace : context
+    Lesson ||--o{ LessonChange : changes
+    PairSpace ||--o{ Announcement : contains
+    PairSpace ||--o{ Homework : contains
+    PairSpace ||--o{ FileAttachment : contains
+    PairSpace ||--o{ DiscussionMessage : contains
+    Homework ||--o{ HomeworkSubmission : submission
+    Homework ||--o{ HomeworkProgress : personal_progress
+    User ||--o{ Favorite : saves
+    Lesson ||--o{ AttendanceQrSession : attendance
 ```
 
-## Ключевые сущности
+The normalized academic model adds `Course`, `LessonSeries`, concrete `LessonOccurrence`, `CourseSpace`, `LessonSpace`, `AcademicEvent` and `ScheduleChange` records while existing `Lesson`/`PairSpace` routes remain available.
 
-| Сущность | Описание | Ключевые поля | Типы |
-|----------|----------|---------------|------|
-| **User** | Пользователь системы | id, phone, email, roles[], university_id, group_id | UUID, VARCHAR, VARCHAR, comma-separated string (simple-array), UUID, UUID |
-| **University** | Учебное заведение | id, name, city, connector_config, status | UUID, VARCHAR, VARCHAR, JSONB, VARCHAR |
-| **Faculty** | Факультет | id, university_id, name, code, dean_user_id | UUID, UUID, VARCHAR, VARCHAR, UUID |
-| **Group** | Учебная группа | id, faculty_id, name, curriculum_year, specialization | UUID, UUID, VARCHAR, INTEGER, VARCHAR |
-| **Teacher** | Привязка преподавателя | id, user_id, university_id, department | UUID, UUID, UUID, VARCHAR |
-| **Lesson** | Пара (ключевая сущность) | id, university_id, group_id, teacher_id, subject, room, day_of_week, start_time, end_time, week_type, start_date, end_date | UUID, UUID, UUID, UUID, VARCHAR, VARCHAR, INTEGER, TIME, TIME, VARCHAR, DATE, DATE |
-| **LessonChange** | Изменение пары | id, lesson_id, change_type, old_values, new_values | UUID, UUID, VARCHAR, JSONB, JSONB |
-| **PairSpace** | Пространство пары | id, lesson_id, active_until | UUID, UUID, TIMESTAMP |
-| **Announcement** | Объявление | id, pair_space_id, author_id, text, is_pinned | UUID, UUID, UUID, TEXT, BOOLEAN |
-| **Homework** | Домашнее задание | id, pair_space_id, title, description, deadline | UUID, UUID, VARCHAR, TEXT, TIMESTAMP |
-| **HomeworkSubmission** | Статус сдачи ДЗ | id, homework_id, student_id, status | UUID, UUID, UUID, VARCHAR |
-| **HomeworkProgress** | Личный статус и чек-лист подготовки, отдельно от сдачи | id, homework_id, student_id, state, subtasks | UUID, UUID, UUID, VARCHAR, JSONB |
-| **HomeworkProgress** | Личный статус подготовки студента; отдельно от фактической сдачи | id, homework_id, student_id, state | UUID, UUID, UUID, VARCHAR |
-| **FileAttachment** | Файл | id, pair_space_id, file_url, file_type, size | UUID, UUID, VARCHAR, VARCHAR, INTEGER |
-| **DiscussionMessage** | Сообщение обсуждения | id, pair_space_id, user_id, text, parent_id | UUID, UUID, UUID, TEXT, UUID |
-| **AbsenceStatus** | Статус отсутствия | id, user_id, type, start_date, end_date, comment | UUID, UUID, VARCHAR, DATE, DATE, TEXT |
-| **AbsenceConfirmation** | Подтверждение куратора | id, absence_id, curator_id, status | UUID, UUID, UUID, VARCHAR |
-| **Notification** | Уведомление | id, user_id, type, title, body, deep_link, is_read | UUID, UUID, VARCHAR, VARCHAR, TEXT, VARCHAR, BOOLEAN |
-| **DeviceToken** | Токен устройства | id, user_id, platform, token | UUID, UUID, VARCHAR, VARCHAR |
-| **AuditLog** | Лог действий | id, user_id, action, entity, entity_id, ip | UUID, UUID, VARCHAR, VARCHAR, UUID, VARCHAR |
+## Persistence and tenant boundaries
 
-## Мультивузовость
+University ownership is represented on relevant domain records and enforced by backend tenant/resource checks. Do not assume every table has a `university_id` column, and do not assume PostgreSQL RLS is active: current migrations create no RLS policies. See [roles and permissions](roles-and-permissions.md) and the per-domain entities for exact scope.
 
-Каждая сущность, привязанная к вузу, имеет `university_id` (UUID → universities.id).  
-Все API-запросы фильтруются по `university_id` текущего пользователя.  
-См. [ADR-0002](../decisions/0002-multitenancy-university-id.md).
+## Schema change workflow
 
-## Статусы отсутствий
+1. Update the TypeORM entity and add a new migration; do not edit a migration that may already have shipped.
+2. Include both `up` and `down` operations and preserve tenant/foreign-key constraints.
+3. Update the related [module documentation](../modules/) and [schema overview](../database/schema-overview.md).
+4. Production backend executes pending migrations at startup; operators must take a backup and review logs.
 
-| Статус | Код | Цвет |
-|--------|-----|------|
-| Учусь | `learning` | зелёный |
-| Болен | `sick` | оранжевый/красный |
-| Работа / занятость | `work` | синий |
-| Другой город | `other_city` | фиолетовый |
-| Другая причина | `other` | серый |
+The current migration inventory is `apps/backend/src/migrations/` (17 migrations as of 2026-09-29). TypeORM is the ORM; no Prisma schema exists.
 
-## Типы изменений расписания
+## Related documents
 
-| Тип | Код | Описание |
-|-----|-----|----------|
-| Перенос | `moved` | Пара перенесена на другое время/дату |
-| Отмена | `cancelled` | Пара отменена |
-| Смена аудитории | `room_changed` | Другая аудитория |
-| Смена преподавателя | `teacher_changed` | Другой преподаватель |
-| Добавление | `added` | Новая пара |
-
-## Seed data
-
-Для пилота на СИБИТ: [database/seed.md](../database/seed.md).
+- [Schema overview](../database/schema-overview.md)
+- [Academic domain](academic-domain.md)
+- [Backend architecture](backend-architecture.md)

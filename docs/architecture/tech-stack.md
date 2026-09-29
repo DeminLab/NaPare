@@ -4,7 +4,7 @@
 
 > Статус: строки **Mobile** — целевой стек, `apps/mobile` и Flutter/Dart-кода в репозитории нет
 > (см. [mobile-architecture.md](mobile-architecture.md) — спецификация, не реализация).
-> Строки Redis, S3, Push и PostHog описывают инфраструктуру/планы: в коде backend этих интеграций нет.
+> Redis runtime service есть в Compose, но backend client/queues не подключены; S3, push delivery, PostHog и Kubernetes deployment не настроены.
 
 | Слой | Технология | Версия | Обоснование |
 |------|------------|--------|-------------|
@@ -18,8 +18,8 @@
 | **MAX WebApp** | Next.js `web-portal` + MAX Bridge | — | MAX открывает существующий сайт; backend проверяет `initData` и возвращает обычную сессию NaPare |
 | **Backend** | NestJS | 10+ | Модульный монолит, OpenAPI из коробки |
 | **ORM** | TypeORM | 0.3+ | Миграции, декораторы, интеграция с NestJS (Prisma не используется) |
-| **БД** | PostgreSQL | 16 | Надёжность, JSONB, полнотекстовый поиск, RLS |
-| **Кэш / очереди** | Redis | 7 | Контейнер и `REDIS_URL` есть в Docker Compose; клиент Redis в коде backend не подключён, rate limiting — `ThrottlerModule` без guard'а |
+| **БД** | PostgreSQL | 16 | Основная реляционная БД; текущие миграции не включают RLS policies |
+| **Кэш / очереди** | Redis | 7 | Контейнер есть в Compose; backend client/queues не подключены. Rate limiting работает через global `ThrottlerGuard` с process-local storage |
 | **Файлы** | S3-совместимое | — | Только переменные `STORAGE_*` в `apps/backend/.env.example`; SDK в коде не используется |
 | **Push (Android)** | Firebase Cloud Messaging | — | Целевой канал; device token регистрируется (`POST /devices/token`), отправка не реализована |
 | **Push (iOS)** | Apple Push Notification | — | Целевой канал, отправка не реализована |
@@ -27,13 +27,13 @@
 | **API Docs** | OpenAPI 3 (Swagger) | — | Генерируется из кода = source of truth, `/api/v1/docs` |
 | **Аналитика** | PostHog | — | Не подключён (ни в backend, ни в клиентах) |
 | **Мониторинг ошибок** | Sentry | 7.x | `@sentry/node` в `apps/backend/src/main.ts` при наличии `SENTRY_DSN` |
-| **CI/CD** | GitHub Actions | — | Lint → Test → Build → Deploy |
+| **CI/CD** | GitHub Actions | — | PR CI и staging workflow на push `main`; production rollout описан отдельно в [DEPLOY.md](../../DEPLOY.md) |
 | **Контейнеризация** | Docker + Docker Compose | — | Локальная разработка + деплой |
-| **Оркестрация** | Kubernetes | — | Production (после пилота) |
+| **Оркестрация** | Docker Compose | — | Используется текущими deployment файлами; Kubernetes — не настроенный будущий вариант |
 
 ## Принципы выбора
 
-1. **TypeScript везде** где возможно (web + backend + max-miniapp)
+1. **TypeScript** для текущих web и backend приложений
 2. **Модульный монолит** на старте — см. [ADR-0001](../decisions/0001-modular-monolith.md)
 3. **OpenAPI из кода** — генерируется, не рисуется вручную
 4. **Мультивузовость** через `university_id` — см. [ADR-0002](../decisions/0002-multitenancy-university-id.md)

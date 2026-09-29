@@ -10,7 +10,7 @@ Notification preferences, in-app notifications and inbox fan-out. Optional Teleg
 
 ## Read sequence
 
-1. Read [the Notifications module](../../../modules/notifications.md) and the [Schedule module](../../../modules/schedule.md).
+1. Read [the Notifications module](../../modules/notifications.md) and the [Schedule module](../../modules/schedule.md).
 2. Follow `NotificationEventHandler` recipient resolution and `mapEvent` formatting.
 
 ## Change boundary
