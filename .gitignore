@@ -11,6 +11,16 @@ build/
 out/
 .eslintcache
 
+# Local exports, scratch work and generated media
+/tmp/
+/outputs/
+brag-output-*/**/.thumbnails/
+brag-output-*/**/.waveform-cache/
+brag-output-*/**/renders/
+brag-output-*/**/snapshots/
+temp_rasp.html
+~$*
+
 # Environment files
 .env*
 !.env.example

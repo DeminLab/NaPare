@@ -6,7 +6,7 @@
 
 ## Scope
 
-Staff workspace UI and its data flow.
+Staff workspace daily summary and its data flow, including sending the device's IANA timezone to the My Day API.
 
 ## Read sequence
 

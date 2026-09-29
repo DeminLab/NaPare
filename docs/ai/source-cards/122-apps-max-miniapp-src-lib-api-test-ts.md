@@ -4,9 +4,13 @@
 
 `apps/max-miniapp/src/lib/api.test.ts`
 
+## Status
+
+Historical source card. The standalone client is not deployed; MAX opens `web-portal`. See [current MAX client flow](../../clients/max-miniapp.md).
+
 ## Scope
 
-Vitest coverage of the mini app API client: token storage round-trip, `Authorization` header, single refresh retry after 401, token drop on rejected refresh, surfacing of backend codes (`MAX_ACCOUNT_NOT_LINKED`), MAX login token persistence, and network-error mapping to `NETWORK_ERROR`.
+Historical Vitest coverage of the retired mini app API client: token storage, refresh retry, backend error mapping, and network-error handling.
 
 ## Read sequence
 

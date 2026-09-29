@@ -14,6 +14,16 @@ export interface AppConfig {
     botToken: string;
     initDataTtlSeconds: number;
   };
+  telegram: {
+    botToken: string;
+    botUsername: string;
+    webhookSecret: string;
+    publicAppUrl: string;
+  };
+  rateLimit: {
+    windowMs: number;
+    max: number;
+  };
 }
 
 function requiredEnvironmentValue(name: string): string {
@@ -51,6 +61,16 @@ export default (): AppConfig => ({
   },
   max: {
     botToken: process.env.MAX_BOT_TOKEN?.trim() ?? '',
-    initDataTtlSeconds: positiveIntegerEnvironmentValue('MAX_INIT_DATA_TTL_SECONDS', 3600),
+    initDataTtlSeconds: positiveIntegerEnvironmentValue('MAX_INIT_DATA_TTL_SECONDS', 900),
+  },
+  telegram: {
+    botToken: process.env.TELEGRAM_BOT_TOKEN?.trim() ?? '',
+    botUsername: process.env.TELEGRAM_BOT_USERNAME?.trim().replace(/^@/, '') ?? '',
+    webhookSecret: process.env.TELEGRAM_WEBHOOK_SECRET?.trim() ?? '',
+    publicAppUrl: process.env.PUBLIC_APP_URL?.trim().replace(/\/$/, '') ?? '',
+  },
+  rateLimit: {
+    windowMs: positiveIntegerEnvironmentValue('RATE_LIMIT_WINDOW_MS', 60000),
+    max: positiveIntegerEnvironmentValue('RATE_LIMIT_MAX', 100),
   },
 });

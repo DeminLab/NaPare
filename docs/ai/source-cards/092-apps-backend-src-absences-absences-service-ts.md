@@ -6,7 +6,7 @@
 
 ## Scope
 
-NestJS backend module, HTTP boundary, authorization or data-service behavior.
+Tenant-scoped absence and attendance service, including short-lived QR session creation and student check-in.
 
 ## Read sequence
 
@@ -16,7 +16,7 @@ NestJS backend module, HTTP boundary, authorization or data-service behavior.
 
 ## Change boundary
 
-Trace consumers and tests before changing data or authorization behavior.
+Never persist raw QR tokens. Preserve lesson tenant checks, teacher ownership, student group checks, 90-second expiry and one attendance record per lesson/student. A competing insert for the same present record should resolve as `alreadyMarked`, not a duplicate or an error visible to the student.
 
 ## Verification
 

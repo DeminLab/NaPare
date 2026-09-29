@@ -147,6 +147,16 @@ describe('validateMaxInitData', () => {
     expect(validateMaxInitData(initData, BOT_TOKEN, { now })).toBeNull();
   });
 
+  it('rejects non-positive or unsafe MAX user identifiers', () => {
+    for (const id of [0, -1, 1.5, Number.MAX_SAFE_INTEGER + 1]) {
+      const initData = buildInitData({
+        auth_date: String(nowSeconds),
+        user: userValue({ id }),
+      });
+      expect(validateMaxInitData(initData, BOT_TOKEN, { now })).toBeNull();
+    }
+  });
+
   it('rejects malformed and empty input', () => {
     expect(validateMaxInitData('', BOT_TOKEN, { now })).toBeNull();
     expect(validateMaxInitData('   ', BOT_TOKEN, { now })).toBeNull();

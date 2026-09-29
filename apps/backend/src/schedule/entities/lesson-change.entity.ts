@@ -26,7 +26,7 @@ export class LessonChange {
 
   @Column({
     type: 'enum',
-    enum: ['moved', 'cancelled', 'room_changed', 'teacher_changed', 'added'],
+    enum: ['moved', 'cancelled', 'room_changed', 'teacher_changed', 'added', 'updated'],
   })
   changeType: string;
 

@@ -91,7 +91,7 @@
 - YYYY-MM-DD: <область> — <что изменили>; проверка: `<команда>` — passed. Блокер: <если есть>.
 ```
 
-Пример:
+Пример исторической записи; `apps/max-miniapp` больше не является текущим клиентом MAX и не запускается стандартными командами `pnpm dev`/`pnpm build`:
 
 ```md
 - 2026-09-16: MAX Mini App — добавлен static Docker runtime; проверка: `docker compose ... ps max-miniapp` — healthy. Блокер: нужен внешний HTTPS URL.

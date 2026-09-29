@@ -1,5 +1,136 @@
+'use client';
+
 import Link from 'next/link';
+import { useEffect, useMemo, useState } from 'react';
+import { apiFetch } from '@/lib/api';
+import { Badge, Button, Card, EmptyState, Icon, RequestState, Skeleton } from '@napare/ui';
+
+interface Preparation {
+  id: string;
+  title: string;
+  description?: string | null;
+  deadline?: string | null;
+  lessonId: string;
+  subject: string;
+}
+
+interface MyDayResponse {
+  upcomingPreparations?: Preparation[];
+}
+
+type PreparationFilter = 'all' | 'urgent' | 'week' | 'later' | 'noDeadline' | 'overdue';
+
+const filters: Array<{ id: PreparationFilter; label: string }> = [
+  { id: 'all', label: 'Все' },
+  { id: 'urgent', label: 'Сегодня и завтра' },
+  { id: 'week', label: 'На неделе' },
+  { id: 'later', label: 'Позже' },
+  { id: 'overdue', label: 'Срок прошёл' },
+  { id: 'noDeadline', label: 'Без срока' },
+];
+
+function daysUntil(deadline?: string | null): number | null {
+  if (!deadline) return null;
+  const due = new Date(deadline);
+  if (Number.isNaN(due.getTime())) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  due.setHours(0, 0, 0, 0);
+  return Math.floor((due.getTime() - today.getTime()) / 86_400_000);
+}
+
+function dueLabel(deadline?: string | null): string {
+  if (!deadline) return 'Срок не указан';
+  const due = new Date(deadline);
+  if (Number.isNaN(due.getTime())) return 'Срок не указан';
+  const days = daysUntil(deadline);
+  const time = due.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+  if (days === 0) return `Сегодня, ${time}`;
+  if (days === 1) return `Завтра, ${time}`;
+  if (days === -1) return `Срок прошёл вчера · ${time}`;
+  if (days !== null && days < 0) return `${Math.abs(days)} дн. назад · ${time}`;
+  return `${due.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })} · ${time}`;
+}
+
+function matchesFilter(preparation: Preparation, filter: PreparationFilter): boolean {
+  if (filter === 'all') return true;
+  const days = daysUntil(preparation.deadline);
+  if (filter === 'noDeadline') return days === null;
+  if (days === null) return false;
+  if (filter === 'urgent') return days >= 0 && days <= 1;
+  if (filter === 'week') return days >= 2 && days <= 7;
+  if (filter === 'later') return days > 7;
+  return days < 0;
+}
 
 export default function PairSpaceIndex() {
-  return <section className="mx-auto max-w-2xl py-12 text-center"><h1 className="ds-page-title">Пространство пары</h1><p className="mt-3 text-slate-500">Выберите пару в расписании, чтобы открыть её пространство.</p><Link href="/week" className="mt-6 inline-flex rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700">Открыть расписание</Link></section>;
+  const [preparations, setPreparations] = useState<Preparation[]>([]);
+  const [filter, setFilter] = useState<PreparationFilter>('all');
+  const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let active = true;
+    apiFetch<MyDayResponse>('/my-day')
+      .then((result) => {
+        if (active) setPreparations(result.upcomingPreparations || []);
+      })
+      .catch((reason: unknown) => {
+        if (active) setError(reason instanceof Error ? reason.message : 'Не удалось загрузить подготовку к парам.');
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => { active = false; };
+  }, []);
+
+  const visible = useMemo(() => {
+    const query = search.trim().toLocaleLowerCase('ru-RU');
+    return preparations.filter((item) => matchesFilter(item, filter) &&
+      (!query || `${item.title} ${item.subject} ${item.description || ''}`.toLocaleLowerCase('ru-RU').includes(query)));
+  }, [filter, preparations, search]);
+
+  if (loading) return <div className="mx-auto max-w-5xl space-y-4"><Skeleton className="h-20" /><Skeleton className="h-40" /><Skeleton className="h-40" /></div>;
+  if (error && !preparations.length) return <div className="mx-auto max-w-3xl"><RequestState title="Не удалось загрузить список" description={error} onRetry={() => window.location.reload()} /></div>;
+
+  return (
+    <div className="mx-auto max-w-5xl space-y-6">
+      <header>
+        <p className="text-xs font-medium text-slate-400">НаПаре / Учёба</p>
+        <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">Подготовка к парам</h1>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">Опубликованные преподавателями темы и материалы с ближайшими сроками. Сдача работ и оценки остаются в Moodle.</p>
+      </header>
+
+      <Card>
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <label className="relative block w-full lg:max-w-sm">
+            <span className="sr-only">Поиск подготовки</span>
+            <Icon name="search" size={17} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Найти тему или предмет" className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-3 text-sm outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100" />
+          </label>
+          <p className="text-sm text-slate-500" role="status">Показано {visible.length} из {preparations.length}</p>
+        </div>
+        <div className="mt-4 flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Фильтр по сроку">
+          {filters.map((item) => <button key={item.id} type="button" aria-pressed={filter === item.id} onClick={() => setFilter(item.id)} className={`shrink-0 rounded-full border px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-100 ${filter === item.id ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'}`}>{item.label}</button>)}
+        </div>
+      </Card>
+
+      {visible.length ? <div className="space-y-3">{visible.map((item) => {
+        const days = daysUntil(item.deadline);
+        const status = days === null ? 'Без срока' : days < 0 ? 'Срок прошёл' : days === 0 ? 'Сегодня' : days === 1 ? 'Завтра' : days <= 7 ? 'На неделе' : 'Позже';
+        return <Card key={item.id} padding="sm" className="transition-colors hover:border-indigo-200">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2"><Badge variant={days !== null && days < 0 ? 'danger' : days !== null && days <= 1 ? 'warning' : 'default'}>{status}</Badge><span className="text-xs text-slate-500">{dueLabel(item.deadline)}</span></div>
+              <h2 className="mt-3 break-words text-base font-semibold text-slate-900">{item.title}</h2>
+              <p className="mt-1 text-sm font-medium text-indigo-700">{item.subject}</p>
+              {item.description && <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-600">{item.description}</p>}
+            </div>
+            <Link href={`/pair-space/${item.lessonId}`} className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 text-sm font-semibold text-slate-700 hover:border-indigo-300 hover:text-indigo-700">К материалам пары <Icon name="arrow-right" size={16} /></Link>
+          </div>
+        </Card>;
+      })}</div> : <Card><EmptyState title={preparations.length ? 'Ничего не найдено' : 'Подготовки пока нет'} description={preparations.length ? 'Измените запрос или фильтр.' : 'Когда преподаватель добавит тему или материал к паре, он появится здесь.'} action={preparations.length ? <Button variant="secondary" onClick={() => { setSearch(''); setFilter('all'); }}>Сбросить фильтры</Button> : <Link href="/week" className="inline-flex min-h-11 items-center rounded-xl bg-indigo-600 px-4 text-sm font-semibold text-white">Открыть расписание</Link>} /></Card>}
+    </div>
+  );
 }

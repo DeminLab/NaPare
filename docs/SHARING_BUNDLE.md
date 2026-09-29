@@ -28,11 +28,7 @@ Copy-Item .env.example .env.docker.local
 docker compose --env-file .env.docker.local -f docker-compose.prod.yml up -d --build
 ```
 
-Перед запуском Docker Mini App соберите его static bundle:
-
-```powershell
-pnpm --filter @napare/max-miniapp build
-```
+MAX открывает существующий `web-portal`; отдельный static bundle `apps/max-miniapp` в текущий запуск не входит. Не собирайте его и не настраивайте бот на этот архивный клиент.
 
 Не передавайте `.env.docker.local`, access tokens, database dumps или содержимое Docker volumes через общий архив.
 
@@ -40,6 +36,5 @@ pnpm --filter @napare/max-miniapp build
 
 ```powershell
 pnpm --filter @napare/backend exec jest --runInBand
-pnpm --filter @napare/max-miniapp test
 docker compose --env-file .env.docker.local -f docker-compose.prod.yml ps
 ```

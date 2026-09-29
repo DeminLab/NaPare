@@ -185,7 +185,7 @@ apps/backend/src/
 │   ├── database.module.ts                # forFeature по всем entity, экспорт репозиториев
 │   └── init.sql                          # SQL-инициализация (не выполняется модулем)
 │
-└── migrations/                           # TypeORM-миграции (8 файлов)
+└── migrations/                           # TypeORM-миграции (17 файлов)
     ├── 1700000000000-InitialSchema.ts
     ├── 1700000000001-NormalizeUserRole.ts
     ├── 1700000000002-OptimizeTenantQueriesAndIntegrity.ts
@@ -195,6 +195,8 @@ apps/backend/src/
     ├── 1700000000006-MaxUserLink.ts
     └── 1700000000007-AttendanceRecords.ts
 ```
+
+В production NestJS автоматически выполняет ожидающие TypeORM-миграции при старте backend (`migrationsRun: true`). Отдельный запуск migration CLI для production Compose не требуется; после выпуска проверьте логи backend и состояние таблицы миграций. Перед изменением схемы сделайте резервную копию PostgreSQL.
 
 ## Ключевые настройки bootstrap
 
@@ -613,7 +615,7 @@ SENTRY_TRACES_SAMPLE_RATE=0.1
 
 # MAX Mini App
 MAX_BOT_TOKEN=
-MAX_INIT_DATA_TTL_SECONDS=3600
+MAX_INIT_DATA_TTL_SECONDS=900
 ```
 
 `REDIS_*`, `FCM_*`, `STORAGE_*`, `RATE_LIMIT_*` объявлены в `.env.example` и

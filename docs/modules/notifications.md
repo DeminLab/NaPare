@@ -14,7 +14,7 @@
 | ---------------------- | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Notification           | Уведомление                    | id, user_id, university_id, type, title, body, deep_link, is_read, read_at, data, category, priority, actions, event_id                                                       |
 | DeviceToken            | Токен устройства               | id, user_id, platform, token, device_name, is_active                                                                                                                          |
-| NotificationPreference | Настройки по типам             | id, user_id, university_id, schedule_changes, cancellations, room_changes, homework_created, deadlines, messages, announcements, system_alerts, quiet_hours_enabled/start/end |
+| NotificationPreference | Настройки по типам и каналам   | id, user_id, university_id, schedule_changes, cancellations, room_changes, homework_created, deadlines, messages, announcements, system_alerts, telegram_enabled, quiet_hours_enabled/start/end, IANA time_zone |
 | InboxItem              | «Входящие» (задачи к действию) | id, event_id, user_id, university_id, type, title, description, deep_link, priority, status (`open`/`snoozed`/`done`), due_at, actions, completed_at                          |
 
 Все четыре регистрируются в `apps/backend/src/database/database.module.ts`.
@@ -64,9 +64,13 @@
 
 **Критичные UX-требования:**
 
-- Deep link: нажатие открывает нужный экран (`deepLink` у Notification и InboxItem)
+- Deep link: нажатие открывает нужный внутренний экран (`deepLink` у Notification и InboxItem); внешние и protocol-relative адреса не открываются.
+- Изменения расписания показывают проверенные backend значения «было → стало» для времени, места и преподавателя; переход ведёт к контексту пары, где доступна полная история.
 - Группировка однотипных уведомлений (антиспам)
 - Настройки по типам событий (`/notifications/preferences`)
+- Студенческие настройки читаются и сохраняются через API, включая тихие часы; состояние не привязано к одному браузеру.
+- Telegram-канал выключен по умолчанию и доступен после привязки аккаунта. Он повторяет решения общего центра уведомлений: обычные события учитывают категории и тихие часы; события с приоритетом `urgent` проходят эти фильтры по существующему правилу.
+- Студенческий центр сохраняет последний список уведомлений в account- и tenant-scoped local cache. Действия «прочитано»/«прочитать все» выполняются локально без сети и отправляются на сервер при восстановлении соединения.
 
 ---
 
@@ -86,8 +90,8 @@
 
 **Антиспам:**
 
-- `NotificationPreference.quietHours*` (тихие часы) реализованы в сущности и DTO
-- Настройки по типам событий (`scheduleChanges`, `cancellations`, `roomChanges`, `homeworkCreated`, `deadlines`, `messages`, `announcements`, `systemAlerts`)
+- `NotificationPreference.quietHours*` (тихие часы) используют сохранённый IANA time zone пользователя, а не часовой пояс backend.
+- Настройки по типам событий (`scheduleChanges`, `cancellations`, `roomChanges`, `homeworkCreated`, `deadlines`, `messages`, `announcements`, `systemAlerts`) и часовой пояс валидируются DTO/service.
 
 **Техническая реализация:**
 
@@ -100,6 +104,8 @@
 
 `processEvent` маппит тип события в текст/категорию и применяет настройки пользователя; получатели: явный `recipients` события, иначе `groupId` → студенты группы + преподаватель, для `sync.*` → операторы вуза, иначе все активные пользователи вуза.
 
+Уведомление об отмене включает предмет и исходное время/место из payload, потому что удалённое занятие уже нельзя открыть как Pair Space; ссылка ведёт к дате его бывшего занятия в расписании.
+
 ---
 
 ## 7. События и уведомления
@@ -109,7 +115,7 @@
 - schedule / academic: `lesson.changed`, `lesson.rescheduled`, `lesson.cancelled`, `room.changed`, `sync.completed`, `sync.failed`
 - pair-space: `announcement.created`, `homework.created`, `homework.updated`, `message.created`
 - absences: `absence.created`, `absence.updated`, `attendance.updated`
-- отложенные: `homework.deadline_soon`, `grade.created` (маппинги есть, публикующие модули — TODO)
+- отложенные: `homework.deadline_soon` публикуется `HomeworkDeadlineReminderService`: каждые 15 минут проверяются незавершённые задания со сроком в ближайшие 24 часа; событие адресуется группе занятия и преподавателю; студентам с личным статусом подготовки `done` оно не создаёт уведомление. Стабильный ключ задания и дедлайна защищает от повторной рассылки. Для срока менее 6 часов приоритет повышается до `high`. События об оценках (`grade.created`) пока не публикуются.
 
 ---
 
@@ -119,6 +125,7 @@
 | --------------- | ------------------------------------------------------------------------------------------- |
 | Доставка        | In-app создание записи + SSE-стрим событий (`GET /events/stream`, `EventBusService.stream`) |
 | Push (FCM/APNs) | **Не реализовано**: push-SDK в бэкенде нет, `DeviceToken` только сохраняется                |
+| Telegram        | Опционально: только при настроенном боте, привязанном аккаунте и согласии пользователя; ограниченная очередь в памяти процесса, без durable retry |
 | Retry           | Не реализован (TODO)                                                                        |
 | История         | Хранится без автоочистки (ретеншн не настроен)                                              |
 | Часовые пояса   | Учёт через `quietHoursStart/End` (настройки пользователя)                                   |
@@ -127,10 +134,10 @@
 
 ## 9. Критерии приёмки
 
-- [ ] При изменении расписания студент получает in-app уведомление
+- [ ] При изменении расписания студент получает in-app уведомление, которое открывает неделю с затронутой датой
 - [ ] При публикации ДЗ / объявления приходит уведомление
 - [ ] Нажатие на уведомление открывает правильный экран (`deepLink`)
-- [ ] Пользователь может отключить отдельные типы (`PATCH /notifications/preferences`)
+- [x] Пользователь может отключить отдельные типы (`PATCH /notifications/preferences`); студенческий экран сохраняет их на сервере.
 - [ ] Куратор получает уведомление о новом отсутствии (`absence.created`)
 - [ ] Нет массового спама (настройки + тихие часы)
 - [ ] Push на iOS и Android — **не проверяемо, интеграции нет**
@@ -150,7 +157,7 @@
 - [ ] Email-уведомления (после MVP)
 - [ ] SMS-уведомления (для критических событий)
 - [ ] Web push (для web-клиента)
-- [ ] Публикаторы для `homework.deadline_soon` и `grade.created`
+- [x] Публикатор `homework.deadline_soon`; [ ] публикатор `grade.created`
 
 ---
 

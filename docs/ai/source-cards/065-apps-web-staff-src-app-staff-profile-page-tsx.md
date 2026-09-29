@@ -6,7 +6,7 @@
 
 ## Scope
 
-Staff workspace UI and its data flow.
+Staff profile overview and its data flow; current-week schedule counts include the full Monday-to-Sunday range with local date formatting, and the security tab links to the shared Telegram account-connection page.
 
 ## Read sequence
 

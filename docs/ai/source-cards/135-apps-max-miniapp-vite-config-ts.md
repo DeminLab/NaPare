@@ -6,17 +6,16 @@
 
 ## Scope
 
-Vite build and development-server settings for the MAX Mini App. Production assets use the `/max/` public base path while API calls stay on the shared-origin `/api/v1` route.
+Legacy Vite build and development-server settings for the retired standalone MAX client. The production `/max/` route now proxies to `web-portal`; this package is retained as source only, excluded from the standard root `pnpm dev` and `pnpm build` tasks, and is not part of `docker-compose.prod.yml`.
 
 ## Related source
 
-- `infrastructure/nginx/nginx.conf` strips `/max/` when proxying requests to the Mini App container.
-- `apps/max-miniapp/nginx.conf` serves built assets from the container root and proxies `/api/` to the backend.
-- `docs/clients/max-miniapp.md` documents the production URL and deployment check.
+- `infrastructure/nginx/nginx.conf` rewrites `/max/` to the shared `web-portal`.
+- `docs/clients/max-miniapp.md` documents the shared site and MAX auth flow.
 
 ## Change boundary
 
-Keep the production base path aligned with Docker Nginx and retain the local `/api` development proxy.
+This configuration is legacy. Do not route the bot back to this client; MAX users now share the main website.
 
 ## Verification
 
@@ -24,4 +23,4 @@ Keep the production base path aligned with Docker Nginx and retain the local `/a
 pnpm --filter @napare/max-miniapp build
 ```
 
-The output should reference assets under `/max/assets/`.
+This check is only relevant if the legacy client is intentionally revived.

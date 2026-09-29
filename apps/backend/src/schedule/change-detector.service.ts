@@ -82,12 +82,13 @@ export class ChangeDetectorService {
             actor: { type: 'system' },
             target: { type: 'lesson', id: existingLesson.id },
             payload: {
+              subject: newLesson.subject,
               oldValue: diff.oldValues,
               newValue: diff.newValues,
               groupId: existingLesson.groupId,
               teacherId: existingLesson.teacherId,
               changeDescription: diff.changeDescription,
-              deepLink: `/week?date=${existingLesson.startDate.toISOString().slice(0, 10)}`,
+              deepLink: `/pair-space/${existingLesson.id}`,
             },
             priority: 'high',
           });
@@ -116,46 +117,62 @@ export class ChangeDetectorService {
     const newValues: JsonObject = {};
     let changeType: LessonChange['changeType'] = 'moved';
 
-    // Check room change
-    if (oldLesson.room !== newLesson.room) {
-      changes.push('аудитория');
-      oldValues.room = oldLesson.room;
-      newValues.room = newLesson.room ?? null;
+    const displayValue = (value: unknown, field: string) => {
+      if (value === null || value === undefined || value === '') return 'не указано';
+      if (field === 'startTime' || field === 'endTime') return String(value).slice(0, 5);
+      if (field === 'startDate') {
+        const [year, month, day] = String(value).slice(0, 10).split('-');
+        return `${day}.${month}.${year}`;
+      }
+      if (field === 'weekType') {
+        return ({ odd: 'нечётная неделя', even: 'чётная неделя', both: 'обе недели' } as Record<string, string>)[String(value)] ?? String(value);
+      }
+      return String(value);
+    };
+
+    const compare = (
+      field: string,
+      label: string,
+      oldValue: unknown,
+      newValue: unknown,
+      normalize: (value: unknown) => string = value => String(value ?? '').trim(),
+    ) => {
+      if (normalize(oldValue) === normalize(newValue)) return;
+      oldValues[field] = oldValue == null ? null : String(oldValue);
+      newValues[field] = newValue == null ? null : String(newValue);
+      changes.push(`${label}: ${displayValue(oldValue, field)} → ${displayValue(newValue, field)}`);
+    };
+
+    const oldStartDate = new Date(oldLesson.startDate).toISOString().slice(0, 10);
+    const newStartDate = new Date(newLesson.startDate).toISOString().slice(0, 10);
+    compare('startDate', 'Дата', oldStartDate, newStartDate);
+    compare('startTime', 'Начало', oldLesson.startTime, newLesson.startTime, value => String(value ?? '').slice(0, 5));
+    compare('endTime', 'Окончание', oldLesson.endTime, newLesson.endTime, value => String(value ?? '').slice(0, 5));
+    compare('room', 'Аудитория', oldLesson.room, newLesson.room);
+    compare('building', 'Корпус', oldLesson.building, newLesson.building);
+    compare('teacherName', 'Преподаватель', oldLesson.teacherName, newLesson.teacherName);
+    compare('subject', 'Предмет', oldLesson.subject, newLesson.subject);
+    compare('subjectType', 'Тип занятия', oldLesson.subjectType, newLesson.subjectType);
+    compare('subgroup', 'Подгруппа', oldLesson.subgroup, newLesson.subgroup);
+    compare('weekType', 'Неделя', oldLesson.weekType, newLesson.weekType);
+
+    if (changes.some(change => change.startsWith('Аудитория:') || change.startsWith('Корпус:'))) {
       changeType = 'room_changed';
     }
-
-    // Check building change
-    if (oldLesson.building !== newLesson.building) {
-      changes.push('корпус');
-      oldValues.building = oldLesson.building;
-      newValues.building = newLesson.building ?? null;
-    }
-
-    // Check teacher change
-    if (oldLesson.teacherName !== newLesson.teacherName) {
-      changes.push('преподаватель');
-      oldValues.teacherName = oldLesson.teacherName;
-      newValues.teacherName = newLesson.teacherName ?? null;
+    if (changes.some(change => change.startsWith('Преподаватель:'))) {
       changeType = 'teacher_changed';
     }
-
-    // Check time change
-    if (oldLesson.startTime !== newLesson.startTime) {
-      changes.push('время начала');
-      oldValues.startTime = oldLesson.startTime;
-      newValues.startTime = newLesson.startTime;
+    if (changes.some(change => change.startsWith('Дата:') || change.startsWith('Начало:') || change.startsWith('Окончание:'))) {
+      changeType = 'moved';
     }
-
-    if (oldLesson.endTime !== newLesson.endTime) {
-      changes.push('время окончания');
-      oldValues.endTime = oldLesson.endTime;
-      newValues.endTime = newLesson.endTime;
+    if (changeType === 'moved' && changes.length > 0 && !changes.some(change => /^(Дата|Начало|Окончание):/.test(change))) {
+      changeType = 'updated';
     }
 
     return {
       hasChanges: changes.length > 0,
       changeType,
-      changeDescription: changes.join(', '),
+      changeDescription: changes.join('; '),
       oldValues,
       newValues,
     };

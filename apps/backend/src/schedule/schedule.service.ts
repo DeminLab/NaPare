@@ -154,6 +154,7 @@ export class ScheduleService {
     startDate: string,
     endDate: string,
     pagination: PaginationQueryDto = new PaginationQueryDto(),
+    timeZone?: string,
   ): Promise<PaginatedResponse<Lesson>> {
     const resolvedGroupId = await this.resolveStudentGroupId(
       universityId,
@@ -166,8 +167,10 @@ export class ScheduleService {
     ) {
       const sourceLessons =
         await this.raspScraperService.getSchedule(resolvedGroupId);
+      const startDateKey = this.getCalendarDateKey(startDate, timeZone);
+      const endDateKey = this.getCalendarDateKey(endDate, timeZone);
       const lessons = sourceLessons
-        .filter((lesson) => lesson.date >= startDate && lesson.date <= endDate)
+        .filter((lesson) => lesson.date >= startDateKey && lesson.date <= endDateKey)
         .map((lesson) => this.mapRaspLesson(lesson, universityId));
       return toPaginatedResponse(lessons, lessons.length, pagination);
     }
@@ -231,6 +234,18 @@ export class ScheduleService {
       where: { universityId, externalId: groupId },
     });
     return group?.id ?? groupId;
+  }
+
+  private getCalendarDateKey(value: string, timeZone?: string): string {
+    if (!timeZone) return value.slice(0, 10);
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(new Date(value));
+    const values = Object.fromEntries(parts.map(({ type, value: part }) => [type, part]));
+    return `${values.year}-${values.month}-${values.day}`;
   }
 
   private mapRaspLesson(lesson: RaspLesson, universityId: string): Lesson {
@@ -395,7 +410,7 @@ export class ScheduleService {
       const savedLesson = await manager.getRepository(Lesson).save(lesson);
       await manager.getRepository(LessonChange).save({
         lessonId: lesson.id,
-        changeType: "moved",
+        changeType: lessonChangeType(oldValue, lessonChangeValues(lesson)),
         oldValues: oldValue,
         newValues: lessonChangeValues(savedLesson),
         changedBy: actor?.id ?? null,
@@ -451,24 +466,28 @@ export class ScheduleService {
     });
 
     const updatedValues = lessonChangeValues(updatedLesson);
-    const eventType =
-      oldValue.room !== updatedValues.room
-        ? "room.changed"
-        : oldValue.startTime !== updatedValues.startTime ||
-            oldValue.endTime !== updatedValues.endTime
-          ? "lesson.rescheduled"
-          : "lesson.changed";
+    const roomChanged = oldValue.room !== updatedValues.room || oldValue.building !== updatedValues.building;
+    const timeChanged = oldValue.startDate !== updatedValues.startDate
+      || oldValue.endDate !== updatedValues.endDate
+      || oldValue.startTime !== updatedValues.startTime
+      || oldValue.endTime !== updatedValues.endTime;
+    const eventType = roomChanged
+      ? "room.changed"
+      : timeChanged
+        ? "lesson.rescheduled"
+        : "lesson.changed";
     await this.eventBus?.publish({
       type: eventType,
       universityId: lesson.universityId,
       actor: this.eventActor(),
       target: { type: "lesson", id: lesson.id },
       payload: {
+        subject: updatedLesson.subject,
         oldValue,
         newValue: updatedValues,
         groupId: lesson.groupId,
         teacherId: lesson.teacherId,
-        deepLink: `/week?date=${lesson.startDate.toISOString().slice(0, 10)}`,
+        deepLink: `/pair-space/${lesson.id}`,
       },
       priority: eventType === "lesson.changed" ? "normal" : "high",
     });
@@ -486,6 +505,7 @@ export class ScheduleService {
       actor: this.eventActor(),
       target: { type: "lesson", id: lesson.id },
       payload: {
+        subject: lesson.subject,
         oldValue: lessonChangeValues(lesson),
         groupId: lesson.groupId,
         teacherId: lesson.teacherId,
@@ -617,6 +637,14 @@ function lessonChangeValues(lesson: Lesson): JsonObject {
     startDate: new Date(lesson.startDate).toISOString(),
     endDate: new Date(lesson.endDate).toISOString(),
   };
+}
+
+function lessonChangeType(oldValues: JsonObject, newValues: JsonObject): string {
+  const changed = (...keys: string[]) => keys.some((key) => oldValues[key] !== newValues[key]);
+  if (changed("room", "building")) return "room_changed";
+  if (changed("teacherId", "teacherName")) return "teacher_changed";
+  if (changed("startDate", "endDate", "startTime", "endTime")) return "moved";
+  return "updated";
 }
 
 function occurrenceSnapshot(occurrence: LessonOccurrence): JsonObject {

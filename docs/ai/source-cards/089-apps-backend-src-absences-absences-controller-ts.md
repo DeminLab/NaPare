@@ -6,7 +6,7 @@
 
 ## Scope
 
-NestJS backend module, HTTP boundary, authorization or data-service behavior.
+Absence endpoints, staff attendance endpoints and role-bound QR session/check-in routes.
 
 ## Read sequence
 
@@ -16,7 +16,7 @@ NestJS backend module, HTTP boundary, authorization or data-service behavior.
 
 ## Change boundary
 
-Trace route decorators, guards and the corresponding service before changing an endpoint.
+Keep QR creation staff-only, check-in student-only, and follow both routes to the corresponding service scope checks.
 
 ## Verification
 

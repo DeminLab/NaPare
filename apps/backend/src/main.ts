@@ -55,6 +55,10 @@ async function bootstrap() {
 
   // Root routes (bypass /api prefix)
   const httpAdapter = app.getHttpAdapter();
+  if (configService.getOrThrow('nodeEnv') === 'production') {
+    // Production requests pass through host Nginx and the Docker Nginx gateway.
+    httpAdapter.getInstance().set('trust proxy', 2);
+  }
   httpAdapter.get('/', (_req, res) => {
     res.redirect('/api/v1/docs');
   });

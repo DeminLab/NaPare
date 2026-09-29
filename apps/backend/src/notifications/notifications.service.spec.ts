@@ -6,7 +6,7 @@ import { DeviceToken } from "./entities/device-token.entity";
 import { NotificationPreference } from "./entities/notification-preference.entity";
 import { InboxItem } from "./entities/inbox-item.entity";
 import { TenantContext } from "../common/tenant/tenant-context";
-import { ForbiddenException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException } from "@nestjs/common";
 import { EventEnvelope } from "../events/event.types";
 
 describe("NotificationsService", () => {
@@ -145,6 +145,76 @@ describe("NotificationsService", () => {
   });
 
   describe("processEvent", () => {
+    it("includes the actual old and new room values in schedule notifications", async () => {
+      mockNotificationRepo.findOne.mockResolvedValue(null);
+      const event: EventEnvelope = {
+        id: "room-change-1",
+        type: "room.changed",
+        actor: { type: "system" },
+        timestamp: "2026-09-28T08:00:00.000Z",
+        university: { id: "uni-1" },
+        target: { type: "lesson", id: "lesson-1" },
+        payload: {
+          subject: "Программирование",
+          oldValue: { building: "1", room: "302" },
+          newValue: { building: "2", room: "504" },
+          deepLink: "/pair-space/lesson-1",
+        },
+        priority: "high",
+      };
+
+      await service.processEvent(event, ["student-1"]);
+
+      expect(mockNotificationRepo.save).toHaveBeenCalledWith(expect.objectContaining({
+        userId: "student-1",
+        body: "«Программирование»: Место: корпус 1, ауд. 302 → корпус 2, ауд. 504.",
+        deepLink: "/pair-space/lesson-1",
+      }));
+      expect(mockInboxRepo.save).toHaveBeenCalledWith(expect.objectContaining({
+        userId: "student-1",
+        description: "«Программирование»: Место: корпус 1, ауд. 302 → корпус 2, ауд. 504. Открой занятие, чтобы посмотреть контекст.",
+        deepLink: "/pair-space/lesson-1",
+      }));
+    });
+
+    it("applies quiet hours in the user's saved timezone", async () => {
+      jest.useFakeTimers().setSystemTime(new Date("2026-09-28T08:00:00.000Z"));
+      mockPreferenceRepo.findOne.mockResolvedValue({
+        userId: "user-1",
+        universityId: "uni-1",
+        deadlines: true,
+        quietHoursEnabled: true,
+        quietHoursStart: "13:00",
+        quietHoursEnd: "15:00",
+        timeZone: "Asia/Omsk",
+      });
+      mockNotificationRepo.findOne.mockResolvedValue(null);
+      const event: EventEnvelope = {
+        id: "event-deadline-1",
+        type: "homework.deadline_soon",
+        actor: { type: "system" },
+        timestamp: "2026-09-28T08:00:00.000Z",
+        university: { id: "uni-1" },
+        target: { type: "homework", id: "homework-1" },
+        payload: {},
+        priority: "normal",
+      };
+
+      try {
+        await service.processEvent(event, ["user-1"]);
+        expect(mockNotificationRepo.save).not.toHaveBeenCalled();
+        expect(mockInboxRepo.save).not.toHaveBeenCalled();
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it("rejects invalid IANA timezones in preference updates", async () => {
+      await expect(
+        service.updatePreferences("user-1", "uni-1", { timeZone: "Not/A-Timezone" }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
     it("uses a recipient-specific deep link for every notification and inbox item", async () => {
       mockNotificationRepo.findOne.mockResolvedValue(null);
       const event: EventEnvelope = {

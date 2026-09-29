@@ -13,11 +13,13 @@ Public NaPare landing page. The hero uses one full-bleed campus image with reada
 - `apps/web-portal/src/app/portal.css` controls responsive hero placement, overlays, and typography.
 - `apps/web-portal/src/components/ProductShowcase.tsx` renders the sample schedule, preparation notice, notification, teacher, attendance statistic, and personal-cabinet UI below the hero.
 - `apps/web-portal/src/app/layout.tsx` provides the site metadata and favicon paths.
+- `apps/web-portal/src/components/MaxLaunchAuth.tsx` handles MAX Bridge authentication and role routing on the landing page.
+- `/connections` is the account's short-lived Telegram linking flow; it does not handle login credentials.
 - `infrastructure/docker/web.Dockerfile` must include public assets in the production runtime.
 
 ## Change boundary
 
-Keep the campus photo confined to the hero and the mockup data clearly demonstrative, accessible, and readable at narrow widths. Do not imply that assignment submission or grading replaces Moodle.
+Keep the campus photo confined to the hero and the mockup data clearly demonstrative, accessible, and readable at narrow widths. Do not imply that assignment submission or grading replaces Moodle. MAX launch authentication must use backend-validated `initData` and keep the ordinary public landing visible without a MAX launch.
 
 ## Verification
 

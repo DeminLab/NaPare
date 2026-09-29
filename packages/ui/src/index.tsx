@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+export { MaxBridgeBackButton } from './MaxBridgeBackButton';
 import {
   ButtonHTMLAttributes,
   HTMLAttributes,

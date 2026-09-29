@@ -1,0 +1,92 @@
+schema_version: "1.0"
+solution: "НаПаре — отметка посещения в MAX"
+# Set this to the deployed public API origin, without /api/v1, before submission.
+base_url: "https://your-public-domain.example"
+openapi_file: "openapi.json"
+test_data:
+  setup: "Run scripts/prepare-max-attendance-demo.sh against a separate demo database."
+  student_login: "max-student@demo.napare"
+  student_password: "Provide the generated password to reviewers through a protected channel."
+  teacher_login: "max-teacher@demo.napare"
+  teacher_password: "Provide the generated password to reviewers through a protected channel."
+  max_identities: "Use two distinct MAX test users: one for the student and one for the teacher. A MAX identity can be linked to only one NaPare account."
+  lesson: "Synthetic lesson labelled ТЕСТ: отметка посещаемости MAX."
+required_checks:
+  - id: "max_first_link"
+    method: "POST"
+    path: "/api/v1/auth/max"
+    role: "student"
+    headers:
+      Content-Type: "application/json"
+    body:
+      initData: "Fresh signed window.WebApp.initData from the MAX Mini App launch."
+      email: "max-student@demo.napare"
+      password: "Provide out of band; never commit the generated value."
+    expected_status: [200]
+    expected_response:
+      content_type: "application/json"
+      required_fields: [accessToken, refreshToken, user.id, user.role]
+    notes: "This check must be run inside MAX with fresh initData; do not replay saved launch data."
+  - id: "teacher_site_login"
+    method: "POST"
+    path: "/api/v1/auth/login"
+    role: "teacher"
+    headers:
+      Content-Type: "application/json"
+    body:
+      email: "max-teacher@demo.napare"
+      password: "Provide out of band; never commit the generated value."
+    expected_status: [200]
+    expected_response:
+      content_type: "application/json"
+      required_fields: [accessToken, refreshToken, user.id, user.role]
+      fixed_values:
+        user.role: "teacher"
+    notes: "Keep this website session active while connecting the teacher's separate MAX test identity."
+  - id: "max_link_existing_teacher_session"
+    method: "POST"
+    path: "/api/v1/auth/max/link"
+    role: "teacher"
+    headers:
+      Content-Type: "application/json"
+      Authorization: "Bearer <teacher accessToken from teacher_site_login>"
+    body:
+      initData: "Fresh signed window.WebApp.initData from the distinct teacher MAX test account."
+    expected_status: [200]
+    expected_response:
+      content_type: "application/json"
+      required_fields: [accessToken, refreshToken, user.id, user.role]
+      fixed_values:
+        user.id: "Same id as teacher_site_login"
+        user.role: "teacher"
+    notes: "The server binds only the JWT-authenticated account, and rejects a MAX identity already linked elsewhere. Never send the university password to this endpoint."
+  - id: "teacher_create_qr"
+    method: "POST"
+    path: "/api/v1/absences/attendance/qr-sessions"
+    role: "teacher"
+    headers:
+      Content-Type: "application/json"
+      Authorization: "Bearer <teacher accessToken from max_link_existing_teacher_session>"
+    body:
+      lessonId: "UUID of the synthetic lesson from the isolated demo database."
+    expected_status: [201]
+    expected_response:
+      content_type: "application/json"
+      required_fields: [token, expiresAt, lessonId]
+    notes: "The lesson must belong to the teacher's university and scope and current time must be from 15 minutes before start through 15 minutes after end. Each QR expires after 90 seconds."
+  - id: "student_qr_check_in"
+    method: "POST"
+    path: "/api/v1/absences/attendance/qr-check-in"
+    role: "student"
+    headers:
+      Content-Type: "application/json"
+      Authorization: "Bearer <student accessToken>"
+    body:
+      token: "Short-lived token returned by teacher_create_qr."
+    expected_status: [201]
+    expected_response:
+      content_type: "application/json"
+      required_fields: [lessonId, status, alreadyMarked]
+      fixed_values:
+        status: "present"
+    notes: "The student must belong to the lesson group. A repeated check-in returns alreadyMarked=true without creating another record."

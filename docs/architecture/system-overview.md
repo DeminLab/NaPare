@@ -7,7 +7,7 @@ graph TB
     subgraph Clients["Клиенты"]
         Portal["web-Portal<br/>(Next.js, единый вход)"]
         Web["Рабочие пространства<br/>web-student / staff / admin / developer"]
-        MAX["MAX Mini-App<br/>(React + Vite)"]
+        MAX["MAX Bot / WebApp Bridge<br/>(launches web-portal)"]
         Legacy["apps/web<br/>(legacy-лендинг)"]
     end
 
@@ -37,7 +37,7 @@ graph TB
 
     Portal --> Auth
     Web --> Auth
-    MAX --> Auth
+    MAX --> Portal
     Legacy --> Auth
 
     Auth --> Users

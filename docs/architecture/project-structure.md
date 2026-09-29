@@ -10,7 +10,11 @@
 napare/
 ├── apps/
 │   ├── backend/                    # NestJS API
-│   ├── mobile/                     # Flutter
+│   ├── web-portal/                 # Public site and MAX Bridge entry
+│   ├── web-student/                # Student workspace
+│   ├── web-staff/                  # Staff workspace
+│   ├── web-admin/                  # University workspace
+│   ├── web-developer/              # Developer workspace
 │   ├── web/                        # Next.js
 │   └── max-miniapp/                # React + Vite
 ├── packages/
@@ -209,7 +213,9 @@ apps/backend/
 
 ---
 
-## Mobile (Flutter)
+## Архивная схема Mobile (Flutter)
+
+> Это проектная схема, а не исходники мобильного приложения: каталога `apps/mobile` в репозитории нет. Для текущей поставки используйте web-клиенты и MAX WebApp на базе `web-portal`.
 
 ```
 apps/mobile/
@@ -366,7 +372,9 @@ apps/mobile/
 
 ---
 
-## Web (Next.js)
+## Архивный Web-монолит (Next.js)
+
+> Этот раздел описывает прежний `apps/web`, а не текущие интерфейсы. Актуальные приложения: `web-portal`, `web-student`, `web-staff`, `web-admin` и `web-developer`; их карта находится в [project map](../ai/project-map.md). Старый монолит не включён в production Compose и исключён из стандартных root `pnpm dev`/`pnpm build`.
 
 ```
 apps/web/
@@ -494,7 +502,9 @@ apps/web/
 
 ---
 
-## MAX Mini-App (React + Vite)
+## Исторический исходный код MAX Mini-App
+
+Этот React-клиент больше не разворачивается и не является пользовательским интерфейсом MAX. Бот открывает существующий `web-portal`; актуальный сценарий описан в [документе MAX-клиента](../clients/max-miniapp.md). Каталог `apps/max-miniapp/` сохранён как исторический исходный код.
 
 ```
 apps/max-miniapp/

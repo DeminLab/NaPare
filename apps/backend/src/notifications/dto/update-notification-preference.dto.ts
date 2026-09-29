@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsBoolean, IsOptional, Matches } from 'class-validator';
+import { IsBoolean, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
 
 export class UpdateNotificationPreferenceDto {
   @ApiPropertyOptional()
@@ -42,6 +42,11 @@ export class UpdateNotificationPreferenceDto {
   @IsBoolean()
   systemAlerts?: boolean;
 
+  @ApiPropertyOptional({ description: 'Отправлять выбранные уведомления в связанный Telegram аккаунт' })
+  @IsOptional()
+  @IsBoolean()
+  telegramEnabled?: boolean;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsBoolean()
@@ -56,4 +61,10 @@ export class UpdateNotificationPreferenceDto {
   @IsOptional()
   @Matches(/^([01]\d|2[0-3]):[0-5]\d$/)
   quietHoursEnd?: string;
+
+  @ApiPropertyOptional({ example: 'Asia/Omsk' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  timeZone?: string;
 }

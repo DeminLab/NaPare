@@ -6,7 +6,7 @@
 
 ## Scope
 
-Staff workspace UI and its data flow.
+Teacher weekly schedule with Monday-to-Sunday navigation, local date range requests, group/subject/type filters, subgroup and upstream week-parity labels when supplied and responsive day selection.
 
 ## Read sequence
 

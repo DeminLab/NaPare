@@ -1,23 +1,28 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
   Optional,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
+import { In, Repository } from "typeorm";
 
 import { PairSpace } from "./entities/pair-space.entity";
 import { Announcement } from "./entities/announcement.entity";
 import { Homework } from "./entities/homework.entity";
 import { FileAttachment } from "./entities/file-attachment.entity";
 import { DiscussionMessage } from "./entities/discussion-message.entity";
+import { PersonalLessonNote } from "./entities/personal-lesson-note.entity";
+import { HomeworkProgress, HomeworkProgressState, HomeworkProgressSubtask } from "./entities/homework-progress.entity";
 import { HomeworkSubmission } from "./entities/homework-submission.entity";
 import { CreateAnnouncementDto } from "./dto/create-announcement.dto";
 import { CreateHomeworkDto } from "./dto/create-homework.dto";
 import { SubmitHomeworkDto } from "./dto/submit-homework.dto";
 import { CreateMessageDto } from "./dto/create-message.dto";
 import { CreateFileDto } from "./dto/create-file.dto";
+import { UpsertPersonalNoteDto } from "./dto/upsert-personal-note.dto";
+import { UpdateHomeworkProgressDto } from "./dto/update-homework-progress.dto";
 import { TenantContext } from "../common/tenant/tenant-context";
 import { EventBusService } from "../events/event-bus.service";
 import { Lesson } from "../schedule/entities/lesson.entity";
@@ -39,7 +44,24 @@ const CONTENT_AUTHOR_ROLES: UserRole[] = [
   UserRole.SUPERADMIN,
 ];
 
-export type PairSpaceResponse = PairSpace & { moodleUrl?: string };
+export type PairSpaceResponse = Omit<PairSpace, "homeworks"> & {
+  homeworks: Array<Homework & { progress?: HomeworkProgressState }>;
+  moodleUrl?: string;
+};
+
+export interface PairSpacePreparationSummary {
+  id: string;
+  title: string;
+  description: string | null;
+  deadline: Date | null;
+  lessonId: string;
+  subject: string;
+  progress: HomeworkProgressState;
+  subtasks: HomeworkProgressSubtask[];
+}
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const SUBJECT_TIMELINE_LIMIT = 20;
 
 @Injectable()
 export class PairSpaceService {
@@ -54,8 +76,12 @@ export class PairSpaceService {
     private readonly fileAttachmentRepository: Repository<FileAttachment>,
     @InjectRepository(DiscussionMessage)
     private readonly messageRepository: Repository<DiscussionMessage>,
+    @InjectRepository(PersonalLessonNote)
+    private readonly personalNoteRepository: Repository<PersonalLessonNote>,
     @InjectRepository(HomeworkSubmission)
     private readonly submissionRepository: Repository<HomeworkSubmission>,
+    @InjectRepository(HomeworkProgress)
+    private readonly homeworkProgressRepository: Repository<HomeworkProgress>,
     private readonly tenantContext: TenantContext,
     @Optional()
     @InjectRepository(Lesson)
@@ -98,6 +124,62 @@ export class PairSpaceService {
     await this.assertRoleScopedAccess(pairSpace);
 
     return this.attachMoodleUrl(pairSpace);
+  }
+
+  async getSubjectTimeline(lessonId: string, universityId: string) {
+    this.tenantContext.assertAccess(universityId);
+    if (!this.lessonRepository) {
+      throw new NotFoundException(`Lesson ${lessonId} not found`);
+    }
+
+    const currentLesson = await this.lessonRepository.findOne({
+      where: { id: lessonId, universityId },
+    });
+    if (!currentLesson) throw new NotFoundException(`Lesson ${lessonId} not found`);
+    await this.assertLessonScopedAccess(currentLesson);
+
+    const user = this.tenantContext.getUser();
+    const scope = {
+      universityId,
+      subject: currentLesson.subject,
+      ...(user?.role === UserRole.STUDENT
+        ? { groupId: currentLesson.groupId }
+        : user?.role === UserRole.TEACHER
+          ? { teacherId: user.id }
+          : currentLesson.courseId
+            ? { courseId: currentLesson.courseId }
+            : { groupId: currentLesson.groupId }),
+      ...(currentLesson.courseId ? { courseId: currentLesson.courseId } : {}),
+    };
+    const pagination = new PaginationQueryDto();
+    pagination.page = 1;
+    pagination.limit = SUBJECT_TIMELINE_LIMIT;
+    const [lessons, total] = await Promise.all([
+      this.lessonRepository.find({
+        where: scope,
+        order: { startDate: "DESC", pairNumber: "DESC" },
+        take: SUBJECT_TIMELINE_LIMIT,
+      }),
+      this.lessonRepository.count({ where: scope }),
+    ]);
+    const lessonIds = lessons.map((lesson) => lesson.id);
+    const spaces = lessonIds.length
+      ? await this.pairSpaceRepository.find({
+          where: { universityId, lessonId: In(lessonIds) },
+          relations: ["announcements", "homeworks", "files"],
+          order: { date: "DESC" },
+        })
+      : [];
+    const spacesByLesson = new Map(spaces.map((space) => [space.lessonId, space]));
+
+    return toPaginatedResponse(
+      lessons.map((lesson) => ({
+        lesson,
+        pairSpace: spacesByLesson.get(lesson.id) ?? null,
+      })),
+      total,
+      pagination,
+    );
   }
 
   /**
@@ -235,6 +317,76 @@ export class PairSpaceService {
     });
   }
 
+  async listPreparationsForLessons(
+    lessonIds: string[],
+    universityId: string,
+  ): Promise<PairSpacePreparationSummary[]> {
+    this.tenantContext.assertAccess(universityId);
+    const persistedLessonIds = lessonIds.filter((id) => UUID_PATTERN.test(id));
+    if (persistedLessonIds.length === 0) return [];
+
+    const pairSpaces = await this.pairSpaceRepository.find({
+      where: { universityId, lessonId: In(persistedLessonIds) },
+      relations: ["homeworks"],
+    });
+
+    const user = this.tenantContext.getUser();
+    const homeworkIds = pairSpaces.flatMap((pairSpace) => (pairSpace.homeworks ?? []).map(({ id }) => id));
+    const progressRows = user?.role === UserRole.STUDENT && homeworkIds.length
+      ? await this.homeworkProgressRepository.find({ where: { studentId: user.id, homeworkId: In(homeworkIds) } })
+      : [];
+    const progressByHomework = new Map(progressRows.map((row) => [row.homeworkId, row]));
+
+    return pairSpaces
+      .flatMap((pairSpace) =>
+        (pairSpace.homeworks ?? []).map((homework) => ({
+          id: homework.id,
+          title: homework.title,
+          description: homework.description ?? null,
+          deadline: homework.deadline ?? null,
+          lessonId: pairSpace.lessonId,
+          subject: pairSpace.subject,
+          progress: progressByHomework.get(homework.id)?.state ?? "todo",
+          subtasks: progressByHomework.get(homework.id)?.subtasks ?? [],
+        })),
+      )
+      .sort((left, right) => {
+        if (!left.deadline) return right.deadline ? 1 : 0;
+        if (!right.deadline) return -1;
+        return left.deadline.getTime() - right.deadline.getTime();
+      });
+  }
+
+  async updateHomeworkProgress(
+    homeworkId: string,
+    studentId: string,
+    dto: UpdateHomeworkProgressDto,
+  ): Promise<HomeworkProgress> {
+    const user = this.tenantContext.getUser();
+    if (!user || user.role !== UserRole.STUDENT || user.id !== studentId) {
+      throw new ForbiddenException("Only the authenticated student can update personal preparation progress");
+    }
+    const homework = await this.homeworkRepository.findOne({ where: { id: homeworkId }, relations: ["pairSpace"] });
+    if (!homework) throw new NotFoundException(`Homework with id ${homeworkId} not found`);
+    await this.assertRoleScopedAccess(homework.pairSpace);
+    if (dto.state === undefined && dto.subtasks === undefined) {
+      throw new BadRequestException("At least one of state or subtasks is required");
+    }
+    if (dto.subtasks && new Set(dto.subtasks.map((item) => item.id)).size !== dto.subtasks.length) {
+      throw new BadRequestException("Subtask IDs must be unique within a preparation checklist");
+    }
+    await this.homeworkProgressRepository.upsert(
+      {
+        homeworkId,
+        studentId,
+        ...(dto.state !== undefined ? { state: dto.state } : {}),
+        ...(dto.subtasks !== undefined ? { subtasks: dto.subtasks } : {}),
+      },
+      { conflictPaths: ["homeworkId", "studentId"], skipUpdateIfNoValuesChanged: true },
+    );
+    return this.homeworkProgressRepository.findOneByOrFail({ homeworkId, studentId });
+  }
+
   async uploadFile(
     pairSpaceId: string,
     uploadedBy: string,
@@ -265,6 +417,38 @@ export class PairSpaceService {
       take: pagination.limit,
     });
     return toPaginatedResponse(data, total, pagination);
+  }
+
+  async getPersonalNote(lessonId: string, universityId: string): Promise<PersonalLessonNote | null> {
+    const pairSpace = await this.getOrCreateByLesson(lessonId, universityId);
+    const user = this.tenantContext.getUser();
+    if (!user) throw new ForbiddenException("Authenticated user required");
+    return this.personalNoteRepository.findOne({
+      where: { pairSpaceId: pairSpace.id, universityId: pairSpace.universityId, userId: user.id },
+    });
+  }
+
+  async savePersonalNote(
+    lessonId: string,
+    universityId: string,
+    dto: UpsertPersonalNoteDto,
+  ): Promise<PersonalLessonNote | null> {
+    const pairSpace = await this.getOrCreateByLesson(lessonId, universityId);
+    const user = this.tenantContext.getUser();
+    if (!user) throw new ForbiddenException("Authenticated user required");
+    if (dto.content.length === 0) {
+      await this.personalNoteRepository.delete({ pairSpaceId: pairSpace.id, userId: user.id, universityId: pairSpace.universityId });
+      return null;
+    }
+    await this.personalNoteRepository.upsert({
+      pairSpaceId: pairSpace.id,
+      universityId: pairSpace.universityId,
+      userId: user.id,
+      content: dto.content,
+    }, { conflictPaths: ["pairSpaceId", "userId"] });
+    return this.personalNoteRepository.findOne({
+      where: { pairSpaceId: pairSpace.id, universityId: pairSpace.universityId, userId: user.id },
+    });
   }
 
   async createMessage(
@@ -444,7 +628,23 @@ export class PairSpaceService {
   private async attachMoodleUrl(
     pairSpace: PairSpace,
   ): Promise<PairSpaceResponse> {
-    if (!this.universityRepository) return pairSpace;
+    let response: PairSpaceResponse = pairSpace;
+    const user = this.tenantContext.getUser();
+    if (user?.role === UserRole.STUDENT && pairSpace.homeworks?.length) {
+      const progressRows = await this.homeworkProgressRepository.find({
+        where: { studentId: user.id, homeworkId: In(pairSpace.homeworks.map(({ id }) => id)) },
+      });
+      const progressByHomework = new Map(progressRows.map((row) => [row.homeworkId, row]));
+      response = {
+        ...pairSpace,
+        homeworks: pairSpace.homeworks.map((homework) => ({
+          ...homework,
+          progress: progressByHomework.get(homework.id)?.state ?? "todo",
+          subtasks: progressByHomework.get(homework.id)?.subtasks ?? [],
+        })),
+      };
+    }
+    if (!this.universityRepository) return response;
     const university = await this.universityRepository.findOne({
       where: { id: pairSpace.universityId },
     });
@@ -455,9 +655,9 @@ export class PairSpaceService {
       typeof baseUrl !== "string" ||
       !baseUrl.startsWith("https://")
     ) {
-      return pairSpace;
+      return response;
     }
-    return { ...pairSpace, moodleUrl: baseUrl };
+    return { ...response, moodleUrl: baseUrl };
   }
 
   private async assertCanPublishContent(

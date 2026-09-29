@@ -18,10 +18,12 @@ import {
 } from "@nestjs/swagger";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
+import { Throttle } from "@nestjs/throttler";
 
 import { AuthService } from "./auth.service";
 import { LoginDto } from "./dto/login.dto";
 import { MaxAuthDto } from "./dto/max-auth.dto";
+import { MaxLinkDto } from "./dto/max-link.dto";
 import { RefreshTokenDto } from "./dto/refresh-token.dto";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
 import { University } from "../users/entities/university.entity";
@@ -39,6 +41,7 @@ export class AuthController {
 
   @Post("login")
   @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
   @ApiOperation({ summary: "Вход в систему" })
   @ApiResponse({ status: 200, description: "Успешный вход" })
   @ApiResponse({ status: 401, description: "Неверные учетные данные" })
@@ -48,6 +51,7 @@ export class AuthController {
 
   @Post("max")
   @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
   @ApiOperation({ summary: "Вход через MAX Mini App (валидация initData)" })
   @ApiResponse({
     status: 200,
@@ -69,8 +73,37 @@ export class AuthController {
     return this.authService.maxAuth(maxAuthDto);
   }
 
+  @Post("max/link")
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Привязать MAX к аккаунту текущей сессии" })
+  async linkMaxToCurrentUser(@Body() dto: MaxLinkDto, @Request() req) {
+    return this.authService.linkMaxToAuthenticatedUser(dto.initData, req.user.id);
+  }
+
+  @Post("telegram/link")
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { ttl: 60_000, limit: 3 } })
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Создать одноразовую ссылку для привязки Telegram" })
+  async createTelegramLink(@Request() req) {
+    return this.authService.createTelegramLink(req.user.id);
+  }
+
+  @Get("telegram/status")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Получить состояние привязки Telegram" })
+  async getTelegramLinkStatus(@Request() req) {
+    return this.authService.getTelegramLinkStatus(req.user.id);
+  }
+
   @Post("portal-login")
   @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
   @ApiOperation({ summary: "Единый вход в кабинеты NaPare" })
   @ApiResponse({
     status: 200,

@@ -49,6 +49,7 @@ function getWeekStart() {
   date.setDate(date.getDate() - (day === 0 ? 6 : day - 1));
   return date;
 }
+function dateKey(date: Date) { return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`; }
 
 export default function GroupsPage() {
   const [groups, setGroups] = useState<Group[]>([]);
@@ -66,11 +67,11 @@ export default function GroupsPage() {
   useEffect(() => {
     const start = getWeekStart();
     const end = new Date(start);
-    end.setDate(end.getDate() + 5);
+    end.setDate(end.getDate() + 6);
     Promise.all([
       apiFetchList<Group>("/admin/groups"),
       apiFetchList<Lesson>(
-        `/schedule/range?startDate=${start.toISOString().split("T")[0]}&endDate=${end.toISOString().split("T")[0]}`,
+        `/schedule/range?startDate=${dateKey(start)}&endDate=${dateKey(end)}`,
       ),
     ])
       .then(([groupItems, lessonItems]) => {

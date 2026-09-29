@@ -3,6 +3,7 @@ import { AbsencesService } from "./absences.service";
 import { getRepositoryToken } from "@nestjs/typeorm";
 import { Absence } from "./entities/absence.entity";
 import { AttendanceRecord } from "./entities/attendance-record.entity";
+import { AttendanceQrSession } from "./entities/attendance-qr-session.entity";
 import { Lesson } from "../schedule/entities/lesson.entity";
 import { User } from "../users/entities/user.entity";
 import { Group } from "../users/entities/group.entity";
@@ -10,6 +11,7 @@ import {
   BadRequestException,
   ForbiddenException,
   NotFoundException,
+  UnauthorizedException,
 } from "@nestjs/common";
 import { TenantContext } from "../common/tenant/tenant-context";
 import { UserRole } from "../auth/interfaces/user-role";
@@ -32,11 +34,19 @@ describe("AbsencesService", () => {
   };
   const mockAttendanceRepository = {
     find: jest.fn().mockResolvedValue([]),
+    findOne: jest.fn().mockResolvedValue(null),
     findAndCount: jest.fn().mockResolvedValue([[], 0]),
     create: jest
       .fn()
       .mockImplementation((dto) => ({ id: "attendance-1", ...dto })),
     save: jest.fn().mockImplementation((records) => Promise.resolve(records)),
+  };
+  const mockAttendanceQrSessionRepository = {
+    findOne: jest.fn().mockResolvedValue(null),
+    create: jest.fn().mockImplementation((dto) => ({ id: "qr-session-1", ...dto })),
+    save: jest.fn().mockImplementation((entity) => Promise.resolve(entity)),
+    update: jest.fn().mockResolvedValue({ affected: 0 }),
+    delete: jest.fn().mockResolvedValue({ affected: 0 }),
   };
   const mockLessonRepository = { findOne: jest.fn().mockResolvedValue(null) };
   const mockUserRepository = {
@@ -54,6 +64,10 @@ describe("AbsencesService", () => {
           provide: getRepositoryToken(AttendanceRecord),
           useValue: mockAttendanceRepository,
         },
+        {
+          provide: getRepositoryToken(AttendanceQrSession),
+          useValue: mockAttendanceQrSessionRepository,
+        },
         { provide: getRepositoryToken(Lesson), useValue: mockLessonRepository },
         { provide: getRepositoryToken(User), useValue: mockUserRepository },
         { provide: getRepositoryToken(Group), useValue: mockGroupRepository },
@@ -66,6 +80,7 @@ describe("AbsencesService", () => {
     mockRepo.findAndCount.mockResolvedValue([[], 0]);
     mockRepo.findOne.mockResolvedValue(null);
     mockAttendanceRepository.find.mockResolvedValue([]);
+    mockAttendanceRepository.findOne.mockResolvedValue(null);
     mockLessonRepository.findOne.mockResolvedValue(null);
     mockUserRepository.find.mockResolvedValue([]);
     mockUserRepository.findOne.mockResolvedValue(null);
@@ -474,6 +489,204 @@ describe("AbsencesService", () => {
           entries: [{ studentId: "student-1", status: "present" }],
         }),
       ).rejects.toThrow(ForbiddenException);
+      expect(mockAttendanceRepository.save).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("attendance QR check-in", () => {
+    const activeSession = {
+      id: "qr-1",
+      universityId: "uni-1",
+      lessonId: "lesson-1",
+      createdById: "teacher-1",
+      revokedAt: null,
+      expiresAt: new Date(Date.now() + 60_000),
+    };
+    const lesson = {
+      id: "lesson-1",
+      universityId: "uni-1",
+      groupId: "group-1",
+      teacherId: "teacher-1",
+      startDate: new Date(Date.now() - 5 * 60_000),
+      endDate: new Date(Date.now() + 40 * 60_000),
+    };
+
+    it("creates a 90-second QR session for a teacher's current lesson", async () => {
+      mockTenantContext.getUser.mockReturnValue({
+        id: "teacher-1",
+        role: UserRole.TEACHER,
+        universityId: "uni-1",
+      });
+      mockLessonRepository.findOne.mockResolvedValue(lesson);
+
+      const result = await service.createAttendanceQrSession("uni-1", "teacher-1", "lesson-1");
+
+      expect(result.token).toMatch(/^[A-Za-z0-9_-]{43}$/);
+      expect(result.lessonId).toBe("lesson-1");
+      expect(result.expiresAt.getTime()).toBeGreaterThan(Date.now() + 80_000);
+      expect(result.expiresAt.getTime()).toBeLessThanOrEqual(Date.now() + 90_000);
+      expect(mockAttendanceQrSessionRepository.create).toHaveBeenCalledWith(expect.objectContaining({
+        universityId: "uni-1",
+        lessonId: "lesson-1",
+        createdById: "teacher-1",
+        tokenHash: expect.stringMatching(/^[a-f0-9]{64}$/),
+        revokedAt: null,
+      }));
+      const persisted = mockAttendanceQrSessionRepository.create.mock.calls[0][0];
+      expect(persisted.tokenHash).not.toBe(result.token);
+      expect(mockAttendanceQrSessionRepository.update).toHaveBeenCalledWith(
+        expect.objectContaining({ universityId: "uni-1", lessonId: "lesson-1" }),
+        expect.objectContaining({ revokedAt: expect.any(Date) }),
+      );
+    });
+
+    it("rejects a teacher who does not own the lesson", async () => {
+      mockTenantContext.getUser.mockReturnValue({
+        id: "teacher-1",
+        role: UserRole.TEACHER,
+        universityId: "uni-1",
+      });
+      mockLessonRepository.findOne.mockResolvedValue({ ...lesson, teacherId: "teacher-2" });
+
+      await expect(service.createAttendanceQrSession("uni-1", "teacher-1", "lesson-1"))
+        .rejects.toThrow(ForbiddenException);
+      expect(mockAttendanceQrSessionRepository.save).not.toHaveBeenCalled();
+    });
+
+    it("rejects QR creation outside the lesson time window", async () => {
+      mockTenantContext.getUser.mockReturnValue({
+        id: "teacher-1",
+        role: UserRole.TEACHER,
+        universityId: "uni-1",
+      });
+      mockLessonRepository.findOne.mockResolvedValue({
+        ...lesson,
+        startDate: new Date(Date.now() + 60 * 60_000),
+        endDate: new Date(Date.now() + 2 * 60 * 60_000),
+      });
+
+      await expect(service.createAttendanceQrSession("uni-1", "teacher-1", "lesson-1"))
+        .rejects.toThrow(BadRequestException);
+      expect(mockAttendanceQrSessionRepository.save).not.toHaveBeenCalled();
+    });
+
+    it("marks a student in the lesson group exactly once", async () => {
+      mockTenantContext.getUser.mockReturnValue({
+        id: "student-1",
+        role: UserRole.STUDENT,
+        universityId: "uni-1",
+      });
+      mockAttendanceQrSessionRepository.findOne.mockResolvedValue(activeSession);
+      mockLessonRepository.findOne.mockResolvedValue(lesson);
+      mockUserRepository.findOne.mockResolvedValue({
+        id: "student-1",
+        universityId: "uni-1",
+        role: UserRole.STUDENT,
+        groupId: "group-1",
+      });
+
+      await expect(service.checkInWithAttendanceQr("raw-qr-token")).resolves.toEqual({
+        lessonId: "lesson-1",
+        status: "present",
+        alreadyMarked: false,
+      });
+      expect(mockAttendanceQrSessionRepository.findOne).toHaveBeenCalledWith(expect.objectContaining({
+        where: expect.objectContaining({
+          universityId: "uni-1",
+          revokedAt: expect.anything(),
+          expiresAt: expect.anything(),
+          tokenHash: expect.stringMatching(/^[a-f0-9]{64}$/),
+        }),
+      }));
+      expect(mockAttendanceRepository.save).toHaveBeenCalledWith(expect.objectContaining({
+        universityId: "uni-1",
+        lessonId: "lesson-1",
+        studentId: "student-1",
+        status: "present",
+        markedById: "teacher-1",
+      }));
+    });
+
+    it("rejects a student from another group before writing attendance", async () => {
+      mockTenantContext.getUser.mockReturnValue({
+        id: "student-1",
+        role: UserRole.STUDENT,
+        universityId: "uni-1",
+      });
+      mockAttendanceQrSessionRepository.findOne.mockResolvedValue(activeSession);
+      mockLessonRepository.findOne.mockResolvedValue({ ...lesson, groupId: "group-2" });
+      mockUserRepository.findOne.mockResolvedValue({
+        id: "student-1",
+        universityId: "uni-1",
+        role: UserRole.STUDENT,
+        groupId: "group-1",
+      });
+
+      await expect(service.checkInWithAttendanceQr("raw-qr-token")).rejects.toThrow(ForbiddenException);
+      expect(mockAttendanceRepository.save).not.toHaveBeenCalled();
+    });
+
+    it("returns the existing present record without creating a duplicate", async () => {
+      mockTenantContext.getUser.mockReturnValue({
+        id: "student-1",
+        role: UserRole.STUDENT,
+        universityId: "uni-1",
+      });
+      mockAttendanceQrSessionRepository.findOne.mockResolvedValue(activeSession);
+      mockLessonRepository.findOne.mockResolvedValue(lesson);
+      mockUserRepository.findOne.mockResolvedValue({
+        id: "student-1",
+        universityId: "uni-1",
+        role: UserRole.STUDENT,
+        groupId: "group-1",
+      });
+      mockAttendanceRepository.findOne.mockResolvedValue({ status: "present" });
+
+      await expect(service.checkInWithAttendanceQr("raw-qr-token")).resolves.toEqual({
+        lessonId: "lesson-1",
+        status: "present",
+        alreadyMarked: true,
+      });
+      expect(mockAttendanceRepository.save).not.toHaveBeenCalled();
+    });
+
+    it("returns success when a concurrent scan wins the unique attendance insert", async () => {
+      mockTenantContext.getUser.mockReturnValue({
+        id: "student-1",
+        role: UserRole.STUDENT,
+        universityId: "uni-1",
+      });
+      mockAttendanceQrSessionRepository.findOne.mockResolvedValue(activeSession);
+      mockLessonRepository.findOne.mockResolvedValue(lesson);
+      mockUserRepository.findOne.mockResolvedValue({
+        id: "student-1",
+        universityId: "uni-1",
+        role: UserRole.STUDENT,
+        groupId: "group-1",
+      });
+      mockAttendanceRepository.findOne
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({ status: "present" });
+      mockAttendanceRepository.save.mockRejectedValueOnce({ driverError: { code: "23505" } });
+
+      await expect(service.checkInWithAttendanceQr("raw-qr-token")).resolves.toEqual({
+        lessonId: "lesson-1",
+        status: "present",
+        alreadyMarked: true,
+      });
+      expect(mockAttendanceRepository.save).toHaveBeenCalledTimes(1);
+      expect(mockAttendanceRepository.findOne).toHaveBeenCalledTimes(2);
+    });
+
+    it("rejects an expired or revoked QR session", async () => {
+      mockTenantContext.getUser.mockReturnValue({
+        id: "student-1",
+        role: UserRole.STUDENT,
+        universityId: "uni-1",
+      });
+      mockAttendanceQrSessionRepository.findOne.mockResolvedValue(null);
+
+      await expect(service.checkInWithAttendanceQr("raw-qr-token")).rejects.toThrow(UnauthorizedException);
       expect(mockAttendanceRepository.save).not.toHaveBeenCalled();
     });
   });

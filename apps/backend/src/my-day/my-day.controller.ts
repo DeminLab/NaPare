@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, UseGuards, Request, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 
 import { MyDayService } from './my-day.service';
@@ -15,12 +15,13 @@ export class MyDayController {
   @ApiOperation({ summary: 'Получить данные для главного экрана' })
   @ApiResponse({ status: 200, description: 'Данные получены' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async getMyDay(@Request() req) {
+  async getMyDay(@Request() req, @Query('timeZone') timeZone?: string) {
     return this.myDayService.getMyDay(
       req.user.id,
       req.user.universityId,
       req.user.role,
       req.user.groupId,
+      timeZone,
     );
   }
 }

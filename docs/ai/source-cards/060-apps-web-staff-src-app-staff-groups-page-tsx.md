@@ -6,7 +6,7 @@
 
 ## Scope
 
-Staff workspace UI and its data flow.
+Staff group overview and its data flow; its current-week schedule fetch includes Monday through Sunday and formats API dates in local calendar time.
 
 ## Read sequence
 

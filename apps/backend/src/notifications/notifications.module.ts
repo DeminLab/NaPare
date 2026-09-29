@@ -11,13 +11,23 @@ import { NotificationEventHandler } from './events/notification-event.handler';
 import { NotificationPreference } from './entities/notification-preference.entity';
 import { InboxItem } from './entities/inbox-item.entity';
 import { User } from '../users/entities/user.entity';
+import { Homework } from '../pair-space/entities/homework.entity';
+import { PairSpace } from '../pair-space/entities/pair-space.entity';
+import { Lesson } from '../schedule/entities/lesson.entity';
+import { EventsModule } from '../events/events.module';
+import { HomeworkDeadlineReminderService } from './homework-deadline-reminder.service';
+import { HomeworkProgress } from '../pair-space/entities/homework-progress.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Notification, DeviceToken, NotificationPreference, InboxItem, User]),
+    TypeOrmModule.forFeature([
+      Notification, DeviceToken, NotificationPreference, InboxItem, User,
+      Homework, HomeworkProgress, PairSpace, Lesson,
+    ]),
     EventEmitterModule,
+    EventsModule,
   ],
-  providers: [NotificationsService, NotificationEventHandler],
+  providers: [NotificationsService, NotificationEventHandler, HomeworkDeadlineReminderService],
   controllers: [NotificationsController, DevicesController],
   exports: [NotificationsService],
 })

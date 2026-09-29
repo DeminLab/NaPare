@@ -28,6 +28,8 @@ erDiagram
     PairSpace ||--o{ DiscussionMessage : has
 
     Homework ||--o{ HomeworkSubmission : has
+    Homework ||--o{ HomeworkProgress : has
+    User ||--o{ HomeworkProgress : tracks
     AbsenceStatus ||--o| AbsenceConfirmation : may have
 ```
 
@@ -46,6 +48,8 @@ erDiagram
 | **Announcement** | Объявление | id, pair_space_id, author_id, text, is_pinned | UUID, UUID, UUID, TEXT, BOOLEAN |
 | **Homework** | Домашнее задание | id, pair_space_id, title, description, deadline | UUID, UUID, VARCHAR, TEXT, TIMESTAMP |
 | **HomeworkSubmission** | Статус сдачи ДЗ | id, homework_id, student_id, status | UUID, UUID, UUID, VARCHAR |
+| **HomeworkProgress** | Личный статус и чек-лист подготовки, отдельно от сдачи | id, homework_id, student_id, state, subtasks | UUID, UUID, UUID, VARCHAR, JSONB |
+| **HomeworkProgress** | Личный статус подготовки студента; отдельно от фактической сдачи | id, homework_id, student_id, state | UUID, UUID, UUID, VARCHAR |
 | **FileAttachment** | Файл | id, pair_space_id, file_url, file_type, size | UUID, UUID, VARCHAR, VARCHAR, INTEGER |
 | **DiscussionMessage** | Сообщение обсуждения | id, pair_space_id, user_id, text, parent_id | UUID, UUID, UUID, TEXT, UUID |
 | **AbsenceStatus** | Статус отсутствия | id, user_id, type, start_date, end_date, comment | UUID, UUID, VARCHAR, DATE, DATE, TEXT |

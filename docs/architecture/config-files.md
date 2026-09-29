@@ -1,5 +1,7 @@
 # Конфигурационные файлы
 
+> **Исторический снимок.** Примеры ниже описывают прежний монолит `apps/web` и ранние compose/env-конфигурации; они не являются инструкцией для текущего production. Сейчас используется `docker-compose.prod.yml`, корневой `.env.example`, `DEPLOY.md` и [MAX guide](../clients/max-miniapp.md). `apps/web` и `apps/max-miniapp` оставлены как legacy source и исключены из стандартных root-команд запуска/сборки.
+
 ## 1. Корень монорепо
 
 ### `.env.example`
@@ -432,7 +434,7 @@ RATE_LIMIT_MAX=100
 
 ---
 
-## 3. Web (Next.js)
+## 3. Архивный Web-монолит (Next.js)
 
 ### `apps/web/package.json`
 
@@ -478,7 +480,9 @@ NEXT_PUBLIC_APP_NAME=НаПаре
 
 ---
 
-## 4. MAX Mini-App (React + Vite)
+## 4. Архивная MAX Mini-App (React + Vite)
+
+Этот пакет сохранён как исторический исходник отдельного клиента. Текущий сценарий кейса запускает существующий сайт `web-portal`: `docker-compose.prod.yml` не поднимает отдельный сервис `max-miniapp`, а Docker Nginx переписывает `/max/` на `web-portal`. Для актуальной настройки MAX используйте [руководство единого MAX-входа](../clients/max-miniapp.md), а не запускайте пакет ниже.
 
 ### `apps/max-miniapp/package.json`
 

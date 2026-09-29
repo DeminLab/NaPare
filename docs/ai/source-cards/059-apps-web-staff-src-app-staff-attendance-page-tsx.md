@@ -16,7 +16,7 @@ Staff workspace UI and its data flow.
 
 ## Change boundary
 
-Trace direct imports and the closest route or caller before changing this file.
+Use the browser's local calendar date for the date input and send that local day's UTC start/end timestamps when loading lessons. Preserve server-side teacher ownership, group and tenant checks.
 
 ## Verification
 

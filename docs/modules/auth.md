@@ -14,7 +14,7 @@
 
 | Сущность    | Описание                  | Ключевые поля                                                                                                                                                                      |
 | ----------- | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| User        | Пользователь              | id, email, password_hash, first_name, last_name, phone, avatar_url, **role** (одно значение enum), university_id, group_id, max_user_id, is_active, session_version, last_login_at |
+| User        | Пользователь              | id, email, password_hash, first_name, last_name, phone, avatar_url, **role** (одно значение enum), university_id, group_id, max_user_id, telegram_user_id, is_active, session_version, last_login_at |
 | DeviceToken | Токен устройства для push | id, user_id, platform, token, device_name, is_active                                                                                                                               |
 | AuditLog    | Лог действий              | id, user_id, action, entity, entity_id, old_values, new_values, ip, user_agent                                                                                                     |
 
@@ -29,7 +29,11 @@
 | Endpoint                      | Метод  | Описание                                                                                                                |
 | ----------------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------- |
 | `/api/v1/auth/login`          | POST   | Вход по email/паролю                                                                                                    |
-| `/api/v1/auth/max`            | POST   | Вход через MAX Mini App (валидация initData, привязка аккаунта)                                                         |
+| `/api/v1/auth/max`            | POST   | Вход на общий сайт из MAX WebApp (валидация initData, привязка аккаунта)                                                |
+| `/api/v1/auth/max/link`       | POST   | Привязать MAX к текущей авторизованной сессии                                                                            |
+| `/api/v1/auth/telegram/link`  | POST   | Создать одноразовую ссылку привязки Telegram (JWT)                                                                       |
+| `/api/v1/auth/telegram/status` | GET   | Проверить привязку Telegram и доступность серверной настройки уведомлений без раскрытия ID/секретов (JWT)                |
+| `/api/v1/integrations/telegram/webhook` | POST | Webhook бота для погашения кода (секретный заголовок Telegram)                                                         |
 | `/api/v1/auth/portal-login`   | POST   | Единый вход в кабинеты; возвращает `workspace`: `student` \| `staff` \| `admin` \| `developer` |
 | `/api/v1/auth/register`       | POST   | **Всегда 403** — самостоятельная регистрация отключена (аккаунты создаёт университет)                                   |
 | `/api/v1/auth/universities`   | GET    | Список активных вузов (публичный; сейчас отдаёт только пилотный СИБИТ)                                                  |
@@ -88,11 +92,12 @@ SMS/кодовых эндпоинтов (`request-code`, `verify-code`) **нет
 
 1. **Одна роль на пользователя:** `users.role` — enum-колонка; `RolesGuard` сравнивает `requiredRoles.includes(user.role)` — комбинаций `teacher + curator` не бывает (`apps/backend/src/users/entities/user.entity.ts`, `apps/backend/src/common/guards/roles.guard.ts`).
 2. **Создание и восстановление аккаунтов:** админ `POST /admin/users` создаёт запись (email, пароль ≥ 10 символов, имя, роль, опционально группа); `POST /admin/users/:id/reset-password` заменяет пароль только управляемого пользователя своего ВУЗа. В обоих случаях сервер хранит bcrypt-хеш, а интерфейс не сохраняет временный пароль после отправки. Приглашение/саморегистрация недоступны.
-3. **Rate limiting:** `ThrottlerModule` сконфигурирован в `app.module.ts` (100 запросов / 60 сек), но `ThrottlerGuard` нигде не подключён (`APP_GUARD` отсутствует) — лимитов на API фактически нет. SMS-лимитов (3/час, блокировка после 5) не существует вместе с SMS-входом.
+3. **Rate limiting:** глобальный `ThrottlerGuard` ограничивает запросы по IP значениями `RATE_LIMIT_MAX` / `RATE_LIMIT_WINDOW_MS` (по умолчанию 100/60 сек); `/auth/login`, `/auth/portal-login`, `/auth/max` и `/auth/max/link` дополнительно ограничены 10 запросами за 60 сек. В production Express учитывает два прокси в текущем маршруте host Nginx → Docker Nginx → backend. SMS-лимитов (3/час, блокировка после 5) не существует вместе с SMS-входом.
 4. **Токены и отзыв:** пара `accessToken` + `refreshToken` подписывается с `JWT_ACCESS_EXPIRATION` / `JWT_REFRESH_EXPIRATION` (`apps/backend/src/config/configuration.ts`), а также содержит текущий `sessionVersion` пользователя. `POST /auth/logout`, блокировка/разблокировка, смена роли и сброс пароля повышают версию: JWT, выданные до этого, перестают проходить и на refresh, и на защищённых маршрутах. Refresh принимает токен в теле `POST /auth/refresh` — отдельной refresh-стратегии/гарда в коде нет. Хранение на клиенте: Secure Storage (mobile) / куки или storage (web).
 5. **Удаление аккаунта:** `DELETE /users/me` → `usersService.deactivate()` — немедленное `isActive=false` (`apps/backend/src/users/users.service.ts:114`). Окна восстановления 30 дней нет; деактивированный пользователь не проходит `login`/`portalLogin`/`maxAuth`.
 6. **Восстановление пароля:** эндпоинта нет (TODO).
-7. **Вход через MAX:** `POST /auth/max` проверяет подпись `initData` токеном `MAX_BOT_TOKEN`; `users.maxUserId` (unique) хранит привязку. Без токена — ответ 503 `MAX_NOT_CONFIGURED`. Непривязанный MAX-аккаунт получает 401 `MAX_ACCOUNT_NOT_LINKED` и привязывается при первом входе по email/паролю. Свежесть `initData` ограничена `MAX_INIT_DATA_TTL_SECONDS` (по умолчанию 1 час).
+7. **Вход через MAX:** `POST /auth/max` проверяет подпись `initData` токеном `MAX_BOT_TOKEN`; `users.maxUserId` (unique) хранит привязку. Без токена — ответ 503 `MAX_NOT_CONFIGURED`. Уже привязанный MAX сразу входит в свой аккаунт независимо от сохранённой локальной сессии сайта. Непривязанный MAX получает 401 `MAX_ACCOUNT_NOT_LINKED`; портал предлагает явно выбрать открытую сессию сайта или ввести выданные университетом email/пароль. `POST /auth/max/link` проверяет JWT выбранной сессии и MAX initData. Оба пути записывают привязку атомарно и не перезаписывают существующие связи. Свежесть `initData` ограничена `MAX_INIT_DATA_TTL_SECONDS` (по умолчанию 900 секунд / 15 минут).
+8. **Привязка Telegram:** вошедший пользователь создаёт в `/connections` одноразовую ссылку через JWT. Её случайный 192-битный код хранится только как SHA-256, истекает через 10 минут и погашается атомарно один раз через приватный `/start` webhook с `X-Telegram-Bot-Api-Secret-Token`. `users.telegramUserId` уникален; код и Telegram ID не позволяют переназначить существующую связь. Пароль в Telegram не передаётся. Связь Telegram не подтверждает MAX-идентичность: MAX привязывается отдельно проверенным `initData` внутри MAX.
 8. **Portal login:** `POST /auth/portal-login` → `{ ...auth, workspace }`; маппинг: `student` → student, `teacher`/`curator`/`faculty_dean`/`department_head` → staff, `university_admin`/`superadmin` → admin, `developer` → developer. Все роли используют общую форму входа; developer открывается под `/developer/` на основном домене.
 9. **Публичные rasp.\* эндпоинты:** отдают данные rasp.sano.ru (кэш 15 мин, таймаут 15 сек) через `RaspScraperService` (`apps/backend/src/auth/rasp-scraper.service.ts`), экспортируемый из `apps/backend/src/rasp/rasp.module.ts`. `SibitUniversityBootstrapService` (`apps/backend/src/auth/sibit-university-bootstrap.service.ts`) при старте приложения создаёт/активирует пилотный вуз.
 
@@ -110,7 +115,7 @@ SMS/кодовых эндпоинтов (`request-code`, `verify-code`) **нет
 | ----------- | -------------------------------------------------------- |
 | Latency     | p95 ≤ 200 мс                                             |
 | Offline     | Работает без сети (кэш токенов)                          |
-| Rate limits | Не настроены: `ThrottlerGuard` не подключён (см. п. 6.3) |
+| Rate limits | Глобально `RATE_LIMIT_MAX` / `RATE_LIMIT_WINDOW_MS`; auth endpoints — 10/60 сек на IP |
 
 ---
 
@@ -124,7 +129,7 @@ SMS/кодовых эндпоинтов (`request-code`, `verify-code`) **нет
 - [ ] Вход по email/паролю работает для всех выданных аккаунтов
 - [x] MAX auth через initData работает (эндпоинт реализован и покрыт тестами; для прогона в MAX задайте `MAX_BOT_TOKEN`)
 - [ ] Refresh token автоматически обновляет access token
-- [ ] Рейт-лимиты на вход — не реализованы (`ThrottlerGuard` не подключён)
+- [x] Лимиты на `login`, `portal-login`, `max` — 10 запросов за 60 сек на IP
 
 ---
 

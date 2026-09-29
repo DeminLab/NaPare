@@ -6,7 +6,7 @@
 
 ## Scope
 
-NestJS backend module, HTTP boundary, authorization or data-service behavior.
+Authentication and account-linking business logic, including MAX `initData` login, first-link credential checks and Telegram webhook pairing with one-time link challenges. Invalid MAX linking credentials return a localized generic error that does not reveal whether the email exists.
 
 ## Read sequence
 

@@ -12,12 +12,12 @@ Docker Nginx routing between the public portal, backend API, and role workspaces
 
 - `docker-compose.prod.yml` defines the frontend upstream services.
 - `apps/web-developer/next.config.js` configures the `/developer` Next.js base path.
-- `apps/max-miniapp/vite.config.ts` configures the `/max/` asset base for the MAX Mini App.
+- `docs/clients/max-miniapp.md` documents that `/max/` now proxies to the public portal for shared MAX/site authentication.
 - `DEPLOY.md` documents the public route map.
 
 ## Change boundary
 
-Do not expose internal web ports publicly. Resolve Docker service names dynamically so Nginx follows container IP changes after a service recreation. Preserve the `/developer` path when proxying to Next.js so assets, pages, and same-origin API requests resolve correctly. For `/max/`, strip that prefix when proxying to the Mini App container because its Nginx serves the built files from `/`.
+Do not expose internal web ports publicly. Resolve Docker service names dynamically so Nginx follows container IP changes after a service recreation. Preserve the `/developer` path when proxying to Next.js so assets, pages, and same-origin API requests resolve correctly. `/max/` rewrites to the public portal root so MAX and browser users enter the same website.
 
 ## Verification
 

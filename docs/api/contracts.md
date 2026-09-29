@@ -236,6 +236,32 @@
 
 ---
 
+### 1.6.1 GET `/users/me/favorites`
+
+Получить избранные группы и преподавателей. Доступно только авторизованному студенту; записи ограничены его пользователем и университетом.
+
+**Headers:** `Authorization: Bearer <accessToken>`
+
+**Response 200:** массив объектов `{ id, kind, externalId, label, createdAt, updatedAt }`, где `kind` — `group` или `teacher`.
+
+### 1.6.2 POST `/users/me/favorites`
+
+Создать или обновить избранный объект (идемпотентно по типу и внешнему идентификатору).
+
+**Request:** `{ "kind": "group", "externalId": "123", "label": "ПМИ-201" }` или `kind: "teacher"`.
+
+`group.externalId` должен быть числовым ID открытого каталога расписаний; teacher ID нормализуется без учёта регистра. `label` ограничен 220 символами.
+
+**Response 201:** `{ "success": true }`.
+
+### 1.6.3 DELETE `/users/me/favorites`
+
+Удалить избранный объект текущего студента.
+
+**Request:** `{ "kind": "teacher", "externalId": "Иванов И.И." }`.
+
+**Response 200:** `{ "success": true }`.
+
 ### 1.7 PATCH `/users/me`
 
 Обновление профиля.
@@ -316,7 +342,7 @@
 
 ### 1.10 POST `/auth/max`
 
-Вход через MAX Mini-App. Сервер валидирует подпись `window.WebApp.initData` токеном `MAX_BOT_TOKEN` и выдаёт JWT НаПаре. При первом входе вместе с `email`/`password` аккаунт университета привязывается к MAX-идентификатору (`users.maxUserId`) — дальше вход в MAX автоматический.
+Вход на существующий сайт NaPare из MAX WebApp. Сервер валидирует подпись `window.WebApp.initData` токеном `MAX_BOT_TOKEN` и выдаёт JWT НаПаре. При первом входе вместе с `email`/`password` аккаунт университета привязывается к MAX-идентификатору (`users.maxUserId`) — дальше вход в MAX автоматический.
 
 **Request:**
 
@@ -333,7 +359,9 @@
 - `initData`: string, 1–8192 (обязательно)
 - `email`, `password`: опционально, только вместе (первичная привязка); `password` min 6
 
-**Подпись:** HMAC-SHA256 по алгоритму MAX (секрет `WebAppData` + `MAX_BOT_TOKEN`), сравнение timing-safe; `auth_date` не старше `MAX_INIT_DATA_TTL_SECONDS` (по умолчанию 3600) и не «из будущего».
+**Подпись:** HMAC-SHA256 по алгоритму MAX (секрет `WebAppData` + `MAX_BOT_TOKEN`), сравнение timing-safe; `auth_date` не старше `MAX_INIT_DATA_TTL_SECONDS` (по умолчанию 900 секунд / 15 минут) и не «из будущего».
+
+**Rate Limit:** 10 запросов за 60 секунд на IP (дополнительно к общему лимиту API). Существующую привязку MAX нельзя заменить этим endpoint; уже занятый MAX ID возвращает `409 CONFLICT`.
 
 **Response 200:**
 
@@ -356,10 +384,30 @@
 |-----|--------|----------|
 | `MAX_INVALID_INIT_DATA` | 401 | Подпись неверна или `auth_date` устарел |
 | `MAX_ACCOUNT_NOT_LINKED` | 401 | Аккаунт не привязан — передайте email/password |
-| `UNAUTHORIZED` | 401 | Неверный email или пароль при привязке |
+| `MAX_INVALID_CREDENTIALS` | 401 | Email или пароль не подходят; одинаковый ответ для неизвестного, неверного и неактивного аккаунта |
 | `CONFLICT` | 409 | MAX-идентификатор уже привязан к другому аккаунту |
 | `MAX_NOT_CONFIGURED` | 503 | Не задан `MAX_BOT_TOKEN` |
 | `VALIDATION_ERROR` | 400 | Некорректное тело запроса |
+
+### 1.10.1 POST `/auth/max/link`
+
+Требует `Authorization: Bearer <accessToken>` действующей сессии. Принимает только `{ "initData": "..." }`, повторно проверяет подпись и свежесть данных MAX и атомарно связывает MAX-идентификатор с текущим пользователем. Возвращает стандартный ответ авторизации. MAX, уже привязанный к другому пользователю, отклоняется с `409`; существующая связь аккаунта с другим MAX также не заменяется.
+
+**Rate Limit:** 10 запросов за 60 секунд на IP. Ошибки валидации и конфликт привязки соответствуют `POST /auth/max`.
+
+### 1.10.2 GET `/auth/telegram/status`
+
+Требует JWT; возвращает `{ "linked": true | false, "notificationsConfigured": true | false }` для текущего пользователя, не раскрывая Telegram user ID или секреты.
+
+### 1.10.3 POST `/auth/telegram/link`
+
+Требует действующий JWT. Создаёт ссылку `https://t.me/<bot>?start=<code>` для привязки текущего аккаунта к Telegram. Код содержит 192 бита случайности, в базе хранится его SHA-256; срок действия — 10 минут. Новая ссылка аннулирует предыдущую активную ссылку этого аккаунта. Если к аккаунту уже привязан Telegram, ответ `409 CONFLICT`; если интеграция не настроена, `503 TELEGRAM_NOT_CONFIGURED`. Rate limit — 3 запроса за 60 секунд.
+
+**Response 200:** `{ "botLink": "https://t.me/napare_bot?start=…", "expiresAt": "2026-09-28T12:34:56.000Z" }`.
+
+### 1.10.4 POST `/integrations/telegram/webhook`
+
+Принимает Telegram Bot API update. Доступ разрешён только с совпадающим `X-Telegram-Bot-Api-Secret-Token`; обрабатывается только приватное сообщение `/start <code>` (или `/link <code>`). Код и Telegram user ID связываются атомарно, Telegram ID уникален. Бот не принимает пароль пользователя. Неверные/истёкшие/уже погашенные коды не создают привязку.
 
 ---
 
@@ -415,65 +463,48 @@
 
 ---
 
-### 2.2 GET `/schedule/my-day`
+### 2.2 GET `/my-day`
 
-Агрегированные данные для экрана "Мой день".
+Агрегированные данные для экрана «Мой день» (`apps/backend/src/my-day/my-day.service.ts`). Ответ — JSON-объект без оболочки `data`.
 
 **Headers:** `Authorization: Bearer <accessToken>`
+
+**Query:** `timeZone` — необязательная IANA timezone клиента (например, `Asia/Omsk`); при отсутствии используется UTC. Невалидная timezone возвращает 400.
 
 **Response 200:**
 
 ```json
 {
-  "data": {
-    "date": "2024-01-15",
-    "dayOfWeek": 1,
-    "lessons": [
-      {
-        "id": "uuid",
-        "subject": "Программирование",
-        "teacher": "Петров П.П.",
-        "room": "301",
-        "startTime": "09:00",
-        "endTime": "10:30",
-        "pairNumber": 1,
-        "hasChanges": true,
-        "changeType": "room_changed",
-        "pairSpaceId": "uuid"
-      }
-    ],
-    "changes": [
-      {
-        "lessonId": "uuid",
-        "subject": "Программирование",
-        "changeType": "room_changed",
-        "oldValue": "201",
-        "newValue": "301",
-        "changedAt": "2024-01-15T08:00:00Z"
-      }
-    ],
-    "hotDeadlines": [
-      {
-        "id": "uuid",
-        "title": "Лабораторная №3",
-        "deadline": "2024-01-15T23:59:59Z",
-        "subject": "Программирование",
-        "pairSpaceId": "uuid"
-      }
-    ],
-    "newContent": [
-      {
-        "type": "announcement",
-        "subject": "Программирование",
-        "title": "Новое объявление",
-        "createdAt": "2024-01-15T08:00:00Z",
-        "pairSpaceId": "uuid"
-      }
-    ],
-    "absenceStatus": null
-  }
+  "date": "2026-09-28",
+  "lessons": [
+    {
+      "id": "lesson-uuid",
+      "subject": "Программирование",
+      "startTime": "2026-09-28T07:00:00.000Z",
+      "endTime": "2026-09-28T08:30:00.000Z",
+      "isChanged": false
+    }
+  ],
+  "pairSpaces": [],
+  "upcomingPreparations": [
+    {
+      "id": "preparation-uuid",
+      "title": "Повторить тему",
+      "description": null,
+      "deadline": "2026-09-30T12:00:00.000Z",
+      "lessonId": "lesson-uuid",
+      "subject": "Программирование",
+      "progress": "todo",
+      "subtasks": []
+    }
+  ],
+  "absences": [],
+  "notifications": { "unreadCount": 2 },
+  "summary": { "totalLessons": 1, "changedLessons": 0, "totalAbsences": 0 }
 }
 ```
+
+`upcomingPreparations` содержит опубликованную подготовку и личный статус студента в пределах следующих 30 дней, связанную с его role-scoped расписанием и отсортированную по сроку; элементы без срока идут последними. `progress` принимает `todo`, `in_progress` или `done`; `subtasks` содержит личные шаги студента. Для остальных ролей массив пуст. Это личный план, не сдача: отправка и оценивание остаются в Moodle.
 
 ---
 
@@ -689,7 +720,31 @@
 
 ---
 
-### 3.2 POST `/pair-spaces/:lessonId/announcements`
+### 3.1a GET `/pair-spaces/:lessonId/timeline`
+
+Хронология недавних занятий того же курса/предмета. Tenant берётся из JWT. Студент видит только свою группу, преподаватель — собственные занятия; прочие роли остаются в пределах текущего tenant и курса (либо группы, если `courseId` не задан). Возвращается первая страница пагинации: 20 занятий в порядке от новых к старым; `meta.total` содержит полное количество подходящих занятий. `pairSpace` может быть `null`, если для занятия ещё не публиковали контент.
+
+**Response 200:** стандартный пагинированный ответ; `data` содержит элементы `{ lesson, pairSpace }`, а `pairSpace` — только `announcements`, `homeworks` и `files`.
+
+---
+
+### 3.2 GET `/pair-spaces/:lessonId/personal-note`
+
+Получить личную заметку текущего пользователя. Доступ к занятию и tenant проверяются так же, как для Pair Space.
+
+**Response 200:** объект заметки (`content`, `updatedAt`) или `null`, если заметка ещё не создана.
+
+### 3.3 PUT `/pair-spaces/:lessonId/personal-note`
+
+Создать или обновить личную заметку (до 20 000 символов). Пустая строка удаляет сохранённое содержимое.
+
+**Request:** `{ "content": "Повторить примеры с доски" }`
+
+Заметка принадлежит только текущему пользователю. Клиент сохраняет локальную копию для офлайн-доступа и синхронизирует её с этим API.
+
+---
+
+### 3.4 POST `/pair-spaces/:lessonId/announcements`
 
 Создать объявление.
 
@@ -725,7 +780,7 @@
 
 ---
 
-### 3.3 POST `/pair-spaces/:lessonId/homeworks`
+### 3.5 POST `/pair-spaces/:lessonId/homeworks`
 
 Создать ДЗ.
 
@@ -766,7 +821,7 @@
 
 ---
 
-### 3.4 POST `/pair-spaces/:lessonId/files`
+### 3.6 POST `/pair-spaces/:lessonId/files`
 
 Загрузить файл.
 
@@ -801,7 +856,7 @@
 
 ---
 
-### 3.5 PATCH `/homeworks/:id/submit`
+### 3.7 PATCH `/homeworks/:id/submit`
 
 Отметить ДЗ как сданное.
 
@@ -822,7 +877,17 @@
 
 ---
 
-### 3.6 GET `/pair-spaces/:lessonId/messages`
+### 3.7a PATCH `/pair-spaces/homeworks/:id/progress`
+
+Сохранить личный статус подготовки и/или чек-лист текущего студента. Endpoint проверяет, что пользователь студент и занятие принадлежит его доступной группе. Эти данные не меняют и не создают Moodle-сдачу.
+
+**Headers:** `Authorization: Bearer <accessToken>`
+**Roles:** `student`
+**Body:** `{ "state"?: "todo" | "in_progress" | "done", "subtasks"?: [{ "id": "uuid", "title": "Прочитать главу", "done": false }] }` (максимум 20 шагов, заголовок до 160 символов)
+**Response 200:** `{ "id": "uuid", "homeworkId": "uuid", "studentId": "uuid", "state": "in_progress" }`
+
+---
+### 3.8 GET `/pair-spaces/:lessonId/messages`
 
 Сообщения обсуждения.
 
@@ -859,7 +924,7 @@
 
 ---
 
-### 3.7 POST `/pair-spaces/:lessonId/messages`
+### 3.9 POST `/pair-spaces/:lessonId/messages`
 
 Написать сообщение.
 
@@ -1243,9 +1308,9 @@
 
 ---
 
-### 5.5 GET `/notifications/settings`
+### 5.5 GET `/notifications/preferences`
 
-Настройки уведомлений.
+Настройки уведомлений текущего пользователя в текущем университете.
 
 **Headers:** `Authorization: Bearer <accessToken>`
 
@@ -1253,31 +1318,27 @@
 
 ```json
 {
-  "data": {
-    "pushEnabled": true,
-    "emailEnabled": false,
-    "types": {
-      "schedule_changed": true,
-      "announcement_created": true,
-      "homework_created": true,
-      "homework_deadline": true,
-      "file_uploaded": true,
-      "absence_created": true,
-      "absence_confirmed": true,
-      "absence_rejected": true
-    },
-    "quietHours": {
-      "enabled": false,
-      "start": "22:00",
-      "end": "08:00"
-    }
-  }
+  "scheduleChanges": true,
+  "cancellations": true,
+  "roomChanges": true,
+  "homeworkCreated": true,
+  "deadlines": true,
+  "messages": true,
+  "announcements": true,
+  "systemAlerts": true,
+  "quietHoursEnabled": false,
+  "quietHoursStart": "22:00:00",
+  "quietHoursEnd": "07:00:00",
+  "timeZone": "Asia/Omsk",
+  "telegramEnabled": true
 }
 ```
 
+`telegramEnabled` выключен по умолчанию. Для обычных событий категории и тихие часы применяются до доставки; события `urgent` проходят фильтры согласно общему правилу уведомлений. Пользователь может включить канал после привязки Telegram.
+
 ---
 
-### 5.6 PATCH `/notifications/settings`
+### 5.6 PATCH `/notifications/preferences`
 
 Обновить настройки.
 
@@ -1287,16 +1348,12 @@
 
 ```json
 {
-  "pushEnabled": true,
-  "types": {
-    "schedule_changed": true,
-    "homework_deadline": true
-  },
-  "quietHours": {
-    "enabled": true,
-    "start": "22:00",
-    "end": "08:00"
-  }
+  "scheduleChanges": true,
+  "deadlines": false,
+  "quietHoursEnabled": true,
+  "quietHoursStart": "22:00",
+  "quietHoursEnd": "07:00",
+  "timeZone": "Asia/Omsk"
 }
 ```
 
@@ -1710,21 +1767,28 @@
 | 4   | `/auth/refresh`                        | POST   | Public                | 10/мин     |
 | 5   | `/auth/logout`                         | POST   | Auth                  | —          |
 | 6   | `/users/me`                            | GET    | Auth                  | —          |
+| 6a  | `/users/me/favorites`                  | GET    | Student               | —          |
+| 6b  | `/users/me/favorites`                  | POST   | Student               | favorite   |
+| 6c  | `/users/me/favorites`                  | DELETE | Student               | favorite   |
 | 7   | `/users/me`                            | PATCH  | Auth                  | —          |
 | 8   | `/users/me/bind-group`                 | POST   | Auth                  | —          |
 | 9   | `/users/me`                            | DELETE | Auth                  | —          |
 | 10  | `/schedule/my`                         | GET    | student, teacher      | —          |
-| 11  | `/schedule/my-day`                     | GET    | student               | —          |
+| 11  | `/my-day`                              | GET    | Auth                  | —          |
 | 12  | `/schedule/lessons/:id`                | GET    | Auth                  | —          |
 | 13  | `/schedule/lessons/:id/changes`        | GET    | Auth                  | —          |
 | 14  | `/admin/schedule/upload`               | POST   | admin                 | 1/час      |
 | 15  | `/admin/schedule/sync`                 | POST   | admin                 | —          |
 | 16  | `/admin/schedule/sync-status`          | GET    | admin                 | —          |
 | 17  | `/pair-spaces/:lessonId`               | GET    | Auth                  | —          |
+| 17c | `/pair-spaces/:lessonId/timeline`      | GET    | Auth / role scope     | —          |
+| 17a | `/pair-spaces/:lessonId/personal-note` | GET    | Auth / lesson scope    | —          |
+| 17b | `/pair-spaces/:lessonId/personal-note` | PUT    | Auth / lesson scope    | —          |
 | 18  | `/pair-spaces/:lessonId/announcements` | POST   | teacher               | —          |
 | 19  | `/pair-spaces/:lessonId/homeworks`     | POST   | teacher               | —          |
 | 20  | `/pair-spaces/:lessonId/files`         | POST   | teacher               | —          |
 | 21  | `/homeworks/:id/submit`                | PATCH  | student               | —          |
+| 21a | `/pair-spaces/homeworks/:id/progress`  | PATCH  | student, lesson scope | —          |
 | 22  | `/pair-spaces/:lessonId/messages`      | GET    | Auth                  | —          |
 | 23  | `/pair-spaces/:lessonId/messages`      | POST   | Auth                  | 10/мин     |
 | 24  | `/absences`                            | POST   | student               | —          |
@@ -1760,3 +1824,7 @@
 | 54  | `/superadmin/connectors`               | GET    | superadmin            | —          |
 | 55  | `/superadmin/connectors/:id`           | PATCH  | superadmin            | —          |
 | 56  | `/auth/max`                            | POST   | Public (MAX initData) | —          |
+| 57  | `/auth/max/link`                       | POST   | JWT user              | —          |
+| 58  | `/auth/telegram/link`                  | POST   | JWT user              | —          |
+| 59  | `/auth/telegram/status`                | GET    | JWT user              | —          |
+| 60  | `/integrations/telegram/webhook`        | POST   | Secret header         | —          |

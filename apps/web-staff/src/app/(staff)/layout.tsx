@@ -10,6 +10,7 @@ import {
   type WorkspaceNavGroup,
 } from "@napare/ui/workspace-shell";
 import { getUnreadCount, getUser, isLoggedIn, logout } from "@/lib/api";
+import { StaffSpotlight } from "./StaffSpotlight";
 
 const groups: WorkspaceNavGroup[] = [
   {
@@ -129,6 +130,7 @@ export default function StaffLayout({ children }: { children: ReactNode }) {
     ),
   }));
   return (
+    <>
     <WorkspaceShell
       LinkComponent={AppLink}
       pathname={pathname}
@@ -142,5 +144,7 @@ export default function StaffLayout({ children }: { children: ReactNode }) {
     >
       {children}
     </WorkspaceShell>
+    <StaffSpotlight />
+    </>
   );
 }

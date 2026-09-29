@@ -123,7 +123,12 @@ export function validateMaxInitData(
   } catch {
     return null;
   }
-  if (!user || typeof user !== 'object' || typeof user.id !== 'number') return null;
+  if (
+    !user
+    || typeof user !== 'object'
+    || !Number.isSafeInteger(user.id)
+    || user.id <= 0
+  ) return null;
 
   return {
     maxUserId: String(user.id),

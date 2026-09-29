@@ -34,7 +34,7 @@ docs/
 ├── product/                      # Обзор продукта, персоны, метрики
 ├── architecture/                 # Система, стек, модель данных, права, коннекторы
 ├── modules/                      # Детали модулей (auth, schedule, pair-space, ...)
-├── clients/                      # Mobile, Web, MAX Mini-App
+├── clients/                      # Mobile, Web, MAX integration via web-portal
 ├── api/                          # OpenAPI = source of truth
 ├── database/                     # Обзор схемы + seed data
 ├── ui/                           # Дизайн-система, экраны, флоу, состояния

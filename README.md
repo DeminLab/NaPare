@@ -7,7 +7,6 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue.svg)](https://www.typescriptlang.org/)
 [![NestJS](https://img.shields.io/badge/NestJS-10-red.svg)](https://nestjs.com/)
 [![Next.js](https://img.shields.io/badge/Next.js-14-black.svg)](https://nextjs.org/)
-[![Flutter](https://img.shields.io/badge/Flutter-3.x-blue.svg)](https://flutter.dev/)
 
 ---
 
@@ -20,6 +19,7 @@
 - [Структура репозитория](#структура-репозитория)
 - [Технологический стек](#технологический-стек)
 - [Быстрый старт](#быстрый-старт)
+- [Демо кейса MAX](#демо-кейса-max)
 - [Локальная разработка](#локальная-разработка)
 - [Переменные окружения](#переменные-окружения)
 - [База данных](#база-данных)
@@ -45,9 +45,10 @@
 
 | Приложение | Платформа | Аудитория | Приоритет |
 |------------|-----------|-----------|-----------|
-| **Mobile App** | iOS + Android (Flutter) | Студенты, преподаватели | Критический |
-| **Web App** | Браузер (Next.js) | Кураторы, админы, преподаватели | Критический |
-| **MAX Mini-App** | Мессенджер MAX (React) | Студенты (быстрый доступ) | Высокий |
+| **Web App** | Браузер (Next.js) | Студенты, преподаватели, кураторы и администрация | Критический |
+| **MAX WebApp** | MAX открывает существующий сайт (`web-portal`) | Все пользователи NaPare | Высокий |
+
+Нативного iOS/Android-приложения в этой версии репозитория нет; продукт и кейс доступны через сайт и MAX WebApp.
 
 ---
 
@@ -92,6 +93,14 @@
 ### Общая схема
 
 ```
+MAX bot (Open) ──> MAX WebView ──> `/` or `/max/` ──> web-portal
+                                                        │ MAX Bridge initData
+                                                        ▼
+                                                   `/api/v1/auth/max`
+                                                        │ verified role
+                                                        ▼
+                                            student / staff / deanery / developer
+
 web-student ─┐
 web-staff ───┼──> NestJS API (/api/v1) ──> PostgreSQL
 web-admin ───┤              │
@@ -104,7 +113,7 @@ web-developer┘              ├────────────> Redis
 1. **Модульный монолит** — единый NestJS-процесс с чёткими границами модулей
 2. **Мультивузовость** — изоляция данных через `university_id` + Row Level Security
 3. **OpenAPI как source of truth** — спецификация генерируется из кода
-4. **TypeScript везде** — web + backend + max-miniapp
+4. **TypeScript в активных приложениях** — web + backend; MAX запускает существующий `web-portal`
 5. **AI-first** — документы ≤ 500 строк, чёткие заголовки, таблицы
 
 ### Архитектурные решения (ADR)
@@ -127,7 +136,8 @@ web-developer┘              ├────────────> Redis
 napare/
 ├── apps/
 │   ├── backend/          # NestJS API и TypeORM миграции
-│   ├── max-miniapp/      # React/Vite Mini App для MAX
+│   ├── web/              # Legacy монолит до разделения на portal и кабинеты
+│   ├── max-miniapp/      # Legacy исходники отдельного клиента; MAX открывает web-portal
 │   ├── web-student/      # Next.js для студентов
 │   ├── web-staff/        # Next.js для персонала и кураторов
 │   ├── web-admin/        # Next.js для администрации вуза
@@ -165,14 +175,10 @@ napare/
 
 | Слой | Технология | Версия | Обоснование |
 |------|------------|--------|-------------|
-| **Mobile** | Flutter | 3.x | Один кодобаза iOS + Android, нативная производительность |
-| **Mobile State** | Riverpod | 2.x | Простой, тестируемый стейт-менеджмент |
-| **Mobile Router** | go_router | latest | Декларативная навигация, deep links |
-| **Mobile HTTP** | dio | latest | Interceptors, retry, cancel |
 | **Web** | Next.js | 14+ (App Router) | SSR, отличный DX, адаптивность |
 | **Web State** | TanStack Query | 5.x | Кэширование, оптимистичные обновления |
 | **Web Styling** | Tailwind CSS | 3.x | Утилитарный CSS, быстрая разработка |
-| **MAX Mini-App** | React + Vite | latest | Стандарт для мини-приложений MAX |
+| **MAX WebApp** | `web-portal` + MAX Bridge | — | Открывает существующий сайт; сервер проверяет `initData` и связывает учётную запись |
 | **Backend** | NestJS | 10+ | Модульный монолит, OpenAPI из коробки |
 | **ORM** | TypeORM | 0.3+ | Миграции, декораторы, интеграция с NestJS |
 | **БД** | PostgreSQL | 16 | Надёжность, JSONB, полнотекстовый поиск, RLS |
@@ -197,7 +203,6 @@ napare/
 - **Node.js** 20+
 - **pnpm** 9+
 - **Docker Desktop** с Docker Compose v2
-- **Flutter** 3.22+ (для мобильного приложения)
 
 ### Установка
 
@@ -247,6 +252,26 @@ pnpm dev:developer
 | MinIO Console | `http://localhost:9001` |
 
 ---
+
+## Демо кейса MAX
+
+Кейс демонстрирует один сквозной сценарий: преподаватель показывает QR для пары, студент открывает общий сайт NaPare кнопкой MAX-бота, при первом запуске связывает аккаунт университета, затем сканирует QR камерой MAX или запасным сканером камеры MAX Web и получает результат отметки. Инструкции, предусловия и список доказательств находятся в [руководстве демо кейса](docs/hackathon-demo.md); сопоставление требований задания с артефактами и внешними шагами — в [карте соответствия кейсу](deliverables/educational-solutions/CASE-COMPLIANCE.md); исследовательский план и таблица замеров — в [материалах интервью и пилота](deliverables/educational-solutions/RESEARCH-PILOT.md).
+
+В репозитории нет паролей для защиты. Для отдельной демо-БД подготовьте связанные аккаунты и тестовую пару скриптом `scripts/prepare-max-attendance-demo.sh`; проверьте выбранный Docker Compose проект и БД до запуска. Скрипт выводит случайные пароли — передавайте их команде отдельно от репозитория.
+
+Для воспроизводимого запуска всех локальных компонентов из Docker подготовьте `.env` по `.env.example`, внесите случайные секреты, укажите `MAX_BOT_TOKEN` и URL тестового запуска, затем выполните одну команду:
+
+```powershell
+docker compose --env-file .env -f docker-compose.prod.yml up -d --build
+```
+
+Веб-вход и Mini App открываются через `http://localhost:8080/`; Swagger/OpenAPI — через `http://localhost:8080/api/v1/docs` и `/api/v1/docs-json`. Требуются Docker Compose v2 и доступ в интернет для загрузки базовых образов. Состав переменных и локальные порты перечислены в разделах [переменных окружения](#переменные-окружения), [локальной разработки](#локальная-разработка) и [Docker и деплой](#docker-и-деплой). Инструкции тестирования MAX приведены в [руководстве демо](docs/hackathon-demo.md).
+
+**Ожидаемый сценарий:** преподаватель входит в `/staff/attendance`, выбирает свою пару и показывает QR; студент открывает сайт кнопкой связанного MAX-бота, при первом запуске связывает университетскую учётную запись, сканирует QR и получает результат с переходом к пространству пары. Повторная отметка не создаёт вторую запись. Полные предусловия, подготовка synthetic-данных, шаги по ролям, ожидаемые состояния и ограничения приведены в [руководстве демо](docs/hackathon-demo.md); ссылки на эти инструкции являются частью комплекта сдачи.
+
+Для безопасной демо-БД задайте уникальные `COMPOSE_PROJECT_NAME=napare-demo` и `DB_NAME=napare_demo` в окружении запуска, поднимите стек с отдельным Docker volume, затем подготовьте данные существующей группы командой из руководства демо. Публичный бот MAX, bot token и HTTPS-сайт являются внешними настройками: MAX Bridge/CDN и клиент MAX невозможно воспроизвести внутри Docker. Демо-расписание помечено `source=hackathon-demo` и `syncStatus=synthetic`, а созданная при показе посещаемость не является реальной статистикой.
+
+Остановить стек без удаления базы можно командой `docker compose --env-file .env -f docker-compose.prod.yml down`; повторный запуск выполняется той же командой старта выше. Пароли и `MAX_BOT_TOKEN` не включайте в Git или публичную версию материалов; если кейс требует эти сведения на первом слайде, заполните отдельную закрытую копию для проверяющих и передайте способом, указанным организаторами. Порты production Compose, зависимости и остальные интеграции описаны в разделах ниже; полный сценарий приёмки — в [руководстве демо](docs/hackathon-demo.md).
 
 ## Локальная разработка
 
@@ -365,8 +390,8 @@ NEXT_PUBLIC_APP_NAME=НаПаре
 | `JWT_REFRESH_EXPIRATION` | Да | Время жизни refresh-токена (например, `30d`) |
 | `REDIS_HOST`, `REDIS_PORT` или `REDIS_URL` | Зависит от среды | Подключение к Redis |
 | `CORS_ORIGIN` | Production | Разрешённый web-оригин |
-| `MAX_BOT_TOKEN` | Для входа через MAX Mini App | Токен бота MAX; без него `POST /api/v1/auth/max` отвечает 503 |
-| `MAX_INIT_DATA_TTL_SECONDS` | Нет | Срок действия `initData` MAX; по умолчанию `3600` |
+| `MAX_BOT_TOKEN` | Для входа в сайт из MAX WebApp | Токен бота MAX; без него `POST /api/v1/auth/max` отвечает 503 |
+| `MAX_INIT_DATA_TTL_SECONDS` | Нет | Срок действия `initData` MAX; по умолчанию `900` |
 | `SENTRY_DSN` | Нет | DSN Sentry |
 | `STORAGE_ENDPOINT`, `STORAGE_BUCKET`, `STORAGE_ACCESS_KEY`, `STORAGE_SECRET_KEY`, `STORAGE_USE_SSL` | Для хранилища файлов | Конфигурация S3-хранилища |
 
@@ -712,7 +737,7 @@ docs/
 ├── product/                      # Обзор продукта, персоны, метрики
 ├── architecture/                 # Система, стек, модель данных, права
 ├── modules/                      # Детали модулей
-├── clients/                      # Mobile, Web, MAX Mini-App
+├── clients/                      # Mobile, Web, MAX website integration
 ├── api/                          # OpenAPI = source of truth
 ├── database/                     # Обзор схемы + seed data
 ├── ui/                           # Дизайн-система, экраны, флоу
@@ -771,7 +796,6 @@ docs/
 | Язык | Инструмент |
 |------|------------|
 | TypeScript | ESLint + Prettier |
-| Flutter | dartfmt + pana |
 
 ### Commit Messages (Conventional Commits)
 

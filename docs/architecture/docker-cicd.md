@@ -1,5 +1,7 @@
 # Docker и CI/CD Конфигурация
 
+> **Историческая конфигурация.** Примеры ниже относятся к прежнему Compose со службой `web`/`apps/web` и не описывают текущую production-сборку. Для актуального запуска используйте корневой [DEPLOY.md](../../DEPLOY.md), `docker-compose.prod.yml` и [README](../../README.md).
+
 ## docker-compose.dev.yml
 
 ```yaml

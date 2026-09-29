@@ -14,9 +14,11 @@ import { Homework } from '../pair-space/entities/homework.entity';
 import { HomeworkSubmission } from '../pair-space/entities/homework-submission.entity';
 import { FileAttachment } from '../pair-space/entities/file-attachment.entity';
 import { DiscussionMessage } from '../pair-space/entities/discussion-message.entity';
+import { PersonalLessonNote } from '../pair-space/entities/personal-lesson-note.entity';
 import { Absence } from '../absences/entities/absence.entity';
 import { AbsenceConfirmation } from '../absences/entities/absence-confirmation.entity';
 import { AttendanceRecord } from '../absences/entities/attendance-record.entity';
+import { AttendanceQrSession } from '../absences/entities/attendance-qr-session.entity';
 import { Notification } from '../notifications/entities/notification.entity';
 import { DeviceToken } from '../notifications/entities/device-token.entity';
 import { AuditLog } from '../common/entities/audit-log.entity';
@@ -30,6 +32,8 @@ import { AcademicEvent } from '../academic/entities/academic-event.entity';
 import { CourseSpace } from '../academic/entities/course-space.entity';
 import { LessonSpace } from '../academic/entities/lesson-space.entity';
 import { ScheduleChange } from '../academic/entities/schedule-change.entity';
+import { Favorite } from '../favorites/entities/favorite.entity';
+import { HomeworkProgress } from '../pair-space/entities/homework-progress.entity';
 
 const entities = [
   University,
@@ -45,9 +49,11 @@ const entities = [
   HomeworkSubmission,
   FileAttachment,
   DiscussionMessage,
+  PersonalLessonNote,
   Absence,
   AbsenceConfirmation,
   AttendanceRecord,
+  AttendanceQrSession,
   Notification,
   DeviceToken,
   AuditLog,
@@ -61,6 +67,8 @@ const entities = [
   CourseSpace,
   LessonSpace,
   ScheduleChange,
+  Favorite,
+  HomeworkProgress,
 ];
 
 @Module({

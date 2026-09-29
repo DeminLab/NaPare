@@ -4,9 +4,13 @@
 
 `apps/max-miniapp/src/lib/api.ts`
 
+## Status
+
+Historical source card. `apps/max-miniapp` is not deployed; MAX opens the existing `web-portal`. See [current MAX client flow](../../clients/max-miniapp.md).
+
 ## Scope
 
-API client of the MAX Mini App: token storage (localStorage with in-memory fallback), automatic refresh after 401, `ApiError` mapping of backend `{statusCode, code, message}` bodies, and typed calls — `/auth/max`, `/auth/login`, `/my-day`, `/schedule/my`, `/notifications`, `/users/me`, `/pair-spaces/:lessonId`, `/absences`.
+Historical API client of the retired standalone MAX Mini App: token storage (localStorage with in-memory fallback), automatic refresh after 401, `ApiError` mapping of backend `{statusCode, code, message}` bodies, and typed calls.
 
 ## Read sequence
 

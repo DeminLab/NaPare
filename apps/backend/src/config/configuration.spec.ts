@@ -10,6 +10,8 @@ const jwtEnvironment = {
   JWT_REFRESH_SECRET: 'refresh-secret-for-tests',
   JWT_ACCESS_EXPIRATION: '15m',
   JWT_REFRESH_EXPIRATION: '30d',
+  RATE_LIMIT_WINDOW_MS: '60000',
+  RATE_LIMIT_MAX: '100',
 };
 
 describe('environment configuration', () => {
@@ -38,6 +40,8 @@ describe('environment configuration', () => {
     expect(config.getOrThrow<string>('auth.jwt.refreshSecret')).toBe(
       jwtEnvironment.JWT_REFRESH_SECRET,
     );
+    expect(config.getOrThrow<number>('rateLimit.windowMs')).toBe(60000);
+    expect(config.getOrThrow<number>('rateLimit.max')).toBe(100);
   });
 
   it('fails when JWT_SECRET is missing', () => {

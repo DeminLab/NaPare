@@ -37,6 +37,9 @@ export class NotificationPreference {
   systemAlerts: boolean;
 
   @Column({ default: false })
+  telegramEnabled: boolean;
+
+  @Column({ default: false })
   quietHoursEnabled: boolean;
 
   @Column({ type: 'time', nullable: true })
@@ -44,6 +47,9 @@ export class NotificationPreference {
 
   @Column({ type: 'time', nullable: true })
   quietHoursEnd: string | null;
+
+  @Column({ type: 'varchar', length: 64, default: 'UTC' })
+  timeZone: string;
 
   @UpdateDateColumn()
   updatedAt: Date;

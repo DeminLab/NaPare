@@ -9,14 +9,13 @@
 1. **Модульный монолит** — единый NestJS-процесс с чёткими границами модулей
 2. **Мультивузовость** — изоляция данных через `university_id` + RLS
 3. **OpenAPI как source of truth** — спецификация генерируется из кода
-4. **TypeScript везде** — web + backend + max-miniapp
+4. **TypeScript везде** — web + backend; legacy `max-miniapp` не входит в production Compose
 5. **AI-first** — документы ≤ 500 строк, чёткие заголовки, таблицы
 
 ## Стек технологий
 
 | Слой | Технология |
 |------|------------|
-| Mobile | Flutter 3.x, Riverpod, go_router, dio |
 | Web | Next.js 14+, TanStack Query, Tailwind CSS |
 | Backend | NestJS 10+, TypeORM, PostgreSQL 16 |
 | Кэш | Redis 7 |
@@ -54,9 +53,9 @@
 | Компонент | Документ | Описание |
 |-----------|----------|----------|
 | Backend | [backend-architecture.md](backend-architecture.md) | NestJS: модули, сервисы, контроллеры, паттерны |
-| Mobile | [mobile-architecture.md](mobile-architecture.md) | Flutter: провайдеры, репозитории, модели |
-| Web | [web-architecture.md](web-architecture.md) | Next.js: компоненты, хуки, страницы |
-| MAX Mini-App | [max-miniapp-architecture.md](max-miniapp-architecture.md) | React: MAX интеграция |
+| Mobile (not shipped) | [mobile-architecture.md](mobile-architecture.md) | Historical design notes; no mobile app source is included |
+| Web clients | [карта приложений](../ai/project-map.md) | Текущие Next.js-клиенты и MAX portal; [web-architecture.md](web-architecture.md) описывает legacy `apps/web` |
+| MAX login | [../clients/max-miniapp.md](../clients/max-miniapp.md) | Сайт + MAX Bridge; legacy miniapp architecture retained for reference |
 | Shared Types | [shared-types-architecture.md](shared-types-architecture.md) | Общие типы и интерфейсы |
 
 ## Детальные реализации модулей
@@ -80,9 +79,13 @@
 napare/
 ├── apps/
 │   ├── backend/        # NestJS API
-│   ├── mobile/         # Flutter
-│   ├── web/            # Next.js
-│   └── max-miniapp/    # React + Vite
+│   ├── web-portal/     # Публичный сайт и MAX Bridge вход
+│   ├── web-student/    # Кабинет студента
+│   ├── web-staff/      # Кабинет преподавателя и куратора
+│   ├── web-admin/      # Кабинет университета
+│   ├── web-developer/  # Технический кабинет
+│   ├── web/            # Legacy монолит, не production
+│   └── max-miniapp/    # Legacy Vite клиент, не production
 ├── packages/
 │   ├── shared/         # Общие типы, константы
 │   ├── ui/             # Общие UI-компоненты

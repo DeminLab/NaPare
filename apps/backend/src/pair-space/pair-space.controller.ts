@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Patch,
+  Put,
   Body,
   Param,
   Query,
@@ -23,6 +24,8 @@ import { CreateHomeworkDto } from "./dto/create-homework.dto";
 import { SubmitHomeworkDto } from "./dto/submit-homework.dto";
 import { CreateMessageDto } from "./dto/create-message.dto";
 import { CreateFileDto } from "./dto/create-file.dto";
+import { UpsertPersonalNoteDto } from "./dto/upsert-personal-note.dto";
+import { UpdateHomeworkProgressDto } from "./dto/update-homework-progress.dto";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
 import { RolesGuard } from "../common/guards/roles.guard";
 import { Roles } from "../common/decorators/roles.decorator";
@@ -46,6 +49,18 @@ export class PairSpaceController {
   @ApiResponse({ status: 404, description: "Not found" })
   async findByLesson(@Param("lessonId") lessonId: string, @Request() req) {
     return this.pairSpaceService.getOrCreateByLesson(
+      lessonId,
+      req.user.universityId,
+    );
+  }
+
+  @Get(":lessonId/timeline")
+  @ApiOperation({ summary: "Получить историю предмета в доступном scope" })
+  @ApiOkResponse({ type: PaginatedResponseDto, description: "Хронология занятий и материалов получена" })
+  @ApiResponse({ status: 401, description: "Unauthorized" })
+  @ApiResponse({ status: 403, description: "Forbidden" })
+  async getSubjectTimeline(@Param("lessonId") lessonId: string, @Request() req) {
+    return this.pairSpaceService.getSubjectTimeline(
       lessonId,
       req.user.universityId,
     );
@@ -154,6 +169,22 @@ export class PairSpaceController {
     return this.pairSpaceService.getMessages(pairSpace.id, pagination);
   }
 
+  @Get(":lessonId/personal-note")
+  @ApiOperation({ summary: "Получить личную заметку к занятию" })
+  async getPersonalNote(@Param("lessonId") lessonId: string, @Request() req) {
+    return this.pairSpaceService.getPersonalNote(lessonId, req.user.universityId);
+  }
+
+  @Put(":lessonId/personal-note")
+  @ApiOperation({ summary: "Сохранить личную заметку к занятию" })
+  async savePersonalNote(
+    @Param("lessonId") lessonId: string,
+    @Request() req,
+    @Body() dto: UpsertPersonalNoteDto,
+  ) {
+    return this.pairSpaceService.savePersonalNote(lessonId, req.user.universityId, dto);
+  }
+
   @Post(":lessonId/messages")
   @ApiOperation({ summary: "Отправить сообщение" })
   @ApiResponse({ status: 201, description: "Сообщение отправлено" })
@@ -188,5 +219,18 @@ export class PairSpaceController {
       req.user.id,
       submitHomeworkDto,
     );
+  }
+
+  @Patch("homeworks/:id/progress")
+  @Roles(UserRole.STUDENT)
+  @ApiOperation({ summary: "Обновить личный статус подготовки к занятию" })
+  @ApiResponse({ status: 200, description: "Личный статус подготовки сохранён; статус сдачи в LMS не меняется" })
+  @ApiResponse({ status: 403, description: "Подготовка не относится к доступной группе пользователя" })
+  async updateHomeworkProgress(
+    @Param("id") id: string,
+    @Request() req,
+    @Body() dto: UpdateHomeworkProgressDto,
+  ) {
+    return this.pairSpaceService.updateHomeworkProgress(id, req.user.id, dto);
   }
 }

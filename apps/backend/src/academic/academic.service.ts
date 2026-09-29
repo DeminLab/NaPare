@@ -220,7 +220,8 @@ export class AcademicService {
   async updateOccurrence(id: string, dto: UpdateLessonOccurrenceDto): Promise<LessonOccurrence> {
     const occurrence = await this.occurrenceRepository.findOne({ where: { id } });
     if (!occurrence) throw new NotFoundException(`Lesson occurrence with id ${id} not found`);
-    await this.assertCourseManageable(await this.getCourse(occurrence.courseId));
+    const course = await this.getCourse(occurrence.courseId);
+    await this.assertCourseManageable(course);
     const originalValue = occurrenceSnapshot(occurrence);
     Object.assign(occurrence, {
       ...dto,
@@ -242,12 +243,17 @@ export class AcademicService {
       }));
       return { saved, changeId: change.id };
     });
-    const eventType = originalValue.room !== updated.saved.room
+    const eventType = updated.saved.status === 'cancelled' && originalValue.status !== 'cancelled'
+      ? 'lesson.cancelled'
+      : originalValue.room !== updated.saved.room
       ? 'room.changed'
       : originalValue.startsAt !== updated.saved.startsAt.toISOString()
         || originalValue.endsAt !== updated.saved.endsAt.toISOString()
         ? 'lesson.rescheduled'
         : 'lesson.changed';
+    const scheduleDeepLink = updated.saved.legacyLessonId
+      ? `/pair-space/${updated.saved.legacyLessonId}`
+      : `/week?date=${updated.saved.startsAt.toISOString().slice(0, 10)}`;
     await this.eventBus.publish({
       idempotencyKey: `academic-schedule-change:${updated.changeId}`,
       type: eventType,
@@ -255,13 +261,14 @@ export class AcademicService {
       actor: { id: actor.id, type: 'user', role: actor.role },
       target: { type: 'lesson_occurrence', id: updated.saved.id },
       payload: {
+        subject: course.name,
         originalValue,
         newValue: occurrenceSnapshot(updated.saved),
         reason: dto.changeReason ?? null,
         source: 'manual',
         groupId: updated.saved.groupId,
         teacherId: updated.saved.teacherId,
-        deepLink: `/academic/occurrences/${updated.saved.id}`,
+        deepLink: scheduleDeepLink,
       },
       priority: 'high',
     });

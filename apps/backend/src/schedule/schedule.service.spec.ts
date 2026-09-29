@@ -9,6 +9,7 @@ import { Group } from "../users/entities/group.entity";
 import { EventEmitter2 } from "@nestjs/event-emitter";
 import { TenantContext } from "../common/tenant/tenant-context";
 import { DataSource } from "typeorm";
+import { RaspScraperService } from "../auth/rasp-scraper.service";
 
 describe("ScheduleService", () => {
   let service: ScheduleService;
@@ -28,6 +29,7 @@ describe("ScheduleService", () => {
     save: jest.fn(),
   };
   const mockGroupRepo = { findOne: jest.fn().mockResolvedValue(null) };
+  const mockRaspScraper = { getSchedule: jest.fn().mockResolvedValue([]) };
   const mockTenantContext = { assertAccess: jest.fn(), getUser: jest.fn() };
 
   beforeEach(async () => {
@@ -37,6 +39,7 @@ describe("ScheduleService", () => {
         { provide: getRepositoryToken(Lesson), useValue: mockLessonRepo },
         { provide: getRepositoryToken(LessonChange), useValue: mockChangeRepo },
         { provide: getRepositoryToken(Group), useValue: mockGroupRepo },
+        { provide: RaspScraperService, useValue: mockRaspScraper },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
         { provide: TenantContext, useValue: mockTenantContext },
         { provide: DataSource, useValue: { transaction: jest.fn() } },
@@ -46,6 +49,7 @@ describe("ScheduleService", () => {
     service = module.get<ScheduleService>(ScheduleService);
     jest.clearAllMocks();
     mockGroupRepo.findOne.mockResolvedValue(null);
+    mockRaspScraper.getSchedule.mockResolvedValue([]);
     mockTenantContext.getUser.mockReturnValue(undefined);
   });
 
@@ -141,6 +145,48 @@ describe("ScheduleService", () => {
           where: expect.objectContaining({ groupId: "group-uuid" }),
         }),
       );
+    });
+
+    it("filters SIBIT lessons by the calendar-day portions of timezone-adjusted bounds", async () => {
+      mockRaspScraper.getSchedule.mockResolvedValue([
+        {
+          lessonId: "previous-local-day",
+          groupId: "12136",
+          groupName: "ГМУ-25",
+          date: "2026-09-28",
+          dayOfWeek: 1,
+          startTime: "20:00",
+          endTime: "21:00",
+          pairNumber: 1,
+          weekType: "both",
+          subject: "Вчера",
+        },
+        {
+          lessonId: "local-day",
+          groupId: "12136",
+          groupName: "ГМУ-25",
+          date: "2026-09-29",
+          dayOfWeek: 2,
+          startTime: "02:00",
+          endTime: "03:00",
+          pairNumber: 1,
+          weekType: "both",
+          subject: "Сегодня",
+        },
+      ]);
+
+      const result = await service.findForStudentDateRange(
+        "uni-1",
+        "12136",
+        "2026-09-28T18:00:00.000Z",
+        "2026-10-29T17:59:59.999Z",
+        undefined,
+        "Asia/Omsk",
+      );
+
+      expect(result.data.map((lesson) => lesson.id)).toEqual([
+        "rasp-local-day-12136",
+      ]);
     });
   });
 

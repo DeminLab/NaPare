@@ -90,7 +90,7 @@ export default function TodayPage() {
     setError("");
     Promise.all([
       getUser(),
-      apiFetch<MyDayResponse>("/my-day"),
+      apiFetch<MyDayResponse>(`/my-day?timeZone=${encodeURIComponent(Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC")}`),
       getNotifications(),
     ])
       .then(([profile, today, notificationItems]) => {

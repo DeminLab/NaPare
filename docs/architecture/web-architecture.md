@@ -1,5 +1,7 @@
 # Архитектура Web (Next.js)
 
+> **Исторический документ для `apps/web`.** Этот монолит не является текущим web-клиентом и не разворачивается в production Compose. Сейчас используются `apps/web-portal`, `apps/web-student`, `apps/web-staff`, `apps/web-admin` и `apps/web-developer`; см. [карту проекта](../ai/project-map.md) и [MAX flow](../clients/max-miniapp.md).
+
 ## Общая структура
 
 ```

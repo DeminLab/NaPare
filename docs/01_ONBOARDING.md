@@ -58,10 +58,12 @@ cd ../mobile
 flutter pub get
 flutter run
 
-# 6. MAX Mini-App
-cd ../max-miniapp
-pnpm install
-pnpm run dev
+# 6. MAX WebApp
+# Separate MAX client is not part of the deployed flow.
+# Run apps/web-portal as the website; MAX Bot opens the same public URL.
+# MAX_BOT_TOKEN must be configured in the backend to enable MAX authentication.
+# Optional Telegram linking uses TELEGRAM_BOT_TOKEN, TELEGRAM_BOT_USERNAME and
+# TELEGRAM_WEBHOOK_SECRET; see docs/clients/telegram-bot.md for webhook setup.
 ```
 
 **Требования:** Node.js 20+, pnpm, Flutter 3.22+, Docker + Docker Compose.

@@ -15,7 +15,7 @@
 | Источник                                              | Что берётся                                                                          |
 | ----------------------------------------------------- | ------------------------------------------------------------------------------------ |
 | Schedule (lessons)                                    | Пары на сегодня (`isChanged` — индикатор изменений)                                  |
-| PairSpace (announcements, homeworks, files, messages) | Пространства сегодняшних пар; `homeworks` — legacy-имя ориентира «подготовка к паре» |
+| PairSpace (announcements, homeworks, files, messages) | Пространства сегодняшних пар; `homeworks` — legacy-имя ориентира «подготовка к паре»; для студента список подготовки строится по занятиям следующих 30 дней |
 | Absences (`Absence`)                                  | Отсутствия за сегодня                                                                |
 | Notifications                                         | Количество непрочитанных (`unreadCount`)                                             |
 
@@ -25,20 +25,32 @@
 
 | Endpoint         | Метод | Описание                             |
 | ---------------- | ----- | ------------------------------------ |
-| `/api/v1/my-day` | GET   | Агрегированные данные для «Мой день» |
+| `/api/v1/my-day` | GET   | Агрегированные данные для «Мой день»; опциональный query `timeZone` задаёт IANA timezone устройства |
 
-Ответ (`apps/backend/src/my-day/my-day.service.ts:49-64`):
+Ответ (`apps/backend/src/my-day/my-day.service.ts`):
 
 ```json
 {
   "date": "2026-09-26",
   "lessons": [],
   "pairSpaces": [],
+  "upcomingPreparations": [
+    {
+      "id": "preparation-uuid",
+      "title": "Повторить тему",
+      "description": null,
+      "deadline": "2026-09-30T12:00:00.000Z",
+      "lessonId": "lesson-uuid",
+      "subject": "Математика"
+    }
+  ],
   "absences": [],
   "notifications": { "unreadCount": 0 },
   "summary": { "totalLessons": 0, "changedLessons": 0, "totalAbsences": 0 }
 }
 ```
+
+`upcomingPreparations` выдаётся только роли student и содержит опубликованные Pair Space элементы подготовки для её расписания на ближайшие 30 дней, включая личный статус `progress` (`todo`, `in_progress`, `done`) и список `subtasks`. Личные изменения ставятся в аккаунтную офлайн-очередь. Элементы отсортированы по сроку, записи без срока идут последними. Для других ролей это поле пустое. Поле `date` и выбор дневного расписания вычисляются в `timeZone` запроса; если его нет, используется UTC. Некорректная IANA timezone возвращает 400.
 
 Полный OpenAPI: [api/README.md](../api/README.md).
 
@@ -65,6 +77,7 @@
 - Pull-to-refresh
 - Понятные пустые состояния («Сегодня пар нет», «Нет горящих дедлайнов»)
 - Тёмная тема
+- Если два занятия перекрываются по времени, показать точный интервал пересечения и ссылки на обе пары.
 
 ---
 
@@ -73,16 +86,19 @@
 **Фактическая логика агрегации (без AI, `my-day.service.ts`):**
 
 ```
-lessons    = по роли: student → findForStudentDate(university, group, today)
-                       teacher → findByTeacher(university, user, today)
-                       иначе   → findByDate(university, today)
+lessons    = по роли и календарным границам today в timeZone: student → findForStudentDateRange(university, group, UTC dayStart, UTC dayEnd, ..., timeZone), затем отбор занятий today и диапазона подготовки по локальной календарной дате
+                       teacher → findByTeacherDateRange(university, user, UTC dayStart, UTC dayEnd)
+                       иначе   → findByDateRange(university, UTC dayStart, UTC dayEnd)
 pairSpaces = pairSpaceService.getOrCreateByLesson(lesson.id, universityId) для каждой доступной пары
-absences   = absencesService.findByStudent(userId), фильтр startDate == today
+upcomingPreparations = student: опубликованная подготовка и личный статус по UUID занятий role-scoped диапазона расписания
+absences   = absencesService.findByStudent(userId), фильтр локальной даты startDate == today в timeZone
 unread     = notificationsService.getUnreadCount(userId)
 summary    = { totalLessons, changedLessons (lessons.isChanged), totalAbsences (все пропуски) }
 ```
 
-Горящие дедлайны и новый контент отдельно не вычисляются: клиент может получить подготовку к паре и объявления из `pairSpaces[].homeworks` / `pairSpaces[].announcements`. Сдачи и оценки в этот агрегат не входят — ими управляет Moodle.
+Студенческий экран показывает `upcomingPreparations` как единый список сроков и связывает каждый элемент с пространством его пары. Публикации и сроки остаются данными Pair Space. Личный статус синхронизируется с аккаунтом; при потере сети изменение сохраняется в локальной очереди конкретного аккаунта и отправляется при восстановлении связи. Он не считается сдачей; фактическая отправка и оценки остаются в Moodle.
+
+На карточках «Моего дня» сроки подписываются по локальной календарной дате: сегодня и завтра показывают время, сроки в ближайшие шесть дней — число дней и время, более дальние — дату. Значок срочности не называет срок через неделю или месяц «сроком на этой неделе».
 
 1. **Пустые состояния:** «Сегодня пар нет», «Нет горящих дедлайнов», «Нет нового контента»
 2. **Кэширование:** при слабом интернете показывать последнее состояние

@@ -147,7 +147,7 @@ universityId: 550e8400-...
 ## 4. «Мой день» — агрегация
 
 ```http
-GET /api/v1/schedule/my-day
+GET /api/v1/my-day
 Authorization: Bearer eyJ...
 ```
 

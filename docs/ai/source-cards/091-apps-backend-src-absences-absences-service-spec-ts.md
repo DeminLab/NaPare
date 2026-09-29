@@ -21,6 +21,7 @@ Trace consumers and tests before changing data or authorization behavior.
 ## Verification
 
 ```powershell
+pnpm --filter @napare/backend exec jest src/absences/absences.service.spec.ts --runInBand
 pnpm --filter @napare/backend exec tsc --noEmit
 ```
 

@@ -7,6 +7,7 @@ import { Homework } from "./entities/homework.entity";
 import { FileAttachment } from "./entities/file-attachment.entity";
 import { DiscussionMessage } from "./entities/discussion-message.entity";
 import { HomeworkSubmission } from "./entities/homework-submission.entity";
+import { HomeworkProgress } from "./entities/homework-progress.entity";
 import { ForbiddenException, NotFoundException } from "@nestjs/common";
 import { TenantContext } from "../common/tenant/tenant-context";
 import { UserRole } from "../auth/interfaces/user-role";
@@ -14,24 +15,33 @@ import { EventBusService } from "../events/event-bus.service";
 import { Lesson } from "../schedule/entities/lesson.entity";
 import { Group } from "../users/entities/group.entity";
 import { University } from "../users/entities/university.entity";
+import { PersonalLessonNote } from "./entities/personal-lesson-note.entity";
 
 describe("PairSpaceService", () => {
   let service: PairSpaceService;
+  let pairSpaceRepository: ReturnType<typeof mockRepo>;
+  let personalNoteRepository: ReturnType<typeof mockRepo>;
+  let tenantContext: { assertAccess: jest.Mock; getUser: jest.Mock };
 
   const mockRepo = (name: string) => ({
     find: jest.fn().mockResolvedValue([]),
     findOne: jest.fn().mockResolvedValue(null),
+    upsert: jest.fn().mockResolvedValue(undefined),
+    delete: jest.fn().mockResolvedValue(undefined),
     create: jest.fn().mockImplementation((dto) => ({ id: "1", ...dto })),
     save: jest.fn().mockImplementation((entity) => Promise.resolve(entity)),
   });
 
   beforeEach(async () => {
+    pairSpaceRepository = mockRepo("PairSpace");
+    personalNoteRepository = mockRepo("PersonalLessonNote");
+    tenantContext = { assertAccess: jest.fn(), getUser: jest.fn() };
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PairSpaceService,
         {
           provide: getRepositoryToken(PairSpace),
-          useValue: mockRepo("PairSpace"),
+          useValue: pairSpaceRepository,
         },
         {
           provide: getRepositoryToken(Announcement),
@@ -53,9 +63,14 @@ describe("PairSpaceService", () => {
           provide: getRepositoryToken(HomeworkSubmission),
           useValue: mockRepo("HomeworkSubmission"),
         },
+        { provide: getRepositoryToken(HomeworkProgress), useValue: mockRepo("HomeworkProgress") },
+        {
+          provide: getRepositoryToken(PersonalLessonNote),
+          useValue: personalNoteRepository,
+        },
         {
           provide: TenantContext,
-          useValue: { assertAccess: jest.fn(), getUser: jest.fn() },
+          useValue: tenantContext,
         },
       ],
     }).compile();
@@ -65,6 +80,123 @@ describe("PairSpaceService", () => {
 
   it("should be defined", () => {
     expect(service).toBeDefined();
+  });
+
+  describe("personal lesson notes", () => {
+    const lessonId = "lesson-1";
+    const pairSpace = { id: "space-1", lessonId, universityId: "uni-1" };
+    const user = { id: "user-1", universityId: "uni-1", role: UserRole.STUDENT, groupId: "group-1" };
+
+    beforeEach(() => {
+      tenantContext.getUser.mockReturnValue(user);
+      pairSpaceRepository.findOne.mockResolvedValue(pairSpace);
+      tenantContext.assertAccess.mockImplementation(() => undefined);
+    });
+
+    it("returns only the current user's note within the authorized pair space", async () => {
+      const note = { pairSpaceId: "space-1", universityId: "uni-1", userId: "user-1", content: "Read chapter 4" };
+      personalNoteRepository.findOne.mockResolvedValue(note);
+      // A minimal lesson repository lets the service enforce student group scope.
+      const module = await Test.createTestingModule({
+        providers: [
+          PairSpaceService,
+          { provide: getRepositoryToken(PersonalLessonNote), useValue: personalNoteRepository },
+          { provide: getRepositoryToken(PairSpace), useValue: pairSpaceRepository },
+          { provide: getRepositoryToken(Announcement), useValue: mockRepo("Announcement") },
+          { provide: getRepositoryToken(Homework), useValue: mockRepo("Homework") },
+          { provide: getRepositoryToken(FileAttachment), useValue: mockRepo("FileAttachment") },
+          { provide: getRepositoryToken(DiscussionMessage), useValue: mockRepo("DiscussionMessage") },
+          { provide: getRepositoryToken(HomeworkSubmission), useValue: mockRepo("HomeworkSubmission") },
+            { provide: getRepositoryToken(HomeworkProgress), useValue: mockRepo("HomeworkProgress") },
+          { provide: TenantContext, useValue: tenantContext },
+          { provide: getRepositoryToken(Lesson), useValue: { findOne: jest.fn().mockResolvedValue({ id: lessonId, universityId: "uni-1", groupId: "group-1" }) } },
+        ],
+      }).compile();
+      const scopedService = module.get<PairSpaceService>(PairSpaceService);
+
+      await expect(scopedService.getPersonalNote(lessonId, "uni-1")).resolves.toBe(note);
+      expect(personalNoteRepository.findOne).toHaveBeenCalledWith({ where: { pairSpaceId: "space-1", universityId: "uni-1", userId: "user-1" } });
+    });
+
+    it("upserts a note under the authenticated user and deletes it when cleared", async () => {
+      // For a student, provide the role-scope repository in a focused instance.
+      const module = await Test.createTestingModule({
+        providers: [
+          PairSpaceService,
+          { provide: getRepositoryToken(PersonalLessonNote), useValue: personalNoteRepository },
+          { provide: getRepositoryToken(PairSpace), useValue: pairSpaceRepository },
+          { provide: getRepositoryToken(Announcement), useValue: mockRepo("Announcement") },
+          { provide: getRepositoryToken(Homework), useValue: mockRepo("Homework") },
+          { provide: getRepositoryToken(FileAttachment), useValue: mockRepo("FileAttachment") },
+          { provide: getRepositoryToken(DiscussionMessage), useValue: mockRepo("DiscussionMessage") },
+          { provide: getRepositoryToken(HomeworkSubmission), useValue: mockRepo("HomeworkSubmission") },
+            { provide: getRepositoryToken(HomeworkProgress), useValue: mockRepo("HomeworkProgress") },
+          { provide: TenantContext, useValue: tenantContext },
+          { provide: getRepositoryToken(Lesson), useValue: { findOne: jest.fn().mockResolvedValue({ id: lessonId, universityId: "uni-1", groupId: "group-1" }) } },
+        ],
+      }).compile();
+      const scopedService = module.get<PairSpaceService>(PairSpaceService);
+      const note = { id: "note-1", content: "Review the examples" };
+      personalNoteRepository.findOne.mockResolvedValue(note);
+
+      await expect(scopedService.savePersonalNote(lessonId, "uni-1", { content: note.content })).resolves.toBe(note);
+      expect(personalNoteRepository.upsert).toHaveBeenCalledWith({ pairSpaceId: "space-1", universityId: "uni-1", userId: "user-1", content: note.content }, { conflictPaths: ["pairSpaceId", "userId"] });
+      await expect(scopedService.savePersonalNote(lessonId, "uni-1", { content: "" })).resolves.toBeNull();
+      expect(personalNoteRepository.delete).toHaveBeenCalledWith({ pairSpaceId: "space-1", userId: "user-1", universityId: "uni-1" });
+    });
+  });
+
+  describe("listPreparationsForLessons", () => {
+    it("scopes preparation reminders to the tenant and supplied lesson ids", async () => {
+      const lessonId = "8d4f43a2-0b62-4d5e-85b1-c3e1eb730b56";
+      pairSpaceRepository.find.mockResolvedValue([
+        {
+          lessonId,
+          subject: "Математика",
+          homeworks: [
+            {
+              id: "prep-later",
+              title: "Подготовить вопросы",
+              deadline: new Date("2026-10-02T12:00:00.000Z"),
+            },
+            {
+              id: "prep-soon",
+              title: "Прочитать главу",
+              deadline: new Date("2026-09-30T12:00:00.000Z"),
+            },
+            { id: "prep-no-date", title: "Повторить тему", deadline: null },
+          ],
+        },
+      ]);
+
+      const result = await service.listPreparationsForLessons(
+        [lessonId, "rasp-external-lesson"],
+        "university-1",
+      );
+
+      expect(tenantContext.assertAccess).toHaveBeenCalledWith("university-1");
+      const findOptions = pairSpaceRepository.find.mock.calls[0][0];
+      expect(findOptions.where.universityId).toBe("university-1");
+      expect(findOptions.where.lessonId).toMatchObject({
+        _type: "in",
+        _value: [lessonId],
+      });
+      expect(result.map((item) => item.id)).toEqual([
+        "prep-soon",
+        "prep-later",
+        "prep-no-date",
+      ]);
+      expect(result[0]).toMatchObject({
+        lessonId,
+        subject: "Математика",
+      });
+    });
+
+    it("does not query for an empty schedule", async () => {
+      await expect(service.listPreparationsForLessons([], "university-1"))
+        .resolves.toEqual([]);
+      expect(pairSpaceRepository.find).not.toHaveBeenCalled();
+    });
   });
 
   describe("findByLesson", () => {
@@ -92,6 +224,7 @@ describe("PairSpaceService", () => {
       const module2: TestingModule = await Test.createTestingModule({
         providers: [
           PairSpaceService,
+          { provide: getRepositoryToken(PersonalLessonNote), useValue: personalNoteRepository },
           { provide: getRepositoryToken(PairSpace), useValue: pairSpaceRepo },
           {
             provide: getRepositoryToken(Announcement),
@@ -113,6 +246,7 @@ describe("PairSpaceService", () => {
             provide: getRepositoryToken(HomeworkSubmission),
             useValue: mockRepo("HomeworkSubmission"),
           },
+          { provide: getRepositoryToken(HomeworkProgress), useValue: mockRepo("HomeworkProgress") },
           { provide: getRepositoryToken(Lesson), useValue: lessonRepo },
           {
             provide: TenantContext,
@@ -161,6 +295,7 @@ describe("PairSpaceService", () => {
       const module2: TestingModule = await Test.createTestingModule({
         providers: [
           PairSpaceService,
+          { provide: getRepositoryToken(PersonalLessonNote), useValue: personalNoteRepository },
           { provide: getRepositoryToken(PairSpace), useValue: pairSpaceRepo },
           {
             provide: getRepositoryToken(Announcement),
@@ -182,6 +317,7 @@ describe("PairSpaceService", () => {
             provide: getRepositoryToken(HomeworkSubmission),
             useValue: mockRepo("HomeworkSubmission"),
           },
+          { provide: getRepositoryToken(HomeworkProgress), useValue: mockRepo("HomeworkProgress") },
           { provide: getRepositoryToken(Lesson), useValue: lessonRepo },
           { provide: getRepositoryToken(Group), useValue: groupRepo },
           {
@@ -235,6 +371,7 @@ describe("PairSpaceService", () => {
       const module2: TestingModule = await Test.createTestingModule({
         providers: [
           PairSpaceService,
+          { provide: getRepositoryToken(PersonalLessonNote), useValue: personalNoteRepository },
           { provide: getRepositoryToken(PairSpace), useValue: pairSpaceRepo },
           {
             provide: getRepositoryToken(Announcement),
@@ -256,6 +393,7 @@ describe("PairSpaceService", () => {
             provide: getRepositoryToken(HomeworkSubmission),
             useValue: mockRepo("HomeworkSubmission"),
           },
+          { provide: getRepositoryToken(HomeworkProgress), useValue: mockRepo("HomeworkProgress") },
           { provide: getRepositoryToken(University), useValue: universityRepo },
           {
             provide: TenantContext,
@@ -309,6 +447,7 @@ describe("PairSpaceService", () => {
       const module2: TestingModule = await Test.createTestingModule({
         providers: [
           PairSpaceService,
+          { provide: getRepositoryToken(PersonalLessonNote), useValue: personalNoteRepository },
           { provide: getRepositoryToken(PairSpace), useValue: pairSpaceRepo },
           {
             provide: getRepositoryToken(Announcement),
@@ -330,6 +469,7 @@ describe("PairSpaceService", () => {
             provide: getRepositoryToken(HomeworkSubmission),
             useValue: mockRepo("HomeworkSubmission"),
           },
+          { provide: getRepositoryToken(HomeworkProgress), useValue: mockRepo("HomeworkProgress") },
           { provide: getRepositoryToken(Lesson), useValue: lessonRepo },
           {
             provide: TenantContext,
@@ -377,6 +517,7 @@ describe("PairSpaceService", () => {
       const module2: TestingModule = await Test.createTestingModule({
         providers: [
           PairSpaceService,
+          { provide: getRepositoryToken(PersonalLessonNote), useValue: personalNoteRepository },
           { provide: getRepositoryToken(PairSpace), useValue: pairSpaceRepo },
           {
             provide: getRepositoryToken(Announcement),
@@ -398,6 +539,7 @@ describe("PairSpaceService", () => {
             provide: getRepositoryToken(HomeworkSubmission),
             useValue: mockRepo("HomeworkSubmission"),
           },
+          { provide: getRepositoryToken(HomeworkProgress), useValue: mockRepo("HomeworkProgress") },
           { provide: getRepositoryToken(Lesson), useValue: lessonRepo },
           {
             provide: TenantContext,
@@ -434,6 +576,7 @@ describe("PairSpaceService", () => {
       const module2: TestingModule = await Test.createTestingModule({
         providers: [
           PairSpaceService,
+          { provide: getRepositoryToken(PersonalLessonNote), useValue: personalNoteRepository },
           { provide: getRepositoryToken(PairSpace), useValue: pairSpaceRepo },
           {
             provide: getRepositoryToken(Announcement),
@@ -455,6 +598,7 @@ describe("PairSpaceService", () => {
             provide: getRepositoryToken(HomeworkSubmission),
             useValue: mockRepo("HomeworkSubmission"),
           },
+          { provide: getRepositoryToken(HomeworkProgress), useValue: mockRepo("HomeworkProgress") },
           {
             provide: TenantContext,
             useValue: {
@@ -499,6 +643,7 @@ describe("PairSpaceService", () => {
       const module2: TestingModule = await Test.createTestingModule({
         providers: [
           PairSpaceService,
+          { provide: getRepositoryToken(PersonalLessonNote), useValue: personalNoteRepository },
           { provide: getRepositoryToken(PairSpace), useValue: pairSpaceRepo },
           {
             provide: getRepositoryToken(Announcement),
@@ -520,6 +665,7 @@ describe("PairSpaceService", () => {
             provide: getRepositoryToken(HomeworkSubmission),
             useValue: mockRepo("HomeworkSubmission"),
           },
+          { provide: getRepositoryToken(HomeworkProgress), useValue: mockRepo("HomeworkProgress") },
           { provide: getRepositoryToken(Lesson), useValue: lessonRepo },
           {
             provide: TenantContext,
@@ -555,6 +701,7 @@ describe("PairSpaceService", () => {
       const module2: TestingModule = await Test.createTestingModule({
         providers: [
           PairSpaceService,
+          { provide: getRepositoryToken(PersonalLessonNote), useValue: personalNoteRepository },
           { provide: getRepositoryToken(PairSpace), useValue: pairSpaceRepo },
           {
             provide: getRepositoryToken(Announcement),
@@ -576,6 +723,7 @@ describe("PairSpaceService", () => {
             provide: getRepositoryToken(HomeworkSubmission),
             useValue: mockRepo("HomeworkSubmission"),
           },
+          { provide: getRepositoryToken(HomeworkProgress), useValue: mockRepo("HomeworkProgress") },
           { provide: getRepositoryToken(Lesson), useValue: lessonRepo },
           {
             provide: TenantContext,
@@ -623,6 +771,7 @@ describe("PairSpaceService", () => {
       const module2: TestingModule = await Test.createTestingModule({
         providers: [
           PairSpaceService,
+          { provide: getRepositoryToken(PersonalLessonNote), useValue: personalNoteRepository },
           { provide: getRepositoryToken(PairSpace), useValue: pairSpaceRepo },
           {
             provide: getRepositoryToken(Announcement),
@@ -644,6 +793,7 @@ describe("PairSpaceService", () => {
             provide: getRepositoryToken(HomeworkSubmission),
             useValue: mockRepo("HomeworkSubmission"),
           },
+          { provide: getRepositoryToken(HomeworkProgress), useValue: mockRepo("HomeworkProgress") },
           { provide: getRepositoryToken(Lesson), useValue: lessonRepo },
           {
             provide: TenantContext,
@@ -689,6 +839,7 @@ describe("PairSpaceService", () => {
       const module2: TestingModule = await Test.createTestingModule({
         providers: [
           PairSpaceService,
+          { provide: getRepositoryToken(PersonalLessonNote), useValue: personalNoteRepository },
           {
             provide: getRepositoryToken(PairSpace),
             useValue: mockRepo("PairSpace"),
@@ -710,6 +861,7 @@ describe("PairSpaceService", () => {
             provide: getRepositoryToken(HomeworkSubmission),
             useValue: mockRepo("HomeworkSubmission"),
           },
+          { provide: getRepositoryToken(HomeworkProgress), useValue: mockRepo("HomeworkProgress") },
           {
             provide: TenantContext,
             useValue: {
@@ -746,6 +898,7 @@ describe("PairSpaceService", () => {
       const module2: TestingModule = await Test.createTestingModule({
         providers: [
           PairSpaceService,
+          { provide: getRepositoryToken(PersonalLessonNote), useValue: personalNoteRepository },
           { provide: getRepositoryToken(PairSpace), useValue: pairSpaceRepo },
           {
             provide: getRepositoryToken(Announcement),
@@ -767,6 +920,7 @@ describe("PairSpaceService", () => {
             provide: getRepositoryToken(HomeworkSubmission),
             useValue: mockRepo("HomeworkSubmission"),
           },
+          { provide: getRepositoryToken(HomeworkProgress), useValue: mockRepo("HomeworkProgress") },
           { provide: getRepositoryToken(Lesson), useValue: lessonRepo },
           {
             provide: TenantContext,

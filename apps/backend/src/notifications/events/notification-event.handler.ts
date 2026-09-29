@@ -4,6 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 
 import { User } from '../../users/entities/user.entity';
+import { HomeworkProgress } from '../../pair-space/entities/homework-progress.entity';
 import { EventEnvelope } from '../../events/event.types';
 import { NotificationsService } from '../notifications.service';
 import { UserRole } from '../../auth/interfaces/user-role';
@@ -16,6 +17,8 @@ export class NotificationEventHandler {
     private readonly notificationsService: NotificationsService,
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
+    @InjectRepository(HomeworkProgress)
+    private readonly homeworkProgressRepository: Repository<HomeworkProgress>,
   ) {}
 
   @OnEvent('napare.event', { async: true })
@@ -48,11 +51,26 @@ export class NotificationEventHandler {
     const teacherId = typeof event.payload.teacherId === 'string' ? event.payload.teacherId : undefined;
     if (groupId) {
       const students = await this.usersRepository.find({
-        where: { universityId: event.university.id, groupId, isActive: true },
+        where: { universityId: event.university.id, groupId, isActive: true, role: UserRole.STUDENT },
         select: ['id'],
       });
+      const studentIds = students.map((student) => student.id);
+      const homeworkId = event.type === 'homework.deadline_soon' && event.target.type === 'homework'
+        ? event.target.id
+        : undefined;
+      if (homeworkId && studentIds.length) {
+        const completed = await this.homeworkProgressRepository.find({
+          where: { homeworkId, studentId: In(studentIds), state: 'done' },
+          select: ['studentId'],
+        });
+        const completedIds = new Set(completed.map((item) => item.studentId));
+        return [...new Set([
+          ...studentIds.filter((studentId) => !completedIds.has(studentId)),
+          ...(teacherId ? [teacherId] : []),
+        ])];
+      }
       return [...new Set([
-        ...students.map((student) => student.id),
+        ...studentIds,
         ...(teacherId ? [teacherId] : []),
       ])];
     }

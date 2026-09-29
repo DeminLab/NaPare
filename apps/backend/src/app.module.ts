@@ -1,15 +1,17 @@
 import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { join } from 'node:path';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { EventEmitterModule } from '@nestjs/event-emitter';
-import { ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { ScheduleModule } from './schedule/schedule.module';
 import { PairSpaceModule } from './pair-space/pair-space.module';
 import { AbsencesModule } from './absences/absences.module';
+import { FavoritesModule } from './favorites/favorites.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { AdminModule } from './admin/admin.module';
 import { MyDayModule } from './my-day/my-day.module';
@@ -22,6 +24,7 @@ import { AppConfig } from './config/configuration';
 import { TenantContextModule } from './common/tenant/tenant-context.module';
 import { EventsModule } from './events/events.module';
 import { AcademicModule } from './academic/academic.module';
+import { SearchModule } from './search/search.module';
 
 @Module({
   imports: [
@@ -63,15 +66,19 @@ import { AcademicModule } from './academic/academic.module';
       },
     }),
     EventEmitterModule.forRoot(),
-    ThrottlerModule.forRoot([{
-      ttl: 60000,
-      limit: 100,
-    }]),
+    ThrottlerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService<AppConfig & Record<string, unknown>>) => [{
+        ttl: configService.get<number>('rateLimit.windowMs', 60000),
+        limit: configService.get<number>('rateLimit.max', 100),
+      }],
+    }),
     AuthModule,
     UsersModule,
     ScheduleModule,
     PairSpaceModule,
     AbsencesModule,
+    FavoritesModule,
     NotificationsModule,
     AdminModule,
     MyDayModule,
@@ -79,8 +86,10 @@ import { AcademicModule } from './academic/academic.module';
     TenantContextModule,
     EventsModule,
     AcademicModule,
+    SearchModule,
   ],
   controllers: [AppController, HealthController],
+  providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

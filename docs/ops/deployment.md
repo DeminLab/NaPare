@@ -37,12 +37,15 @@ cp .env.example .env
 The root `docker-compose.yml` includes the production stack, so the following commands can be run directly from the repository root:
 
 ```bash
+git pull --ff-only origin main
 docker compose config
-docker compose build
+docker compose build --pull
 docker compose up -d
 docker compose ps
 curl -fsS http://127.0.0.1:8080/api/v1/health
 ```
+
+The production backend applies pending TypeORM migrations during startup. Do not run a separate migration command for this Compose stack; confirm the backend logs show successful migration startup and back up PostgreSQL before deployment.
 
 Required values include database credentials, `REDIS_PASSWORD`, `JWT_SECRET`, `JWT_REFRESH_SECRET` and `CORS_ORIGIN`. The four `NEXT_PUBLIC_*_URL` values are public build-time configuration. Do not use development defaults in a production environment.
 

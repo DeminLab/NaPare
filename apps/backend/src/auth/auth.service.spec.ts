@@ -5,6 +5,7 @@ import { JwtService } from "@nestjs/jwt";
 import { ConfigService } from "@nestjs/config";
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   ServiceUnavailableException,
   UnauthorizedException,
@@ -50,6 +51,7 @@ describe("AuthService", () => {
       create: jest.fn(),
       findById: jest.fn(),
       update: jest.fn(),
+      bindMaxUserIdIfUnlinked: jest.fn(),
       invalidateSessions: jest.fn(),
     };
     jwtService = {
@@ -227,7 +229,7 @@ describe("AuthService", () => {
         maxUserId: null,
         passwordHash,
       });
-      (usersService.update as jest.Mock).mockResolvedValue(linkedUser);
+      (usersService.bindMaxUserIdIfUnlinked as jest.Mock).mockResolvedValue(linkedUser);
 
       await expect(
         service.maxAuth({
@@ -236,9 +238,7 @@ describe("AuthService", () => {
           password: "correct-password",
         }),
       ).resolves.toMatchObject({ user: { id: "user-1" } });
-      expect(usersService.update).toHaveBeenCalledWith("user-1", {
-        maxUserId: "424242",
-      });
+      expect(usersService.bindMaxUserIdIfUnlinked).toHaveBeenCalledWith("user-1", "424242");
     });
 
     it("rejects an unlinked MAX account without credentials", async () => {
@@ -268,6 +268,26 @@ describe("AuthService", () => {
         }),
       ).rejects.toThrow(UnauthorizedException);
       expect(usersService.update).not.toHaveBeenCalled();
+    });
+
+    it("does not overwrite an account already linked to another MAX user", async () => {
+      const passwordHash = await bcrypt.hash("correct-password", 4);
+      (usersService.findByMaxUserId as jest.Mock).mockResolvedValue(null);
+      (usersService.findByEmail as jest.Mock).mockResolvedValue({
+        ...linkedUser,
+        maxUserId: "another-max-user",
+        passwordHash,
+      });
+      (usersService.bindMaxUserIdIfUnlinked as jest.Mock).mockRejectedValue(
+        new ConflictException("Для этого аккаунта уже привязан другой MAX"),
+      );
+
+      await expect(service.maxAuth({
+        initData: freshInitData(),
+        email: "student@sibit.ru",
+        password: "correct-password",
+      })).rejects.toThrow(ConflictException);
+      expect(usersService.bindMaxUserIdIfUnlinked).toHaveBeenCalledWith("user-1", "424242");
     });
 
     it("rejects initData that fails server-side validation", async () => {
@@ -326,6 +346,30 @@ describe("AuthService", () => {
       await expect(
         service.maxAuth({ initData: freshInitData() }),
       ).rejects.toThrow(ForbiddenException);
+    });
+  });
+
+  describe("linkMaxToAuthenticatedUser", () => {
+    const freshInitData = () => buildMaxInitData(Math.floor(Date.now() / 1000) - 60);
+    const activeUser = { id: "user-1", isActive: true, maxUserId: null, role: "student", universityId: "uni-1" };
+
+    it("binds verified MAX identity to the current active session", async () => {
+      (usersService.findById as jest.Mock).mockResolvedValue(activeUser);
+      (usersService.findByMaxUserId as jest.Mock).mockResolvedValue(null);
+      (usersService.bindMaxUserIdIfUnlinked as jest.Mock).mockResolvedValue({ ...activeUser, maxUserId: "424242" });
+
+      await expect(service.linkMaxToAuthenticatedUser(freshInitData(), "user-1"))
+        .resolves.toMatchObject({ accessToken: "mock-token", user: { id: "user-1" } });
+      expect(usersService.bindMaxUserIdIfUnlinked).toHaveBeenCalledWith("user-1", "424242");
+    });
+
+    it("rejects MAX identity already linked to a different account", async () => {
+      (usersService.findById as jest.Mock).mockResolvedValue(activeUser);
+      (usersService.findByMaxUserId as jest.Mock).mockResolvedValue({ id: "user-2" });
+
+      await expect(service.linkMaxToAuthenticatedUser(freshInitData(), "user-1"))
+        .rejects.toThrow(ConflictException);
+      expect(usersService.bindMaxUserIdIfUnlinked).not.toHaveBeenCalled();
     });
   });
 });

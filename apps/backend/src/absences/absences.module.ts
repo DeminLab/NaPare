@@ -4,6 +4,7 @@ import { TypeOrmModule } from "@nestjs/typeorm";
 import { Absence } from "./entities/absence.entity";
 import { AbsenceConfirmation } from "./entities/absence-confirmation.entity";
 import { AttendanceRecord } from "./entities/attendance-record.entity";
+import { AttendanceQrSession } from "./entities/attendance-qr-session.entity";
 import { Lesson } from "../schedule/entities/lesson.entity";
 import { User } from "../users/entities/user.entity";
 import { Group } from "../users/entities/group.entity";
@@ -18,6 +19,7 @@ import { EventsModule } from "../events/events.module";
       Absence,
       AbsenceConfirmation,
       AttendanceRecord,
+      AttendanceQrSession,
       Lesson,
       User,
       Group,

@@ -3,6 +3,13 @@ import { ForbiddenException } from "@nestjs/common";
 import { AuthController } from "./auth.controller";
 
 describe("AuthController", () => {
+  it("limits password and MAX authentication endpoints to 10 requests per minute", () => {
+    for (const method of ["login", "portalLogin", "maxAuth", "linkMaxToCurrentUser"] as const) {
+      expect(Reflect.getMetadata("THROTTLER:LIMITdefault", AuthController.prototype[method])).toBe(10);
+      expect(Reflect.getMetadata("THROTTLER:TTLdefault", AuthController.prototype[method])).toBe(60_000);
+    }
+  });
+
   it("rejects public registration", () => {
     const controller = new AuthController(
       {} as never,

@@ -6,6 +6,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
+import { TelegramWebhookController } from './telegram-webhook.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { SibitUniversityBootstrapService } from './sibit-university-bootstrap.service';
 import { UsersModule } from '../users/users.module';
@@ -31,7 +32,7 @@ import { RaspModule } from '../rasp/rasp.module';
     }),
   ],
   providers: [AuthService, JwtStrategy, SibitUniversityBootstrapService],
-  controllers: [AuthController],
+  controllers: [AuthController, TelegramWebhookController],
   exports: [AuthService],
 })
 export class AuthModule {}

@@ -63,7 +63,11 @@ services:
       FCM_PRIVATE_KEY: ${FCM_PRIVATE_KEY:-}
       FCM_CLIENT_EMAIL: ${FCM_CLIENT_EMAIL:-}
       MAX_BOT_TOKEN: ${MAX_BOT_TOKEN:-}
-      MAX_INIT_DATA_TTL_SECONDS: ${MAX_INIT_DATA_TTL_SECONDS:-3600}
+      MAX_INIT_DATA_TTL_SECONDS: ${MAX_INIT_DATA_TTL_SECONDS:-900}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-}
+      TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:-}
+      PUBLIC_APP_URL: ${PUBLIC_APP_URL:-}
     networks: [app, data]
     depends_on:
       postgres:
@@ -212,29 +216,6 @@ services:
       retries: 5
       start_period: 30s
 
-  max-miniapp:
-    build:
-      context: .
-      dockerfile: apps/max-miniapp/Dockerfile
-    restart: unless-stopped
-    init: true
-    ports:
-      - '127.0.0.1:3006:8080'
-    networks: [edge, app]
-    depends_on:
-      backend:
-        condition: service_healthy
-    healthcheck:
-      test: ['CMD-SHELL', 'wget -q --spider http://127.0.0.1:8080/ || exit 1']
-      interval: 15s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-    read_only: true
-    tmpfs: [/tmp, /var/cache/nginx, /var/run]
-    security_opt: [no-new-privileges:true]
-    cap_drop: [ALL]
-
   nginx:
     image: nginx:1.27-alpine
     restart: unless-stopped
@@ -257,8 +238,6 @@ services:
       web-admin:
         condition: service_healthy
       web-developer:
-        condition: service_healthy
-      max-miniapp:
         condition: service_healthy
     healthcheck:
       test: ['CMD-SHELL', 'wget -q --spider http://127.0.0.1/nginx-health || exit 1']

@@ -15,7 +15,7 @@
 | **Web** | Next.js | 15.5.x (App Router) | SSR, отличный DX, адаптивность; все 6 Next-приложений на 15.5.24 |
 | **Web State** | React state + localStorage | — | Рабочие пространства работают на `useState`/`useEffect`; TanStack Query, Zustand и axios есть только в legacy `apps/web` |
 | **Web Styling** | Tailwind CSS | 3.x | Утилитарный CSS; токены — `packages/design-tokens` (preset + `styles.css`) |
-| **MAX Mini-App** | React + Vite | 5.x | Стандарт для мини-приложений MAX, порт 3005 |
+| **MAX WebApp** | Next.js `web-portal` + MAX Bridge | — | MAX открывает существующий сайт; backend проверяет `initData` и возвращает обычную сессию NaPare |
 | **Backend** | NestJS | 10+ | Модульный монолит, OpenAPI из коробки |
 | **ORM** | TypeORM | 0.3+ | Миграции, декораторы, интеграция с NestJS (Prisma не используется) |
 | **БД** | PostgreSQL | 16 | Надёжность, JSONB, полнотекстовый поиск, RLS |

@@ -1,6 +1,7 @@
-import { ForbiddenException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { ConfigService } from '@nestjs/config';
 
 import { Notification, NotificationAction } from './entities/notification.entity';
 import { DevicePlatform, DeviceToken } from './entities/device-token.entity';
@@ -9,6 +10,8 @@ import { UpdateNotificationPreferenceDto } from './dto/update-notification-prefe
 import { NotificationPreference } from './entities/notification-preference.entity';
 import { InboxItem, InboxItemStatus } from './entities/inbox-item.entity';
 import { TenantContext } from '../common/tenant/tenant-context';
+import { User } from '../users/entities/user.entity';
+import { AppConfig } from '../config/configuration';
 import { UserRole } from '../auth/interfaces/user-role';
 import { EventEnvelope, NapareEventType } from '../events/event.types';
 import {
@@ -20,6 +23,14 @@ import {
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
+  private readonly telegramDeliveryQueue: Array<{
+    userId: string;
+    notificationId: string;
+    title: string;
+    body: string;
+    deepLink: string;
+  }> = [];
+  private telegramDeliveryWorkerRunning = false;
 
   constructor(
     @InjectRepository(Notification)
@@ -31,6 +42,10 @@ export class NotificationsService {
     @Optional() @InjectRepository(InboxItem)
     private readonly inboxRepository: Repository<InboxItem>,
     private readonly tenantContext: TenantContext,
+    @Optional() @InjectRepository(User)
+    private readonly usersRepository?: Repository<User>,
+    @Optional()
+    private readonly configService?: ConfigService<AppConfig & Record<string, unknown>>,
   ) {}
 
   async findByUser(
@@ -79,6 +94,7 @@ export class NotificationsService {
       const existingNotification = await this.notificationRepository.findOne({
         where: { eventId: event.id, userId },
       });
+      const isNewNotification = !existingNotification;
       const notification = existingNotification ?? await this.notificationRepository.save(this.notificationRepository.create({
           userId,
           universityId: event.university.id,
@@ -115,6 +131,10 @@ export class NotificationsService {
         }
       }
 
+      if (isNewNotification && preference.telegramEnabled) {
+        this.enqueueTelegramNotification(userId, notification.id, mapped.title, mapped.body, deepLink);
+      }
+
       this.logger.debug(`Created notification ${notification.id} for event ${event.id}`);
     }
   }
@@ -131,6 +151,9 @@ export class NotificationsService {
     update: UpdateNotificationPreferenceDto,
   ): Promise<NotificationPreference> {
     this.tenantContext.assertAccess(universityId);
+    if (update.timeZone && !isValidTimeZone(update.timeZone)) {
+      throw new BadRequestException('timeZone must be a valid IANA timezone');
+    }
     const preferences = await this.getPreferences(userId, universityId);
     Object.assign(preferences, update);
     return this.preferenceRepository.save(preferences);
@@ -275,6 +298,90 @@ export class NotificationsService {
     if (preferences.quietHoursEnabled && isQuietHours(preferences)) return false;
     return true;
   }
+
+  private async sendTelegramNotification(
+    userId: string,
+    notificationId: string,
+    title: string,
+    body: string,
+    deepLink: string,
+  ): Promise<void> {
+    const botToken = this.configService?.get<string>('telegram.botToken') ?? '';
+    const appUrl = this.configService?.get<string>('telegram.publicAppUrl') ?? '';
+    if (!botToken || !appUrl || !this.usersRepository) return;
+
+    const user = await this.usersRepository.findOne({
+      where: { id: userId, isActive: true },
+      select: ['id', 'telegramUserId'],
+    });
+    if (!user?.telegramUserId) return;
+
+    let destination: URL;
+    try {
+      const base = new URL(appUrl);
+      if (base.protocol !== 'https:' || !deepLink.startsWith('/') || deepLink.startsWith('//')) return;
+      destination = new URL(deepLink, base);
+      if (destination.origin !== base.origin) return;
+    } catch {
+      return;
+    }
+
+    try {
+      const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: user.telegramUserId,
+          text: `${title}\n${body}`,
+          reply_markup: { inline_keyboard: [[{ text: 'Открыть в НаПаре', url: destination.toString() }]] },
+        }),
+        signal: AbortSignal.timeout(5000),
+      });
+      if (!response.ok) this.logger.warn(`Telegram delivery failed for notification ${notificationId}: HTTP ${response.status}`);
+    } catch {
+      this.logger.warn(`Telegram delivery failed for notification ${notificationId}: network error`);
+    }
+  }
+
+  private enqueueTelegramNotification(
+    userId: string,
+    notificationId: string,
+    title: string,
+    body: string,
+    deepLink: string,
+  ): void {
+    if (this.telegramDeliveryQueue.length >= 1000) {
+      this.logger.warn(`Telegram delivery queue is full; skipped notification ${notificationId}`);
+      return;
+    }
+
+    this.telegramDeliveryQueue.push({ userId, notificationId, title, body, deepLink });
+    if (!this.telegramDeliveryWorkerRunning) void this.drainTelegramDeliveryQueue();
+  }
+
+  private async drainTelegramDeliveryQueue(): Promise<void> {
+    this.telegramDeliveryWorkerRunning = true;
+    try {
+      while (this.telegramDeliveryQueue.length > 0) {
+        const delivery = this.telegramDeliveryQueue.shift()!;
+        try {
+          await this.sendTelegramNotification(
+            delivery.userId,
+            delivery.notificationId,
+            delivery.title,
+            delivery.body,
+            delivery.deepLink,
+          );
+        } catch {
+          this.logger.warn(`Telegram delivery failed for notification ${delivery.notificationId}: internal error`);
+        }
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+    } finally {
+      this.telegramDeliveryWorkerRunning = false;
+      if (this.telegramDeliveryQueue.length > 0) void this.drainTelegramDeliveryQueue();
+    }
+  }
 }
 
 interface EventNotificationMapping {
@@ -312,16 +419,140 @@ function mapEvent(event: EventEnvelope): EventNotificationMapping {
     'sync.failed': { type: 'system', category: 'important', title: 'Ошибка синхронизации', body: 'Синхронизация завершилась с ошибкой.', inbox: { title: 'Разбери ошибку синхронизации', description: 'Открой детали и повтори синхронизацию после исправления.' } },
   };
   const base = mappings[event.type] ?? { type: 'other', category: 'all', title: 'Новое событие', body: 'Данные обновились.', inbox: null };
+  if (event.type === 'homework.deadline_soon' && typeof payload.homeworkTitle === 'string') {
+    const homeworkTitle = payload.homeworkTitle.trim();
+    if (homeworkTitle) {
+      return {
+        ...base,
+        deepLink,
+        actions: [action],
+        dueAt: null,
+        title: `Скоро дедлайн: ${homeworkTitle}`,
+        body: typeof payload.subject === 'string'
+          ? `Задание по предмету «${payload.subject}» нужно сдать в ближайшие 24 часа.`
+          : `Задание нужно сдать в ближайшие 24 часа.`,
+        inbox: {
+          title: `Сдай задание «${homeworkTitle}»`,
+          description: 'Открой задание и проверь точный срок сдачи и прогресс.',
+        },
+      };
+    }
+  }
+  if (['lesson.changed', 'lesson.rescheduled', 'lesson.cancelled', 'room.changed'].includes(event.type)) {
+    const subject = typeof payload.subject === 'string' ? payload.subject.trim() : '';
+    const details = scheduleChangeDetails(event.type, payload);
+    const subjectPrefix = subject ? `«${subject}»: ` : '';
+    return {
+      ...base,
+      body: `${subjectPrefix}${details || base.body}`,
+      inbox: base.inbox && details
+        ? { ...base.inbox, description: `${subjectPrefix}${details} Открой занятие, чтобы посмотреть контекст.` }
+        : base.inbox,
+      deepLink,
+      actions: [action],
+      dueAt: null,
+    };
+  }
   return { ...base, deepLink, actions: [action], dueAt: null };
+}
+
+function scheduleChangeDetails(eventType: NapareEventType, payload: EventEnvelope['payload']): string | null {
+  const oldValue = recordValue(payload.oldValue ?? payload.originalValue);
+  const newValue = recordValue(payload.newValue);
+  if (eventType === 'lesson.cancelled') {
+    const plannedTime = formatLessonTime(oldValue);
+    const plannedLocation = formatLocation(oldValue);
+    const details = [
+      plannedTime !== '—' ? `Планировалось: ${plannedTime}` : null,
+      plannedLocation !== '—' ? `место: ${plannedLocation}` : null,
+    ].filter(Boolean);
+    return details.length ? `${details.join('; ')}.` : null;
+  }
+  const changed = (...keys: string[]) => keys.some((key) => key in oldValue && key in newValue && oldValue[key] !== newValue[key]);
+  const details: string[] = [];
+
+  if (changed('building', 'room')) {
+    details.push(`Место: ${formatLocation(oldValue)} → ${formatLocation(newValue)}`);
+  }
+  if (changed('startDate', 'endDate', 'startTime', 'endTime', 'startsAt', 'endsAt')) {
+    details.push(`Время: ${formatLessonTime(oldValue)} → ${formatLessonTime(newValue)}`);
+  }
+  for (const [key, label] of [['teacherName', 'Преподаватель'], ['subject', 'Предмет']] as const) {
+    if (changed(key)) details.push(`${label}: ${displayValue(oldValue[key])} → ${displayValue(newValue[key])}`);
+  }
+  if (details.length) return `${details.join('. ')}.`;
+  const description = typeof payload.changeDescription === 'string' ? payload.changeDescription.trim() : '';
+  return description ? `Изменилось: ${description}.` : null;
+}
+
+function recordValue(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+}
+
+function displayValue(value: unknown): string {
+  if (typeof value === 'string' || typeof value === 'number') return String(value) || '—';
+  return '—';
+}
+
+function formatLocation(value: Record<string, unknown>): string {
+  const building = typeof value.building === 'string' ? value.building.trim() : '';
+  const room = typeof value.room === 'string' ? value.room.trim() : '';
+  const parts = [building ? `корпус ${building}` : '', room ? `ауд. ${room}` : ''].filter(Boolean);
+  return parts.length ? parts.join(', ') : '—';
+}
+
+function formatLessonTime(value: Record<string, unknown>): string {
+  const rawStart = value.startTime ?? value.startsAt;
+  const rawEnd = value.endTime ?? value.endsAt;
+  const start = formatClock(rawStart);
+  const end = formatClock(rawEnd);
+  const time = start && end ? `${start}–${end}` : start || end;
+  const rawDate = value.startDate ?? value.startsAt;
+  const date = formatScheduleDate(rawDate);
+  return [date, time].filter(Boolean).join(', ') || '—';
+}
+
+function formatClock(value: unknown): string {
+  if (typeof value !== 'string') return '';
+  const match = value.match(/(?:T|^)(\d{2}:\d{2})/);
+  return match?.[1] ?? '';
+}
+
+function formatScheduleDate(value: unknown): string {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}/.test(value)) return '';
+  const date = new Date(`${value.slice(0, 10)}T12:00:00`);
+  return Number.isNaN(date.getTime()) ? '' : date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
 }
 
 function isQuietHours(preferences: NotificationPreference): boolean {
   if (!preferences.quietHoursStart || !preferences.quietHoursEnd) return false;
-  const now = new Date();
-  const current = now.getHours() * 60 + now.getMinutes();
+  const current = getMinutesInTimeZone(new Date(), preferences.timeZone || 'UTC');
   const start = toMinutes(preferences.quietHoursStart);
   const end = toMinutes(preferences.quietHoursEnd);
   return start <= end ? current >= start && current < end : current >= start || current < end;
+}
+
+function getMinutesInTimeZone(date: Date, timeZone: string): number {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone,
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(date);
+  const hour = Number(parts.find((part) => part.type === 'hour')?.value ?? 0);
+  const minute = Number(parts.find((part) => part.type === 'minute')?.value ?? 0);
+  return hour * 60 + minute;
+}
+
+function isValidTimeZone(timeZone: string): boolean {
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function toMinutes(value: string): number {

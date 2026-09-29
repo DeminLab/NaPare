@@ -17,6 +17,8 @@ import { CreateAbsenceDto } from './dto/create-absence.dto';
 import { UpdateAbsenceDto } from './dto/update-absence.dto';
 import { RejectAbsenceDto } from './dto/reject-absence.dto';
 import { MarkAttendanceDto } from './dto/mark-attendance.dto';
+import { CreateAttendanceQrSessionDto } from './dto/create-attendance-qr-session.dto';
+import { AttendanceQrCheckInDto } from './dto/attendance-qr-check-in.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -77,6 +79,20 @@ export class AbsencesController {
   @ApiOperation({ summary: 'Сохранить посещаемость занятия' })
   async markAttendance(@Request() req, @Body() markAttendanceDto: MarkAttendanceDto) {
     return this.absencesService.markAttendance(req.user.universityId, req.user.id, markAttendanceDto);
+  }
+
+  @Post('attendance/qr-sessions')
+  @Roles(...ABSENCE_STAFF_ROLES)
+  @ApiOperation({ summary: 'Создать короткую QR-сессию посещаемости для занятия' })
+  async createAttendanceQrSession(@Request() req, @Body() dto: CreateAttendanceQrSessionDto) {
+    return this.absencesService.createAttendanceQrSession(req.user.universityId, req.user.id, dto.lessonId);
+  }
+
+  @Post('attendance/qr-check-in')
+  @Roles(UserRole.STUDENT)
+  @ApiOperation({ summary: 'Отметить своё присутствие по активному QR-коду занятия' })
+  async checkInWithAttendanceQr(@Body() dto: AttendanceQrCheckInDto) {
+    return this.absencesService.checkInWithAttendanceQr(dto.token);
   }
 
   @Get('stats/:studentId')

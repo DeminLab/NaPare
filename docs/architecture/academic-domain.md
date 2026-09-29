@@ -15,6 +15,8 @@ University
 
 `Course` is the durable subject identity. `LessonSeries` owns recurrence, regular time, group and teacher. `LessonOccurrence` owns one concrete date, room, status and an optional legacy `Lesson` link. This prevents a single row from mixing curriculum identity, recurrence and a changed occurrence.
 
+`LessonSeries` currently stores recurrence metadata only; no generator expands a series into future occurrences, so student schedule reads continue to depend on concrete dated `Lesson`/`LessonOccurrence` rows. Term anchors, week-parity expansion, and vacation calendars remain integration work.
+
 ## Compatibility strategy
 
 - Existing `Lesson` rows remain valid and existing `/schedule` routes remain unchanged.

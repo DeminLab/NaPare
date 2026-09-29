@@ -6,7 +6,7 @@
 
 ## Scope
 
-NestJS backend module, HTTP boundary, authorization or data-service behavior.
+Authentication API routes, including MAX login/link, JWT-protected Telegram linking and its secret-protected Telegram webhook.
 
 ## Read sequence
 

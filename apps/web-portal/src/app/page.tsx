@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Icon, type IconName } from "@napare/ui";
 import { ProductShowcase } from "../components/ProductShowcase";
+import { MaxLaunchAuth } from "../components/MaxLaunchAuth";
 
 const roles = [
   {
@@ -103,6 +104,7 @@ const modules = [
 export default function HomePage() {
   return (
     <main>
+      <MaxLaunchAuth />
       <header className="portal-header">
         <Link href="/" className="brand">
           <Image
@@ -422,6 +424,9 @@ export default function HomePage() {
           </p>
           <Link href="/login" className="text-link">
             Войти
+          </Link>
+          <Link href="/connections" className="text-link">
+            Связать Telegram
           </Link>
         </div>
         <p className="footer-copy">

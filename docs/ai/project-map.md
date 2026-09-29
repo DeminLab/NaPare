@@ -3,7 +3,9 @@
 | Area | Responsibility | Start here |
 | --- | --- | --- |
 | `apps/backend` | API, authorization and data integration | `apps/backend/src` and `docs/api/README.md` |
-| `apps/web-student` | Student experience | Read-only during current redesign |
+| `apps/web`, `apps/max-miniapp` | Retained legacy clients; not routed by production Nginx/Compose and excluded from standard root `pnpm dev`/`pnpm build` | Historical configuration in `docs/architecture/config-files.md`; MAX uses `apps/web-portal` |
+| `apps/web-portal` | Public product site and shared MAX launch / account-connection pages | `apps/web-portal/src/app` and `docs/clients/max-miniapp.md` |
+| `apps/web-student` | Student experience | Protected from the role-workspace redesign; product features explicitly requested outside that redesign may change it |
 | `apps/web-staff` | Teaching and daily learning operations | `apps/web-staff/src/app` |
 | `apps/web-admin` | University control and schedule administration | `apps/web-admin/src/app` |
 | `apps/web-developer` | Platform diagnostics and technical operations | `apps/web-developer/src/app` |

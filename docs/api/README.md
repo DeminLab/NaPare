@@ -39,7 +39,7 @@ OpenAPI-спецификация **генерируется из кода** (Nes
 }
 ```
 
-Поле `details` присутствует только при ошибке валидации (список сообщений class-validator). Остальные коды (`INVALID_CODE`, `CODE_EXPIRED`, `RATE_LIMIT_EXCEEDED`, `INVALID_CREDENTIALS`, `ACCOUNT_LOCKED`, `INTERNAL_ERROR`) в API не используются.
+Поле `details` присутствует только при ошибке валидации (список сообщений class-validator). Код `RATE_LIMITED` возвращается активным throttler guard при превышении лимита.
 
 | Код                     | HTTP Status | Описание                                              |
 | ----------------------- | ----------- | ----------------------------------------------------- |
@@ -53,7 +53,7 @@ OpenAPI-спецификация **генерируется из кода** (Nes
 | `HTTP_ERROR`            | прочие      | Прочие HTTP-ошибки                                    |
 | `INTERNAL_SERVER_ERROR` | 500         | Внутренняя ошибка                                     |
 
-**Rate limiting:** `ThrottlerModule` сконфигурирован (100 запросов/60 с), но `ThrottlerGuard` нигде не подключён — пер-эндпоинтные лимиты в [contracts.md](contracts.md) фактически не действуют.
+**Rate limiting:** `ThrottlerGuard` активен глобально. Стандартный лимит — `RATE_LIMIT_MAX` запросов за `RATE_LIMIT_WINDOW_MS` на IP; `/auth/login`, `/auth/portal-login`, `/auth/max` и `/auth/max/link` ограничены дополнительно 10 запросами за 60 секунд, `/auth/telegram/link` — 3 запросами за 60 секунд. В production Express доверяет двум прокси: host Nginx и Docker Nginx.
 
 ---
 
@@ -100,9 +100,11 @@ npx @openapitools/openapi-generator-cli generate \
 | Группа           | Префикс                                    | Модуль                                                                                                          |
 | ---------------- | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
 | Auth & Users     | `/api/v1/auth`, `/api/v1/users`            | [modules/auth.md](../modules/auth.md)                                                                           |
+| Favorites        | `/api/v1/users/me/favorites`                | Student-only groups/teachers saved in the current tenant and account; see [contracts](contracts.md) |
 | Schedule         | `/api/v1/schedule`                         | [modules/schedule.md](../modules/schedule.md)                                                                   |
 | My Day           | `/api/v1/my-day`                           | `GET /my-day` — агрегат «Главный экран» (lessons, pairSpaces, absences, notifications, summary)                 |
 | Pair Space       | `/api/v1/pair-spaces`                      | [modules/pair-space.md](../modules/pair-space.md)                                                               |
+| Search           | `/api/v1/search`                            | Авторизованный Spotlight по данным, доступным роли пользователя                                                |
 | Absences         | `/api/v1/absences`, `/api/v1/curator`      | [modules/absences.md](../modules/absences.md)                                                                   |
 | Notifications    | `/api/v1/notifications`, `/api/v1/devices` | [modules/notifications.md](../modules/notifications.md)                                                         |
 | Events           | `/api/v1/events`                           | `GET /events`, SSE `GET /events/stream` — лента событий текущего пользователя                                   |

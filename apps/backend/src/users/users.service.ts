@@ -1,8 +1,9 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { ConflictException, Injectable, NotFoundException, Optional } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { In, Repository } from "typeorm";
+import { In, IsNull, Repository } from "typeorm";
 
 import { User } from "./entities/user.entity";
+import { TelegramLinkChallenge } from "./entities/telegram-link-challenge.entity";
 import { CreateUserDto } from "./dto/create-user.dto";
 import { TenantContext } from "../common/tenant/tenant-context";
 import { UserRole } from "../auth/interfaces/user-role";
@@ -18,6 +19,8 @@ export class UsersService {
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
     private readonly tenantContext: TenantContext,
+    @Optional() @InjectRepository(TelegramLinkChallenge)
+    private readonly telegramChallenges?: Repository<TelegramLinkChallenge>,
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<User> {
@@ -42,6 +45,83 @@ export class UsersService {
   async findByMaxUserId(maxUserId: string): Promise<User | null> {
     if (!maxUserId) return null;
     return this.usersRepository.findOne({ where: { maxUserId } });
+  }
+
+  async createTelegramLinkChallenge(userId: string, tokenHash: string, expiresAt: Date): Promise<void> {
+    if (!this.telegramChallenges) throw new Error("Telegram linking is unavailable");
+    const user = await this.findById(userId);
+    if (!user || !user.isActive) throw new NotFoundException("Аккаунт недоступен");
+    if (user.telegramUserId) throw new ConflictException("К аккаунту уже привязан Telegram");
+    await this.telegramChallenges.manager.transaction(async manager => {
+      const challenges = manager.getRepository(TelegramLinkChallenge);
+      await manager.query(`DELETE FROM "telegram_link_challenges" WHERE "expiresAt" < CURRENT_TIMESTAMP - INTERVAL '1 day' OR "consumedAt" < CURRENT_TIMESTAMP - INTERVAL '1 day'`);
+      await manager.query(`SELECT "id" FROM "users" WHERE "id" = $1 FOR UPDATE`, [userId]);
+      await challenges.update(
+        { userId, consumedAt: IsNull() },
+        { consumedAt: new Date() },
+      );
+      await challenges.save(
+        challenges.create({ userId, tokenHash, expiresAt, consumedAt: null }),
+      );
+    });
+  }
+
+  async isTelegramLinked(userId: string): Promise<boolean> {
+    const user = await this.findById(userId);
+    return Boolean(user?.telegramUserId);
+  }
+
+  async consumeTelegramLinkChallenge(tokenHash: string, telegramUserId: string): Promise<'linked' | 'invalid' | 'already-linked'> {
+    try {
+      return await this.usersRepository.manager.transaction(async manager => {
+        const challenges = manager.getRepository(TelegramLinkChallenge);
+        const consumed = await challenges.createQueryBuilder()
+          .update(TelegramLinkChallenge)
+          .set({ consumedAt: () => 'CURRENT_TIMESTAMP' })
+          .where('"tokenHash" = :tokenHash AND "consumedAt" IS NULL AND "expiresAt" > CURRENT_TIMESTAMP', { tokenHash })
+          .returning('"userId"')
+          .execute();
+        const userId = consumed.raw[0]?.userId as string | undefined;
+        if (!userId) return 'invalid';
+
+        const users = manager.getRepository(User);
+        const result = await users.createQueryBuilder()
+          .update(User)
+          .set({ telegramUserId })
+          .where('"id" = :userId AND "isActive" = true AND ("telegramUserId" IS NULL OR "telegramUserId" = :telegramUserId)', { userId, telegramUserId })
+          .execute();
+        if (result.affected === 1) return 'linked';
+        const current = await users.findOne({ where: { id: userId } });
+        if (current?.telegramUserId === telegramUserId) return 'linked';
+        return 'already-linked';
+      });
+    } catch (error) {
+      const driverCode = (error as { driverError?: { code?: string } })?.driverError?.code;
+      if (driverCode === '23505') return 'already-linked';
+      throw error;
+    }
+  }
+
+  async bindMaxUserIdIfUnlinked(id: string, maxUserId: string): Promise<User> {
+    const current = await this.findById(id);
+    if (!current) throw new NotFoundException(`User with id ${id} not found`);
+    if (current.maxUserId === maxUserId) return current;
+    if (current.maxUserId) {
+      throw new ConflictException("Для этого аккаунта уже привязан другой MAX");
+    }
+
+    const result = await this.usersRepository.update(
+      { id, maxUserId: IsNull() },
+      { maxUserId },
+    );
+    if (result.affected === 1) {
+      const updated = await this.findById(id);
+      if (updated) return updated;
+    }
+
+    const latest = await this.findById(id);
+    if (latest?.maxUserId === maxUserId) return latest;
+    throw new ConflictException("Для этого аккаунта уже привязан другой MAX");
   }
 
   async findByUniversityId(

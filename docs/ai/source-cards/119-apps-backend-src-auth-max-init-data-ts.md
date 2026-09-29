@@ -6,13 +6,13 @@
 
 ## Scope
 
-Pure server-side validation of MAX Mini App `initData`: parse launch params, rebuild the data-check string, verify the HMAC-SHA256 signature (`WebAppData` + `MAX_BOT_TOKEN`) with timing-safe comparison, and enforce `auth_date` freshness (`maxAgeSeconds`, future skew).
+Pure server-side validation of MAX Mini App `initData`: parse launch params, rebuild the data-check string, verify the HMAC-SHA256 signature (`WebAppData` + `MAX_BOT_TOKEN`) with timing-safe comparison, and enforce `auth_date` freshness (`maxAgeSeconds`, future skew). Application configuration defaults `MAX_INIT_DATA_TTL_SECONDS` to 900 seconds (15 minutes).
 
 ## Read sequence
 
 1. Start with [AI context](../../../AI_CONTEXT.md) and the backend auth map.
 2. Read this canonical source file.
-3. Follow callers: `AuthService.maxAuth` (`auth.service.ts`) and the contract in `docs/api/contracts.md` §1.10.
+3. Follow callers: `AuthService.maxAuth` and `AuthService.linkMaxToAuthenticatedUser` (`auth.service.ts`) and the contracts in `docs/api/contracts.md` §1.10.
 
 ## Change boundary
 
