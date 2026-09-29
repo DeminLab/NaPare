@@ -14,6 +14,7 @@ out/
 # Local exports, scratch work and generated media
 /tmp/
 /outputs/
+/.codex-presentation-build/
 brag-output-*/**/.thumbnails/
 brag-output-*/**/.waveform-cache/
 brag-output-*/**/renders/
