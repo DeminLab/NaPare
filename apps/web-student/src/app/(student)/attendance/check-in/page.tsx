@@ -78,7 +78,7 @@ export default function AttendanceCheckInPage() {
   useEffect(() => {
     let active = true;
     void (async () => {
-      if (window.isSecureContext && navigator.mediaDevices?.getUserMedia) {
+      if (window.isSecureContext && typeof navigator.mediaDevices?.getUserMedia === 'function') {
         setBrowserScannerAvailable(true);
       }
       for (let attempt = 0; attempt < 150 && active; attempt += 1) {
