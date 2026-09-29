@@ -23,6 +23,7 @@ declare global {
     WebApp?: {
       initData?: string;
     };
+    __naparePendingMaxInitData?: string;
   }
 }
 
@@ -43,7 +44,7 @@ function workspaceForRole(role: string): Workspace | null {
   return null;
 }
 
-export function MaxLaunchAuth() {
+export function MaxLaunchAuth({ captureOnly = false }: { captureOnly?: boolean }) {
   const [initData, setInitData] = useState('');
   const [linkRequired, setLinkRequired] = useState(false);
   const [sessionAccessToken, setSessionAccessToken] = useState('');
@@ -61,9 +62,10 @@ export function MaxLaunchAuth() {
       // Give the CDN script time to load on slow mobile connections so the
       // one-time launch data is not missed during React hydration.
       for (let attempt = 0; attempt < 150 && active; attempt += 1) {
+        const pendingData = window.__naparePendingMaxInitData?.trim();
         const bridgeData = window.WebApp?.initData?.trim();
         const hasFragmentLaunchData = window.location.hash.includes('WebAppData=');
-        const launchData = bridgeData || (hasFragmentLaunchData ? window.location.hash : '');
+        const launchData = pendingData || bridgeData || (hasFragmentLaunchData ? window.location.hash : '');
         if (launchData) {
           // MAX may place signed launch data in the URL fragment when the
           // Bridge CDN is unavailable. Keep the payload only in memory so it
@@ -75,6 +77,11 @@ export function MaxLaunchAuth() {
               `${window.location.pathname}${window.location.search}`,
             );
           }
+          if (captureOnly) {
+            window.__naparePendingMaxInitData = launchData;
+            return;
+          }
+          window.__naparePendingMaxInitData = undefined;
           setInitData(launchData);
           try {
             // A MAX identity may already belong to a different site account
@@ -113,12 +120,12 @@ export function MaxLaunchAuth() {
         }
         await new Promise(resolve => window.setTimeout(resolve, 100));
       }
-      if (active && (window.WebApp || window.location.hash.includes('WebAppData='))) {
+      if (!captureOnly && active && (window.WebApp || window.location.hash.includes('WebAppData='))) {
         setError('Не удалось получить данные запуска MAX. Повторите открытие мини-приложения.');
       }
     })();
     return () => { active = false; };
-  }, []);
+  }, [captureOnly]);
 
   async function getCurrentSessionAccessToken(): Promise<CurrentSession | null> {
     let accessToken = window.localStorage.getItem('accessToken');

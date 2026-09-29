@@ -104,7 +104,7 @@ const modules = [
 export default function HomePage() {
   return (
     <main>
-      <MaxLaunchAuth />
+      <MaxLaunchAuth captureOnly />
       <header className="portal-header">
         <Link href="/" className="brand">
           <Image

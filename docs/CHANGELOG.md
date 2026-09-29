@@ -2,7 +2,10 @@
 
 > Entries below preserve the original change history and may mention paths/components that were subsequently renamed, removed, or never implemented. Treat them as historical notes, not as a current file index. Current behavior is described by code/configuration and the docs linked from [00_START_HERE](00_START_HERE.md).
 
-## [Unreleased] — 2026-09-29
+## [Unreleased] — 2026-09-30
+
+### MAX
+- Opening the public portal inside MAX now keeps the landing page visible; authentication and first-time account linking begin only after the visitor selects «Войти».
 
 ### Documentation
 - Updated active onboarding, architecture, data model, role, client, security, operations, contribution and API guidance against current repository sources.
