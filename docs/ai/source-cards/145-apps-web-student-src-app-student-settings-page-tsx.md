@@ -6,7 +6,7 @@
 
 ## Scope
 
-Student account settings. Notification delivery preferences, opt-in Telegram delivery after account linking, quiet hours, and the device's IANA time zone are loaded from and saved through the authenticated `/notifications/preferences` API. Name, surname, and phone are saved through authenticated `PATCH /users/me`; light/dark/system theme, accent color, and compact mode are saved locally and applied across the student workspace by the route group's `StudentAppearanceProvider`.
+Student account settings. Notification delivery preferences, opt-in Telegram delivery after account linking, quiet hours, and the device's IANA time zone are loaded from and saved through the authenticated `/notifications/preferences` API. Name, surname, and phone are saved through authenticated `PATCH /users/me`; light/dark/system theme, accent color, and compact mode are saved locally and applied across the student workspace by the route group's `StudentAppearanceProvider`. The connections section links to the shared `/connections` page for MAX and Telegram account links.
 
 ## Read sequence
 

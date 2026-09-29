@@ -11,9 +11,11 @@ const groups: WorkspaceNavGroup[] = [
   { label: 'Университет', items: [{ href: '/users', label: 'Пользователи', icon: 'users' }, { href: '/structure', label: 'Структура', icon: 'building', keywords: ['университет', 'факультеты', 'группы'] }] },
   { label: 'Операции', items: [{ href: '/schedule-import', label: 'Расписание и импорт', icon: 'calendar', keywords: ['расписание', 'импорт', 'pipeline'] }, { href: '/connectors', label: 'Коннекторы', icon: 'plug' }, { href: '/dashboard?view=analytics', label: 'Аналитика', icon: 'chart' }] },
   { label: 'Система', items: [{ href: '/notifications', label: 'Уведомления', icon: 'bell' }, { href: '/audit-log', label: 'Журнал аудита', icon: 'list', keywords: ['аудит', 'логи'] }] },
-  { label: 'Настройки', items: [{ href: '/university', label: 'Настройки университета', icon: 'settings' }] },
+  { label: 'Настройки', items: [{ href: '/university', label: 'Настройки университета', icon: 'settings' }, { href: '/connections', label: 'Подключения аккаунта', icon: 'plug', keywords: ['max', 'telegram'] }] },
 ];
-const AppLink = ({ href, children, ...props }: NavigationLinkProps) => <Link href={href} {...props}>{children}</Link>;
+const AppLink = ({ href, children, ...props }: NavigationLinkProps) => href === '/connections'
+  ? <a href={href} {...props}>{children}</a>
+  : <Link href={href} {...props}>{children}</Link>;
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();

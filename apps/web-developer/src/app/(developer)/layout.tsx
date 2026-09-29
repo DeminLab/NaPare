@@ -72,13 +72,19 @@ const groups: WorkspaceNavGroup[] = [
         icon: "users",
         keywords: ["sessions", "сессии"],
       },
+      {
+        href: "/connections",
+        label: "Подключения аккаунта",
+        icon: "plug",
+        keywords: ["max", "telegram"],
+      },
     ],
   },
 ];
-const AppLink = ({ href, children, ...props }: NavigationLinkProps) => (
-  <Link href={href} {...props}>
-    {children}
-  </Link>
+const AppLink = ({ href, children, ...props }: NavigationLinkProps) => href === "/connections" ? (
+  <a href={href} {...props}>{children}</a>
+) : (
+  <Link href={href} {...props}>{children}</Link>
 );
 
 export default function DeveloperLayout({ children }: { children: ReactNode }) {

@@ -6,7 +6,7 @@
 
 ## Scope
 
-Authentication API routes, including MAX login/link, JWT-protected Telegram linking and its secret-protected Telegram webhook.
+Authentication API routes, including MAX login, JWT-protected MAX link/status, Telegram link/status and its secret-protected webhook.
 
 ## Read sequence
 

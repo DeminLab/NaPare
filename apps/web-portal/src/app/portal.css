@@ -1301,61 +1301,16 @@ footer {
   }
 }
 
-.max-launch-notice {
-  position: fixed;
-  z-index: 50;
-  inset: 1rem 1rem auto;
-  margin-inline: auto;
-  width: fit-content;
-  max-width: calc(100vw - 2rem);
-  padding: 0.75rem 1rem;
-  border: 1px solid #dbe3f0;
-  border-radius: 0.75rem;
-  background: #fff;
-  color: #334155;
-  box-shadow: 0 8px 28px rgb(15 23 42 / 12%);
-}
-
-.max-launch-notice button {
-  margin-left: 0.75rem;
-  color: #4338ca;
-  font-weight: 650;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-.max-launch-backdrop {
-  position: fixed;
-  z-index: 60;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  overflow-y: auto;
-  padding: 1rem;
-  background: rgb(15 23 42 / 48%);
-}
-
-.max-launch-card {
-  width: min(100%, 28rem);
-  padding: 1.5rem;
-  border: 1px solid #e2e8f0;
-  border-radius: 1rem;
-  background: #fff;
-  color: #0f172a;
-  box-shadow: 0 20px 60px rgb(15 23 42 / 20%);
-}
-
-.max-launch-card h2 { margin: 0.5rem 0; font-size: 1.5rem; line-height: 1.25; }
-.max-launch-card > p:not(.eyebrow) { margin: 0 0 1.25rem; color: #64748b; line-height: 1.55; }
-.max-launch-current-session { display: grid; gap: 0.65rem; margin-bottom: 1rem; padding: 0.85rem; border: 1px solid #c7d2fe; border-radius: 0.65rem; background: #eef2ff; }
-.max-launch-current-session p { margin: 0; overflow-wrap: anywhere; color: #334155; font-size: 0.875rem; line-height: 1.45; }
-.max-launch-current-session button { min-height: 2.75rem; padding: 0.7rem 0.9rem; border: 0; border-radius: 0.5rem; background: #4338ca; color: #fff; font: inherit; font-weight: 650; cursor: pointer; }
-.max-launch-current-session button:focus-visible { outline: 3px solid rgb(79 70 229 / 35%); outline-offset: 2px; }
-.max-launch-current-session button:disabled { cursor: wait; opacity: 0.65; }
-.max-launch-form { display: grid; gap: 0.6rem; }
-.max-launch-form label { color: #334155; font-size: 0.875rem; font-weight: 600; }
-.max-launch-form input { width: 100%; min-height: 2.75rem; margin-bottom: 0.5rem; padding: 0.625rem 0.75rem; border: 1px solid #cbd5e1; border-radius: 0.5rem; background: #fff; color: #0f172a; }
-.max-launch-form input:focus-visible, .max-launch-form button:focus-visible { outline: 3px solid rgb(79 70 229 / 35%); outline-offset: 2px; }
-.max-launch-form button { min-height: 2.875rem; margin-top: 0.25rem; padding: 0.75rem 1rem; border: 0; border-radius: 0.5rem; background: #4338ca; color: #fff; font-weight: 650; cursor: pointer; }
-.max-launch-form button:disabled { cursor: wait; opacity: 0.65; }
-.max-launch-form .error { margin: 0; color: #b91c1c; font-size: 0.875rem; }
+.max-login-choice { display: grid; gap: 0.7rem; margin: 1.25rem 0; padding: 1rem; border: 1px solid #dbe3f0; border-radius: 0.85rem; background: #f8fafc; }
+.max-login-choice .eyebrow { margin: 0; }
+.max-login-choice h2 { margin: 0; color: #0f172a; font-size: 1.1rem; }
+.max-login-choice > p:not(.eyebrow) { margin: 0; color: #64748b; font-size: 0.9rem; line-height: 1.5; }
+.max-login-choice > button:not(.max-login-retry) { min-height: 2.875rem; border: 0; border-radius: 0.65rem; background: #4338ca; color: #fff; font: inherit; font-weight: 650; cursor: pointer; }
+.max-login-choice button:focus-visible, .login-password-choice:focus-visible, .login-method-back:focus-visible { outline: 3px solid rgb(79 70 229 / 35%); outline-offset: 2px; }
+.max-login-choice button:disabled { cursor: wait; opacity: 0.65; }
+.max-login-error { padding: 0.75rem; border-radius: 0.65rem; background: #fff7ed; color: #9a3412 !important; }
+.max-login-choice > .max-login-retry { justify-self: start; color: #4338ca; font: inherit; font-weight: 650; text-decoration: underline; text-underline-offset: 3px; }
+.login-method-divider { display: flex; align-items: center; gap: 0.75rem; margin-top: 0.5rem; color: #94a3b8; font-size: 0.75rem; }
+.login-method-divider::before, .login-method-divider::after { height: 1px; flex: 1; background: #e2e8f0; content: ""; }
+.login-password-choice { width: 100%; min-height: 2.875rem; margin-top: 0.25rem; border: 1px solid #cbd5e1; border-radius: 0.65rem; background: #fff; color: #334155; font: inherit; font-weight: 650; cursor: pointer; }
+.login-method-back { margin-top: 1rem; color: #4338ca; font: inherit; font-size: 0.9rem; font-weight: 650; }

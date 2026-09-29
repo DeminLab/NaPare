@@ -5,7 +5,7 @@
 ## [Unreleased] — 2026-09-30
 
 ### MAX
-- Opening the public portal inside MAX now keeps the landing page visible; authentication and first-time account linking begin only after the visitor selects «Войти».
+- The login page offers an explicit choice between MAX and university credentials. MAX account linking moved to account connections in settings and is available across all role workspaces.
 
 ### Documentation
 - Updated active onboarding, architecture, data model, role, client, security, operations, contribution and API guidance against current repository sources.

@@ -6,7 +6,7 @@
 
 ## Scope
 
-Developer operations workspace UI and its data flow.
+Developer operations workspace shell and navigation. Its «Подключения аккаунта» item uses a same-origin browser link to the shared portal page so the `/developer` base path is not applied to `/connections`.
 
 ## Read sequence
 

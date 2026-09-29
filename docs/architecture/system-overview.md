@@ -20,7 +20,7 @@ flowchart LR
     API --> PostgreSQL[(PostgreSQL)]
 ```
 
-MAX opens the existing portal. On first link, the portal sends MAX `initData` and university credentials to the backend; subsequent launches use the linked account flow. See [MAX integration](../clients/max-miniapp.md).
+MAX opens the existing portal. Login offers an explicit choice between MAX and university credentials. An unlinked MAX identity can be linked later from account connections after password login. See [MAX integration](../clients/max-miniapp.md).
 
 ## Backend modules
 

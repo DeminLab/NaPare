@@ -168,6 +168,14 @@ export class AuthService {
     }
   }
 
+  async getMaxLinkStatus(userId: string): Promise<{ linked: boolean }> {
+    const user = await this.usersService.findById(userId);
+    if (!user || !user.isActive) {
+      throw new UnauthorizedException("Аккаунт недоступен");
+    }
+    return { linked: Boolean(user.maxUserId) };
+  }
+
   async refreshToken(refreshToken: string): Promise<AuthResponse> {
     try {
       const payload = this.jwtService.verify<JwtPayload>(refreshToken, {

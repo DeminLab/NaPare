@@ -6,7 +6,7 @@
 
 ## Scope
 
-Shared NaPare main-site login. It stores the existing token pair only after `POST /api/v1/auth/portal-login` succeeds, then selects a same-origin workspace from the backend-provided workspace value. When opened from MAX, this is the explicit point where retained launch data is authenticated and an unlinked account can be linked.
+Shared NaPare main-site login. The user chooses MAX or university email/password. Password login stores the token pair only after `POST /api/v1/auth/portal-login` succeeds and selects a same-origin workspace from the backend-provided workspace value. MAX login starts only after its explicit button; linking is managed separately on `/connections`.
 
 ## Read sequence
 

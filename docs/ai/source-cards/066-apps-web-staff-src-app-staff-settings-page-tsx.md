@@ -6,7 +6,7 @@
 
 ## Scope
 
-Staff workspace UI and its data flow.
+Staff workspace settings. The account-connections section links to the shared portal `/connections` page for MAX and Telegram links.
 
 ## Read sequence
 

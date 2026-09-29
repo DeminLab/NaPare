@@ -83,6 +83,14 @@ export class AuthController {
     return this.authService.linkMaxToAuthenticatedUser(dto.initData, req.user.id);
   }
 
+  @Get("max/status")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Получить состояние привязки MAX текущего аккаунта" })
+  async getMaxLinkStatus(@Request() req) {
+    return this.authService.getMaxLinkStatus(req.user.id);
+  }
+
   @Post("telegram/link")
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
