@@ -15,7 +15,7 @@ import type { HealthInfo, UserInfo } from "@/lib/api";
 const groups: WorkspaceNavGroup[] = [
   {
     label: "Обзор",
-    items: [{ href: "/overview", label: "Обзор", icon: "home" }],
+    items: [{ href: "/overview", label: "Состояние системы", mobileLabel: "Система", icon: "home" }],
   },
   {
     label: "Платформа",
@@ -27,22 +27,16 @@ const groups: WorkspaceNavGroup[] = [
         keywords: ["api explorer", "endpoints", "api"],
       },
       {
-        href: "/api#logs",
-        label: "Журналы",
+        href: "/overview#events",
+        label: "События платформы",
         icon: "list",
         keywords: ["логи", "logs"],
       },
       {
-        href: "/api#events",
-        label: "События",
+        href: "/notifications",
+        label: "Уведомления",
         icon: "pulse",
         keywords: ["events"],
-      },
-      {
-        href: "/api#connectors",
-        label: "Коннекторы",
-        icon: "plug",
-        keywords: ["connectors", "интеграции"],
       },
     ],
   },
@@ -91,6 +85,7 @@ export default function DeveloperLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [user, setUser] = useState<UserInfo | null>(null);
   const [health, setHealth] = useState<HealthInfo | null>(null);
+  const [healthChecked, setHealthChecked] = useState(false);
   const [unread, setUnread] = useState(0);
   useEffect(() => {
     getUser()
@@ -98,7 +93,8 @@ export default function DeveloperLayout({ children }: { children: ReactNode }) {
       .catch(() => undefined);
     getHealth()
       .then(setHealth)
-      .catch(() => setHealth(null));
+      .catch(() => setHealth(null))
+      .finally(() => setHealthChecked(true));
     apiFetch<{ data: Array<{ isRead: boolean }> }>("/notifications")
       .then((response) =>
         setUnread(response.data.filter((item) => !item.isRead).length),
@@ -140,13 +136,21 @@ export default function DeveloperLayout({ children }: { children: ReactNode }) {
       groups={groups}
       roleLabel="Разработчик"
       homeHref="/overview"
-      user={{ name, role: "Разработчик" }}
+      user={{ name, role: "Разработчик", id: user?.id }}
       unreadCount={unread}
+      notificationHref="/notifications"
       status={{
-        label: apiAvailable ? "API доступен" : "API недоступен",
+        label: !healthChecked ? "Проверяем API…" : apiAvailable ? "API доступен" : "Не удалось проверить API",
         tone: apiAvailable ? "success" : "warning",
       }}
       commands={commands}
+      mobileHrefs={["/overview", "/api", "/notifications", "/docs"]}
+      help={{ title: "Инструменты разработчика", description: "Проверка API, события платформы и документация.", steps: [
+        { title: "Проверить состояние системы", description: "Доступность API и сведения о текущем окружении.", href: "/overview" },
+        { title: "Открыть API", description: "Проверка доступности методов с текущими правами доступа.", href: "/api" },
+        { title: "Найти документацию", description: "Описание устройства платформы и её контрактов.", href: "/docs" },
+        { title: "Проверить текущую сессию", description: "Сведения об авторизации вашего аккаунта.", href: "/session" },
+      ]}}
       onLogout={logout}
     >
       {children}

@@ -14,7 +14,7 @@ import { LessonChange } from "./entities/lesson-change.entity";
 import { CreateLessonDto } from "./dto/create-lesson.dto";
 import { UpdateLessonDto } from "./dto/update-lesson.dto";
 import { TenantContext } from "../common/tenant/tenant-context";
-import { getDayRange } from "./utils/date-range";
+import { getDayRange, getInclusiveDateBounds } from "./utils/date-range";
 import { JsonObject } from "../common/types/json-value.type";
 import { EventBusService } from "../events/event-bus.service";
 import { LessonOccurrence } from "../academic/entities/lesson-occurrence.entity";
@@ -140,7 +140,7 @@ export class ScheduleService {
       {
         where: {
           universityId,
-          startDate: Between(new Date(startDate), new Date(endDate)),
+          startDate: Between(...getInclusiveDateBounds(startDate, endDate)),
         },
         order: { startDate: "ASC", pairNumber: "ASC" },
       },
@@ -182,7 +182,7 @@ export class ScheduleService {
         where: {
           universityId,
           groupId: resolvedGroupId,
-          startDate: Between(new Date(startDate), new Date(endDate)),
+          startDate: Between(...getInclusiveDateBounds(startDate, endDate)),
         },
         order: { startDate: "ASC", pairNumber: "ASC" },
       },
@@ -347,7 +347,7 @@ export class ScheduleService {
         where: {
           universityId,
           teacherId,
-          startDate: Between(new Date(startDate), new Date(endDate)),
+          startDate: Between(...getInclusiveDateBounds(startDate, endDate)),
         },
         order: { startDate: "ASC", pairNumber: "ASC" },
       },

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { lessonTabFromSearch } from "@napare/ui/workspace-shell";
 import { apiFetch } from "@/lib/api";
 import {
   Avatar,
@@ -80,8 +81,17 @@ export default function PairSpacePage() {
   const searchParams = useSearchParams();
   const lessonId = params.lessonId as string;
   const [activeTab, setActiveTab] = useState(
-    searchParams.get("compose") ? "homeworks" : "overview",
+    lessonTabFromSearch(searchParams.toString()),
   );
+  useEffect(() => {
+    setActiveTab(lessonTabFromSearch(searchParams.toString()));
+  }, [searchParams]);
+  const selectTab = (tab: string) => {
+    setActiveTab(tab);
+    const query = new URLSearchParams(searchParams.toString());
+    query.set("tab", tab);
+    router.push("/pair-space/" + lessonId + "?" + query.toString(), { scroll: false });
+  };
   const [pairSpace, setPairSpace] = useState<PairSpace | null>(null);
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [loading, setLoading] = useState(true);
@@ -192,13 +202,13 @@ export default function PairSpacePage() {
       </div>
     );
   const tabs = [
-    { id: "overview", label: "Обзор" },
+    { id: "overview", label: "Главное" },
+    { id: "homeworks", label: "Подготовка", count: pairSpace.homeworks.length },
     {
       id: "materials",
       label: "Материалы",
       count: pairSpace.files?.length || 0,
     },
-    { id: "homeworks", label: "Подготовка", count: pairSpace.homeworks.length },
     { id: "discussion", label: "Обсуждение", count: pairSpace.messages.length },
   ];
   const action = (kind: "announcement" | "homework" | "file") => {
@@ -229,7 +239,7 @@ export default function PairSpacePage() {
               </span>
               <span>{lesson.groupName || "Группа не указана"}</span>
               <span>Ауд. {lesson.room || "—"}</span>
-              <span>{lesson.subjectType || "Занятие"}</span>
+              <span>{({ lecture: "Лекция", seminar: "Семинар", practice: "Практика", lab: "Лабораторная", exam: "Экзамен", consultation: "Консультация", other: "Занятие" } as Record<string, string>)[lesson.subjectType || ""] || "Занятие"}</span>
             </div>
             {lesson.isChanged && (
               <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800">
@@ -267,50 +277,12 @@ export default function PairSpacePage() {
               onClick={() => action("file")}
             >
               <Icon name="upload" size={15} />
-              Материал
+              Ссылка на материал
             </Button>
           </div>
         </div>
       </Card>
-      <div className="flex flex-wrap gap-2 rounded-xl border border-slate-200 bg-slate-50 p-2">
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={() => action("announcement")}
-        >
-          Новое объявление
-        </Button>
-        <Button size="sm" variant="ghost" onClick={() => action("homework")}>
-          Подготовка к паре
-        </Button>
-        <Button size="sm" variant="ghost" onClick={() => action("file")}>
-          Загрузить материал
-        </Button>
-        <Button
-          size="sm"
-          variant="ghost"
-          disabled
-          title="Для опросов пока нет контракта бэкенда"
-        >
-          Опрос
-        </Button>
-        <Button
-          size="sm"
-          variant="ghost"
-          disabled
-          title="Для ссылок пока нет контракта бэкенда"
-        >
-          Ссылка
-        </Button>
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={() => setActiveTab("discussion")}
-        >
-          Сообщение группе
-        </Button>
-      </div>
-      <TabBar tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
+      <TabBar tabs={tabs} activeTab={activeTab} onChange={selectTab} />
       {error && (
         <RequestState
           title="Не удалось выполнить действие"
@@ -324,53 +296,16 @@ export default function PairSpacePage() {
         </p>
       )}
       {activeTab === "overview" && (
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card padding="sm">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-              Что подготовить
-            </p>
-            <div className="mt-3 space-y-2 text-sm text-slate-700">
-              <p>
-                {pairSpace.homeworks.length
-                  ? `${pairSpace.homeworks.length} ориентиров опубликовано`
-                  : "Добавьте первый ориентир"}
-              </p>
-              <p>{pairSpace.files?.length || 0} материалов доступно группе</p>
-              <p>
-                {pairSpace.messages.length
-                  ? `${pairSpace.messages.length} сообщений в обсуждении`
-                  : "Обсуждение пока пустое"}
-              </p>
-            </div>
-          </Card>
-          <Card padding="sm">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-              Быстрый итог
-            </p>
-            <div className="mt-3 space-y-2 text-sm text-slate-700">
-              <p>Объявлений: {pairSpace.announcements.length}</p>
-              <p>Подготовок: {pairSpace.homeworks.length}</p>
-              <p>Материалов: {pairSpace.files?.length || 0}</p>
-            </div>
-          </Card>
-          <Card padding="sm">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-              Статус пары
-            </p>
-            <p className="mt-3 text-lg font-semibold text-slate-900">
-              {lesson.isChanged ? "Есть изменение" : "По расписанию"}
-            </p>
-            <p className="mt-1 text-sm text-slate-500">
-              Публикации и сообщения доступны группе сразу после сохранения.
-            </p>
-          </Card>
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <Card padding="sm"><h2 className="text-base font-bold text-slate-900">Объявления для группы</h2><div className="mt-4 space-y-3">{pairSpace.announcements.length ? pairSpace.announcements.map(item => <article key={item.id} className="rounded-xl border border-slate-200 p-4"><div className="mb-2 flex items-center gap-2">{item.isPinned && <Badge variant="sky">Закреплено</Badge>}<span className="text-xs text-slate-500">{timeAgo(item.createdAt)}</span></div><p className="whitespace-pre-wrap text-sm leading-6 text-slate-800">{item.text}</p></article>) : <p className="text-sm text-slate-500">Опубликуйте организационные детали, чтобы группа увидела их перед занятием.</p>}</div></Card>
+          <Card padding="sm"><h2 className="text-base font-bold text-slate-900">Подготовка группы</h2><p className="mt-3 text-sm leading-6 text-slate-600">{pairSpace.homeworks.length} ориентиров · {pairSpace.files?.length || 0} материалов</p><Button variant="secondary" fullWidth className="mt-4" onClick={() => selectTab("homeworks")}>Проверить подготовку</Button><p className="mt-4 text-xs leading-5 text-slate-500">Сдачи и оценки остаются в Moodle. Здесь размещайте план подготовки и материалы к этой паре.</p></Card>
         </div>
       )}
       {activeTab === "materials" &&
         (!pairSpace.files?.length ? (
           <EmptyState
             title="Материалов пока нет"
-            description="Загрузите файл, чтобы группа увидела его в пространстве пары."
+            description="Добавьте ссылку на файл, доступный группе."
           />
         ) : (
           <div className="grid gap-3 md:grid-cols-2">
@@ -389,7 +324,7 @@ export default function PairSpacePage() {
                     </a>
                     <p className="mt-1 text-xs text-slate-500">
                       {item.fileType.toUpperCase()} ·{" "}
-                      {Math.round(item.size / 1024)} KB
+                      {item.size > 0 ? `${Math.round(item.size / 1024)} KB` : "Размер не указан"}
                     </p>
                   </div>
                 </div>
@@ -589,7 +524,7 @@ export default function PairSpacePage() {
       <Modal
         open={modal === "file"}
         onClose={() => setModal(null)}
-        title="Загрузить материал"
+        title="Добавить ссылку на материал"
       >
         <div className="space-y-4">
           <Input

@@ -6,7 +6,7 @@
 
 ## Scope
 
-Staff workspace UI and its data flow.
+Staff workspace uses actual teacher/curator/dean/department-head labels, grouped navigation, a shared attention centre, one search, mobile shortcuts and role help. Personal connections route to the portal.
 
 ## Read sequence
 

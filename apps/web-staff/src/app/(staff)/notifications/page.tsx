@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { AttentionNavigation } from "../AttentionNavigation";
 import { useEffect, useMemo, useState } from "react";
 import { apiFetchList, markAllRead, markNotificationRead } from "@/lib/api";
 import {
@@ -150,8 +151,9 @@ export default function NotificationsPage() {
           </Button>
         )}
       </div>
+      <AttentionNavigation active="notifications" />
       <div
-        role="tablist"
+        role="group"
         aria-label="Фильтры уведомлений"
         className="flex gap-1 overflow-x-auto border-b border-slate-200"
       >
@@ -159,8 +161,7 @@ export default function NotificationsPage() {
           <button
             key={item.id}
             type="button"
-            role="tab"
-            aria-selected={filter === item.id}
+            aria-pressed={filter === item.id}
             onClick={() => setFilter(item.id)}
             className={`shrink-0 border-b-2 px-3 py-3 text-sm font-medium transition-colors ${filter === item.id ? "border-sky-600 text-sky-700" : "border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-900"}`}
           >

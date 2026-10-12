@@ -5,12 +5,14 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import {
   WorkspaceShell,
+  searchCommands,
+  type WorkspaceSearchResponse,
+  type WorkspaceHelp,
   type NavigationLinkProps,
   type WorkspaceCommand,
   type WorkspaceNavGroup,
 } from "@napare/ui/workspace-shell";
-import { getUnreadCount, getUser, isLoggedIn, logout } from "@/lib/api";
-import { StaffSpotlight } from "./StaffSpotlight";
+import { apiFetch, getUnreadCount, getUser, isLoggedIn, logout } from "@/lib/api";
 
 const groups: WorkspaceNavGroup[] = [
   {
@@ -41,14 +43,13 @@ const groups: WorkspaceNavGroup[] = [
       },
       { href: "/groups", label: "Группы", icon: "users" },
       { href: "/attendance", label: "Посещаемость", icon: "check" },
-      { href: "/pair-space", label: "Пространства пар", icon: "book" },
+      { href: "/pair-space", label: "Занятия и материалы", icon: "book", keywords: ["пространства пар"] },
     ],
   },
   {
     label: "Коммуникация",
     items: [
-      { href: "/inbox", label: "Входящие", icon: "bell" },
-      { href: "/notifications", label: "Уведомления", icon: "bell" },
+      { href: "/inbox", activePaths: ["/notifications"], mobileLabel: "Внимание", label: "Центр внимания", icon: "bell", keywords: ["входящие", "уведомления", "заявки"] },
     ],
   },
   {
@@ -56,22 +57,26 @@ const groups: WorkspaceNavGroup[] = [
     items: [
       { href: "/profile", label: "Профиль", icon: "user" },
       { href: "/settings", label: "Настройки", icon: "settings" },
+      { href: "/connections", label: "Подключения аккаунта", icon: "plug" },
     ],
   },
 ];
 const AppLink = ({ href, children, ...props }: NavigationLinkProps) => (
-  <Link href={href} {...props}>
-    {children}
-  </Link>
+  href === "/connections" ? <a href={href} {...props}>{children}</a> : <Link href={href} {...props}>{children}</Link>
 );
+const searchWorkspace = async (query: string, signal: AbortSignal) => searchCommands(await apiFetch<WorkspaceSearchResponse>("/search?q=" + encodeURIComponent(query), { signal }));
+const help: WorkspaceHelp = { title: "Ваш рабочий день", description: "Расписание, группы и действия, которые требуют вашего внимания.", steps: [
+  { title: "Начать с ближайшей пары", description: "Время, группа и аудитория на странице «Сегодня».", href: "/today" },
+  { title: "Подготовить занятие", description: "Добавьте тему и ссылки на материалы для студентов.", href: "/assignments" },
+  { title: "Проверить посещаемость", description: "Откройте журнал своей группы или QR-сессию.", href: "/attendance" },
+  { title: "Разобрать важные события", description: "Заявки и сообщения собраны в центре внимания.", href: "/inbox" },
+] };
+const roleLabels: Record<string, string> = { teacher: "Преподаватель", curator: "Куратор", faculty_dean: "Декан", department_head: "Заведующий кафедрой" };
 
 export default function StaffLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [user, setUser] = useState<{
-    firstName: string;
-    lastName: string;
-  } | null>(null);
+  const [user, setUser] = useState<Awaited<ReturnType<typeof getUser>> | null>(null);
   const [unread, setUnread] = useState(0);
   useEffect(() => {
     if (!isLoggedIn()) {
@@ -103,8 +108,8 @@ export default function StaffLayout({ children }: { children: ReactNode }) {
     },
     {
       id: "staff:inbox",
-      label: "Открыть входящие",
-      description: "Сообщения и действия преподавателя",
+      label: "Открыть центр внимания",
+      description: "Сообщения и важные действия",
       icon: "bell",
       href: "/inbox",
       keywords: ["сообщения", "вопросы", "работы"],
@@ -126,25 +131,27 @@ export default function StaffLayout({ children }: { children: ReactNode }) {
   const resolvedGroups = groups.map((group) => ({
     ...group,
     items: group.items.map((item) =>
-      item.href === "/notifications" ? { ...item, badge: unread } : item,
+      item.href === "/inbox" ? { ...item, badge: unread } : item,
     ),
   }));
   return (
-    <>
     <WorkspaceShell
       LinkComponent={AppLink}
       pathname={pathname}
       groups={resolvedGroups}
-      roleLabel="Преподаватель"
+      roleLabel={roleLabels[user.role] || "Сотрудник университета"}
       homeHref="/today"
-      user={{ name: fullName, role: "Преподаватель" }}
+      user={{ name: fullName, role: roleLabels[user.role] || "Сотрудник университета", id: user.id }}
       unreadCount={unread}
       commands={commands}
+      notificationHref="/notifications"
+      onSearch={searchWorkspace}
+      searchPlaceholder="Предмет, группа, материал или раздел…"
+      mobileHrefs={["/today", "/week", "/groups", "/inbox"]}
+      help={help}
       onLogout={logout}
     >
       {children}
     </WorkspaceShell>
-    <StaffSpotlight />
-    </>
   );
 }

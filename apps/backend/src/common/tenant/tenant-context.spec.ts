@@ -36,3 +36,28 @@ describe('TenantContext', () => {
     expect(() => context.assertAccess('uni-b')).not.toThrow();
   });
 });
+
+describe('TenantContext request scope', () => {
+  const makeUser = (id: string) => ({ id, email: `${id}@napare.test`, role: UserRole.UNIVERSITY_ADMIN, universityId: id });
+
+  it('retains the authenticated actor after an asynchronous guard completes', async () => {
+    const context = new TenantContext();
+    await context.runInRequest(async () => {
+      await Promise.resolve().then(() => context.setUser(makeUser('first')));
+      expect(context.getUser()?.id).toBe('first');
+    });
+    expect(context.getUser()).toBeUndefined();
+  });
+
+  it('isolates overlapping requests and enforces their university boundaries', async () => {
+    const context = new TenantContext();
+    await Promise.all(['first', 'second'].map(id => context.runInRequest(async () => {
+      await Promise.resolve().then(() => context.setUser(makeUser(id)));
+      await new Promise(resolve => setImmediate(resolve));
+      expect(context.getUser()?.id).toBe(id);
+      expect(() => context.assertAccess(id)).not.toThrow();
+      expect(() => context.assertAccess(id === 'first' ? 'second' : 'first')).toThrow();
+    })));
+    expect(context.getUser()).toBeUndefined();
+  });
+});

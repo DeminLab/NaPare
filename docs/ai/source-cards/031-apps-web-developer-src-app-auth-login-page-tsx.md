@@ -6,7 +6,7 @@
 
 ## Scope
 
-Developer operations workspace UI and its data flow.
+Legacy developer login routes visitors to the shared portal login, retaining one account entry flow.
 
 ## Read sequence
 

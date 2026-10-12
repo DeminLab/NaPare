@@ -9,7 +9,7 @@ import { apiFetch, apiFetchList, getUser, logout, type Me } from '@/lib/api';
 const groups: WorkspaceNavGroup[] = [
   { label: 'Обзор', items: [{ href: '/dashboard', label: 'Обзор', icon: 'dashboard', keywords: ['overview', 'сводка'] }] },
   { label: 'Университет', items: [{ href: '/users', label: 'Пользователи', icon: 'users' }, { href: '/structure', label: 'Структура', icon: 'building', keywords: ['университет', 'факультеты', 'группы'] }] },
-  { label: 'Операции', items: [{ href: '/schedule-import', label: 'Расписание и импорт', icon: 'calendar', keywords: ['расписание', 'импорт', 'pipeline'] }, { href: '/connectors', label: 'Коннекторы', icon: 'plug' }, { href: '/dashboard?view=analytics', label: 'Аналитика', icon: 'chart' }] },
+  { label: 'Расписание и данные', items: [{ href: '/schedule-import', label: 'Расписание', icon: 'calendar', keywords: ['расписание', 'импорт'] }, { href: '/connectors', label: 'Источники данных', icon: 'plug', keywords: ['коннекторы', 'интеграции'] }] },
   { label: 'Система', items: [{ href: '/notifications', label: 'Уведомления', icon: 'bell' }, { href: '/audit-log', label: 'Журнал аудита', icon: 'list', keywords: ['аудит', 'логи'] }] },
   { label: 'Настройки', items: [{ href: '/university', label: 'Настройки университета', icon: 'settings' }, { href: '/connections', label: 'Подключения аккаунта', icon: 'plug', keywords: ['max', 'telegram'] }] },
 ];
@@ -37,5 +37,10 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const fullName = user.firstName + ' ' + user.lastName;
   const resolvedGroups = groups.map((group) => ({ ...group, items: group.items.map((item) => item.href === '/notifications' ? { ...item, badge: notificationCount } : item) }));
   const status = systemStatus === 'online' ? { label: 'Система работает', tone: 'success' as const } : systemStatus === 'offline' ? { label: 'Система недоступна', tone: 'danger' as const } : { label: 'Проверка системы', tone: 'warning' as const };
-  return <WorkspaceShell LinkComponent={AppLink} pathname={pathname} groups={resolvedGroups} roleLabel="Кабинет ВУЗа" homeHref="/dashboard" user={{ name: fullName, role: 'Оператор ВУЗа' }} unreadCount={notificationCount} status={status} commands={commands} onLogout={logout}>{children}</WorkspaceShell>;
+  return <WorkspaceShell LinkComponent={AppLink} pathname={pathname} groups={resolvedGroups} roleLabel="Кабинет ВУЗа" homeHref="/dashboard" user={{ name: fullName, role: 'Сотрудник ВУЗа', id: user.id }} unreadCount={notificationCount} status={status} commands={commands} mobileHrefs={['/dashboard', '/schedule-import', '/users', '/structure']} help={{ title: 'Управление университетом', description: 'Начните с пользователей и структуры, затем проверьте расписание и источники данных.', steps: [
+    { title: 'Проверить общую сводку', description: 'Статистика и состояние данных университета.', href: '/dashboard' },
+    { title: 'Добавить пользователей', description: 'Учётные записи и доступ к кабинетам.', href: '/users' },
+    { title: 'Настроить расписание', description: 'Импорт, проверка ошибок и публикация занятий.', href: '/schedule-import' },
+    { title: 'Подключить источники данных', description: 'Интеграции университета; личные MAX и Telegram находятся в меню аккаунта.', href: '/connectors' },
+  ] }} onLogout={logout}>{children}</WorkspaceShell>;
 }

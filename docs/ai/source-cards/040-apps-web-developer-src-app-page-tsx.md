@@ -6,7 +6,7 @@
 
 ## Scope
 
-Developer operations workspace UI and its data flow.
+Developer root redirects to the authenticated API workspace. Next configuration skips automatic trailing slash redirection to avoid a loop with the existing Nginx /developer to /developer/ redirect.
 
 ## Read sequence
 

@@ -18,7 +18,7 @@ describe("MyDayService", () => {
     getOrCreateByLesson: jest.fn(),
     listPreparationsForLessons: jest.fn(),
   };
-  const absencesService = { findByStudent: jest.fn() };
+  const absencesService = { findByStudent: jest.fn(), findByLesson: jest.fn() };
   const notificationsService = { getUnreadCount: jest.fn() };
 
   let service: MyDayService;
@@ -39,6 +39,7 @@ describe("MyDayService", () => {
       lessonId: "today-lesson",
     });
     absencesService.findByStudent.mockResolvedValue({ data: [] });
+    absencesService.findByLesson.mockResolvedValue({ data: [] });
     notificationsService.getUnreadCount.mockResolvedValue(0);
 
     service = new MyDayService(
@@ -80,6 +81,25 @@ describe("MyDayService", () => {
 
     expect(scheduleService.findByTeacherDateRange).toHaveBeenCalled();
     expect(pairSpaceService.listPreparationsForLessons).not.toHaveBeenCalled();
+    expect(absencesService.findByStudent).not.toHaveBeenCalled();
+  });
+
+  it("uses scoped lesson absences for staff and deduplicates a multi-lesson absence", async () => {
+    scheduleService.findByTeacherDateRange.mockResolvedValue({ data: [{ id: "first" }, { id: "second" }] });
+    absencesService.findByLesson.mockResolvedValue({ data: [{ id: "absence-1", startDate: `${today}T00:00:00Z`, endDate: `${today}T23:59:59Z` }] });
+    const result = await service.getMyDay("teacher-1", "university-1", UserRole.TEACHER);
+    expect(absencesService.findByStudent).not.toHaveBeenCalled();
+    expect(absencesService.findByLesson.mock.calls).toEqual([["first"], ["second"]]);
+    expect(result.absences).toHaveLength(1);
+    expect(result.summary.totalAbsences).toBe(1);
+  });
+
+  it("includes an absence that began yesterday and continues today", async () => {
+    const yesterday = new Date(`${today}T00:00:00Z`);
+    yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+    absencesService.findByStudent.mockResolvedValue({ data: [{ id: "ongoing", startDate: yesterday, endDate: `${today}T23:59:59Z` }] });
+    const result = await service.getMyDay("student-1", "university-1", UserRole.STUDENT, "group-1");
+    expect(result.absences.map(absence => absence.id)).toEqual(["ongoing"]);
   });
 
   it("uses the requested IANA timezone to determine the local day", async () => {

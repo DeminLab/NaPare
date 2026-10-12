@@ -6,7 +6,7 @@
 
 ## Scope
 
-Notification preferences, in-app notifications and inbox fan-out. Optional Telegram delivery is opt-in, follows the same category/quiet-hour filters, and uses validated internal deep links. Schedule events include backend-supplied old/new details; cancellation notices include the original lesson's time and location.
+Event notifications and inbox items retain existing schemas and scopes. Preparation reminders use preparation wording and explain that submissions and grades remain in Moodle, avoiding false submission instructions to teachers.
 
 ## Read sequence
 

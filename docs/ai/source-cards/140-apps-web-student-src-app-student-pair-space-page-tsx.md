@@ -6,7 +6,7 @@
 
 ## Scope
 
-Student entry point to Pair Spaces and the cross-lesson preparation/deadline overview.
+Student preparation list preserves query and filter in the URL, requests my-day with the existing timeZone parameter, and links to the preparation tab of each lesson. Personal progress remains separate from submission.
 
 ## Read sequence
 

@@ -6,7 +6,7 @@
 
 ## Scope
 
-Unit coverage for My Day's role-scoped schedule range and upcoming preparation aggregation.
+My Day regressions cover the student lookahead, local timezone, staff lesson-scoped absence reads, deduplication and multi-day periods.
 
 ## Read sequence
 

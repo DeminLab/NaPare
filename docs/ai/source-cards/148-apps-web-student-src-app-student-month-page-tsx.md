@@ -6,7 +6,7 @@
 
 ## Scope
 
-Student month schedule. It loads every page of the authenticated `/schedule/range` result and displays supplied subgroups and week parity, presents a desktop calendar and mobile day list, filters by lesson type or subject/teacher/building/room search, exports the selected month's non-cancelled lessons as `.ics`, and caches month data separately by university and account. Cached content appears immediately while the app checks for newer data; network failures leave the saved copy visible.
+Student month schedule preserves selected date, type and query in the URL and carries that context back to week view. Fetching waits for query restoration.
 
 ## Read sequence
 

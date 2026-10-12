@@ -6,7 +6,7 @@
 
 ## Scope
 
-Pair Space data access and policy, including published preparation items, account-owned personal lesson notes, and a bounded subject timeline. The timeline must use the tenant and role-scoped lesson access rules and return only approved shared content, never another user's personal notes or private submissions.
+Pair Space access enforces teacher ownership for existing spaces as well as newly created spaces. Student group scopes and private notes remain isolated. Preparation deadlines are normalised from ISO input to Date before saving and publishing events, preventing a post-save 500.
 
 ## Read sequence
 

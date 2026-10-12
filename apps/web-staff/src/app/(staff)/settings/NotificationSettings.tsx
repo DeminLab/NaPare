@@ -1,0 +1,59 @@
+'use client';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { apiFetch } from '@/lib/api';
+import { Button, Card, RequestState, Skeleton } from '@/components/ui';
+
+const events = [
+  { key: 'scheduleChanges', label: 'Изменения расписания' },
+  { key: 'cancellations', label: 'Отмена занятий' },
+  { key: 'roomChanges', label: 'Смена аудитории' },
+  { key: 'homeworkCreated', label: 'Новая подготовка к занятию' },
+  { key: 'deadlines', label: 'Напоминания о сроках' },
+  { key: 'messages', label: 'Сообщения в обсуждениях' },
+  { key: 'announcements', label: 'Объявления' },
+  { key: 'systemAlerts', label: 'Системные события' },
+] as const;
+type Preferences = Record<typeof events[number]['key'], boolean> & { telegramEnabled: boolean };
+type TelegramStatus = { linked: boolean; notificationsConfigured: boolean };
+const normalize = (value: Partial<Preferences>): Preferences => Object.fromEntries([...events.map(event => [event.key, value[event.key] !== false]), ['telegramEnabled', value.telegramEnabled === true]]) as Preferences;
+
+export function NotificationSettings() {
+  const [preferences, setPreferences] = useState<Preferences | null>(null);
+  const [saved, setSaved] = useState<Preferences | null>(null);
+  const [telegram, setTelegram] = useState<TelegramStatus | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [status, setStatus] = useState('');
+  const loadController = useRef<AbortController | null>(null);
+  const load = useCallback(() => {
+    loadController.current?.abort();
+    const controller = new AbortController();
+    loadController.current = controller;
+    setLoading(true); setError('');
+    apiFetch<Partial<Preferences>>('/notifications/preferences', { signal: controller.signal }).then(response => {
+      if (controller.signal.aborted) return;
+      const value = normalize(response); setPreferences(value); setSaved(value);
+    }).catch(() => { if (!controller.signal.aborted) setError('Не удалось загрузить настройки уведомлений.'); }).finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    apiFetch<TelegramStatus>('/auth/telegram/status', { signal: controller.signal }).then(value => { if (!controller.signal.aborted) setTelegram(value); }).catch(() => { if (!controller.signal.aborted) setTelegram(null); });
+  }, []);
+  useEffect(() => { load(); return () => loadController.current?.abort(); }, [load]);
+  const save = async () => {
+    if (!preferences) return;
+    setSaving(true); setError(''); setStatus('');
+    try {
+      const value = normalize(await apiFetch<Partial<Preferences>>('/notifications/preferences', { method: 'PATCH', body: JSON.stringify(preferences) }));
+      setPreferences(value); setSaved(value); setStatus('Настройки уведомлений сохранены.');
+    } catch { setError('Не удалось сохранить настройки. Ваш выбор остался на экране — попробуйте ещё раз.'); }
+    finally { setSaving(false); }
+  };
+  if (loading) return <Skeleton className="h-72" />;
+  if (!preferences) return <RequestState title="Настройки недоступны" description={error} onRetry={load} />;
+  const changed = JSON.stringify(preferences) !== JSON.stringify(saved);
+  return <Card><h2 className="text-lg font-semibold text-slate-900">Какие события вам нужны</h2><p className="mt-2 text-sm text-slate-600">Выбранные события появляются в кабинете. Дополнительную доставку в Telegram можно включить после подключения аккаунта.</p>
+    <div className="mt-4 grid gap-1 sm:grid-cols-2">{events.map(event => <label key={event.key} className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg p-3 hover:bg-slate-50"><input type="checkbox" className="h-5 w-5 accent-sky-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-700" checked={preferences[event.key]} disabled={saving} onChange={e => { setStatus(''); setPreferences(previous => previous && { ...previous, [event.key]: e.target.checked }); }} /><span className="text-sm text-slate-800">{event.label}</span></label>)}</div>
+    <div className="mt-4 border-t border-slate-200 pt-4"><label className="flex min-h-11 items-center gap-3"><input type="checkbox" className="h-5 w-5 accent-sky-700" checked={preferences.telegramEnabled} disabled={saving || (!preferences.telegramEnabled && (!telegram?.linked || !telegram.notificationsConfigured))} onChange={e => { setStatus(''); setPreferences(previous => previous && { ...previous, telegramEnabled: e.target.checked }); }} /><span className="text-sm font-medium">Также отправлять в Telegram</span></label><p className="mt-1 text-sm text-slate-500">{!telegram ? 'Не удалось проверить подключение Telegram.' : !telegram.linked ? 'Аккаунт Telegram ещё не подключён.' : !telegram.notificationsConfigured ? 'Доставка Telegram пока не настроена университетом.' : 'Telegram подключён. Настройка применяется после сохранения.'}</p><a href="/connections" className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-sky-700">Открыть подключения аккаунта →</a></div>
+    {error && <p role="alert" className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+    <div className="mt-4 flex flex-wrap items-center gap-3"><Button onClick={() => void save()} disabled={saving || !changed}>{saving ? 'Сохраняем…' : 'Сохранить настройки'}</Button><span role="status" className="text-sm text-slate-600">{status || (changed ? 'Есть несохранённые изменения' : 'Настройки сохранены')}</span></div>
+  </Card>;
+}

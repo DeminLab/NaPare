@@ -190,6 +190,25 @@ describe("ScheduleService", () => {
     });
   });
 
+
+  describe("inclusive schedule ranges", () => {
+    it.each(["student", "teacher", "university"])("includes lessons on the final calendar day for %s", async (role) => {
+      if (role === "student") await service.findForStudentDateRange("uni-1", "group-1", "2026-10-05", "2026-10-11");
+      else if (role === "teacher") await service.findByTeacherDateRange("uni-1", "teacher-1", "2026-10-05", "2026-10-11");
+      else await service.findByDateRange("uni-1", "2026-10-05", "2026-10-11");
+      const options = mockLessonRepo.findAndCount.mock.calls[0][0];
+      expect(options.where.startDate.value.map((date: Date) => date.toISOString())).toEqual(["2026-10-05T00:00:00.000Z", "2026-10-11T23:59:59.999Z"]);
+      expect(options.where.universityId).toBe("uni-1");
+      if (role === "student") expect(options.where.groupId).toBe("group-1");
+      if (role === "teacher") expect(options.where.teacherId).toBe("teacher-1");
+    });
+    it("preserves explicit timezone-adjusted timestamps from My Day", async () => {
+      await service.findForStudentDateRange("uni-1", "group-1", "2026-10-10T18:00:00.000Z", "2026-10-11T17:59:59.999Z");
+      const options = mockLessonRepo.findAndCount.mock.calls[0][0];
+      expect(options.where.startDate.value.map((date: Date) => date.toISOString())).toEqual(["2026-10-10T18:00:00.000Z", "2026-10-11T17:59:59.999Z"]);
+    });
+  });
+
   describe("create", () => {
     it("should create and save a lesson", async () => {
       const dto = {

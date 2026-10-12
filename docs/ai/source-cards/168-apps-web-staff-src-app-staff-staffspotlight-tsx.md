@@ -6,7 +6,7 @@
 
 ## Scope
 
-Staff global search command panel, keyboard navigation, debounced API calls and role-scoped lesson navigation.
+Legacy staff Spotlight retained as source but no longer mounted. Active staff search is provided by WorkspaceShell with the existing scoped search endpoint.
 
 ## Read sequence
 

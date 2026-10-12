@@ -77,10 +77,7 @@ function lessonState(lesson: Lesson, now: Date) {
 }
 
 export default function TodayPage() {
-  const [user, setUser] = useState<{
-    firstName: string;
-    lastName: string;
-  } | null>(null);
+  const [user, setUser] = useState<Awaited<ReturnType<typeof getUser>> | null>(null);
   const [day, setDay] = useState<MyDayResponse | null>(null);
   const [notices, setNotices] = useState<Notice[]>([]);
   const [loading, setLoading] = useState(true);
@@ -181,7 +178,7 @@ export default function TodayPage() {
   return (
     <div className="mx-auto max-w-[1400px] space-y-6">
       <PageHeader
-        eyebrow="Рабочий день преподавателя"
+        eyebrow={user?.role === "curator" ? "Рабочий день куратора" : user?.role === "teacher" ? "Рабочий день преподавателя" : "Рабочий день"}
         title={`Добрый день, ${user?.firstName || ""}`}
         description={now.toLocaleDateString("ru-RU", {
           weekday: "long",
@@ -194,6 +191,7 @@ export default function TodayPage() {
           </Link>
         }
       />
+      {user?.role === "curator" && <Card className="border-sky-200 bg-sky-50/50"><h2 className="text-lg font-semibold text-slate-900">Группы и обращения</h2><p className="mt-2 text-sm text-slate-600">Проверьте обращения студентов об отсутствии и назначенные вам группы.</p><div className="mt-4 flex flex-wrap gap-2"><Link href="/attendance"><Button>Рассмотреть обращения</Button></Link><Link href="/groups"><Button variant="secondary">Открыть группы</Button></Link><Link href="/inbox"><Button variant="ghost">Центр внимания</Button></Link></div></Card>}
       <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         {[
           {
@@ -209,7 +207,7 @@ export default function TodayPage() {
           {
             label: "Активные задания",
             value: activeHomework,
-            note: "В пространствах пар",
+            note: "Подготовка к занятиям",
           },
           {
             label: "Непросмотренные",
@@ -231,7 +229,7 @@ export default function TodayPage() {
           <section>
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-base font-bold text-slate-900">
-                {current ? "Сейчас" : "Следующая пара"}
+                {current ? "Сейчас" : !next && lessons.length ? "Занятия завершены" : "Следующая пара"}
               </h2>
               <span className="text-xs text-slate-400">
                 {next ? lessonState(next, now).label : "Сегодня"}
@@ -284,8 +282,8 @@ export default function TodayPage() {
               </Card>
             ) : (
               <EmptyState
-                title="Сегодня нет занятий"
-                description="Можно проверить расписание на неделю или открыть группы."
+                title={lessons.length ? "Все занятия на сегодня завершены" : "Сегодня нет занятий"}
+                description="Расписание дня остаётся ниже. План следующих занятий доступен в разделе «Неделя»."
               />
             )}
           </section>
@@ -359,7 +357,7 @@ export default function TodayPage() {
                 href="/inbox"
                 className="text-xs font-semibold text-sky-700"
               >
-                Входящие
+                Центр внимания
               </Link>
             </div>
             <div className="mt-3 divide-y divide-slate-100">

@@ -6,7 +6,7 @@
 
 ## Scope
 
-Authenticated role-aware aggregation for the My Day API: today's lessons, pair spaces, absences, notifications, and student preparation deadlines in the next 30 days. The optional IANA `timeZone` parameter determines the local calendar day and its UTC query bounds across student, teacher, and other role paths; invalid zones are rejected.
+My Day selects absence data by role: student personal records, staff records for their scoped daily lessons. It deduplicates multi-lesson absences and includes periods that continue from earlier days. Schedule timezone and preparation lookahead retain existing contracts.
 
 ## Read sequence
 

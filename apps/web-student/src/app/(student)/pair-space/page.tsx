@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useWorkspaceQuery } from '@napare/ui/workspace-shell';
 import { useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '@/lib/api';
 import { Badge, Button, Card, EmptyState, Icon, RequestState, Skeleton } from '@napare/ui';
@@ -69,10 +70,15 @@ export default function PairSpaceIndex() {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  useWorkspaceQuery({ filter, q: search }, query => {
+    const requested = query.get("filter");
+    setFilter(filters.find(item => item.id === requested)?.id || "all");
+    setSearch((query.get("q") || "").slice(0, 80));
+  });
 
   useEffect(() => {
     let active = true;
-    apiFetch<MyDayResponse>('/my-day')
+    apiFetch<MyDayResponse>('/my-day?timeZone=' + encodeURIComponent(Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'))
       .then((result) => {
         if (active) setPreparations(result.upcomingPreparations || []);
       })
@@ -112,7 +118,7 @@ export default function PairSpaceIndex() {
           <p className="text-sm text-slate-500" role="status">Показано {visible.length} из {preparations.length}</p>
         </div>
         <div className="mt-4 flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Фильтр по сроку">
-          {filters.map((item) => <button key={item.id} type="button" aria-pressed={filter === item.id} onClick={() => setFilter(item.id)} className={`shrink-0 rounded-full border px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-100 ${filter === item.id ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'}`}>{item.label}</button>)}
+          {filters.map((item) => <button key={item.id} type="button" aria-pressed={filter === item.id} onClick={() => setFilter(item.id)} className={`min-h-11 shrink-0 rounded-full border px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-100 ${filter === item.id ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'}`}>{item.label}</button>)}
         </div>
       </Card>
 
@@ -127,7 +133,7 @@ export default function PairSpaceIndex() {
               <p className="mt-1 text-sm font-medium text-indigo-700">{item.subject}</p>
               {item.description && <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-600">{item.description}</p>}
             </div>
-            <Link href={`/pair-space/${item.lessonId}`} className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 text-sm font-semibold text-slate-700 hover:border-indigo-300 hover:text-indigo-700">К материалам пары <Icon name="arrow-right" size={16} /></Link>
+            <Link href={`/pair-space/${item.lessonId}?tab=homeworks`} className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 text-sm font-semibold text-slate-700 hover:border-indigo-300 hover:text-indigo-700">Открыть подготовку <Icon name="arrow-right" size={16} /></Link>
           </div>
         </Card>;
       })}</div> : <Card><EmptyState title={preparations.length ? 'Ничего не найдено' : 'Подготовки пока нет'} description={preparations.length ? 'Измените запрос или фильтр.' : 'Когда преподаватель добавит тему или материал к паре, он появится здесь.'} action={preparations.length ? <Button variant="secondary" onClick={() => { setSearch(''); setFilter('all'); }}>Сбросить фильтры</Button> : <Link href="/week" className="inline-flex min-h-11 items-center rounded-xl bg-indigo-600 px-4 text-sm font-semibold text-white">Открыть расписание</Link>} /></Card>}

@@ -1314,3 +1314,37 @@ footer {
 .login-method-divider::before, .login-method-divider::after { height: 1px; flex: 1; background: #e2e8f0; content: ""; }
 .login-password-choice { width: 100%; min-height: 2.875rem; margin-top: 0.25rem; border: 1px solid #cbd5e1; border-radius: 0.65rem; background: #fff; color: #334155; font: inherit; font-weight: 650; cursor: pointer; }
 .login-method-back { margin-top: 1rem; color: #4338ca; font: inherit; font-size: 0.9rem; font-weight: 650; }
+
+.login-password-field { position: relative; margin-top: 8px; }
+.login-password-field input { width: 100%; padding-right: 6.5rem; }
+.login-form .login-password-toggle { position: absolute; top: 3px; right: 3px; min-height: 44px; min-width: 80px; margin: 0; padding: 0 10px; border-radius: 8px; background: #f2f4f7; color: #344054; font-size: 13px; }
+.login-form .login-password-toggle:focus-visible { outline: 3px solid #e0e7ff; }
+.login-field-error { display: block; margin-top: 6px; color: #b42318; font-size: 13px; font-weight: 500; }
+.login-form input[aria-invalid="true"] { border-color: #d92d20; }
+.login-alt-method, .login-support-details { margin-top: 18px; border-top: 1px solid #e2e8f0; padding-top: 8px; }
+.login-alt-method summary, .login-support-details summary { min-height: 44px; padding: 12px 0; color: #4338ca; cursor: pointer; font-size: 14px; font-weight: 650; }
+.login-alt-method summary:focus-visible, .login-support-details summary:focus-visible { outline: 3px solid #e0e7ff; outline-offset: 2px; border-radius: 8px; }
+.login-alt-method .max-login-choice { margin-top: 12px; }
+
+.connections-page { max-width: 1024px; margin: auto; padding: 32px 24px 64px; }
+.connections-back { display: inline-flex; align-items: center; min-height: 44px; padding: 0 12px; border: 0; border-radius: 8px; background: transparent; color: var(--color-brand); font: inherit; font-weight: 600; cursor: pointer; }
+.connections-heading { margin: 24px 0; max-width: 640px; }
+.connections-kicker { font-size: 12px; color: var(--color-brand); font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.connections-heading h1 { margin: 12px 0; font-size: clamp(28px, 5vw, 40px); letter-spacing: -.03em; }
+.connections-heading > p:last-child, .connections-card > p, .connections-footer { color: var(--color-text-secondary); line-height: 1.65; }
+.connections-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.connections-card { min-width: 0; padding: 28px; border: 1px solid var(--color-border); border-radius: 20px; background: var(--color-surface); box-shadow: var(--shadow-sm); }
+.connections-card-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.connections-card-heading h2 { margin: 0; font-size: 22px; }
+.connections-card-heading span { font-size: 12px; color: var(--color-text-secondary); border-radius: 20px; background: var(--color-surface-secondary); padding: 6px 10px; }
+.connections-card ol { padding-left: 20px; font-size: 14px; line-height: 1.7; color: var(--color-text-secondary); }
+.connections-card li { padding: 4px 0 4px 4px; }
+.connections-button { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 10px 18px; border: 0; border-radius: 10px; background: var(--color-brand); color: white; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.connections-button:disabled { opacity: .5; cursor: default; }
+.connections-error, .connections-success, .connections-note { margin: 16px 0; padding: 16px; border: 1px solid var(--color-border); border-radius: 12px; font-size: 14px; line-height: 1.6; overflow-wrap: anywhere; }
+.connections-error { background: #fffbeb; color: #92400e; border-color: #fde68a; }
+.connections-success { background: #ecfdf5; color: #065f46; border-color: #a7f3d0; }
+.connections-note { background: var(--color-surface-secondary); }
+.connections-footer { margin-top: 24px; font-size: 13px; }
+.connections-page button:focus-visible, .connections-page a:focus-visible { outline: 3px solid var(--color-brand); outline-offset: 4px; }
+@media (max-width: 640px) { .connections-page { padding: 20px 16px 40px; } .connections-grid { grid-template-columns: minmax(0, 1fr); } .connections-card { padding: 22px; } .connections-button { width: 100%; } }

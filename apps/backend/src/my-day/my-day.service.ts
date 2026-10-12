@@ -192,7 +192,10 @@ export class MyDayService {
     }
 
     // Get absences for today
-    const absences = (await this.absencesService.findByStudent(userId)).data;
+    const absencePages = role === UserRole.STUDENT
+      ? [await this.absencesService.findByStudent(userId)]
+      : await Promise.all(lessons.map(lesson => this.absencesService.findByLesson(lesson.id)));
+    const absences = [...new Map(absencePages.flatMap(page => page.data).map(absence => [absence.id, absence])).values()];
 
     // Get unread notifications count
     const unreadCount = await this.notificationsService.getUnreadCount(userId);
@@ -203,7 +206,7 @@ export class MyDayService {
       pairSpaces,
       upcomingPreparations,
       absences: absences.filter(
-        (absence) => getDateKeyInTimeZone(new Date(absence.startDate), timeZone) === today,
+        (absence) => new Date(absence.startDate) <= dayEnd && new Date(absence.endDate) >= dayStart,
       ),
       notifications: {
         unreadCount,

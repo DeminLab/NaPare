@@ -6,7 +6,7 @@
 
 ## Scope
 
-Staff workspace UI and its data flow.
+Teacher lesson workspace has four focused tabs and one publication toolbar. Main tab displays actual announcements and preparation links. Adding material publishes a link to a file, rather than claiming file upload. Subject types are translated for users.
 
 ## Read sequence
 

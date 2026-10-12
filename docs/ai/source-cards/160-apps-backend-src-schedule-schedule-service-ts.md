@@ -6,7 +6,7 @@
 
 ## Scope
 
-Tenant- and role-scoped schedule queries and manual lesson updates. Student date-range queries can receive an IANA timezone for date-only external schedule filtering. Updates preserve old/new lesson values, classify room/building, teacher, date/time, and other changes accurately, and publish events addressed to the affected group and teacher. Date-only reschedules are notified as schedule changes. Cancellation events include the subject and the deleted lesson's original schedule values.
+Tenant- and role-scoped schedule queries and manual lesson updates. Date-only end dates include the entire last UTC day; explicit ISO instants retain their exact bounds. External student date filtering accepts an IANA timezone. Lesson changes publish accurately classified notifications.
 
 ## Read sequence
 

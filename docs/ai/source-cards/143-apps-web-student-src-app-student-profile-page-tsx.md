@@ -6,7 +6,7 @@
 
 ## Scope
 
-Student profile and study summary, including preparation count from the role-scoped My Day response and a security-tab link to the shared Telegram account-connection page.
+Student profile uses available group names from the scoped My Day response with browser timezone. University UUIDs are not displayed as names; account connections open the shared portal.
 
 ## Read sequence
 

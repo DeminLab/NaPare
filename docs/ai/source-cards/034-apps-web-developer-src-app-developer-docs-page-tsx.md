@@ -6,7 +6,7 @@
 
 ## Scope
 
-Developer operations workspace UI and its data flow.
+Developer API documentation derives the base URL from the current browser origin, provides working section anchors and language examples, handles clipboard failure and links to real Swagger. Token values are never included in examples.
 
 ## Read sequence
 

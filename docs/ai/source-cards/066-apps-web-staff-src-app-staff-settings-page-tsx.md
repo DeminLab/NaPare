@@ -6,7 +6,7 @@
 
 ## Scope
 
-Staff workspace settings. The account-connections section links to the shared portal `/connections` page for MAX and Telegram links.
+Staff settings use real notification preferences and Telegram account status, explicit saving and error recovery, plus profile and account connection links. Fake settings tabs were removed.
 
 ## Read sequence
 

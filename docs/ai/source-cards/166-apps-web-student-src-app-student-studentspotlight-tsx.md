@@ -6,7 +6,7 @@
 
 ## Scope
 
-Student global search command panel, keyboard navigation, debounced API calls and Pair Space navigation.
+Legacy student Spotlight retained as source but no longer mounted. Active student search is provided by WorkspaceShell and the role-scoped search adapter in StudentShell.
 
 ## Read sequence
 

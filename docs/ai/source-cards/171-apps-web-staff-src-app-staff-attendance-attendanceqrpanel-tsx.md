@@ -6,7 +6,7 @@
 
 ## Scope
 
-Teacher QR generation, 90-second expiry display and QR refresh for a selected lesson. The helper text explains the student flow from MAX and the in-app scanner.
+Teacher QR generation and refresh retain the 90-second expiry and lesson time window. A copy-link alternative supports students using the current browser, handles clipboard failure and never extends the QR validity.
 
 ## Read sequence
 

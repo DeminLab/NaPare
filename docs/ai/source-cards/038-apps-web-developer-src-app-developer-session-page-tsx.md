@@ -6,7 +6,7 @@
 
 ## Scope
 
-Developer operations workspace UI and its data flow.
+Current browser session shows token timestamps and logout consequences without displaying token contents.
 
 ## Read sequence
 

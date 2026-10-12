@@ -21,6 +21,9 @@ describe("PairSpaceService", () => {
   let service: PairSpaceService;
   let pairSpaceRepository: ReturnType<typeof mockRepo>;
   let personalNoteRepository: ReturnType<typeof mockRepo>;
+  let lessonRepository: ReturnType<typeof mockRepo>;
+  let homeworkRepository: ReturnType<typeof mockRepo>;
+  let eventBus: { publish: jest.Mock };
   let tenantContext: { assertAccess: jest.Mock; getUser: jest.Mock };
 
   const mockRepo = (name: string) => ({
@@ -35,10 +38,15 @@ describe("PairSpaceService", () => {
   beforeEach(async () => {
     pairSpaceRepository = mockRepo("PairSpace");
     personalNoteRepository = mockRepo("PersonalLessonNote");
+    lessonRepository = mockRepo("Lesson");
+    homeworkRepository = mockRepo("Homework");
+    eventBus = { publish: jest.fn().mockResolvedValue(undefined) };
     tenantContext = { assertAccess: jest.fn(), getUser: jest.fn() };
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PairSpaceService,
+        { provide: getRepositoryToken(Lesson), useValue: lessonRepository },
+        { provide: EventBusService, useValue: eventBus },
         {
           provide: getRepositoryToken(PairSpace),
           useValue: pairSpaceRepository,
@@ -49,7 +57,7 @@ describe("PairSpaceService", () => {
         },
         {
           provide: getRepositoryToken(Homework),
-          useValue: mockRepo("Homework"),
+          useValue: homeworkRepository,
         },
         {
           provide: getRepositoryToken(FileAttachment),
@@ -196,6 +204,37 @@ describe("PairSpaceService", () => {
       await expect(service.listPreparationsForLessons([], "university-1"))
         .resolves.toEqual([]);
       expect(pairSpaceRepository.find).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("existing teacher lesson space", () => {
+    beforeEach(() => {
+      tenantContext.getUser.mockReturnValue({ id: "teacher-1", role: UserRole.TEACHER, universityId: "uni-1" });
+      pairSpaceRepository.findOne.mockResolvedValue({ id: "ps-1", lessonId: "lesson-1", universityId: "uni-1", announcements: [], homeworks: [], files: [], messages: [] });
+    });
+
+    it.each(["by-id", "by-lesson", "get-or-create"])("blocks a colleague's existing space through %s", async method => {
+      lessonRepository.findOne.mockResolvedValue({ id: "lesson-1", universityId: "uni-1", teacherId: "teacher-2" });
+      const read = method === "by-id" ? service.findById("ps-1") : method === "by-lesson" ? service.findByLesson("lesson-1", "uni-1") : service.getOrCreateByLesson("lesson-1", "uni-1");
+      await expect(read).rejects.toThrow(ForbiddenException);
+      expect(pairSpaceRepository.save).not.toHaveBeenCalled();
+    });
+
+    it("allows the owner to open the existing lesson space", async () => {
+      lessonRepository.findOne.mockResolvedValue({ id: "lesson-1", universityId: "uni-1", teacherId: "teacher-1" });
+      await expect(service.findByLesson("lesson-1", "uni-1")).resolves.toMatchObject({ id: "ps-1" });
+    });
+  });
+
+  describe("preparation deadline publication", () => {
+    it.each(["2026-10-12", "2026-10-12T09:00:00.000Z"])("saves and publishes an ISO deadline without a post-save error: %s", async deadline => {
+      tenantContext.getUser.mockReturnValue({ id: "teacher-1", role: UserRole.TEACHER, universityId: "uni-1" });
+      lessonRepository.findOne.mockResolvedValue({ id: "lesson-1", universityId: "uni-1", teacherId: "teacher-1" });
+      pairSpaceRepository.findOne.mockResolvedValue({ id: "ps-1", lessonId: "lesson-1", universityId: "uni-1" });
+      const result = await service.createHomework("ps-1", "teacher-1", { title: "Подготовиться", deadline: deadline as unknown as Date });
+      expect(result.deadline).toBeInstanceOf(Date);
+      expect(homeworkRepository.create).toHaveBeenCalledWith(expect.objectContaining({ deadline: new Date(deadline) }));
+      expect(eventBus.publish).toHaveBeenCalledWith(expect.objectContaining({ type: "homework.created", payload: expect.objectContaining({ deadline: new Date(deadline).toISOString() }) }));
     });
   });
 

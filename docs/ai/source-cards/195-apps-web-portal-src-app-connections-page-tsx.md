@@ -6,7 +6,7 @@
 
 ## Scope
 
-Authenticated account connections page. MAX status is loaded from `/auth/max/status` and linking uses fresh Bridge `initData` with `/auth/max/link`; Telegram uses its short-lived backend-issued deep link. Credentials and MAX identity values are not displayed.
+Shared account connections page has responsive semantic CSS, MAX/Telegram instructions, initial status checking and login states, temporary link creation and existing authenticated APIs. Actual messenger delivery requires configured integrations.
 
 ## Read sequence
 

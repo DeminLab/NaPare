@@ -6,7 +6,7 @@
 
 ## Scope
 
-Next.js deployment settings for the developer workspace, including the shared-origin `/developer` base path and backend rewrites.
+Developer Next.js application configuration preserves its base path, standalone packaging and API rewrite. skipTrailingSlashRedirect prevents the existing Nginx root redirect from looping.
 
 ## Related source
 

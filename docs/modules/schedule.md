@@ -134,3 +134,7 @@
 - [ ] Автоматический cron-синк расписания (параллельно ручной загрузке)
 - [ ] Поддержка нескольких семестров
 - [x] Экспорт выбранной недели в iCal (`.ics`); подписка с автоматическим обновлением пока не реализована.
+
+## Date range boundaries
+
+Date-only end dates include the entire final UTC day for stored lessons. ISO timestamps remain exact. The existing IANA timezone parameter continues to govern date-only external student schedules.

@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useWorkspaceQuery, parseCalendarDate } from '@napare/ui/workspace-shell';
 import { useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '@/lib/api';
 import type { PaginatedResponse } from '@/lib/api';
@@ -142,11 +143,21 @@ export default function MonthSchedulePage() {
   const [cacheRefreshing, setCacheRefreshing] = useState(false);
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
+  const [selectedDate, setSelectedDate] = useState(() => dateKey(new Date()));
   const firstDay = new Date(month.getFullYear(), month.getMonth(), 1, 12);
   const monthKey = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, '0')}`;
   const today = dateKey(new Date());
+  const queryReady = useWorkspaceQuery({ date: selectedDate, filter, q: search }, query => {
+    const date = parseCalendarDate(query.get("date")) || new Date();
+    setSelectedDate(dateKey(date));
+    setMonth(new Date(date.getFullYear(), date.getMonth(), 1, 12));
+    const type = query.get("filter") || "all";
+    setFilter(type === "all" || type in typeLabels ? type : "all");
+    setSearch((query.get("q") || "").slice(0, 80));
+  });
 
   useEffect(() => {
+    if (!queryReady) return;
     const key = getCacheKey(monthKey);
     let cached: { savedAt: string; lessons: Lesson[] } | null = null;
     if (key) {
@@ -201,7 +212,7 @@ export default function MonthSchedulePage() {
       })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [monthKey, retryCount]);
+  }, [queryReady, monthKey, retryCount]);
 
   const visibleLessons = useMemo(() => lessons.filter(lesson =>
     (filter === 'all' || lesson.subjectType === filter)
@@ -214,10 +225,11 @@ export default function MonthSchedulePage() {
   const changedCount = currentMonthLessons.filter(lesson => lesson.isChanged).length;
   const hasFilters = Boolean(search.trim()) || filter !== 'all';
 
-  const changeMonth = (amount: number) => setMonth(current => new Date(current.getFullYear(), current.getMonth() + amount, 1, 12));
+  const selectMonth = (date: Date) => { setMonth(date); setSelectedDate(dateKey(date)); };
+  const changeMonth = (amount: number) => selectMonth(new Date(month.getFullYear(), month.getMonth() + amount, 1, 12));
   const chooseMonth = (value: string) => {
     const [year, monthNumber] = value.split('-').map(Number);
-    if (year && monthNumber >= 1 && monthNumber <= 12) setMonth(new Date(year, monthNumber - 1, 1, 12));
+    if (year && monthNumber >= 1 && monthNumber <= 12) selectMonth(new Date(year, monthNumber - 1, 1, 12));
   };
 
   return <div className="mx-auto max-w-[1400px] space-y-6">
@@ -228,9 +240,9 @@ export default function MonthSchedulePage() {
         <p className="mt-2 text-sm text-slate-500">Пары, изменения и типы занятий в календаре месяца.</p>
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        <Link href="/week" className="inline-flex h-11 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50">Неделя</Link>
+        <Link href={"/week?" + new URLSearchParams({ date: selectedDate, filter, q: search }).toString()} className="inline-flex h-11 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50">Неделя</Link>
         <button type="button" onClick={() => downloadCalendar(monthLessons, monthKey)} disabled={loading || !monthLessons.some(lesson => !isCancelled(lesson))} className="h-11 rounded-xl border border-indigo-200 bg-white px-4 text-sm font-semibold text-indigo-700 hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-50">Скачать месяц (.ics)</button>
-        <button type="button" onClick={() => setMonth(new Date(new Date().getFullYear(), new Date().getMonth(), 1, 12))} className="h-11 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50">Этот месяц</button>
+        <button type="button" onClick={() => selectMonth(new Date())} className="h-11 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50">Этот месяц</button>
         <button type="button" onClick={() => changeMonth(-1)} aria-label="Предыдущий месяц" className="h-11 w-11 rounded-xl border border-slate-200 bg-white text-lg text-slate-600 hover:bg-slate-50">‹</button>
         <label className="flex h-11 items-center rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-600">
           <span className="sr-only">Выбрать месяц</span>

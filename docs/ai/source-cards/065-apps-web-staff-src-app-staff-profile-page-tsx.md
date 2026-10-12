@@ -6,7 +6,7 @@
 
 ## Scope
 
-Staff profile overview and its data flow; current-week schedule counts include the full Monday-to-Sunday range with local date formatting, and the security tab links to the shared Telegram account-connection page.
+Staff profile displays the actual role and available groups from attendance-groups. Technical UUIDs are not presented as university names. Account connections use a root-level link to the shared portal.
 
 ## Read sequence
 

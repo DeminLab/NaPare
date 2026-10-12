@@ -6,7 +6,7 @@
 
 ## Scope
 
-Staff workspace UI and its data flow.
+Attendance journal saves only explicitly marked students. Unmarked rows are not silently recorded as present; batch actions and individual controls remain available. The percentage counts marked students. Existing scoped group, lesson, QR and absence APIs are preserved.
 
 ## Read sequence
 

@@ -6,7 +6,7 @@
 
 ## Scope
 
-NestJS backend module, HTTP boundary, authorization or data-service behavior.
+Global request context initialises AsyncLocalStorage before authentication guards. Its mutable store retains the authenticated actor across asynchronous Passport callbacks and isolates concurrent requests. Background jobs keep their existing context behaviour.
 
 ## Read sequence
 

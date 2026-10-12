@@ -14,8 +14,12 @@ declare global {
 }
 
 export default function ConnectionsPage() {
+  const [checking, setChecking] = useState(true);
+  const [signedIn, setSignedIn] = useState(false);
   const [botLink, setBotLink] = useState('');
   const [expiresAt, setExpiresAt] = useState('');
+  const [maxKnown, setMaxKnown] = useState(false);
+  const [telegramKnown, setTelegramKnown] = useState(false);
   const [linked, setLinked] = useState(false);
   const [maxLinked, setMaxLinked] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -28,6 +32,7 @@ export default function ConnectionsPage() {
       try {
         let accessToken = window.localStorage.getItem('accessToken');
         if (!accessToken) return;
+        setSignedIn(true);
         let response = await fetch('/api/v1/auth/max/status', { headers: { Authorization: `Bearer ${accessToken}` } });
         if (response.status === 401) {
           const refreshToken = window.localStorage.getItem('refreshToken');
@@ -47,6 +52,7 @@ export default function ConnectionsPage() {
         if (response.ok) {
           const payload = await response.json() as { linked?: boolean };
           setMaxLinked(payload.linked === true);
+          setMaxKnown(true);
         }
       } catch {
         // Leave the connection controls available while the API is offline.
@@ -60,6 +66,7 @@ export default function ConnectionsPage() {
         if (response.ok) {
           const payload = await response.json() as { linked?: boolean };
           setLinked(payload.linked === true);
+          setTelegramKnown(true);
           if (payload.linked) setBotLink('');
         }
       } catch {
@@ -68,8 +75,7 @@ export default function ConnectionsPage() {
     };
     const onVisible = () => { if (document.visibilityState === 'visible') void refreshStatus(); };
     const onWindowFocus = () => { void refreshMaxStatus(); };
-    void refreshMaxStatus();
-    void refreshStatus();
+    void refreshMaxStatus().finally(() => { void refreshStatus().finally(() => setChecking(false)); });
     window.addEventListener('focus', onVisible);
     window.addEventListener('focus', onWindowFocus);
     document.addEventListener('visibilitychange', onVisible);
@@ -166,33 +172,14 @@ export default function ConnectionsPage() {
   }
 
   return (
-    <main className="mx-auto max-w-2xl px-5 py-12 sm:px-8">
-      <button type="button" onClick={() => window.history.length > 1 ? window.history.back() : window.location.assign('/')} className="text-sm font-semibold text-indigo-700 hover:text-indigo-900">← Назад в кабинет</button>
-      <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-        <p className="text-xs font-bold uppercase tracking-[0.14em] text-indigo-700">Подключения аккаунта</p>
-        <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-950">Связи аккаунта</h1>
-        <div className="mt-6 rounded-xl border border-slate-200 p-4 sm:p-5">
-          <h2 className="text-lg font-semibold text-slate-900">MAX</h2>
-          <p className="mt-2 text-sm leading-6 text-slate-600">Свяжите MAX с текущим аккаунтом НаПаре, чтобы потом входить в этот кабинет одним нажатием.</p>
-          {maxLinked ? <p className="mt-4 rounded-xl bg-emerald-50 p-4 text-sm font-semibold text-emerald-900" role="status">MAX уже связан с этим аккаунтом.</p> : <button type="button" onClick={() => void linkMaxAccount()} disabled={maxBusy} className="mt-4 inline-flex min-h-11 items-center justify-center rounded-xl bg-indigo-700 px-5 text-sm font-semibold text-white hover:bg-indigo-800 disabled:cursor-wait disabled:opacity-60">{maxBusy ? 'Связываем…' : 'Связать MAX с этим аккаунтом'}</button>}
-          {maxError && <p className="mt-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-900" role="alert">{maxError}</p>}
-          {!maxLinked && <p className="mt-3 text-xs leading-5 text-slate-500">Откройте эту страницу внутри MAX и войдите в НаПаре по университетскому email и паролю перед привязкой.</p>}
-        </div>
-        <div className="mt-5 border-t border-slate-100 pt-5">
-          <h2 className="text-lg font-semibold text-slate-900">Telegram</h2>
-          <p className="mt-2 text-sm leading-6 text-slate-600">Создайте временную ссылку и откройте её в личном чате официального бота. Пароль боту не передаётся.</p>
-        {linked ? <p className="mt-6 rounded-xl bg-emerald-50 p-4 text-sm font-semibold text-emerald-900" role="status">Telegram уже связан с этим аккаунтом.</p> : <button type="button" onClick={() => void createTelegramLink()} disabled={busy} className="mt-6 inline-flex min-h-11 items-center justify-center rounded-xl bg-indigo-700 px-5 text-sm font-semibold text-white hover:bg-indigo-800 disabled:cursor-wait disabled:opacity-60">
-          {busy ? 'Создаём ссылку…' : 'Создать ссылку Telegram'}
-        </button>}
-        {error && <p className="mt-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-900" role="alert">{error}{error.startsWith('Сначала войдите') && <> <Link className="font-semibold underline" href="/login">Войти</Link></>}</p>}
-        {botLink && <div className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 p-4" role="status">
-          <p className="text-sm font-semibold text-emerald-950">Ссылка готова и действует 10 минут.</p>
-          <p className="mt-1 text-xs text-emerald-800">Истекает: {new Date(expiresAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}. Создание новой ссылки сразу аннулирует предыдущую.</p>
-          <a href={botLink} target="_blank" rel="noreferrer" className="mt-3 inline-flex min-h-10 items-center rounded-lg bg-white px-4 text-sm font-semibold text-emerald-900 ring-1 ring-emerald-200 hover:bg-emerald-100">Открыть Telegram-бота</a>
-        </div>}
-        <p className="mt-6 border-t border-slate-100 pt-4 text-xs leading-5 text-slate-500">Не пересылайте эту ссылку другим людям. Уже привязанный Telegram не заменяется автоматически; обратитесь к администратору НаПаре.</p>
-        </div>
-      </section>
+    <main className="connections-page">
+      <button type="button" onClick={() => window.history.length > 1 ? window.history.back() : window.location.assign('/')} className="connections-back">← Назад в кабинет</button>
+      <header className="connections-heading"><p className="connections-kicker">Подключения аккаунта</p><h1>MAX и Telegram</h1><p>Подключите удобный способ входа и канал для уведомлений к своему аккаунту НаПаре.</p></header>
+      {checking ? <p role="status" className="connections-note">Проверяем подключения…</p> : !signedIn ? <div className="connections-note"><p>Чтобы управлять подключениями, войдите в аккаунт, выданный университетом.</p><Link href="/login" className="connections-button">Войти в НаПаре</Link></div> : null}
+      <div className="connections-grid">
+        <section className="connections-card"><div className="connections-card-heading"><h2>MAX</h2><span>{checking ? "Проверяем…" : !signedIn ? "Нужен вход" : !maxKnown ? "Статус неизвестен" : maxLinked ? "Подключён" : "Не подключён"}</span></div><p>Вход в ваш кабинет из мини-приложения MAX.</p><ol><li>Откройте НаПаре внутри MAX.</li><li>Войдите по университетскому email и паролю.</li><li>Нажмите кнопку привязки на этой странице.</li></ol>{maxLinked ? <p className="connections-success" role="status">MAX связан с этим аккаунтом.</p> : <button type="button" onClick={() => void linkMaxAccount()} disabled={maxBusy || checking || !signedIn} className="connections-button">{maxBusy ? 'Связываем…' : 'Связать MAX'}</button>}{maxError && <p className="connections-error" role="alert">{maxError}</p>}</section>
+        <section className="connections-card"><div className="connections-card-heading"><h2>Telegram</h2><span>{checking ? "Проверяем…" : !signedIn ? "Нужен вход" : !telegramKnown ? "Статус неизвестен" : linked ? "Подключён" : "Не подключён"}</span></div><p>Уведомления об изменениях расписания и важных событиях.</p><ol><li>Создайте временную ссылку.</li><li>Откройте её в личном чате бота и нажмите «Начать».</li><li>Вернитесь на эту страницу для проверки статуса.</li></ol>{linked ? <p className="connections-success" role="status">Telegram связан с этим аккаунтом.</p> : <button type="button" onClick={() => void createTelegramLink()} disabled={busy || checking || !signedIn} className="connections-button">{busy ? 'Создаём ссылку…' : 'Создать ссылку Telegram'}</button>}{error && <p className="connections-error" role="alert">{error}</p>}{botLink && <div className="connections-success" role="status"><p>Ссылка готова. Действует до {new Date(expiresAt).toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'})}.</p><a href={botLink} target="_blank" rel="noopener noreferrer" className="connections-button">Открыть бота ↗</a></div>}</section>
+      </div><p className="connections-footer">Пароль НаПаре не передаётся ботам. Каналы и типы уведомлений можно выбрать в настройках своего кабинета.</p>
     </main>
   );
 }

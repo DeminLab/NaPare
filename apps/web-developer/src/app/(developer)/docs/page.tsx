@@ -1,69 +1,50 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import Link from "next/link";
+import { useEffect, useState } from "react";
 
-const sections = ['Начало работы', 'Аутентификация', 'API', 'Пользователи', 'Расписание', 'Группы', 'Уведомления', 'Ошибки', 'Вебхуки'];
-const pageLinks = ['Введение', 'Аутентификация', 'Запрос к API', 'Формат ответа', 'Ошибки'];
-
-const examples = {
-  curl: `curl https://api.napare.ru/api/v1/users/me \\
-  -H "Authorization: Bearer $TOKEN"`,
-  javascript: `const response = await fetch('/api/v1/users/me', {
-  headers: { Authorization: \`Bearer \${token}\` },
-});
-
-const user = await response.json();`,
-  python: `import requests
-
-response = requests.get(
-    "https://api.napare.ru/api/v1/users/me",
-    headers={"Authorization": f"Bearer {token}"},
-)`,
-};
-
-function CodeBlock() {
-  const [language, setLanguage] = useState<keyof typeof examples>('curl');
-  const [copied, setCopied] = useState(false);
-
-  const copy = async () => {
-    await navigator.clipboard.writeText(examples[language]);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1600);
-  };
-
-  return <div className="overflow-hidden rounded-xl border border-white/10 bg-[#080b12] shadow-2xl shadow-black/20">
-    <div className="flex items-center justify-between border-b border-white/10 px-3 py-2">
-      <div className="flex gap-1" role="tablist" aria-label="Язык кода">
-        {(Object.keys(examples) as Array<keyof typeof examples>).map((item) => <button key={item} type="button" role="tab" aria-selected={language === item} onClick={() => setLanguage(item)} className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${language === item ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/75'}`}>{item}</button>)}
-      </div>
-      <button type="button" onClick={copy} className="rounded-md px-2.5 py-1.5 text-xs font-medium text-white/45 transition-colors hover:bg-white/10 hover:text-white">{copied ? 'Скопировано' : 'Копировать'}</button>
-    </div>
-    <pre className="overflow-x-auto p-4 text-[13px] leading-6 text-sky-100"><code>{examples[language]}</code></pre>
-  </div>;
-}
+const sections = [
+  { id: "introduction", label: "Начало работы" },
+  { id: "authentication", label: "Аутентификация" },
+  { id: "api-request", label: "Запрос к API" },
+  { id: "responses", label: "Ответы и ошибки" },
+];
 
 export default function DocsPage() {
-  const [query, setQuery] = useState('');
-  const [active, setActive] = useState('Начало работы');
-  const visibleSections = useMemo(() => sections.filter((section) => section.toLowerCase().includes(query.toLowerCase())), [query]);
+  const [origin, setOrigin] = useState("");
+  const [language, setLanguage] = useState("curl");
+  const [copyStatus, setCopyStatus] = useState("");
+  useEffect(() => setOrigin(window.location.origin), []);
+  const baseUrl = origin + "/api/v1";
+  const examples: Record<string, string> = {
+    curl: `curl '${baseUrl}/users/me' -H 'Authorization: Bearer YOUR_ACCESS_TOKEN'`,
+    javascript: `const response = await fetch('/api/v1/users/me', {
+  headers: { Authorization: \`Bearer \${token}\` },
+});
+if (!response.ok) throw new Error(\`HTTP \${response.status}\`);
+const user = await response.json();`,
+    python: `import requests
 
-  return <div className="min-h-full bg-[#0b0e14] text-white">
-    <div className="border-b border-white/10 px-4 py-4 sm:px-6 lg:px-8"><div className="mx-auto flex max-w-[1500px] items-center gap-2 text-xs text-white/40">Разработчик <span>/</span> <span className="text-white/80">Документация</span></div></div>
-    <div className="mx-auto grid max-w-[1500px] lg:grid-cols-[220px_minmax(0,1fr)_190px]">
-      <aside className="border-b border-white/10 px-4 py-5 lg:min-h-[calc(100vh-74px)] lg:border-b-0 lg:border-r lg:px-5">
-        <label className="relative block"><span className="sr-only">Поиск по документации</span><span className="pointer-events-none absolute left-3 top-2.5 text-white/35">⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Поиск по документации…" className="w-full rounded-lg border border-white/10 bg-white/[0.04] py-2 pl-8 pr-3 text-sm text-white outline-none placeholder:text-white/30 focus:border-sky-400/60" /></label>
-        <nav className="mt-6 grid grid-cols-2 gap-1 lg:block" aria-label="Разделы документации">{visibleSections.map((section) => <button key={section} type="button" onClick={() => setActive(section)} className={`w-full rounded-lg px-3 py-2 text-left text-sm transition-colors ${active === section ? 'bg-sky-400/10 font-medium text-sky-300' : 'text-white/55 hover:bg-white/[0.05] hover:text-white'}`}>{section}</button>)}{visibleSections.length === 0 && <p className="col-span-2 px-3 py-2 text-xs text-white/35">Нет подходящих разделов</p>}</nav>
-      </aside>
-      <main className="min-w-0 px-5 py-8 sm:px-8 lg:px-12 lg:py-12">
-        <div className="mx-auto max-w-3xl"><div className="mb-8 flex items-start justify-between gap-4"><div><p className="text-sm font-medium text-sky-300">{active}</p><h1 className="mt-2 text-3xl font-bold tracking-tight text-white sm:text-4xl">Разработка на NaPare</h1><p className="mt-4 max-w-2xl text-base leading-7 text-white/55">Подключите инструменты вашего вуза к платформе NaPare и синхронизируйте расписание, группы, задания и уведомления.</p></div><a href="/api/v1/docs" target="_blank" rel="noopener noreferrer" className="hidden shrink-0 rounded-lg border border-white/10 px-3 py-2 text-xs font-medium text-white/60 hover:bg-white/10 hover:text-white sm:block">Открыть Swagger ↗</a></div>
-          <section id="introduction" className="scroll-mt-8"><h2 className="text-xl font-semibold text-white">Введение</h2><p className="mt-3 text-sm leading-7 text-white/55">API NaPare — это REST-интерфейс для аутентифицированного доступа к рабочему пространству вуза. Запросы используют JSON и возвращают предсказуемую обёртку ответа.</p></section>
-          <section id="authentication" className="mt-10 scroll-mt-8"><h2 className="text-xl font-semibold text-white">Аутентификация</h2><p className="mt-3 text-sm leading-7 text-white/55">Отправляйте токен доступа в заголовке Authorization. Храните токены в секрете и обновляйте их, если данные доступа раскрыты.</p><div className="mt-5"><CodeBlock /></div></section>
-          <section id="api-request" className="mt-10 scroll-mt-8"><h2 className="text-xl font-semibold text-white">Запрос к API</h2><p className="mt-3 text-sm leading-7 text-white/55">Используйте базовый URL ниже для запросов к платформе. Интерактивный обозреватель API содержит полную схему эндпоинтов и модели ответов.</p><div className="mt-5 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 font-mono text-sm text-sky-200">https://api.napare.ru/api/v1</div></section>
-          <section className="mt-10 border-t border-white/10 pt-8"><h2 className="text-xl font-semibold text-white">Продолжить изучение</h2><div className="mt-4 grid gap-3 sm:grid-cols-2">{['Пользователи', 'Расписание', 'Группы', 'Уведомления'].map((item) => <button key={item} type="button" onClick={() => setActive(item)} className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-left text-sm text-white/65 hover:border-sky-400/40 hover:text-white">{item}<span className="float-right text-white/30">→</span></button>)}</div></section>
-        </div>
-      </main>
-      <aside className="hidden border-l border-white/10 px-5 py-12 xl:block"><p className="text-xs font-semibold uppercase tracking-wider text-white/35">На этой странице</p><nav className="mt-4 space-y-3">{pageLinks.map((item, index) => <a key={item} href={`#${['introduction', 'authentication', 'api-request', 'api-request', 'errors'][index]}`} className="block text-xs text-white/45 hover:text-sky-300">{item}</a>)}</nav><div className="mt-10 border-t border-white/10 pt-5"><p className="text-xs text-white/30">Нужна полная схема?</p><Link href="/api" className="mt-2 inline-block text-xs font-medium text-sky-300 hover:text-sky-200">Открыть API Explorer →</Link></div></aside>
+response = requests.get(
+    "${baseUrl}/users/me",
+    headers={"Authorization": f"Bearer {token}"},
+)
+response.raise_for_status()`,
+  };
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(examples[language]); setCopyStatus("Скопировано"); }
+    catch { setCopyStatus("Не удалось скопировать. Выделите код вручную."); }
+  };
+  return <div className="mx-auto max-w-6xl space-y-7 px-4 py-6 text-white sm:px-6 lg:px-8">
+    <div><p className="text-sm text-sky-300">Разработчик</p><h1 className="mt-2 text-2xl font-bold sm:text-3xl">Документация API</h1><p className="mt-3 max-w-2xl text-sm leading-6 text-white/60">Начните с адреса текущего стенда и проверки своего аккаунта. Схемы методов и обязательные поля доступны в Swagger.</p><a href="/api/v1/docs" target="_blank" rel="noopener noreferrer" className="mt-4 inline-flex min-h-11 items-center rounded-xl border border-white/20 px-4 text-sm font-semibold text-sky-200 hover:bg-white/5">Открыть Swagger ↗</a></div>
+    <div className="grid gap-6 lg:grid-cols-[200px_minmax(0,1fr)]">
+      <nav aria-label="Содержание документации" className="flex flex-wrap gap-2 lg:sticky lg:top-24 lg:block lg:self-start">{sections.map(section => <a key={section.id} href={"#" + section.id} className="flex min-h-11 items-center rounded-lg px-3 text-sm text-white/70 hover:bg-white/5 hover:text-sky-200">{section.label}</a>)}</nav>
+      <div className="min-w-0 space-y-6">
+        <section id="introduction" className="scroll-mt-24 rounded-2xl border border-white/10 bg-white/[0.03] p-5 sm:p-6"><h2 className="text-lg font-semibold">Адрес текущего стенда</h2><p className="mt-3 text-sm leading-6 text-white/60">Все кабинеты работают через единый домен. Адрес ниже соответствует сайту, который открыт сейчас.</p><code className="mt-4 block break-all rounded-lg bg-black/20 p-3 text-sm text-sky-200">{baseUrl}</code></section>
+        <section id="authentication" className="scroll-mt-24 rounded-2xl border border-white/10 bg-white/[0.03] p-5 sm:p-6"><h2 className="text-lg font-semibold">Аутентификация</h2><p className="mt-3 text-sm leading-6 text-white/60">Передавайте access token в заголовке Authorization: Bearer. Права зависят от роли и университета аккаунта. Не публикуйте токены в коде, скриншотах или журналах.</p><Link href="/session" className="mt-4 inline-flex min-h-11 items-center text-sm text-sky-200">Проверить текущую сессию →</Link></section>
+        <section id="api-request" className="scroll-mt-24 rounded-2xl border border-white/10 bg-white/[0.03] p-5 sm:p-6"><h2 className="text-lg font-semibold">Первый запрос: мой аккаунт</h2><p className="mt-3 text-sm leading-6 text-white/60">Замените YOUR_ACCESS_TOKEN своим токеном в локальном инструменте. Пример не содержит данные текущей сессии.</p><div className="mt-4 overflow-hidden rounded-xl border border-white/10 bg-[#080b12]"><div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 p-2"><div className="flex gap-1">{Object.keys(examples).map(item => <button key={item} type="button" aria-pressed={item === language} onClick={() => {setLanguage(item); setCopyStatus("");}} className={`min-h-11 rounded-lg px-3 text-xs ${item === language ? "bg-white/10 text-white" : "text-white/60"}`}>{item}</button>)}</div><button type="button" onClick={copy} className="min-h-11 rounded-lg px-3 text-xs text-sky-200">Копировать</button></div><pre className="overflow-x-auto p-4 text-xs leading-6 text-sky-100"><code>{examples[language]}</code></pre></div>{copyStatus && <p role="status" className="mt-2 text-sm text-white/70">{copyStatus}</p>}</section>
+        <section id="responses" className="scroll-mt-24 rounded-2xl border border-white/10 bg-white/[0.03] p-5 sm:p-6"><h2 className="text-lg font-semibold">Ответы и ошибки</h2><p className="mt-3 text-sm leading-6 text-white/60">Формат ответа зависит от метода: объект, список или результат с пагинацией. Проверяйте схему выбранного запроса в Swagger и HTTP-статус перед чтением данных.</p><dl className="mt-4 space-y-3 text-sm"><div className="flex gap-4"><dt className="font-mono text-sky-200">401</dt><dd className="text-white/60">Сессия истекла или токен отсутствует. Выполните вход заново.</dd></div><div className="flex gap-4"><dt className="font-mono text-sky-200">403</dt><dd className="text-white/60">У аккаунта нет доступа к этому действию или университету.</dd></div><div className="flex gap-4"><dt className="font-mono text-sky-200">400</dt><dd className="text-white/60">Проверьте обязательные поля и формат значений.</dd></div></dl><Link href="/api" className="mt-5 inline-flex min-h-11 items-center text-sm text-sky-200">Открыть обозреватель API →</Link></section>
+      </div>
     </div>
   </div>;
 }

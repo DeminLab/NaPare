@@ -6,7 +6,7 @@
 
 ## Scope
 
-Developer operations workspace shell and navigation. Its «Подключения аккаунта» item uses a same-origin browser link to the shared portal page so the `/developer` base path is not applied to `/connections`.
+Developer workspace groups system state, API, events and documentation, and distinguishes checking, successful health checks and unavailable verification. Includes mobile shortcuts and role help.
 
 ## Read sequence
 

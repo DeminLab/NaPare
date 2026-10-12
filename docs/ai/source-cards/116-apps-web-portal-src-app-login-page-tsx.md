@@ -6,7 +6,7 @@
 
 ## Scope
 
-Shared NaPare main-site login. The user chooses MAX or university email/password. Password login stores the token pair only after `POST /api/v1/auth/portal-login` succeeds and selects a same-origin workspace from the backend-provided workspace value. MAX login starts only after its explicit button; linking is managed separately on `/connections`.
+Portal login shows university email/password immediately, offers password visibility and inline validation, and keeps MAX as an alternative; MAX launch data opens the relevant section automatically. Session contracts are unchanged.
 
 ## Read sequence
 

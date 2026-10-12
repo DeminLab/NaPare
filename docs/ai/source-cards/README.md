@@ -211,3 +211,18 @@ Choose the card matching the task area, read the canonical source and then follo
 - [198 — `scripts/prepare-max-attendance-demo.sh`](198-scripts-prepare-max-attendance-demo-sh.md)
 - [199 — `scripts/verify-max-deployment.sh`](199-scripts-verify-max-deployment-sh.md)
 - [200 — `scripts/export-case-openapi.sh`](200-scripts-export-case-openapi-sh.md)
+- [201 — `packages/ui/src/WorkspaceShell.tsx`](201-packages-ui-src-workspaceshell-tsx.md)
+- [202 — `packages/ui/src/workspace-navigation.ts`](202-packages-ui-src-workspace-navigation-ts.md)
+- [203 — `packages/ui/src/useWorkspaceQuery.ts`](203-packages-ui-src-useworkspacequery-ts.md)
+- [204 — `apps/web-staff/src/app/(staff)/AttentionNavigation.tsx`](204-apps-web-staff-src-app-staff-attentionnavigation-tsx.md)
+- [205 — `apps/web-staff/src/app/(staff)/settings/NotificationSettings.tsx`](205-apps-web-staff-src-app-staff-settings-notificationsettings-tsx.md)
+- [206 — `scripts/test-workspace-navigation.cjs`](206-scripts-test-workspace-navigation-cjs.md)
+- [207 — `apps/web-staff/src/app/(staff)/inbox/page.tsx`](207-apps-web-staff-src-app-staff-inbox-page-tsx.md)
+
+- [208 — `apps/backend/src/common/tenant/tenant-context.ts`](208-apps-backend-src-common-tenant-tenant-context-ts.md)
+
+- [209 — `apps/backend/src/common/tenant/tenant-context.spec.ts`](209-apps-backend-src-common-tenant-tenant-context-spec-ts.md)
+
+- [210 — `apps/web-student/src/lib/api.ts`](210-apps-web-student-src-lib-api-ts.md)
+
+- [211 — `scripts/test-student-api.cjs`](211-scripts-test-student-api-cjs.md)

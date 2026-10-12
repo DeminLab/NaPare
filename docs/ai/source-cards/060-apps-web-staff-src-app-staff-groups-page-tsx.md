@@ -6,7 +6,7 @@
 
 ## Scope
 
-Staff group overview and its data flow; its current-week schedule fetch includes Monday through Sunday and formats API dates in local calendar time.
+Staff groups use the existing role-scoped attendance-groups endpoint. Group details and students retain their resource authorization. Cards provide separate accessible actions without nested buttons and links; missing student counts are not displayed as zero.
 
 ## Read sequence
 

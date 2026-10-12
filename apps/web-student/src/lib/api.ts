@@ -40,6 +40,12 @@ export async function getUser(): Promise<StudentUser> {
   return apiFetch<StudentUser>('/users/me');
 }
 
+async function readApiResponse<T>(response: Response): Promise<T> {
+  if (response.status === 204) return undefined as T;
+  const body = await response.text();
+  return (body.trim() ? JSON.parse(body) : null) as T;
+}
+
 export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
   const token = getToken();
   const response = await fetch(`${API_BASE}${path}`, {
@@ -64,8 +70,7 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
         },
       });
       if (!retryResponse.ok) throw await toApiError(retryResponse);
-      if (retryResponse.status === 204) return undefined as T;
-      return (await retryResponse.json()) as T;
+      return readApiResponse<T>(retryResponse);
     }
     clearTokens();
     if (typeof window !== 'undefined') window.location.href = '/student/login';
@@ -82,8 +87,7 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
     throw new Error(data?.message || fallback);
   }
 
-  if (response.status === 204) return undefined as T;
-  return (await response.json()) as T;
+  return readApiResponse<T>(response);
 }
 
 export interface PaginatedResponse<T> {

@@ -6,7 +6,7 @@
 
 ## Scope
 
-Student Monday-to-Sunday weekly schedule, including building/room/subgroup/upstream week-parity display and search, notification date deep links, API-backed date grouping, per-account cached week shown immediately while freshness is checked in the background and retained when offline, lesson type filters, server-synced favorite teachers with a queued local offline fallback/migration, a favorites-only filter, individual Google Calendar event links for non-cancelled lessons, `.ics` export for the selected week that omits cancelled lessons, and selected-week sharing through MAX Bridge, Web Share or clipboard.
+Student schedule provides day/week/list modes, URL-restored date/type/query/favourites and exact selected-date transitions to month. Existing offline cache, sharing, favourites and exports are preserved.
 
 ## Read sequence
 

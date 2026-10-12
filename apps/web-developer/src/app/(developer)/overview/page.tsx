@@ -86,7 +86,7 @@ export default function DeveloperOverviewPage() {
         </div>
         <PageHeader
           eyebrow="Developer workspace"
-          title="Обзор панели разработчика"
+          title="Состояние системы"
           description="Состояние API-платформы и операционная телеметрия"
           actions={
             <Button variant="secondary" onClick={load}>
@@ -125,7 +125,7 @@ export default function DeveloperOverviewPage() {
         )}
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_300px]">
           <div className="space-y-6">
-            <Card className="border-white/10 bg-white/[0.04]">
+            <Card id="events" className="scroll-mt-24 border-white/10 bg-white/[0.04]">
               <div className="mb-4 flex items-center justify-between">
                 <div>
                   <h2 className="text-sm font-bold uppercase tracking-wider text-white/70">

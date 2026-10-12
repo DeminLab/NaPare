@@ -6,7 +6,7 @@
 
 ## Scope
 
-University administration workspace shell and navigation. Its «Подключения аккаунта» item uses a same-origin browser link to the shared portal page so the `/deanery` base path is not applied to `/connections`.
+University workspace uses grouped navigation for overview, schedule, users, structure and data sources; removes the unused analytics query route, adds mobile shortcuts and role help.
 
 ## Read sequence
 

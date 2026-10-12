@@ -406,9 +406,9 @@ function mapEvent(event: EventEnvelope): EventNotificationMapping {
     'lesson.rescheduled': { type: 'schedule_change', category: 'schedule', title: 'Занятие перенесено', body: 'Время или дата занятия изменились.', inbox: { title: 'Проверь новое время занятия', description: 'Убедись, что новое время подходит твоему плану.' } },
     'lesson.cancelled': { type: 'schedule_change', category: 'important', title: 'Занятие отменено', body: 'Занятие больше не состоится по исходному плану.', inbox: { title: 'Обрати внимание на отмену', description: 'Проверь обновлённое расписание.' } },
     'room.changed': { type: 'schedule_change', category: 'schedule', title: 'Аудитория изменена', body: 'Для занятия назначена новая аудитория.', inbox: { title: 'Проверь новую аудиторию', description: 'Открой занятие и запланируй переход в новую аудиторию.' } },
-    'homework.created': { type: 'new_homework', category: 'homework', title: 'Новое задание', body: 'В пространстве пары появилось новое задание.', inbox: { title: 'Выполни новое задание', description: 'Открой задание и проверь требования и дедлайн.' } },
+    'homework.created': { type: 'new_homework', category: 'homework', title: 'Новая подготовка к паре', body: 'В пространстве пары появился план подготовки.', inbox: { title: 'Проверь подготовку к паре', description: 'Открой план подготовки и проверь требования и срок.' } },
     'homework.updated': { type: 'new_homework', category: 'homework', title: 'Задание обновлено', body: 'Изменились условия или статус задания.', inbox: { title: 'Проверь обновлённое задание', description: 'Открой задание и проверь изменения.' } },
-    'homework.deadline_soon': { type: 'deadline', category: 'important', title: 'Скоро дедлайн', body: 'Срок сдачи задания приближается.', inbox: { title: 'Закрой задание до дедлайна', description: 'Проверь прогресс и отправь работу вовремя.' } },
+    'homework.deadline_soon': { type: 'deadline', category: 'important', title: 'Скоро дедлайн', body: 'Срок подготовки к паре приближается.', inbox: { title: 'Проверь подготовку до дедлайна', description: 'Открой план подготовки и проверь срок. Сдачи и оценки остаются в Moodle.' } },
     'announcement.created': { type: 'new_announcement', category: 'teachers', title: 'Новое объявление', body: 'Преподаватель опубликовал объявление.', inbox: null },
     'message.created': { type: 'other', category: 'teachers', title: 'Новое сообщение', body: 'В пространстве пары появилось сообщение.', inbox: { title: 'Ответь на сообщение', description: 'Открой обсуждение и посмотри новый контекст.' } },
     'absence.created': { type: 'new_absence', category: 'system', title: 'Новое отсутствие', body: 'Зарегистрировано отсутствие.', inbox: { title: 'Проверь отсутствие', description: 'Открой запись и проверь статус подтверждения.' } },
@@ -429,11 +429,11 @@ function mapEvent(event: EventEnvelope): EventNotificationMapping {
         dueAt: null,
         title: `Скоро дедлайн: ${homeworkTitle}`,
         body: typeof payload.subject === 'string'
-          ? `Задание по предмету «${payload.subject}» нужно сдать в ближайшие 24 часа.`
-          : `Задание нужно сдать в ближайшие 24 часа.`,
+          ? `Срок подготовки по предмету «${payload.subject}» наступит в ближайшие 24 часа.`
+          : `Срок подготовки наступит в ближайшие 24 часа.`,
         inbox: {
-          title: `Сдай задание «${homeworkTitle}»`,
-          description: 'Открой задание и проверь точный срок сдачи и прогресс.',
+          title: `Проверь подготовку «${homeworkTitle}»`,
+          description: 'Открой план подготовки и проверь срок. Сдачи и оценки остаются в Moodle.',
         },
       };
     }

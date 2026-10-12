@@ -15,7 +15,7 @@ import {
 interface Group {
   id: string;
   name: string;
-  studentCount: number;
+  studentCount?: number;
   faculty?: { name?: string } | null;
   facultyName?: string;
 }
@@ -69,7 +69,7 @@ export default function GroupsPage() {
     const end = new Date(start);
     end.setDate(end.getDate() + 6);
     Promise.all([
-      apiFetchList<Group>("/admin/groups"),
+      apiFetchList<Group>("/admin/attendance-groups"),
       apiFetchList<Lesson>(
         `/schedule/range?startDate=${dateKey(start)}&endDate=${dateKey(end)}`,
       ),
@@ -145,7 +145,7 @@ export default function GroupsPage() {
             Мои группы
           </h1>
           <p className="mt-1 text-sm text-slate-500">
-            {groups.length} групп назначено
+            {loading ? "Загружаем доступные группы…" : `${groups.length} групп доступно`}
           </p>
         </div>
       </div>
@@ -200,10 +200,8 @@ export default function GroupsPage() {
               (lesson) => lesson.groupName === group.name,
             )[0];
             return (
-              <button
+              <div
                 key={group.id}
-                type="button"
-                onClick={() => openGroup(group)}
                 className="text-left"
               >
                 <Card
@@ -212,25 +210,19 @@ export default function GroupsPage() {
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <h2 className="text-lg font-bold text-slate-900">
-                        {group.name}
-                      </h2>
+                      <h2 className="text-lg font-bold text-slate-900"><button type="button" onClick={() => openGroup(group)} className="min-h-11 text-left hover:text-sky-700">{group.name}</button></h2>
                       <p className="mt-1 text-sm text-slate-500">
-                        {group.studentCount} студентов
+                        {group.studentCount === undefined ? "Откройте список студентов" : `${group.studentCount} студентов`}
                       </p>
                     </div>
-                    <Badge variant="sky">{group.studentCount}</Badge>
+                    {group.studentCount !== undefined && <Badge variant="sky">{group.studentCount}</Badge>}
                   </div>
                   <p className="mt-5 text-xs font-semibold uppercase tracking-wide text-slate-400">
-                    Ближайшая пара
+                    Занятия этой недели
                   </p>
                   <p className="mt-1 font-semibold text-slate-800">
                     {nearest?.subject || "Нет в расписании"}
                   </p>
-                  <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-4">
-                    <span className="text-sm text-slate-500">Посещаемость</span>
-                    <span className="text-sm font-bold text-slate-700">—</span>
-                  </div>
                   <div className="mt-4 flex gap-2 border-t border-slate-100 pt-4">
                     <Link
                       href={`/attendance?group=${group.id}`}
@@ -246,12 +238,12 @@ export default function GroupsPage() {
                     >
                       Расписание
                     </Link>
-                    <span className="ml-auto rounded-lg px-2 py-1 text-xs font-semibold text-slate-500">
+                    <button type="button" onClick={() => openGroup(group)} className="ml-auto min-h-11 rounded-lg px-2 py-1 text-xs font-semibold text-sky-700 hover:bg-sky-50">
                       Открыть →
-                    </span>
+                    </button>
                   </div>
                 </Card>
-              </button>
+              </div>
             );
           })}
         </div>
@@ -264,7 +256,7 @@ export default function GroupsPage() {
                 <h2 className="text-xl font-bold text-slate-900">
                   {selected.name}
                 </h2>
-                <Badge variant="sky">{selected.studentCount} студентов</Badge>
+                {!detailLoading && !detailError && <Badge variant="sky">{students.length} студентов</Badge>}
               </div>
               <p className="mt-1 text-sm text-slate-500">
                 {groupFaculty(selected)}

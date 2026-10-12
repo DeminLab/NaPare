@@ -6,7 +6,7 @@
 
 ## Scope
 
-Student My Day UI, including the current/next lesson with building, room and subgroup and upstream odd/even week when supplied, daily timeline, overlapping lesson warnings, schedule changes, announcements, and preparation reminders returned by `/my-day`. Deadline labels reflect the actual local calendar distance instead of labeling every future item "this week". Sends the browser's IANA timezone and uses an account-scoped same-day cache that renders immediately while the API refreshes, preserving the saved view when offline.
+Student Today prioritises the current/next lesson, important events and preparation. Quick actions expose QR attendance, absence requests and schedule; preparation links open the exact lesson tab.
 
 ## Read sequence
 

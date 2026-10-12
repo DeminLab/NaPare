@@ -3,6 +3,7 @@ const backendUrl = process.env.BACKEND_URL || 'http://localhost:3000';
 
 const nextConfig = {
   basePath: '/developer',
+  skipTrailingSlashRedirect: true,
   transpilePackages: ['@napare/ui', '@napare/design-tokens'],
   reactStrictMode: true,
   eslint: {

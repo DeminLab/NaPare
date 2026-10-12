@@ -3,17 +3,23 @@
 import Link from 'next/link';
 import { useEffect, useState, type ReactNode } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { WorkspaceShell, type NavigationLinkProps, type WorkspaceCommand, type WorkspaceNavGroup } from '@napare/ui/workspace-shell';
-import { getUnreadCount, getUser, isLoggedIn, logout, StudentUser } from '@/lib/api';
+import { WorkspaceShell, searchCommands, type WorkspaceSearchResponse, type WorkspaceHelp, type NavigationLinkProps, type WorkspaceCommand, type WorkspaceNavGroup } from '@napare/ui/workspace-shell';
+import { apiFetch, getUnreadCount, getUser, isLoggedIn, logout, StudentUser } from '@/lib/api';
 
 const groups: WorkspaceNavGroup[] = [
-  { label: 'Мой день', items: [{ href: '/today', label: 'Мой день', icon: 'home', keywords: ['сейчас', 'дальше', 'action center'] }] },
-  { label: 'Учёба', items: [{ href: '/week', label: 'Расписание', icon: 'calendar', keywords: ['день', 'неделя', 'agenda'] }, { href: '/pair-space', label: 'Пространства пар', icon: 'book', keywords: ['материалы', 'задания', 'обсуждение'] }, { href: '/absences', label: 'Посещаемость', icon: 'clipboard' }] },
-  { label: 'Коммуникация', items: [{ href: '/notifications', label: 'Уведомления', icon: 'bell' }] },
-  { label: 'Аккаунт', items: [{ href: '/profile', label: 'Профиль', icon: 'user' }, { href: '/settings', label: 'Настройки', icon: 'settings' }] },
+  { label: 'Главное', items: [{ href: '/today', label: 'Сегодня', icon: 'home', keywords: ['мой день', 'сейчас', 'дальше'] }, { href: '/week', activePaths: ['/month'], label: 'Расписание', icon: 'calendar', keywords: ['день', 'неделя', 'месяц'] }, { href: '/pair-space', label: 'Подготовка', icon: 'book', keywords: ['материалы', 'задания', 'пространства пар'] }, { href: '/notifications', label: 'Уведомления', icon: 'bell' }] },
+  { label: 'Другие действия', items: [{ href: '/attendance/check-in', label: 'Отметиться по QR', icon: 'check' }, { href: '/absences', label: 'Сообщить об отсутствии', icon: 'clipboard' }, { href: '/groups', label: 'Избранное расписание', icon: 'users' }] },
+  { label: 'Аккаунт', items: [{ href: '/profile', label: 'Профиль', icon: 'user' }, { href: '/settings', label: 'Настройки', icon: 'settings' }, { href: '/connections', label: 'Подключения аккаунта', icon: 'plug' }] },
 ];
 
-const AppLink = ({ href, children, ...props }: NavigationLinkProps) => <Link href={href} {...props}>{children}</Link>;
+const AppLink = ({ href, children, ...props }: NavigationLinkProps) => href === '/connections' ? <a href={href} {...props}>{children}</a> : <Link href={href} {...props}>{children}</Link>;
+const searchWorkspace = async (query: string, signal: AbortSignal) => searchCommands(await apiFetch<WorkspaceSearchResponse>('/search?q=' + encodeURIComponent(query), { signal }));
+const help: WorkspaceHelp = { title: 'Ваш учебный день в одном месте', description: 'Начните с ближайшей пары, затем откройте подготовку или расписание.', steps: [
+  { title: 'Узнать, куда идти сейчас', description: 'Время, аудитория и изменения ближайшего занятия.', href: '/today' },
+  { title: 'Проверить расписание', description: 'Неделя и месяц, поиск по предметам и избранные преподаватели.', href: '/week' },
+  { title: 'Подготовиться к занятию', description: 'Темы, материалы и ваш прогресс. Сдача работ и оценки — в Moodle.', href: '/pair-space' },
+  { title: 'Сообщить об отсутствии', description: 'Отправьте причину и проверьте статус заявки.', href: '/absences' },
+] };
 
 export default function StudentShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -28,14 +34,14 @@ export default function StudentShell({ children }: { children: ReactNode }) {
   }, [router]);
 
   const commands: WorkspaceCommand[] = [
-    { id: 'student:today', label: 'Открыть мой день', description: 'Сейчас, дальше и Action Center', icon: 'home', href: '/today', keywords: ['сейчас', 'задачи'] },
-    { id: 'student:schedule', label: 'Открыть расписание', description: 'День, неделя и agenda', icon: 'calendar', href: '/week', keywords: ['расписание', 'agenda'] },
-    { id: 'student:pair-space', label: 'Открыть пространства пар', description: 'Материалы, задания и обсуждения', icon: 'book', href: '/pair-space' },
+    { id: 'student:today', label: 'Открыть сегодня', description: 'Ближайшая пара и важные действия', icon: 'home', href: '/today', keywords: ['сейчас', 'задачи'] },
+    { id: 'student:schedule', label: 'Открыть расписание', description: 'Неделя и месяц', icon: 'calendar', href: '/week', keywords: ['расписание'] },
+    { id: 'student:pair-space', label: 'Открыть подготовку', description: 'Материалы, темы и обсуждения', icon: 'book', href: '/pair-space' },
     { id: 'student:notifications', label: 'Открыть уведомления', description: unread ? unread + ' непрочитанных' : 'Всё прочитано', icon: 'bell', href: '/notifications' },
   ];
 
   if (!user) return <div className="flex min-h-screen items-center justify-center bg-[var(--color-background)] text-sm text-[var(--color-text-secondary)]">Загрузка…</div>;
   const name = user.firstName + ' ' + user.lastName;
   const resolvedGroups = groups.map(group => ({ ...group, items: group.items.map(item => item.href === '/notifications' ? { ...item, badge: unread } : item) }));
-  return <WorkspaceShell LinkComponent={AppLink} pathname={pathname} groups={resolvedGroups} roleLabel="Студент" homeHref="/today" user={{ name, role: user.groupName || 'Студент' }} unreadCount={unread} commands={commands} onLogout={logout}>{children}</WorkspaceShell>;
+  return <WorkspaceShell LinkComponent={AppLink} pathname={pathname} groups={resolvedGroups} roleLabel="Студент" homeHref="/today" user={{ name, role: user.groupName || 'Студент', id: user.id }} unreadCount={unread} commands={commands} onSearch={searchWorkspace} searchPlaceholder="Предмет, преподаватель, материал или раздел…" mobileHrefs={['/today', '/week', '/pair-space', '/notifications']} help={help} onLogout={logout}>{children}</WorkspaceShell>;
 }

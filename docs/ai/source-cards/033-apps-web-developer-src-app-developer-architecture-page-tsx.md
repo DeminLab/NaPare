@@ -6,7 +6,7 @@
 
 ## Scope
 
-Developer operations workspace UI and its data flow.
+Interactive architecture map describes current workspace routes, Next.js 15 and optional external integrations. The diagram is documentation and does not claim live service health.
 
 ## Read sequence
 

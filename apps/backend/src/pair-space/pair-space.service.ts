@@ -284,6 +284,7 @@ export class PairSpaceService {
     await this.assertCanPublishContent(pairSpaceId, authorId);
     const homework = this.homeworkRepository.create({
       ...createHomeworkDto,
+      deadline: createHomeworkDto.deadline ? new Date(createHomeworkDto.deadline) : undefined,
       pairSpaceId,
       authorId,
       source: "manual",
@@ -573,6 +574,15 @@ export class PairSpaceService {
   private async assertRoleScopedAccess(pairSpace: PairSpace): Promise<void> {
     this.tenantContext.assertAccess(pairSpace.universityId);
     const user = this.tenantContext.getUser();
+    if (user?.role === UserRole.TEACHER) {
+      const lesson = await this.lessonRepository?.findOne({
+        where: { id: pairSpace.lessonId, universityId: pairSpace.universityId },
+      });
+      if (!lesson || lesson.teacherId !== user.id) {
+        throw new ForbiddenException("Teachers can only access their own lesson spaces");
+      }
+      return;
+    }
     if (!user || user.role !== UserRole.STUDENT) return;
     if (!user.groupId || !this.lessonRepository) {
       throw new ForbiddenException(
