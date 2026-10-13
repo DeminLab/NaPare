@@ -68,7 +68,7 @@ const searchWorkspace = async (query: string, signal: AbortSignal) => searchComm
 const help: WorkspaceHelp = { title: "Ваш рабочий день", description: "Расписание, группы и действия, которые требуют вашего внимания.", steps: [
   { title: "Начать с ближайшей пары", description: "Время, группа и аудитория на странице «Сегодня».", href: "/today" },
   { title: "Подготовить занятие", description: "Добавьте тему и ссылки на материалы для студентов.", href: "/assignments" },
-  { title: "Проверить посещаемость", description: "Откройте журнал своей группы или QR-сессию.", href: "/attendance" },
+  { title: "Проверить посещаемость", description: "Откройте список группы и отметьте присутствие, отсутствие и опоздание.", href: "/attendance" },
   { title: "Разобрать важные события", description: "Заявки и сообщения собраны в центре внимания.", href: "/inbox" },
 ] };
 const roleLabels: Record<string, string> = { teacher: "Преподаватель", curator: "Куратор", faculty_dean: "Декан", department_head: "Заведующий кафедрой" };

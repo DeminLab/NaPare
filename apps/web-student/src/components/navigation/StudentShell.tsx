@@ -8,7 +8,7 @@ import { apiFetch, getUnreadCount, getUser, isLoggedIn, logout, StudentUser } fr
 
 const groups: WorkspaceNavGroup[] = [
   { label: 'Главное', items: [{ href: '/today', label: 'Сегодня', icon: 'home', keywords: ['мой день', 'сейчас', 'дальше'] }, { href: '/week', activePaths: ['/month'], label: 'Расписание', icon: 'calendar', keywords: ['день', 'неделя', 'месяц'] }, { href: '/pair-space', label: 'Подготовка', icon: 'book', keywords: ['материалы', 'задания', 'пространства пар'] }, { href: '/notifications', label: 'Уведомления', icon: 'bell' }] },
-  { label: 'Другие действия', items: [{ href: '/attendance/check-in', label: 'Отметиться по QR', icon: 'check' }, { href: '/absences', label: 'Сообщить об отсутствии', icon: 'clipboard' }, { href: '/groups', label: 'Избранное расписание', icon: 'users' }] },
+  { label: 'Другие действия', items: [{ href: '/absences', label: 'Сообщить об отсутствии', icon: 'clipboard' }, { href: '/groups', label: 'Избранное расписание', icon: 'users' }] },
   { label: 'Аккаунт', items: [{ href: '/profile', label: 'Профиль', icon: 'user' }, { href: '/settings', label: 'Настройки', icon: 'settings' }, { href: '/connections', label: 'Подключения аккаунта', icon: 'plug' }] },
 ];
 

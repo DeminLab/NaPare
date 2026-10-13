@@ -6,7 +6,7 @@
 
 ## Scope
 
-Attendance journal saves only explicitly marked students. Unmarked rows are not silently recorded as present; batch actions and individual controls remain available. The percentage counts marked students. Existing scoped group, lesson, QR and absence APIs are preserved.
+Attendance journal saves only explicitly marked students. While existing marks load, the roster cannot be edited or saved; stale requests are ignored after changing the lesson. Unmarked rows are not silently recorded as present; batch actions and individual controls remain available. The percentage counts marked students. Teacher records present, absent or late in the group roster. QR generation is no longer exposed. Existing scoped group, lesson and absence APIs are preserved.
 
 ## Read sequence
 
