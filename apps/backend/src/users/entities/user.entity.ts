@@ -43,8 +43,8 @@ export class User {
   })
   role: UserRole;
 
-  @Column({ type: "uuid" })
-  universityId: string;
+  @Column({ type: "uuid", nullable: true })
+  universityId: string | null;
 
   @Column({ type: "varchar", nullable: true })
   groupId: string;

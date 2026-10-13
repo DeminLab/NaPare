@@ -11,7 +11,7 @@ const groups: WorkspaceNavGroup[] = [
   { label: 'Университет', items: [{ href: '/users', label: 'Пользователи', icon: 'users' }, { href: '/structure', label: 'Структура', icon: 'building', keywords: ['университет', 'факультеты', 'группы'] }] },
   { label: 'Расписание и данные', items: [{ href: '/schedule-import', label: 'Расписание', icon: 'calendar', keywords: ['расписание', 'импорт'] }, { href: '/connectors', label: 'Источники данных', icon: 'plug', keywords: ['коннекторы', 'интеграции'] }] },
   { label: 'Система', items: [{ href: '/notifications', label: 'Уведомления', icon: 'bell' }, { href: '/audit-log', label: 'Журнал аудита', icon: 'list', keywords: ['аудит', 'логи'] }] },
-  { label: 'Настройки', items: [{ href: '/university', label: 'Настройки университета', icon: 'settings' }, { href: '/connections', label: 'Подключения аккаунта', icon: 'plug', keywords: ['max', 'telegram'] }] },
+  { label: 'Настройки', items: [{ href: '/university', label: 'Настройки университета', icon: 'settings' }, { href: '/connections', label: 'Подключения аккаунта', icon: 'plug', keywords: ['max'] }] },
 ];
 const AppLink = ({ href, children, ...props }: NavigationLinkProps) => href === '/connections'
   ? <a href={href} {...props}>{children}</a>
@@ -41,6 +41,6 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     { title: 'Проверить общую сводку', description: 'Статистика и состояние данных университета.', href: '/dashboard' },
     { title: 'Добавить пользователей', description: 'Учётные записи и доступ к кабинетам.', href: '/users' },
     { title: 'Настроить расписание', description: 'Импорт, проверка ошибок и публикация занятий.', href: '/schedule-import' },
-    { title: 'Подключить источники данных', description: 'Интеграции университета; личные MAX и Telegram находятся в меню аккаунта.', href: '/connectors' },
+    { title: 'Подключить источники данных', description: 'Интеграции университета; подключение MAX находится в меню аккаунта.', href: '/connectors' },
   ] }} onLogout={logout}>{children}</WorkspaceShell>;
 }

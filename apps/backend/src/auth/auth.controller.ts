@@ -9,6 +9,7 @@ import {
   Request,
   Query,
   ForbiddenException,
+  GoneException,
 } from "@nestjs/common";
 import {
   ApiTags,
@@ -98,7 +99,7 @@ export class AuthController {
   @ApiBearerAuth()
   @ApiOperation({ summary: "Создать одноразовую ссылку для привязки Telegram" })
   async createTelegramLink(@Request() req) {
-    return this.authService.createTelegramLink(req.user.id);
+    throw new GoneException('Telegram больше не используется в NaPare');
   }
 
   @Get("telegram/status")
@@ -106,7 +107,7 @@ export class AuthController {
   @ApiBearerAuth()
   @ApiOperation({ summary: "Получить состояние привязки Telegram" })
   async getTelegramLinkStatus(@Request() req) {
-    return this.authService.getTelegramLinkStatus(req.user.id);
+    return { linked: false, notificationsConfigured: false, available: false };
   }
 
   @Post("portal-login")

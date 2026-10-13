@@ -6,7 +6,7 @@
 
 ## Scope
 
-Staff settings use real notification preferences and Telegram account status, explicit saving and error recovery, plus profile and account connection links. Fake settings tabs were removed.
+Staff settings use real notification preferences without Telegram controls, explicit saving and error recovery, plus profile and account connection links. Fake settings tabs were removed.
 
 ## Read sequence
 

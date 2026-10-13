@@ -1,3 +1,4 @@
+import { requireUniversityId } from '../common/tenant/require-university';
 import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -19,6 +20,8 @@ import {
   PaginationQueryDto,
   toPaginatedResponse,
 } from '../common/dto/pagination-query.dto';
+
+const TELEGRAM_DELIVERY_ENABLED = false;
 
 @Injectable()
 export class NotificationsService {
@@ -55,7 +58,7 @@ export class NotificationsService {
     const currentUser = this.tenantContext.getUser();
     const [data, total] = await this.notificationRepository.findAndCount({
       where: currentUser && currentUser.role !== UserRole.SUPERADMIN
-        ? { userId, universityId: currentUser.universityId }
+        ? { userId, universityId: requireUniversityId(currentUser) }
         : { userId },
       order: { createdAt: 'DESC' },
       skip: (pagination.page - 1) * pagination.limit,
@@ -68,7 +71,7 @@ export class NotificationsService {
     const currentUser = this.tenantContext.getUser();
     return this.notificationRepository.count({
       where: currentUser && currentUser.role !== UserRole.SUPERADMIN
-        ? { userId, universityId: currentUser.universityId, isRead: false }
+        ? { userId, universityId: requireUniversityId(currentUser), isRead: false }
         : { userId, isRead: false },
     });
   }
@@ -131,7 +134,7 @@ export class NotificationsService {
         }
       }
 
-      if (isNewNotification && preference.telegramEnabled) {
+      if (isNewNotification && TELEGRAM_DELIVERY_ENABLED && preference.telegramEnabled) {
         this.enqueueTelegramNotification(userId, notification.id, mapped.title, mapped.body, deepLink);
       }
 
@@ -166,7 +169,7 @@ export class NotificationsService {
         userId,
         ...(status ? { status } : {}),
         ...(currentUser && currentUser.role !== UserRole.SUPERADMIN
-          ? { universityId: currentUser.universityId }
+          ? { universityId: requireUniversityId(currentUser) }
           : {}),
       },
       order: { createdAt: 'DESC' },
@@ -208,7 +211,7 @@ export class NotificationsService {
     const currentUser = this.tenantContext.getUser();
     await this.notificationRepository.update(
       currentUser && currentUser.role !== UserRole.SUPERADMIN
-        ? { userId, universityId: currentUser.universityId, isRead: false }
+        ? { userId, universityId: requireUniversityId(currentUser), isRead: false }
         : { userId, isRead: false },
       { isRead: true, readAt: new Date() },
     );

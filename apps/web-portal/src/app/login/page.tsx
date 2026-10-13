@@ -5,10 +5,11 @@ import Image from 'next/image';
 import { FormEvent, useEffect, useState } from 'react';
 import { MaxLaunchAuth } from '../../components/MaxLaunchAuth';
 
-type Workspace = 'student' | 'staff' | 'admin' | 'developer';
+type Workspace = 'student' | 'staff' | 'admin' | 'developer' | 'career';
 type LoginResponse = { accessToken: string; refreshToken: string; workspace: Workspace };
 
 const destinations: Record<Workspace, string> = {
+  career: '/career',
   student: '/student/today',
   staff: '/staff/today',
   admin: '/deanery/dashboard',
@@ -34,7 +35,7 @@ export default function LoginPage() {
     const emailInput = event.currentTarget.elements.namedItem('email') as HTMLInputElement;
     const passwordInput = event.currentTarget.elements.namedItem('password') as HTMLInputElement;
     const fields = {
-      email: !normalizedEmail ? 'Введите email, выданный университетом.' : emailInput.validity.typeMismatch ? 'Проверьте адрес: например, name@university.ru.' : undefined,
+      email: !normalizedEmail ? 'Введите email своего аккаунта.' : emailInput.validity.typeMismatch ? 'Проверьте адрес: например, name@university.ru.' : undefined,
       password: !password ? 'Введите пароль от аккаунта НаПаре.' : undefined,
     };
     setFieldErrors(fields);
@@ -52,7 +53,7 @@ export default function LoginPage() {
       });
       const payload = await response.json().catch(() => null);
       if (!response.ok) {
-        if (response.status === 401) throw new Error('Неверный email или пароль. Используйте учётные данные, выданные университетом.');
+        if (response.status === 401) throw new Error('Неверный email или пароль. Проверьте учётные данные.');
         if (response.status === 403) throw new Error('Доступ к кабинету не настроен. Обратитесь к администратору университета.');
         if (response.status === 429) throw new Error('Слишком много попыток входа. Подождите немного и попробуйте снова.');
         throw new Error('Сервис входа временно недоступен. Попробуйте ещё раз через несколько минут.');
@@ -72,13 +73,13 @@ export default function LoginPage() {
 
   return (
     <main className="login-layout">
-      <section className="login-aside"><Link href="/" className="brand light"><Image src="/brand/np-mark.png" alt="" width={34} height={34} priority unoptimized />НаПаре</Link><div><p className="eyebrow">Единый вход</p><h2>Один аккаунт.<br />Свой кабинет.</h2><p>После входа НаПаре определит вашу роль и откроет нужное рабочее пространство.</p></div><small>Учётные данные выдаёт университет.</small></section>
+      <section className="login-aside"><Link href="/" className="brand light"><Image src="/brand/np-mark.png" alt="" width={34} height={34} priority unoptimized />НаПаре</Link><div><p className="eyebrow">Единый вход</p><h2>Один аккаунт.<br />Свой кабинет.</h2><p>После входа НаПаре определит вашу роль и откроет нужное рабочее пространство.</p></div><small>Учебные аккаунты выдаёт университет. Работодатели регистрируются самостоятельно.</small></section>
       <section className="login-panel">
         <div className="login-card">
           <MaxLaunchAuth captureOnly />
           <Link href="/" className="brand mobile-brand"><Image src="/brand/np-mark.png" alt="" width={34} height={34} priority unoptimized />НаПаре</Link>
-          <h1>Вход в НаПаре</h1>
-          <p className="muted">Используйте аккаунт, выданный университетом. Кабинет откроется автоматически.</p><p className="login-account-help">Первый вход — по email и паролю. MAX можно подключить после входа.</p>
+          <h1>Вход в НаПаре</h1><a href="/career/register" className="login-career-link">Регистрация работодателя →</a>
+          <p className="muted">Войдите в свой аккаунт. Нужный кабинет откроется автоматически.</p><p className="login-account-help">Первый вход — по email и паролю. MAX можно подключить после входа.</p>
           <form onSubmit={submit} className="login-form" noValidate aria-busy={loading}>
             {error && <p className="error" role="alert">{error}</p>}
             <label htmlFor="login-email">Email

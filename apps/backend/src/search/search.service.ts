@@ -1,3 +1,4 @@
+import { requireUniversityId } from '../common/tenant/require-university';
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ObjectLiteral, Repository, SelectQueryBuilder } from 'typeorm';
@@ -63,14 +64,14 @@ export class SearchService {
   ) {}
 
   async search(query: SearchQueryDto, user: AuthenticatedUser) {
-    this.tenantContext.assertAccess(user.universityId);
+    this.tenantContext.assertAccess(requireUniversityId(user));
     const term = query.q.trim();
     if (term.length < 2 || term.length > 80) return { query: term, results: [] as SearchResult[] };
     const scope = await this.resolveScope(user);
     const pattern = searchPattern(term);
 
     const lessonQuery = this.lessonRepository.createQueryBuilder('lesson')
-      .where('lesson.universityId = :universityId', { universityId: user.universityId })
+      .where('lesson.universityId = :universityId', { universityId: requireUniversityId(user) })
       .andWhere('(lesson.subject ILIKE :pattern OR lesson.teacherName ILIKE :pattern OR lesson.room ILIKE :pattern OR lesson.building ILIKE :pattern)', { pattern })
       .orderBy('lesson.startDate', 'DESC')
       .take(MAX_MATCHED_LESSONS);
@@ -79,7 +80,7 @@ export class SearchService {
     const homeworkQuery = this.homeworkRepository.createQueryBuilder('homework')
       .innerJoin(PairSpace, 'pairSpace', 'pairSpace.id = homework.pairSpaceId')
       .innerJoin(Lesson, 'lesson', 'lesson.id = pairSpace.lessonId AND lesson.universityId = pairSpace.universityId')
-      .where('pairSpace.universityId = :universityId', { universityId: user.universityId })
+      .where('pairSpace.universityId = :universityId', { universityId: requireUniversityId(user) })
       .andWhere('(homework.title ILIKE :pattern OR COALESCE(homework.description, \'\') ILIKE :pattern)', { pattern })
       .orderBy('homework.deadline', 'ASC', 'NULLS LAST')
       .take(MAX_MATCHED_LESSONS);
@@ -88,7 +89,7 @@ export class SearchService {
     const fileQuery = this.fileRepository.createQueryBuilder('file')
       .innerJoin(PairSpace, 'pairSpace', 'pairSpace.id = file.pairSpaceId')
       .innerJoin(Lesson, 'lesson', 'lesson.id = pairSpace.lessonId AND lesson.universityId = pairSpace.universityId')
-      .where('pairSpace.universityId = :universityId', { universityId: user.universityId })
+      .where('pairSpace.universityId = :universityId', { universityId: requireUniversityId(user) })
       .andWhere('file.fileName ILIKE :pattern', { pattern })
       .orderBy('file.createdAt', 'DESC')
       .take(MAX_MATCHED_LESSONS);
@@ -214,22 +215,22 @@ export class SearchService {
       let sourceGroupId: string | undefined;
       if (/^\d+$/.test(groupId)) {
         sourceGroupId = groupId;
-        const group = await this.groupRepository.findOne({ where: { universityId: user.universityId, externalId: groupId } });
+        const group = await this.groupRepository.findOne({ where: { universityId: requireUniversityId(user), externalId: groupId } });
         if (group) {
           groupId = group.id;
           sourceGroupId = group.externalId || undefined;
         }
       } else {
-        const group = await this.groupRepository.findOne({ where: { id: groupId, universityId: user.universityId } });
+        const group = await this.groupRepository.findOne({ where: { id: groupId, universityId: requireUniversityId(user) } });
         if (group?.externalId) sourceGroupId = group.externalId;
       }
       if (sourceGroupId) {
-        const university = await this.universityRepository.findOne({ where: { id: user.universityId } });
+        const university = await this.universityRepository.findOne({ where: { id: requireUniversityId(user) } });
         if (university?.name !== SIBIT_UNIVERSITY.name || university.city !== SIBIT_UNIVERSITY.city) sourceGroupId = undefined;
       }
-      return { universityId: user.universityId, groupId, sourceGroupId };
+      return { universityId: requireUniversityId(user), groupId, sourceGroupId };
     }
-    if (user.role === UserRole.TEACHER) return { universityId: user.universityId, teacherId: user.id };
-    return { universityId: user.universityId };
+    if (user.role === UserRole.TEACHER) return { universityId: requireUniversityId(user), teacherId: user.id };
+    return { universityId: requireUniversityId(user) };
   }
 }

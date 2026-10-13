@@ -6,7 +6,7 @@
 
 ## Scope
 
-Authentication and account-linking business logic, including MAX `initData` login, authenticated MAX linking, boolean link status, and Telegram webhook pairing with one-time link challenges. MAX links are verified against the current JWT user and fresh signed launch data.
+Authentication and account-linking business logic, including MAX `initData` login, authenticated MAX linking, boolean link status, and legacy Telegram linking internals retained for data compatibility. Telegram HTTP linking and webhook delivery are disabled by the 13 October product decision. Portal workspace routing includes employer and career-center primary roles. MAX links are verified against the current JWT user and fresh signed launch data.
 
 ## Read sequence
 

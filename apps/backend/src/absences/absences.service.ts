@@ -1,3 +1,4 @@
+import { requireUniversityId } from '../common/tenant/require-university';
 import {
   BadRequestException,
   ConflictException,
@@ -67,11 +68,11 @@ export class AbsencesService {
     pagination: PaginationQueryDto = new PaginationQueryDto(),
   ): Promise<PaginatedResponse<Absence>> {
     const user = this.tenantContext.getUser();
-    if (user) await this.assertStudentReadScope(studentId, user.universityId);
+    if (user) await this.assertStudentReadScope(studentId, requireUniversityId(user));
     const [data, total] = await this.absenceRepository.findAndCount({
       where:
         user && user.role !== UserRole.SUPERADMIN
-          ? { studentId, universityId: user.universityId }
+          ? { studentId, universityId: requireUniversityId(user) }
           : { studentId },
       order: { createdAt: "DESC" },
       skip: (pagination.page - 1) * pagination.limit,
@@ -97,7 +98,7 @@ export class AbsencesService {
         user && user.role !== UserRole.SUPERADMIN
           ? {
               affectedLessonIds: ArrayContains([lessonId]),
-              universityId: user.universityId,
+              universityId: requireUniversityId(user),
             }
           : { affectedLessonIds: ArrayContains([lessonId]) },
       order: { createdAt: "DESC" },
@@ -235,9 +236,9 @@ export class AbsencesService {
     if (!user || !ABSENCE_STAFF_ROLES.includes(user.role)) {
       throw new ForbiddenException("Staff role required");
     }
-    this.tenantContext.assertAccess(user.universityId);
+    this.tenantContext.assertAccess(requireUniversityId(user));
     const [data, total] = await this.absenceRepository.findAndCount({
-      where: { universityId: user.universityId, confirmationRequired: true },
+      where: { universityId: requireUniversityId(user), confirmationRequired: true },
       order: { createdAt: "DESC" },
       skip: (pagination.page - 1) * pagination.limit,
       take: pagination.limit,
@@ -247,7 +248,7 @@ export class AbsencesService {
       ? await this.userRepository.find({
           where: {
             id: In(studentIds),
-            universityId: user.universityId,
+            universityId: requireUniversityId(user),
             role: UserRole.STUDENT,
           },
         })
@@ -409,7 +410,7 @@ export class AbsencesService {
     const session = await this.attendanceQrSessionRepository.findOne({
       where: {
         tokenHash: createHash("sha256").update(token).digest("hex"),
-        universityId: user.universityId,
+        universityId: requireUniversityId(user),
         revokedAt: IsNull(),
         expiresAt: MoreThan(new Date()),
       },
@@ -418,14 +419,14 @@ export class AbsencesService {
 
     const [lesson, student] = await Promise.all([
       this.lessonRepository.findOne({ where: { id: session.lessonId, universityId: session.universityId } }),
-      this.userRepository.findOne({ where: { id: user.id, universityId: user.universityId, role: UserRole.STUDENT } }),
+      this.userRepository.findOne({ where: { id: user.id, universityId: requireUniversityId(user), role: UserRole.STUDENT } }),
     ]);
     if (!lesson || !student?.groupId) throw new ForbiddenException("Студент или занятие недоступны.");
-    const studentGroupId = await this.resolveStudentGroupId(user.universityId, student.groupId);
+    const studentGroupId = await this.resolveStudentGroupId(requireUniversityId(user), student.groupId);
     if (studentGroupId !== lesson.groupId) throw new ForbiddenException("Этот QR-код предназначен для другой учебной группы.");
 
     const existing = await this.attendanceRepository.findOne({
-      where: { universityId: user.universityId, lessonId: lesson.id, studentId: user.id },
+      where: { universityId: requireUniversityId(user), lessonId: lesson.id, studentId: user.id },
     });
     if (existing) {
       if (existing.status === "present") return { lessonId: lesson.id, status: "present", alreadyMarked: true };
@@ -434,7 +435,7 @@ export class AbsencesService {
 
     try {
       await this.attendanceRepository.save(this.attendanceRepository.create({
-        universityId: user.universityId,
+        universityId: requireUniversityId(user),
         lessonId: lesson.id,
         studentId: user.id,
         status: "present",
@@ -444,7 +445,7 @@ export class AbsencesService {
     } catch (error) {
       if ((error as { driverError?: { code?: string } })?.driverError?.code === "23505") {
         const concurrentRecord = await this.attendanceRepository.findOne({
-          where: { universityId: user.universityId, lessonId: lesson.id, studentId: user.id },
+          where: { universityId: requireUniversityId(user), lessonId: lesson.id, studentId: user.id },
         });
         if (concurrentRecord?.status === "present") {
           return { lessonId: lesson.id, status: "present", alreadyMarked: true };
@@ -456,7 +457,7 @@ export class AbsencesService {
 
     await this.eventBus?.publish({
       type: "attendance.updated",
-      universityId: user.universityId,
+      universityId: requireUniversityId(user),
       actor: { id: user.id, type: "user", role: user.role },
       target: { type: "lesson", id: lesson.id },
       payload: { lessonId: lesson.id, records: 1, source: "qr" },

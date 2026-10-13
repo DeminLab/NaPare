@@ -14,7 +14,7 @@ Public NaPare landing page. The hero uses one full-bleed campus image with reada
 - `apps/web-portal/src/components/ProductShowcase.tsx` renders the sample schedule, preparation notice, notification, teacher, attendance statistic, and personal-cabinet UI below the hero.
 - `apps/web-portal/src/app/layout.tsx` provides the site metadata and favicon paths.
 - `apps/web-portal/src/components/MaxLaunchAuth.tsx` captures MAX launch data in memory on the landing page; authentication and linking start only on `/login` after the visitor chooses «Войти».
-- `/connections` is the account's short-lived Telegram linking flow; it does not handle login credentials.
+- `/connections` is the account's MAX account connection flow; it does not handle login credentials.
 - `infrastructure/docker/web.Dockerfile` must include public assets in the production runtime.
 
 ## Change boundary

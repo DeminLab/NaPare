@@ -59,6 +59,9 @@ export interface UniversityStats {
 }
 
 const ROLE_HIERARCHY: Record<UserRole, number> = {
+  [UserRole.EMPLOYER]: 0,
+  [UserRole.CAREER_STAFF]: 2,
+  [UserRole.CAREER_ADMIN]: 3,
   [UserRole.DEVELOPER]: 0,
   [UserRole.STUDENT]: 1,
   [UserRole.TEACHER]: 2,
@@ -647,6 +650,7 @@ export class AdminService {
     requesterRole: UserRole,
     targetRole: UserRole,
   ): boolean {
+    if (targetRole === UserRole.EMPLOYER) return false;
     if (targetRole === UserRole.DEVELOPER) {
       return requesterRole === UserRole.SUPERADMIN;
     }

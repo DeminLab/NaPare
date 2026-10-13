@@ -1,3 +1,4 @@
+import { CareerModule } from './career/career.module';
 import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { join } from 'node:path';
@@ -73,6 +74,7 @@ import { SearchModule } from './search/search.module';
         limit: configService.get<number>('rateLimit.max', 100),
       }],
     }),
+    CareerModule,
     AuthModule,
     UsersModule,
     ScheduleModule,

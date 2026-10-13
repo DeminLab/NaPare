@@ -22,9 +22,9 @@ export class TenantContext {
     return this.storage.getStore()?.user;
   }
 
-  assertAccess(universityId: string): void {
+  assertAccess(universityId: string | null): void {
     const user = this.getUser();
-    if (user && user.role !== UserRole.SUPERADMIN && user.universityId !== universityId) {
+    if (user && user.role !== UserRole.SUPERADMIN && (!universityId || !user.universityId || user.universityId !== universityId)) {
       throw new ForbiddenException('Access denied to this university');
     }
   }

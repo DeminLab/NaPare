@@ -103,7 +103,7 @@ export default function DashboardPage() {
   if (loading) return <div className="mx-auto max-w-[var(--layout-content-max)] space-y-6" aria-busy="true" aria-label="Загрузка dashboard"><Skeleton className="h-28" /><div className="grid gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(18rem,.7fr)]"><Skeleton className="h-72" /><Skeleton className="h-72" /></div><Skeleton className="h-48" /></div>;
   if (error && !users.length && !lessons.length) return <div className="mx-auto max-w-[var(--layout-content-max)]"><RequestState title="Не удалось загрузить сводку ВУЗа" description={error} onRetry={load} /></div>;
 
-  return <div className="mx-auto max-w-[var(--layout-content-max)] space-y-6">
+  return <div className="mx-auto max-w-[var(--layout-content-max)] space-y-6"><a href="/career" className="flex min-h-11 items-center justify-between gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-sm font-semibold text-[var(--color-text)]"><span>Практика и работа</span><span>Открыть карьерный кабинет →</span></a>
     <PageHeader eyebrow="Кабинет ВУЗа" title="Состояние учебного дня" description={currentDate} actions={<><Badge variant={backend === 'online' ? 'green' : backend === 'offline' ? 'red' : 'slate'} dot>{backend === 'online' ? 'Система работает' : backend === 'offline' ? 'Не удалось проверить API' : 'Проверяем систему'}</Badge><Link href="/schedule-import"><Button size="sm">Обновить расписание</Button></Link></>} />
 
     {partial.length > 0 && <div role="status" className="rounded-[var(--radius-md)] border border-[var(--color-warning)] bg-[var(--color-warning-soft)] px-4 py-3 text-sm text-[var(--color-warning)]">Часть данных недоступна: {partial.join(', ')}. Показаны доступные сведения.</div>}

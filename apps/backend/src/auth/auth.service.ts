@@ -21,7 +21,7 @@ import { UserRole } from "./interfaces/user-role";
 import { User } from "../users/entities/user.entity";
 import { validateMaxInitData } from "./max-init-data";
 
-export type PortalWorkspace = "student" | "staff" | "admin" | "developer";
+export type PortalWorkspace = "student" | "staff" | "admin" | "developer" | "career";
 
 @Injectable()
 export class AuthService {
@@ -339,6 +339,7 @@ export class AuthService {
   }
 
   private getPortalWorkspace(role: UserRole): PortalWorkspace | null {
+    if ([UserRole.EMPLOYER, UserRole.CAREER_STAFF, UserRole.CAREER_ADMIN].includes(role)) return "career";
     if (role === UserRole.STUDENT) return "student";
     if (role === UserRole.DEVELOPER) return "developer";
     if (

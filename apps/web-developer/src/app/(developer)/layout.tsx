@@ -70,7 +70,7 @@ const groups: WorkspaceNavGroup[] = [
         href: "/connections",
         label: "Подключения аккаунта",
         icon: "plug",
-        keywords: ["max", "telegram"],
+        keywords: ["max"],
       },
     ],
   },

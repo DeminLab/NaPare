@@ -6,7 +6,7 @@
 
 ## Scope
 
-NestJS authentication module and HTTP boundary, including MAX endpoints and the secret-protected Telegram webhook.
+NestJS authentication module and HTTP boundary, including MAX endpoints. The legacy Telegram webhook is no longer registered (13 October 2026).
 
 ## Read sequence
 

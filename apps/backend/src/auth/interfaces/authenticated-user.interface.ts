@@ -4,6 +4,6 @@ export interface AuthenticatedUser {
   id: string;
   email: string;
   role: UserRole;
-  universityId: string;
+  universityId: string | null;
   groupId?: string | null;
 }

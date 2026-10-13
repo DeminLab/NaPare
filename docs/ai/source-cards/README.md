@@ -226,3 +226,29 @@ Choose the card matching the task area, read the canonical source and then follo
 - [210 — `apps/web-student/src/lib/api.ts`](210-apps-web-student-src-lib-api-ts.md)
 
 - [211 — `scripts/test-student-api.cjs`](211-scripts-test-student-api-cjs.md)
+
+- [212 — `apps/backend/src/career/career.controller.ts`](212-apps-backend-src-career-career-controller-ts.md)
+
+- [213 — `apps/backend/src/career/career.dto.ts`](213-apps-backend-src-career-career-dto-ts.md)
+
+- [214 — `apps/backend/src/career/career.entities.ts`](214-apps-backend-src-career-career-entities-ts.md)
+
+- [215 — `apps/backend/src/career/career.module.ts`](215-apps-backend-src-career-career-module-ts.md)
+
+- [216 — `apps/backend/src/career/career.service.spec.ts`](216-apps-backend-src-career-career-service-spec-ts.md)
+
+- [217 — `apps/backend/src/career/career.service.ts`](217-apps-backend-src-career-career-service-ts.md)
+
+- [218 — `apps/backend/src/common/guards/jwt-auth.guard.spec.ts`](218-apps-backend-src-common-guards-jwt-auth-guard-spec-ts.md)
+
+- [219 — `apps/backend/src/common/tenant/require-university.ts`](219-apps-backend-src-common-tenant-require-university-ts.md)
+
+- [220 — `apps/backend/src/migrations/1700000000017-CareerPlatform.ts`](220-apps-backend-src-migrations-1700000000017-careerplatform-ts.md)
+
+- [221 — `apps/web-portal/src/app/career/page.tsx`](221-apps-web-portal-src-app-career-page-tsx.md)
+
+- [222 — `apps/web-portal/src/app/career/register/page.tsx`](222-apps-web-portal-src-app-career-register-page-tsx.md)
+
+- [223 — `apps/web-portal/src/app/career/portfolio/[studentId]/page.tsx`](223-apps-web-portal-src-app-career-portfolio-studentid-page-tsx.md)
+
+- [224 — `apps/web-portal/src/app/career/api.ts`](224-apps-web-portal-src-app-career-api-ts.md)

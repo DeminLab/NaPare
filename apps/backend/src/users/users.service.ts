@@ -31,7 +31,7 @@ export class UsersService {
 
   async findById(id: string): Promise<User | null> {
     const user = await this.usersRepository.findOne({ where: { id } });
-    if (user) this.tenantContext.assertAccess(user.universityId);
+    if (user && this.tenantContext.getUser()?.id !== id) this.tenantContext.assertAccess(user.universityId);
     return user;
   }
 

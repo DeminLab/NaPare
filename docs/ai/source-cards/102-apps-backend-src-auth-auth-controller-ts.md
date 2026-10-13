@@ -6,7 +6,7 @@
 
 ## Scope
 
-Authentication API routes, including MAX login, JWT-protected MAX link/status, Telegram link/status and its secret-protected webhook.
+Authentication API routes, including MAX login, JWT-protected MAX link/status, legacy Telegram link/status (410/unavailable). Telegram webhook is unregistered as of 13 October 2026.
 
 ## Read sequence
 

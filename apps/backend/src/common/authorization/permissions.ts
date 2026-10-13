@@ -22,6 +22,9 @@ const allAcademicRead: Permission[] = [
 ];
 
 export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
+  [UserRole.EMPLOYER]: [],
+  [UserRole.CAREER_STAFF]: [],
+  [UserRole.CAREER_ADMIN]: [],
   [UserRole.STUDENT]: allAcademicRead,
   [UserRole.TEACHER]: [
     ...allAcademicRead,

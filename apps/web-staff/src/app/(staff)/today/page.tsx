@@ -175,6 +175,7 @@ export default function TodayPage() {
     );
   return (
     <div className="mx-auto max-w-[1400px] space-y-6">
+      <a href="/career" className="flex min-h-11 items-center justify-between gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-sm font-semibold text-[var(--color-text)]"><span>Практика и работа</span><span>Открыть карьерный кабинет →</span></a>
       <PageHeader
         eyebrow={user?.role === "curator" ? "Рабочий день куратора" : user?.role === "teacher" ? "Рабочий день преподавателя" : "Рабочий день"}
         title={`Добрый день, ${user?.firstName || ""}`}

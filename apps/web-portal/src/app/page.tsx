@@ -258,6 +258,8 @@ export default function HomePage() {
         </div>
       </section>
 
+      <section id="career" className="section"><div className="section-inner"><div className="section-head"><p className="eyebrow">Практика и работа</p><h2 className="section-title">От учебных навыков к задачам работодателей</h2><p className="section-lead center">Студент, карьерный центр и компания работают в одной среде: допуск, задача, результат и отзыв.</p></div><div className="role-grid role-grid-page">{[["Студенту", "Профильные и непрофильные задачи с понятными сроками и занятостью. Принятые работы с отзывами формируют портфолио."], ["Работодателю", "Публикация конкретных задач, выбор исполнителя, сдача и приёмка результата на сайте."], ["Карьерному центру", "Проверка студентов и достижений, допуски через тестирование, работа с компаниями-партнёрами."]].map(([title,text])=><article key={title}><h3>{title}</h3><p>{text}</p></article>)}</div><div className="hero-actions"><Link href="/career" className="primary-action">Открыть практику и работу</Link><Link href="/career/register" className="secondary-action">Я работодатель</Link></div><p className="section-lead center">Сервис для студентов бесплатен. Онлайн-оплата пока не подключена.</p></div></section>
+
       <section id="launch" className="section"><div className="section-inner"><div className="section-head"><p className="eyebrow">Для университета</p><h2 className="section-title">Что нужно для начала работы</h2><p className="section-lead center">Администратор готовит структуру и расписание; студенты и сотрудники получают готовые аккаунты.</p></div><div className="steps">{[["01", "Назначьте администратора", "Определите, кто будет управлять пользователями и данными ВУЗа."], ["02", "Опишите структуру", "Добавьте факультеты и группы, назначьте доступ сотрудникам."], ["03", "Подключите расписание", "Настройте поддерживаемый источник или проверьте файл CSV / JSON перед импортом."], ["04", "Выдайте аккаунты", "Передайте учётные данные студентам и сотрудникам защищённым способом."]].map(([number,title,text]) => <article key={number}><span className="step-number">{number}</span><h3>{title}</h3><p>{text}</p></article>)}</div></div></section>
 
       <section id="how" className="section section-alt">
@@ -309,7 +311,7 @@ export default function HomePage() {
               <summary>Где взять учётные данные?</summary>
               <p>
                 Логин и пароль выдаёт университет: учебная часть или
-                администратор системы. Самостоятельная регистрация не нужна.
+                администратор системы. Работодатели регистрируются самостоятельно в разделе «Практика и работа».
               </p>
             </details>
             <details>
@@ -353,11 +355,11 @@ export default function HomePage() {
             Войти
           </Link>
           <Link href="/connections" className="text-link">
-            Связать Telegram
+            Подключить MAX
           </Link>
         </div>
         <p className="footer-copy">
-          © 2026 НаПаре · Учётные записи выдаёт университет.
+          © 2026 НаПаре · Учебные аккаунты выдаёт университет. Работодатели регистрируются самостоятельно.
         </p>
       </footer>
     </main>

@@ -60,6 +60,9 @@ const emptyNewUser: NewUserForm = {
 };
 
 const roleLabels: Record<string, string> = {
+  career_staff: "Специалист карьерного центра",
+  career_admin: "Руководитель карьерного центра",
+  employer: "Работодатель",
   student: "Студент",
   teacher: "Преподаватель",
   curator: "Куратор",
@@ -83,6 +86,8 @@ const roleVariants: Record<
   developer: "green",
 };
 const assignableRoles = [
+  "career_staff",
+  "career_admin",
   "student",
   "teacher",
   "curator",

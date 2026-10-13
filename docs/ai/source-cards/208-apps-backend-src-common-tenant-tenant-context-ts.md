@@ -6,7 +6,7 @@
 
 ## Scope
 
-Request-local authenticated actor and university access checks. Initialised by TenantContextModule before asynchronous guards; maintains existing superadmin and background-job semantics.
+Request-local authenticated actor and university access checks. Null university scope cannot read academic data; only employer identity may be stored without a university. Initialised by TenantContextModule before asynchronous guards; maintains existing superadmin and background-job semantics.
 
 ## Read sequence
 

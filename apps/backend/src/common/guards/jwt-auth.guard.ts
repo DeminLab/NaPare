@@ -1,5 +1,6 @@
-import { Injectable, ExecutionContext, UnauthorizedException } from '@nestjs/common';
+import { Injectable, ExecutionContext, ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { UserRole } from '../../auth/interfaces/user-role';
 import { TenantContext } from '../tenant/tenant-context';
 import { AuthenticatedUser } from '../../auth/interfaces/authenticated-user.interface';
 
@@ -23,6 +24,12 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     if (error instanceof Error) throw error;
     if (!isAuthenticatedUser(user)) {
       throw new UnauthorizedException();
+    }
+    const actor = user as unknown as AuthenticatedUser;
+    if (([UserRole.EMPLOYER, UserRole.CAREER_STAFF, UserRole.CAREER_ADMIN].includes(actor.role) || !actor.universityId) && _context) {
+      const request = _context.switchToHttp().getRequest<{ originalUrl?: string; url?: string }>();
+      const path = (request.originalUrl || request.url || '').split('?')[0];
+      if (!/^\/api\/v1\/career(?:\/|$)/.test(path) && path !== '/api/v1/users/me' && !['/api/v1/auth/logout','/api/v1/auth/max/status','/api/v1/auth/max/link'].includes(path)) throw new ForbiddenException('Для этого раздела необходима привязка к вузу');
     }
     this.tenantContext.setUser(user);
     return user;

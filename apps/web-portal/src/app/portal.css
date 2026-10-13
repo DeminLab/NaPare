@@ -1353,3 +1353,5 @@ footer {
 .login-account-help { margin: 1rem 0; padding: .85rem 1rem; border-left: 3px solid var(--color-brand); background: var(--color-brand-soft); color: var(--color-text-secondary); font-size: .875rem; line-height: 1.6; }
 @media (min-width: 900px) { .login-layout { grid-template-columns: minmax(280px, .75fr) minmax(0, 1.25fr); } }
 .role-grid-page h3 { margin: 1rem 0 .5rem; font-size: 1.25rem; }
+
+.login-career-link { display:inline-flex; align-items:center; min-height:44px; margin:8px 0; font-size:14px; font-weight:600; color:var(--portal-accent, #245742); }

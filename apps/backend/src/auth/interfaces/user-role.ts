@@ -1,5 +1,8 @@
 export enum UserRole {
   STUDENT = 'student',
+  EMPLOYER = 'employer',
+  CAREER_STAFF = 'career_staff',
+  CAREER_ADMIN = 'career_admin',
   TEACHER = 'teacher',
   CURATOR = 'curator',
   FACULTY_DEAN = 'faculty_dean',
