@@ -255,7 +255,7 @@ export default function ConnectorsPage() {
         </div>
         <Badge variant="slate">Данные ВУЗа</Badge>
       </div>
-      <div className="grid grid-cols-3 gap-3">
+      {connectors.length > 0 && <div className="grid grid-cols-3 gap-3">
         <Card padding="sm">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
             Работают
@@ -280,7 +280,7 @@ export default function ConnectorsPage() {
             {counts.errors}
           </p>
         </Card>
-      </div>
+      </div>}
       {error && (
         <p
           role="alert"
@@ -474,7 +474,7 @@ export default function ConnectorsPage() {
       ) : (
         <EmptyState
           title="Коннектор не настроен"
-          description="Добавьте тип коннектора в профиле ВУЗа, чтобы подключить источник расписания или Moodle."
+          description="Выберите поддерживаемый источник в профиле университета. Файл расписания можно импортировать без подключения внешнего источника." action={<div className="flex flex-wrap justify-center gap-3"><Link href="/university?section=integrations" className="inline-flex min-h-11 items-center rounded-xl bg-[var(--color-brand)] px-4 text-sm font-semibold text-white">Настроить источник</Link><Link href="/schedule-import" className="inline-flex min-h-11 items-center rounded-xl border px-4 text-sm font-semibold text-[var(--color-brand)]">Импортировать файл</Link></div>}
         />
       )}
     </div>

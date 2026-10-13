@@ -6,7 +6,7 @@
 
 ## Scope
 
-Staff groups use the existing role-scoped attendance-groups endpoint. Group details and students retain their resource authorization. Cards provide separate accessible actions without nested buttons and links; missing student counts are not displayed as zero.
+Accessible groups with URL search/faculty state and shared Sheet details. Student roster and schedule failures are independent. Week links pass group ID; preparation links carry group name search; nearest future lesson is explicitly labelled.
 
 ## Read sequence
 

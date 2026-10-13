@@ -6,7 +6,7 @@
 
 ## Scope
 
-Teacher weekly schedule with Monday-to-Sunday navigation, local date range requests, group/subject/type filters, subgroup and upstream week-parity labels when supplied and responsive day selection.
+Week schedule with day view and full list mode, collapsible filters and URL restoration. Group filters accept group ID or legacy name; status uses date before time. Up to 100 lessons are requested for the week.
 
 ## Read sequence
 
@@ -24,3 +24,7 @@ Trace direct imports and the closest route or caller before changing this file.
 pnpm --filter @napare/web-staff exec tsc --noEmit
 ```
 
+
+## Schedule date contract
+
+The lesson day comes from startDate/date, with ISO startTime only as a legacy fallback. HH:mm startTime must not be used as a date. Regression check: `node scripts/test-staff-week.cjs`.

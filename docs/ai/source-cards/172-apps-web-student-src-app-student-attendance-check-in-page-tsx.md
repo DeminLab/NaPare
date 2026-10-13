@@ -6,7 +6,7 @@
 
 ## Scope
 
-Authenticated student QR check-in result and Pair Space follow-up. When opened inside MAX without a token, the page prefers MAX's native camera QR reader. If that bridge method is absent or rejects on a particular client, it uses a secure-context browser camera and the bundled ZXing QR decoder. It only accepts a same-origin URL for this exact check-in route, removes a directly opened one-time token from the browser URL/history, then sends the token to the authenticated API.
+QR attendance check-in via MAX or browser camera with explicit confirmation states and manual teacher-link fallback. Invalid origin/path/token is rejected; one submission runs at a time. Camera denial and unavailable hardware have separate guidance.
 
 ## Read sequence
 

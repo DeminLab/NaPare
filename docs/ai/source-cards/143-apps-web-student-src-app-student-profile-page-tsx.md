@@ -6,7 +6,7 @@
 
 ## Scope
 
-Student profile uses available group names from the scoped My Day response with browser timezone. University UUIDs are not displayed as names; account connections open the shared portal.
+Student identity/contact profile with separate study/activity sections. Repeated study and activity blocks are removed from the primary tab. Editing/security links lead to supported settings; no fictitious phone or attendance metric is shown.
 
 ## Read sequence
 
@@ -17,6 +17,8 @@ Student profile uses available group names from the scoped My Day response with 
 ## Change boundary
 
 Report preparation reminders, not submission or completion counts. Submission and grading remain in Moodle.
+
+Недоступные уведомления обозначены отдельно от пустой истории; число относится к загруженному списку.
 
 ## Verification
 

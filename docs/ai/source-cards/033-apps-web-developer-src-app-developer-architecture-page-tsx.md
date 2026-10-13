@@ -6,7 +6,7 @@
 
 ## Scope
 
-Interactive architecture map describes current workspace routes, Next.js 15 and optional external integrations. The diagram is documentation and does not claim live service health.
+Interactive architecture map includes the public portal, four role workspaces, Nginx, API and data services. MAX is documented as a portal launch surface rather than an API relay. The diagram is documentation and does not claim live service health.
 
 ## Read sequence
 

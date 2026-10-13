@@ -6,7 +6,7 @@
 
 ## Scope
 
-Administration workspace UI and its data flow.
+User directory with mobile cards, URL filters, bulk confirmation and partial results. Details use the shared Sheet. Individual role changes require confirmation and update both directory/detail state only after success; API failures preserve the previous role.
 
 ## Read sequence
 
@@ -17,6 +17,8 @@ Administration workspace UI and its data flow.
 ## Change boundary
 
 Trace direct imports and the closest route or caller before changing this file.
+
+Sheet приостановлен во время подтверждения роли или сброса пароля: одновременно активен один диалог; отмена возвращает исходную роль.
 
 ## Verification
 

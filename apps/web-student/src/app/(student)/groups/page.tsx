@@ -84,6 +84,7 @@ export default function GroupSchedulePage() {
   const [year, setYear] = useState('');
   const [groups, setGroups] = useState<StudyGroup[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState('');
+  const [showCatalog, setShowCatalog] = useState(true);
   const [lessons, setLessons] = useState<GroupLesson[]>([]);
   const [week, setWeek] = useState(() => startOfWeek(new Date()));
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
@@ -249,11 +250,11 @@ export default function GroupSchedulePage() {
   const visibleGroups = useMemo(() => groups.filter(group =>
     (!favoriteOnly || favoriteIds.includes(group.groupId))
     && (!search || `${group.name} ${group.faculty} ${group.course}`.toLocaleLowerCase('ru-RU').includes(search.trim().toLocaleLowerCase('ru-RU'))),
-  ), [groups, favoriteOnly, favoriteIds, search]);
+  ).sort((a, b) => Number(favoriteIds.includes(b.groupId)) - Number(favoriteIds.includes(a.groupId)) || a.name.localeCompare(b.name, 'ru')), [groups, favoriteOnly, favoriteIds, search]);
   const days = useMemo(() => daysForWeek(lessons, week), [lessons, week]);
   const normalizedLessonSearch = lessonSearch.trim().toLocaleLowerCase('ru-RU');
   const changeWeek = (offset: number) => setWeek(current => { const next = new Date(current); next.setDate(next.getDate() + offset * 7); return next; });
-  const selectGroup = (groupId: string) => { setSelectedGroupId(groupId); setLessons([]); setScheduleSavedAt(null); setScheduleRefreshing(false); setScheduleError(''); setScheduleLoading(Boolean(groupId)); updateCatalogCache(catalogCacheKey, current => ({ ...current, selectedYear: year, selectedGroupId: groupId })); };
+  const selectGroup = (groupId: string) => { setShowCatalog(!groupId); setSelectedGroupId(groupId); setLessons([]); setScheduleSavedAt(null); setScheduleRefreshing(false); setScheduleError(''); setScheduleLoading(Boolean(groupId)); updateCatalogCache(catalogCacheKey, current => ({ ...current, selectedYear: year, selectedGroupId: groupId })); };
   const toggleFavorite = (groupId: string) => {
     const wasFavorite = favoriteIds.includes(groupId);
     setFavoriteIds(current => wasFavorite ? current.filter(id => id !== groupId) : [...current, groupId]);
@@ -261,7 +262,7 @@ export default function GroupSchedulePage() {
   };
 
   return <div className="mx-auto grid min-w-0 max-w-[1400px] grid-cols-1 gap-6 xl:grid-cols-[340px_minmax(0,1fr)]">
-    <section className="h-fit rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+    <section className={`${showCatalog || !selectedGroupId ? '' : 'hidden xl:block'} h-fit rounded-2xl border border-slate-200 bg-white p-4 sm:p-5`}>
       <div className="flex items-start justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-wide text-indigo-600">Каталог СИБИТ</p><h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-950">Расписания групп</h1></div><label className="sr-only" htmlFor="academic-year">Учебный год</label><select id="academic-year" disabled={catalogLoading || !years.length} value={year} onChange={event => { selectGroup(''); setYear(event.target.value); }} className="h-10 max-w-36 rounded-lg border border-slate-200 bg-white px-2 text-xs" aria-label="Учебный год">{!years.length && <option value="">{catalogLoading ? "Загрузка…" : "Нет данных"}</option>}{years.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}</select></div>
       <p className="mt-2 text-sm text-slate-500">Официальное расписание групп из источника университета.</p>
       <label className="mt-4 block"><span className="sr-only">Поиск группы</span><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Поиск по группе или факультету" className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-indigo-400 focus:bg-white focus:ring-4 focus:ring-indigo-100" /></label>
@@ -270,7 +271,8 @@ export default function GroupSchedulePage() {
       {catalogLoading ? <div role="status" aria-busy="true" className="mt-4 space-y-3"><p className="text-sm text-slate-500">Загружаем каталог групп…</p>{Array.from({ length: 5 }, (_, index) => <Skeleton key={index} className="h-16 rounded-xl" />)}</div> : <div className="mt-4 max-h-[62vh] space-y-2 overflow-y-auto pr-1">{visibleGroups.map(group => { const favorite = favoriteIds.includes(group.groupId); const selected = selectedGroupId === group.groupId; return <div key={group.groupId} className={`flex items-center gap-2 rounded-xl border p-2 ${selected ? 'border-indigo-300 bg-indigo-50/50' : 'border-slate-200'}`}><button type="button" onClick={() => selectGroup(group.groupId)} aria-pressed={selected} className="min-w-0 flex-1 rounded-lg px-2 py-1 text-left"><span className="block truncate text-sm font-semibold text-slate-900">{group.name}</span><span className="mt-1 block truncate text-xs text-slate-500">{group.faculty} · {group.course} курс</span></button><button type="button" onClick={() => toggleFavorite(group.groupId)} aria-label={favorite ? `Убрать группу ${group.name} из избранного` : `Добавить группу ${group.name} в избранное`} aria-pressed={favorite} className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-xl ${favorite ? 'text-amber-600 hover:bg-amber-100' : 'text-slate-400 hover:bg-slate-100 hover:text-amber-600'}`}>{favorite ? '★' : '☆'}</button></div>; })}{!visibleGroups.length && !catalogError && <EmptyState title="Группы не найдены" description={favoriteOnly ? 'Добавьте группы в избранное или отключите фильтр.' : 'Измените запрос поиска.'} />}</div>}
     </section>
 
-    <section className="min-w-0 space-y-5">
+    <section className={`${showCatalog && selectedGroupId ? 'hidden xl:block' : !selectedGroupId ? 'hidden xl:block' : ''} min-w-0 space-y-5`}>
+      <button type="button" onClick={() => setShowCatalog(true)} className="inline-flex min-h-11 items-center text-sm font-semibold text-indigo-700 xl:hidden">← Выбрать другую группу</button>
       <header className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5"><div><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{selectedGroup ? `${selectedGroup.name} · ${year}` : 'Выберите учебную группу'}</p><h2 className="mt-1 text-2xl font-bold text-slate-950">Расписание</h2><p className="mt-1 text-sm capitalize text-slate-500">{week.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })} – {(() => { const last = new Date(week); last.setDate(last.getDate() + 6); return last.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }); })()}</p></div><div className="flex flex-wrap items-center gap-2"><button type="button" onClick={() => changeWeek(-1)} className="h-10 w-10 rounded-lg border border-slate-200 text-lg" aria-label="Предыдущая неделя">‹</button><button type="button" onClick={() => setWeek(startOfWeek(new Date()))} className="h-10 rounded-lg border border-slate-200 px-3 text-sm font-semibold">Сегодня</button><button type="button" onClick={() => changeWeek(1)} className="h-10 w-10 rounded-lg border border-slate-200 text-lg" aria-label="Следующая неделя">›</button></div></header>
       <label className="block"><span className="sr-only">Поиск по расписанию группы</span><input value={lessonSearch} onChange={event => setLessonSearch(event.target.value)} placeholder="Поиск по предмету, преподавателю или аудитории" className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100" /></label>
       {scheduleSavedAt && <p role="status" className="text-xs font-medium text-amber-700">{scheduleRefreshing ? 'Сохраненная копия · проверяем актуальность' : scheduleError ? 'Офлайн · сохранено' : 'Обновлено'} {new Date(scheduleSavedAt).toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' })}</p>}

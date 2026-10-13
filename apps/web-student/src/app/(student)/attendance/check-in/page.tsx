@@ -17,6 +17,9 @@ declare global {
 
 export default function AttendanceCheckInPage() {
   const [state, setState] = useState<CheckInState>({ status: 'idle', message: 'Откройте отметку посещаемости в MAX или в браузере с доступом к камере.' });
+  const [qrLink,setQrLink]=useState("");
+  const [scannerReady,setScannerReady]=useState(false);
+  const submittingRef=useRef(false);
   const [scanning, setScanning] = useState(false);
   const [maxScannerAvailable, setMaxScannerAvailable] = useState(false);
   const [browserScannerAvailable, setBrowserScannerAvailable] = useState(false);
@@ -26,6 +29,7 @@ export default function AttendanceCheckInPage() {
   const scannerCancelledRef = useRef(false);
 
   const submitToken = useCallback(async (token: string) => {
+    if(submittingRef.current) return; submittingRef.current=true;
     setState({ status: 'loading', message: 'Проверяем QR-код…' });
     try {
       const result = await apiFetch<CheckInResponse>('/absences/attendance/qr-check-in', {
@@ -39,7 +43,7 @@ export default function AttendanceCheckInPage() {
       });
     } catch (reason) {
       setState({ status: 'error', message: reason instanceof Error ? reason.message : 'Не удалось отметить присутствие.' });
-    }
+    } finally {submittingRef.current=false;}
   }, []);
 
   const handleScannedValue = useCallback((scanned: string) => {
@@ -88,6 +92,7 @@ export default function AttendanceCheckInPage() {
         }
         await new Promise(resolve => window.setTimeout(resolve, 100));
       }
+      if(active) setScannerReady(true);
     })();
     return () => { active = false; };
   }, []);
@@ -177,22 +182,25 @@ export default function AttendanceCheckInPage() {
       else scannerControlsRef.current = controls;
     } catch (reason) {
       stopBrowserScanner();
-      setState({ status: 'error', message: reason instanceof Error ? `Не удалось запустить сканирование: ${reason.message}` : 'Не удалось открыть камеру. Проверьте разрешение в MAX или браузере.' });
+      setState({ status: 'error', message: reason instanceof Error && reason.name === 'NotAllowedError' ? 'Доступ к камере запрещён. Разрешите камеру в настройках браузера или откройте ссылку преподавателя.' : reason instanceof Error && reason.name === 'NotFoundError' ? 'Камера не найдена. Откройте ссылку отметки, выданную преподавателем.' : reason instanceof Error ? `Не удалось запустить сканирование: ${reason.message}` : 'Не удалось открыть камеру. Проверьте разрешение в MAX или браузере.' });
     }
   }
 
-  return <main className="mx-auto flex min-h-[65vh] max-w-xl items-center px-4 py-10">
-    <section className="w-full rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm sm:p-8" aria-live="polite">
+  return <div className="mx-auto flex max-w-xl items-start px-4 py-6 sm:py-10">
+    <section className="w-full rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm sm:p-8">
       <span className={`mx-auto flex h-12 w-12 items-center justify-center rounded-full text-xl font-bold ${state.status === 'success' ? 'bg-emerald-100 text-emerald-700' : state.status === 'error' ? 'bg-rose-100 text-rose-700' : 'bg-sky-100 text-sky-700'}`} aria-hidden="true">
         {state.status === 'loading' ? '…' : state.status === 'success' ? '✓' : state.status === 'error' ? '!' : '⌖' }
       </span>
       <h1 className="mt-4 text-xl font-bold text-slate-950">Отметка посещаемости</h1>
       <p className={`mt-2 text-sm ${state.status === 'error' ? 'text-rose-700' : 'text-slate-600'}`} role={state.status === 'error' ? 'alert' : 'status'}>{state.message}</p>
+      {state.status === 'idle' && !browserCameraOpen && <ol className="mt-5 space-y-3 rounded-xl bg-slate-50 p-4 text-left text-sm text-slate-600"><li><strong className="text-slate-900">1. Откройте код преподавателя.</strong> Используйте код именно вашей пары.</li><li><strong className="text-slate-900">2. Наведите камеру.</strong> Проверьте доступ к камере или откройте ссылку отметки.</li><li><strong className="text-slate-900">3. Дождитесь подтверждения.</strong> Успешная проверка показывает, что присутствие сохранено.</li></ol>}
+      {scannerReady && !maxScannerAvailable && !browserScannerAvailable && state.status === 'idle' && <p className="mt-4 text-sm text-amber-700">Сканер камеры здесь недоступен. Откройте ссылку отметки или используйте MAX на телефоне.</p>}
       {(maxScannerAvailable || browserScannerAvailable) && (state.status === 'idle' || (state.status === 'error' && !state.message.startsWith('Сначала войдите'))) && <button type="button" onClick={() => void scanWithMax()} disabled={scanning} className="mt-5 inline-flex min-h-11 items-center justify-center rounded-lg bg-sky-700 px-4 text-sm font-semibold text-white hover:bg-sky-800 disabled:cursor-wait disabled:opacity-60 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-sky-200">{scanning ? 'Открываем камеру…' : maxScannerAvailable ? 'Сканировать QR камерой MAX' : 'Сканировать QR камерой'}</button>}
       {browserCameraOpen && <div className="mt-5 overflow-hidden rounded-xl border border-slate-200 bg-slate-950"><video ref={videoRef} className="max-h-72 w-full object-cover" autoPlay playsInline muted aria-label="Изображение с камеры для сканирования QR" /><button type="button" onClick={stopBrowserScanner} className="min-h-10 w-full bg-slate-900 px-4 text-sm font-semibold text-white hover:bg-slate-800">Отменить сканирование</button></div>}
       {state.status === 'error' && <p className="mt-3 text-xs text-slate-500">Проверьте, что вы вошли в NaPare и состоите в группе этого занятия. QR-код действует ограниченное время.</p>}
       {state.status === 'success' && state.lessonId && <Link href={`/pair-space/${state.lessonId}`} className="mt-5 inline-flex min-h-10 items-center justify-center rounded-lg bg-sky-700 px-4 text-sm font-semibold text-white hover:bg-sky-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-sky-200">Открыть пространство пары</Link>}
-      {state.status === 'error' && <a href="/" className="mt-5 inline-flex min-h-10 items-center justify-center rounded-lg border border-slate-200 px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-sky-100">{state.message.startsWith('Сначала войдите') ? 'Войти в NaPare' : 'Открыть главную NaPare'}</a>}
+      {state.status === 'error' && <a href={state.message.startsWith('Сначала войдите') ? '/login' : '/student/today'} className="mt-5 inline-flex min-h-10 items-center justify-center rounded-lg border border-slate-200 px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-sky-100">{state.message.startsWith('Сначала войдите') ? 'Войти в NaPare' : 'Вернуться к учебному дню'}</a>}
+      {state.status !== 'loading' && state.status !== 'success' && <details className="mt-5 rounded-xl border border-slate-200 p-4 text-left"><summary className="min-h-11 cursor-pointer text-sm font-semibold text-slate-700">Есть ссылка отметки от преподавателя</summary><form onSubmit={event=>{event.preventDefault();const value=qrLink.trim();setQrLink('');if(value) handleScannedValue(value);}} className="mt-3 space-y-3"><label htmlFor="qr-checkin-link" className="block text-sm text-slate-600">Ссылка QR-кода</label><input id="qr-checkin-link" type="text" value={qrLink} onChange={event=>setQrLink(event.target.value)} autoComplete="off" placeholder="Вставьте ссылку преподавателя" className="min-h-11 w-full rounded-xl border px-3 text-sm"/><button type="submit" disabled={!qrLink.trim() || scanning} className="min-h-11 rounded-xl bg-sky-700 px-4 text-sm font-semibold text-white disabled:opacity-50">Проверить ссылку</button></form></details>}
     </section>
-  </main>;
+  </div>;
 }

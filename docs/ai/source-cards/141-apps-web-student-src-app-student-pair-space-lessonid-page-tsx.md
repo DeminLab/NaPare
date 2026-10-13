@@ -6,7 +6,7 @@
 
 ## Scope
 
-Student lesson has four primary sections (overview, preparation, materials, discussion), extra personal notes/history, compatible URL tabs, readable lesson times, announcements on overview, scoped offline cache and existing preparation progress.
+Lesson overview previews the nearest preparation topics with personal progress and exact topic anchors. Pinned announcements come first. Discussion has an explicitly labelled multiline composer; sending is deliberate and concurrent submits are blocked.
 
 ## Read sequence
 

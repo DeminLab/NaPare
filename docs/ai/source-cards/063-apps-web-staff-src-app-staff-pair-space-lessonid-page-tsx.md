@@ -6,7 +6,7 @@
 
 ## Scope
 
-Teacher lesson workspace has four focused tabs and one publication toolbar. Main tab displays actual announcements and preparation links. Adding material publishes a link to a file, rather than claiming file upload. Subject types are translated for users.
+Staff lesson workspace with date/group context, attendance link, preparation preview and pinned announcements first. Discussion is multiline and explicit; mutation errors remain visible in their forms, and concurrent submits are blocked.
 
 ## Read sequence
 

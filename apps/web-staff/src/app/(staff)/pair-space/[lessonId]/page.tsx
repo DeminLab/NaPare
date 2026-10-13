@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { lessonTabFromSearch } from "@napare/ui/workspace-shell";
@@ -60,6 +61,7 @@ interface Lesson {
   subject: string;
   subjectType?: string;
   room?: string;
+  startDate?: string;
   startTime: string;
   endTime: string;
   groupName?: string;
@@ -140,6 +142,8 @@ export default function PairSpacePage() {
     message: string,
     update: (value: T) => void,
   ) => {
+    if(submitting) return;
+    setSuccess("");
     setSubmitting(true);
     setError("");
     try {
@@ -156,7 +160,7 @@ export default function PairSpacePage() {
     }
   };
   const sendMessage = () => {
-    if (!newMessage.trim()) return;
+    if (submitting || !newMessage.trim()) return;
     void run(
       () =>
         apiFetch<Message>(`/pair-spaces/${lessonId}/messages`, {
@@ -235,9 +239,9 @@ export default function PairSpacePage() {
             </div>
             <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-500">
               <span className="font-semibold text-slate-800">
-                {lesson.startTime}–{lesson.endTime}
+                {lesson.startTime.includes("T") ? lesson.startTime.slice(11,16) : lesson.startTime}–{lesson.endTime.includes("T") ? lesson.endTime.slice(11,16) : lesson.endTime}
               </span>
-              <span>{lesson.groupName || "Группа не указана"}</span>
+              <span>{lesson.startDate ? new Date(lesson.startDate).toLocaleDateString("ru-RU",{day:"numeric",month:"long"}) : "Дата не указана"}</span><span>{lesson.groupName || "Группа не указана"}</span>
               <span>Ауд. {lesson.room || "—"}</span>
               <span>{({ lecture: "Лекция", seminar: "Семинар", practice: "Практика", lab: "Лабораторная", exam: "Экзамен", consultation: "Консультация", other: "Занятие" } as Record<string, string>)[lesson.subjectType || ""] || "Занятие"}</span>
             </div>
@@ -247,7 +251,7 @@ export default function PairSpacePage() {
               </p>
             )}
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2"><Link href={`/attendance?lesson=${lessonId}`} className="inline-flex min-h-11 items-center rounded-xl border px-3 text-sm font-semibold text-sky-700">Посещаемость пары →</Link>
             {pairSpace.moodleUrl && (
               <a
                 href={pairSpace.moodleUrl}
@@ -283,13 +287,7 @@ export default function PairSpacePage() {
         </div>
       </Card>
       <TabBar tabs={tabs} activeTab={activeTab} onChange={selectTab} />
-      {error && (
-        <RequestState
-          title="Не удалось выполнить действие"
-          description={error}
-          onRetry={() => setError("")}
-        />
-      )}
+      {error && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}
       {success && (
         <p role="status" className="text-sm font-medium text-emerald-700">
           {success}
@@ -297,8 +295,8 @@ export default function PairSpacePage() {
       )}
       {activeTab === "overview" && (
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-          <Card padding="sm"><h2 className="text-base font-bold text-slate-900">Объявления для группы</h2><div className="mt-4 space-y-3">{pairSpace.announcements.length ? pairSpace.announcements.map(item => <article key={item.id} className="rounded-xl border border-slate-200 p-4"><div className="mb-2 flex items-center gap-2">{item.isPinned && <Badge variant="sky">Закреплено</Badge>}<span className="text-xs text-slate-500">{timeAgo(item.createdAt)}</span></div><p className="whitespace-pre-wrap text-sm leading-6 text-slate-800">{item.text}</p></article>) : <p className="text-sm text-slate-500">Опубликуйте организационные детали, чтобы группа увидела их перед занятием.</p>}</div></Card>
-          <Card padding="sm"><h2 className="text-base font-bold text-slate-900">Подготовка группы</h2><p className="mt-3 text-sm leading-6 text-slate-600">{pairSpace.homeworks.length} ориентиров · {pairSpace.files?.length || 0} материалов</p><Button variant="secondary" fullWidth className="mt-4" onClick={() => selectTab("homeworks")}>Проверить подготовку</Button><p className="mt-4 text-xs leading-5 text-slate-500">Сдачи и оценки остаются в Moodle. Здесь размещайте план подготовки и материалы к этой паре.</p></Card>
+          <Card padding="sm"><h2 className="text-base font-bold text-slate-900">Объявления для группы</h2><div className="mt-4 space-y-3">{pairSpace.announcements.length ? [...pairSpace.announcements].sort((a,b)=>Number(b.isPinned)-Number(a.isPinned)||b.createdAt.localeCompare(a.createdAt)).map(item => <article key={item.id} className="rounded-xl border border-slate-200 p-4"><div className="mb-2 flex items-center gap-2">{item.isPinned && <Badge variant="sky">Закреплено</Badge>}<span className="text-xs text-slate-500">{timeAgo(item.createdAt)}</span></div><p className="whitespace-pre-wrap text-sm leading-6 text-slate-800">{item.text}</p></article>) : <p className="text-sm text-slate-500">Опубликуйте организационные детали, чтобы группа увидела их перед занятием.</p>}</div></Card>
+          <Card padding="sm"><h2 className="text-base font-bold text-slate-900">Подготовка группы</h2><p className="mt-3 text-sm leading-6 text-slate-600">{pairSpace.homeworks.length} ориентиров · {pairSpace.files?.length || 0} материалов</p>{pairSpace.homeworks.length>0 && <ul className="mt-3 space-y-2">{pairSpace.homeworks.slice(0,3).map(item=><li key={item.id} className="rounded-lg bg-slate-50 p-3"><p className="break-words text-sm font-medium">{item.title}</p><p className="mt-1 text-xs text-slate-500">{item.deadline ? new Date(item.deadline).toLocaleDateString('ru-RU') : 'Без срока'}</p></li>)}</ul>}<Button variant="secondary" fullWidth className="mt-4" onClick={() => selectTab("homeworks")}>Проверить подготовку</Button><p className="mt-4 text-xs leading-5 text-slate-500">Сдачи и оценки остаются в Moodle. Здесь размещайте план подготовки и материалы к этой паре.</p></Card>
         </div>
       )}
       {activeTab === "materials" &&
@@ -315,7 +313,7 @@ export default function PairSpacePage() {
                   <Icon name="file" className="text-sky-700" />
                   <div className="min-w-0 flex-1">
                     <a
-                      href={item.fileUrl}
+                      href={item.fileUrl?.startsWith("https://") ? item.fileUrl : undefined}
                       target="_blank"
                       rel="noreferrer"
                       className="truncate text-sm font-semibold text-slate-900 hover:text-sky-700"
@@ -323,7 +321,7 @@ export default function PairSpacePage() {
                       {item.fileName}
                     </a>
                     <p className="mt-1 text-xs text-slate-500">
-                      {item.fileType.toUpperCase()} ·{" "}
+                      {item.fileType?.toUpperCase() || "Материал"} ·{" "}
                       {item.size > 0 ? `${Math.round(item.size / 1024)} KB` : "Размер не указан"}
                     </p>
                   </div>
@@ -372,8 +370,8 @@ export default function PairSpacePage() {
               <Card key={item.id} padding="sm">
                 <div className="flex items-start gap-3">
                   <Avatar name={item.authorName || "Участник"} size="sm" />
-                  <div>
-                    <div className="flex items-center gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span className="text-sm font-semibold text-slate-900">
                         {item.authorName || "Участник"}
                       </span>
@@ -381,23 +379,13 @@ export default function PairSpacePage() {
                         {timeAgo(item.createdAt)}
                       </span>
                     </div>
-                    <p className="mt-1 text-sm text-slate-700">{item.text}</p>
+                    <p className="mt-1 whitespace-pre-wrap break-words text-sm text-slate-700">{item.text}</p>
                   </div>
                 </div>
               </Card>
             ))
           )}
-          <div className="flex gap-2">
-            <Input
-              value={newMessage}
-              onChange={(event) => setNewMessage(event.target.value)}
-              placeholder="Сообщение группе"
-              onKeyDown={(event) => event.key === "Enter" && sendMessage()}
-            />
-            <Button onClick={sendMessage} aria-label="Отправить сообщение">
-              <Icon name="arrow-right" size={16} />
-            </Button>
-          </div>
+          <form onSubmit={event=>{event.preventDefault();sendMessage();}} className="rounded-xl border bg-white p-4"><label htmlFor="staff-discussion" className="text-sm font-semibold">Сообщение группе</label><textarea id="staff-discussion" rows={3} disabled={submitting} value={newMessage} onChange={event=>setNewMessage(event.target.value)} placeholder="Вопрос или пояснение к занятию…" className="mt-3 w-full rounded-xl border p-3 text-sm"/><div className="mt-3 flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-slate-500">Сообщение увидят участники пары.</p><Button type="submit" loading={submitting} disabled={submitting || !newMessage.trim()}>Отправить сообщение</Button></div></form>
         </div>
       )}
       <Modal
@@ -405,11 +393,12 @@ export default function PairSpacePage() {
         onClose={() => setModal(null)}
         title="Новое объявление"
       >
-        <div className="space-y-4">
+        <div className="space-y-4">{error && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}
           <textarea
             value={announcementText}
             onChange={(event) => setAnnouncementText(event.target.value)}
             rows={4}
+            aria-label="Текст объявления"
             placeholder="Что важно сообщить группе?"
             className="block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
           />
@@ -456,7 +445,7 @@ export default function PairSpacePage() {
         onClose={() => setModal(null)}
         title="Подготовка к занятию"
       >
-        <div className="space-y-4">
+        <div className="space-y-4">{error && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}
           <Input
             label="Что подготовить"
             value={homeworkTitle}
@@ -526,7 +515,7 @@ export default function PairSpacePage() {
         onClose={() => setModal(null)}
         title="Добавить ссылку на материал"
       >
-        <div className="space-y-4">
+        <div className="space-y-4">{error && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}
           <Input
             label="Название файла"
             value={file.fileName}

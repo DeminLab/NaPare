@@ -68,7 +68,8 @@ export async function apiFetch<T>(
       });
       if (!retryResponse.ok) throw await toApiError(retryResponse);
       if (retryResponse.status === 204) return undefined as T;
-      return (await retryResponse.json()) as T;
+      const content = await retryResponse.text();
+      return (content.trim() ? JSON.parse(content) : undefined) as T;
     }
     clearTokens();
     if (typeof window !== "undefined") window.location.href = "/login";
@@ -87,7 +88,8 @@ export async function apiFetch<T>(
   }
 
   if (response.status === 204) return undefined as T;
-  return (await response.json()) as T;
+  const content = await response.text();
+  return (content.trim() ? JSON.parse(content) : undefined) as T;
 }
 
 export interface PaginatedResponse<T> {

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useWorkspaceQuery } from "@napare/ui/workspace-shell";
 import { AttentionNavigation } from "../AttentionNavigation";
 import { useEffect, useMemo, useState } from "react";
 import { apiFetchList, markAllRead, markNotificationRead } from "@/lib/api";
@@ -29,6 +30,7 @@ interface Notification {
   createdAt: string;
   deepLink?: string;
   actions?: Array<{ label: string; href: string }>;
+  priority?: string;
   data?: Record<string, unknown>;
 }
 type Filter =
@@ -78,6 +80,9 @@ export default function NotificationsPage() {
   const [filter, setFilter] = useState<Filter>("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [actionError, setActionError] = useState('');
+  const [busy, setBusy] = useState('');
+  useWorkspaceQuery({filter},params=>setFilter(filters.some(item=>item.id===params.get('filter'))?params.get('filter') as Filter:'all'));
 
   const load = () => {
     setLoading(true);
@@ -97,14 +102,9 @@ export default function NotificationsPage() {
     load();
   }, []);
   const unread = notifications.filter((item) => !item.isRead).length;
-  const visible = useMemo(
-    () =>
-      filter === "all"
-        ? notifications
-        : notifications.filter((item) => item.category === filter),
-    [filter, notifications],
-  );
+  const visible = useMemo(()=>notifications.filter(item=>filter==='all'||(filter==='important'?item.category==='important'||['high','urgent'].includes(item.priority||''):item.category===filter)).sort((a,b)=>(b.priority==='urgent'?2:b.priority==='high'?1:0)-(a.priority==='urgent'?2:a.priority==='high'?1:0)||Number(a.isRead)-Number(b.isRead)||b.createdAt.localeCompare(a.createdAt)),[filter,notifications]);
   const markRead = async (id: string) => {
+    if(busy) return; setBusy(id); setActionError("");
     try {
       await markNotificationRead(id);
       setNotifications((items) =>
@@ -113,18 +113,19 @@ export default function NotificationsPage() {
         ),
       );
     } catch {
-      /* keep the notification unread when API is unavailable */
-    }
+      setActionError("Не удалось отметить событие прочитанным. Повторите действие.");
+    } finally {setBusy("");}
   };
   const markEverythingRead = async () => {
+    if(busy) return; setBusy("all"); setActionError("");
     try {
       await markAllRead();
       setNotifications((items) =>
         items.map((item) => ({ ...item, isRead: true })),
       );
     } catch {
-      setError("Не удалось отметить уведомления прочитанными.");
-    }
+      setActionError("Не удалось отметить уведомления прочитанными.");
+    } finally {setBusy("");}
   };
 
   return (
@@ -142,11 +143,11 @@ export default function NotificationsPage() {
             Уведомления
           </h1>
           <p className="mt-1 text-sm text-slate-500">
-            {unread ? `${unread} непрочитанных` : "Все уведомления прочитаны"}
+            {loading ? "Загружаем события…" : unread ? `${unread} непрочитанных` : "Все уведомления прочитаны"}
           </p>
         </div>
         {unread > 0 && (
-          <Button variant="ghost" size="sm" onClick={markEverythingRead}>
+          <Button variant="ghost" size="sm" onClick={markEverythingRead} disabled={Boolean(busy)} loading={busy === "all"}>
             Отметить все прочитанными
           </Button>
         )}
@@ -169,6 +170,7 @@ export default function NotificationsPage() {
           </button>
         ))}
       </div>
+      {actionError && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{actionError}</p>}
       {loading ? (
         <div className="space-y-3">
           {[1, 2, 3].map((item) => (
@@ -194,7 +196,7 @@ export default function NotificationsPage() {
         />
       ) : (
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-          <div className="hidden grid-cols-[180px_minmax(0,1fr)_100px_190px] gap-4 border-b border-slate-200 bg-slate-50 px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 md:grid">
+          <div className="hidden grid-cols-[180px_minmax(0,1fr)_100px_190px] gap-4 border-b border-slate-200 bg-slate-50 px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 xl:grid">
             <span>Кто</span>
             <span>Событие</span>
             <span>Время</span>
@@ -206,10 +208,7 @@ export default function NotificationsPage() {
               return (
                 <div
                   key={notification.id}
-                  className={`grid gap-3 px-4 py-4 md:grid-cols-[180px_minmax(0,1fr)_100px_190px] md:items-center md:gap-4 md:px-5 ${!notification.isRead ? "bg-sky-50/40" : ""}`}
-                  onClick={() =>
-                    !notification.isRead && markRead(notification.id)
-                  }
+                  className={`grid gap-3 px-4 py-4 xl:grid-cols-[150px_minmax(0,1fr)_100px_210px] md:items-center md:gap-4 md:px-5 ${!notification.isRead ? "bg-sky-50/40" : ""}`}
                 >
                   <div>
                     <span className="text-xs font-semibold uppercase tracking-wide text-slate-400 md:hidden">
@@ -228,7 +227,7 @@ export default function NotificationsPage() {
                       <div>
                         <p className="text-sm font-semibold text-slate-900">
                           {notification.title}
-                        </p>
+                        </p>{["high","urgent"].includes(notification.priority || "") && <Badge variant="red" className="mt-2">{notification.priority === "urgent" ? "Срочно" : "Важно"}</Badge>}
                         <p className="mt-1 text-sm leading-5 text-slate-500">
                           {notification.body}
                         </p>
@@ -243,16 +242,16 @@ export default function NotificationsPage() {
                       {timeAgo(notification.createdAt)}
                     </p>
                   </div>
-                  <div>
+                  <div className="flex flex-wrap items-center gap-2 xl:flex-col xl:items-start">
                     {action && (
                       <Link
                         href={action.href}
-                        onClick={() => markRead(notification.id)}
                         className="inline-flex min-h-9 items-center rounded-lg px-2.5 py-2 text-xs font-semibold text-sky-700 hover:bg-sky-50"
                       >
                         {action.label} →
                       </Link>
                     )}
+                    {!notification.isRead && <button type="button" disabled={Boolean(busy)} onClick={()=>void markRead(notification.id)} className="min-h-11 rounded-lg px-2.5 text-xs font-semibold text-slate-600">{busy===notification.id?"Сохраняем…":"Отметить прочитанным"}</button>}
                   </div>
                 </div>
               );

@@ -6,7 +6,7 @@
 
 ## Scope
 
-Staff workspace UI and its data flow.
+Staff event history with important/unread priority, URL filter restoration, explicit read actions and action errors that preserve the list.
 
 ## Read sequence
 

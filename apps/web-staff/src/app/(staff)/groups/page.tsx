@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useWorkspaceQuery } from "@napare/ui/workspace-shell";
 import { apiFetchList } from "@/lib/api";
 import {
   Badge,
@@ -9,6 +10,7 @@ import {
   EmptyState,
   RequestState,
   SearchInput,
+  Sheet,
   Skeleton,
 } from "@/components/ui";
 
@@ -29,6 +31,7 @@ interface Lesson {
   id: string;
   subject: string;
   groupName: string;
+  startDate?: string;
   startTime: string;
   endTime: string;
   room: string;
@@ -59,6 +62,8 @@ export default function GroupsPage() {
   const [detailTab, setDetailTab] = useState<DetailTab>("students");
   const [search, setSearch] = useState("");
   const [faculty, setFaculty] = useState("all");
+  const [scheduleError,setScheduleError]=useState("");
+  useWorkspaceQuery({q:search,faculty},params=>{setSearch((params.get("q")||"").slice(0,100));setFaculty(params.get("faculty")||"all");});
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [error, setError] = useState("");
@@ -71,8 +76,8 @@ export default function GroupsPage() {
     Promise.all([
       apiFetchList<Group>("/admin/attendance-groups"),
       apiFetchList<Lesson>(
-        `/schedule/range?startDate=${dateKey(start)}&endDate=${dateKey(end)}`,
-      ),
+        `/schedule/range?startDate=${dateKey(start)}&endDate=${dateKey(end)}&limit=100`,
+      ).catch(()=>{setScheduleError("Расписание недели не загрузилось.");return [];}),
     ])
       .then(([groupItems, lessonItems]) => {
         setGroups(groupItems);
@@ -126,8 +131,8 @@ export default function GroupsPage() {
     { id: "students", label: "Студенты" },
     { id: "schedule", label: "Расписание" },
     { id: "attendance", label: "Посещаемость", href: attendanceLink },
-    { id: "assignments", label: "Подготовка к парам", href: "/assignments" },
-    { id: "announcements", label: "Объявления", href: "/notifications" },
+    { id: "assignments", label: "Подготовка к парам", href: `/assignments?q=${encodeURIComponent(selected?.name || "")}` },
+    { id: "announcements", label: "Объявления", href: "/notifications?filter=teachers" },
   ];
 
   return (
@@ -196,9 +201,7 @@ export default function GroupsPage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {filtered.map((group) => {
-            const nearest = lessons.filter(
-              (lesson) => lesson.groupName === group.name,
-            )[0];
+            const nearest = lessons.filter(lesson=>lesson.groupName===group.name && new Date(lesson.startDate || lesson.startTime).getTime()>=Date.now()).sort((a,b)=>(a.startDate || a.startTime).localeCompare(b.startDate || b.startTime))[0];
             return (
               <div
                 key={group.id}
@@ -218,10 +221,10 @@ export default function GroupsPage() {
                     {group.studentCount !== undefined && <Badge variant="sky">{group.studentCount}</Badge>}
                   </div>
                   <p className="mt-5 text-xs font-semibold uppercase tracking-wide text-slate-400">
-                    Занятия этой недели
+                    Ближайшее занятие этой недели
                   </p>
                   <p className="mt-1 font-semibold text-slate-800">
-                    {nearest?.subject || "Нет в расписании"}
+                    {scheduleError ? "Нет данных расписания" : nearest?.subject || "Ближайших занятий нет"}
                   </p>
                   <div className="mt-4 flex gap-2 border-t border-slate-100 pt-4">
                     <Link
@@ -249,7 +252,7 @@ export default function GroupsPage() {
         </div>
       )}
       {selected && (
-        <Card className="scroll-mt-24 px-5 py-5 sm:px-7">
+        <Sheet open onClose={()=>setSelected(null)} title={selected.name}>
           <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
             <div>
               <div className="flex flex-wrap items-center gap-2">
@@ -297,7 +300,7 @@ export default function GroupsPage() {
             <div className="mt-5">
               <Skeleton className="h-32" />
             </div>
-          ) : detailError ? (
+          ) : detailError && detailTab === "students" ? (
             <div className="mt-5">
               <RequestState
                 title="Не удалось загрузить студентов"
@@ -312,7 +315,7 @@ export default function GroupsPage() {
                   {students.map((student) => (
                     <div
                       key={student.id}
-                      className="flex items-center justify-between gap-3 py-3"
+                      className="flex flex-wrap items-center justify-between gap-3 py-3"
                     >
                       <div>
                         <p className="text-sm font-semibold text-slate-800">
@@ -340,16 +343,16 @@ export default function GroupsPage() {
             </div>
           ) : detailTab === "schedule" ? (
             <div className="mt-5">
-              {groupLessons.length ? (
+              {scheduleError ? <RequestState title="Расписание недоступно" description={scheduleError} onRetry={()=>window.location.reload()}/> : groupLessons.length ? (
                 <div className="space-y-2">
                   {groupLessons.map((lesson) => (
                     <div
                       key={lesson.id}
-                      className="flex items-center gap-4 rounded-xl bg-slate-50 px-4 py-3"
+                      className="flex flex-wrap items-center gap-3 rounded-xl bg-slate-50 px-4 py-3"
                     >
                       <span className="w-28 shrink-0 text-sm font-semibold text-slate-700">
-                        {lesson.startTime.slice(0, 10)} ·{" "}
-                        {lesson.startTime.slice(11, 16)}
+                        {lesson.startDate?.slice(0,10) || (lesson.startTime.includes("T") ? lesson.startTime.slice(0,10) : "Дата не указана")} ·{" "}
+                        {lesson.startTime.includes("T") ? lesson.startTime.slice(11,16) : lesson.startTime}
                       </span>
                       <span className="text-sm font-medium text-slate-900">
                         {lesson.subject}
@@ -373,7 +376,7 @@ export default function GroupsPage() {
               », чтобы работать с данными группы.
             </div>
           )}
-        </Card>
+        </Sheet>
       )}
     </div>
   );

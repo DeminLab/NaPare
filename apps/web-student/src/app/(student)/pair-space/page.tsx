@@ -5,6 +5,8 @@ import { useWorkspaceQuery } from '@napare/ui/workspace-shell';
 import { useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '@/lib/api';
 import { Badge, Button, Card, EmptyState, Icon, RequestState, Skeleton } from '@napare/ui';
+import { PreparationProgressControl, type PreparationProgress } from '../PreparationProgressControl';
+import { readStudentPreparationProgress } from '../preparation-progress-api';
 
 interface Preparation {
   id: string;
@@ -13,6 +15,7 @@ interface Preparation {
   deadline?: string | null;
   lessonId: string;
   subject: string;
+  progress?: PreparationProgress;
 }
 
 interface MyDayResponse {
@@ -68,19 +71,21 @@ export default function PairSpaceIndex() {
   const [preparations, setPreparations] = useState<Preparation[]>([]);
   const [filter, setFilter] = useState<PreparationFilter>('all');
   const [search, setSearch] = useState('');
+  const [unfinishedOnly, setUnfinishedOnly] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  useWorkspaceQuery({ filter, q: search }, query => {
+  useWorkspaceQuery({ filter, q: search, unfinished: unfinishedOnly ? '1' : '' }, query => {
     const requested = query.get("filter");
     setFilter(filters.find(item => item.id === requested)?.id || "all");
     setSearch((query.get("q") || "").slice(0, 80));
+    setUnfinishedOnly(query.get('unfinished') === '1');
   });
 
   useEffect(() => {
     let active = true;
     apiFetch<MyDayResponse>('/my-day?timeZone=' + encodeURIComponent(Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'))
       .then((result) => {
-        if (active) setPreparations(result.upcomingPreparations || []);
+        if (active) setPreparations((result.upcomingPreparations || []).map(preparation => ({ ...preparation, progress: readStudentPreparationProgress(preparation.id, preparation.progress || 'todo') })));
       })
       .catch((reason: unknown) => {
         if (active) setError(reason instanceof Error ? reason.message : 'Не удалось загрузить подготовку к парам.');
@@ -93,9 +98,15 @@ export default function PairSpaceIndex() {
 
   const visible = useMemo(() => {
     const query = search.trim().toLocaleLowerCase('ru-RU');
-    return preparations.filter((item) => matchesFilter(item, filter) &&
-      (!query || `${item.title} ${item.subject} ${item.description || ''}`.toLocaleLowerCase('ru-RU').includes(query)));
-  }, [filter, preparations, search]);
+    return preparations.filter((item) => matchesFilter(item, filter) && (!unfinishedOnly || item.progress !== 'done') &&
+      (!query || `${item.title} ${item.subject} ${item.description || ''}`.toLocaleLowerCase('ru-RU').includes(query)))
+      .sort((a, b) => (a.deadline || '9999').localeCompare(b.deadline || '9999'));
+  }, [filter, preparations, search, unfinishedOnly]);
+  const bucket = (item: Preparation) => {
+    const days = daysUntil(item.deadline);
+    return days === null ? 'Без срока' : days < 0 ? 'Срок прошёл' : days === 0 ? 'Сегодня' : days === 1 ? 'Завтра' : days <= 7 ? 'На неделе' : 'Позже';
+  };
+  const grouped = ['Сегодня', 'Завтра', 'На неделе', 'Позже', 'Без срока', 'Срок прошёл'].map(title => ({ title, items: visible.filter(item => bucket(item) === title) })).filter(group => group.items.length);
 
   if (loading) return <div className="mx-auto max-w-5xl space-y-4"><Skeleton className="h-20" /><Skeleton className="h-40" /><Skeleton className="h-40" /></div>;
   if (error && !preparations.length) return <div className="mx-auto max-w-3xl"><RequestState title="Не удалось загрузить список" description={error} onRetry={() => window.location.reload()} /></div>;
@@ -120,23 +131,24 @@ export default function PairSpaceIndex() {
         <div className="mt-4 flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Фильтр по сроку">
           {filters.map((item) => <button key={item.id} type="button" aria-pressed={filter === item.id} onClick={() => setFilter(item.id)} className={`min-h-11 shrink-0 rounded-full border px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-100 ${filter === item.id ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'}`}>{item.label}</button>)}
         </div>
+        <label className="mt-3 flex min-h-11 cursor-pointer items-center gap-3 text-sm text-slate-700"><input type="checkbox" checked={unfinishedOnly} onChange={event => setUnfinishedOnly(event.target.checked)} className="h-5 w-5 accent-indigo-600" />Только незавершённая подготовка</label>
       </Card>
 
-      {visible.length ? <div className="space-y-3">{visible.map((item) => {
+      {visible.length ? <div className="space-y-6">{grouped.map(group => <details key={group.title} open={group.title === 'Сегодня' || group.title === 'Завтра' || filter !== 'all' || Boolean(search.trim()) || unfinishedOnly} className="space-y-3"><summary className="min-h-11 cursor-pointer py-2 text-lg font-semibold text-slate-900"><h2 className="inline">{group.title} <span className="ml-2 text-sm font-normal text-slate-500">{group.items.length}</span></h2></summary>{group.items.map((item) => {
         const days = daysUntil(item.deadline);
         const status = days === null ? 'Без срока' : days < 0 ? 'Срок прошёл' : days === 0 ? 'Сегодня' : days === 1 ? 'Завтра' : days <= 7 ? 'На неделе' : 'Позже';
         return <Card key={item.id} padding="sm" className="transition-colors hover:border-indigo-200">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2"><Badge variant={days !== null && days < 0 ? 'danger' : days !== null && days <= 1 ? 'warning' : 'default'}>{status}</Badge><span className="text-xs text-slate-500">{dueLabel(item.deadline)}</span></div>
-              <h2 className="mt-3 break-words text-base font-semibold text-slate-900">{item.title}</h2>
+              <h3 className="mt-3 break-words text-base font-semibold text-slate-900">{item.title}</h3>
               <p className="mt-1 text-sm font-medium text-indigo-700">{item.subject}</p>
-              {item.description && <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-600">{item.description}</p>}
+              {item.description && <details className="mt-2 text-sm text-slate-600"><summary className="min-h-11 cursor-pointer py-2 font-medium text-indigo-700">Что подготовить</summary><p className="whitespace-pre-wrap break-words leading-6">{item.description}</p></details>}
             </div>
-            <Link href={`/pair-space/${item.lessonId}?tab=homeworks`} className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 text-sm font-semibold text-slate-700 hover:border-indigo-300 hover:text-indigo-700">Открыть подготовку <Icon name="arrow-right" size={16} /></Link>
+            <div className="flex shrink-0 flex-wrap items-center gap-3 sm:flex-col sm:items-end"><PreparationProgressControl preparationId={item.id} initialState={item.progress} onSaved={progress => setPreparations(current => current.map(preparation => preparation.id === item.id ? { ...preparation, progress } : preparation))} /><Link href={`/pair-space/${item.lessonId}?tab=homeworks#preparation-${item.id}`} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 text-sm font-semibold text-slate-700 hover:border-indigo-300 hover:text-indigo-700">Открыть занятие <Icon name="arrow-right" size={16} /></Link></div>
           </div>
         </Card>;
-      })}</div> : <Card><EmptyState title={preparations.length ? 'Ничего не найдено' : 'Подготовки пока нет'} description={preparations.length ? 'Измените запрос или фильтр.' : 'Когда преподаватель добавит тему или материал к паре, он появится здесь.'} action={preparations.length ? <Button variant="secondary" onClick={() => { setSearch(''); setFilter('all'); }}>Сбросить фильтры</Button> : <Link href="/week" className="inline-flex min-h-11 items-center rounded-xl bg-indigo-600 px-4 text-sm font-semibold text-white">Открыть расписание</Link>} /></Card>}
+      })}</details>)}</div> : <Card><EmptyState title={preparations.length ? 'Ничего не найдено' : 'Подготовки пока нет'} description={preparations.length ? 'Измените запрос или фильтр.' : 'Когда преподаватель добавит тему или материал к паре, он появится здесь.'} action={preparations.length ? <Button variant="secondary" onClick={() => { setSearch(''); setFilter('all'); setUnfinishedOnly(false); }}>Сбросить фильтры</Button> : <Link href="/week" className="inline-flex min-h-11 items-center rounded-xl bg-indigo-600 px-4 text-sm font-semibold text-white">Открыть расписание</Link>} /></Card>}
     </div>
   );
 }

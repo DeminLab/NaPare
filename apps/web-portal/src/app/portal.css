@@ -72,7 +72,7 @@ a {
   margin: 0 0 18px;
 }
 .hero h1,
-.login-aside h1 {
+.login-aside h2 {
   font-size: clamp(44px, 7vw, 76px);
   letter-spacing: -0.065em;
   line-height: 0.98;
@@ -153,7 +153,7 @@ footer {
 .login-aside .eyebrow {
   color: #c7d2fe;
 }
-.login-aside h1 {
+.login-aside h2 {
   font-size: clamp(42px, 5vw, 68px);
 }
 .login-aside p:not(.eyebrow) {
@@ -177,7 +177,7 @@ footer {
 .mobile-brand {
   display: none;
 }
-.login-card h2 {
+.login-card h1 {
   font-size: 31px;
   letter-spacing: -0.04em;
   margin: 0 0 10px;
@@ -1348,3 +1348,8 @@ footer {
 .connections-footer { margin-top: 24px; font-size: 13px; }
 .connections-page button:focus-visible, .connections-page a:focus-visible { outline: 3px solid var(--color-brand); outline-offset: 4px; }
 @media (max-width: 640px) { .connections-page { padding: 20px 16px 40px; } .connections-grid { grid-template-columns: minmax(0, 1fr); } .connections-card { padding: 22px; } .connections-button { width: 100%; } }
+
+/* Keep the entry form primary and the explanatory panel compact. */
+.login-account-help { margin: 1rem 0; padding: .85rem 1rem; border-left: 3px solid var(--color-brand); background: var(--color-brand-soft); color: var(--color-text-secondary); font-size: .875rem; line-height: 1.6; }
+@media (min-width: 900px) { .login-layout { grid-template-columns: minmax(280px, .75fr) minmax(0, 1.25fr); } }
+.role-grid-page h3 { margin: 1rem 0 .5rem; font-size: 1.25rem; }

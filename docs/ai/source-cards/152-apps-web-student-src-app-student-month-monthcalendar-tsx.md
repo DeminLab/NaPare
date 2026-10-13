@@ -6,7 +6,7 @@
 
 ## Scope
 
-Responsive student month calendar, including daily lesson chips with available building/room/subgroup/week-parity context and Pair Space links for persisted lesson IDs.
+Compact month selector on desktop and mobile. The parent owns the selected date and URL state; selecting a day reveals every lesson in a readable adjacent/below panel. Location/subgroup/week parity come from the source, and Pair Space links are restricted to persisted lesson IDs.
 
 ## Read sequence
 

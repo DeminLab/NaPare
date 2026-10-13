@@ -6,7 +6,7 @@
 
 ## Scope
 
-Administration workspace UI and its data flow.
+University profile, structure and source type selection using the existing PATCH contract. Unknown current source types are preserved until a supported type is explicitly selected.
 
 ## Read sequence
 
@@ -17,6 +17,8 @@ Administration workspace UI and its data flow.
 ## Change boundary
 
 Trace direct imports and the closest route or caller before changing this file.
+
+Сбой вспомогательного запроса отличается от пустого списка и нулевой статистики; структура содержит явное состояние ошибки.
 
 ## Verification
 

@@ -90,7 +90,8 @@ export async function apiFetch<T>(
   }
 
   if (res.status === 204) return undefined as T;
-  return (await res.json()) as T;
+  const content = await res.text();
+  return (content.trim() ? JSON.parse(content) : undefined) as T;
 }
 
 export interface PaginatedResponse<T> {

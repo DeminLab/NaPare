@@ -6,7 +6,7 @@
 
 ## Scope
 
-Administration workspace UI and its data flow.
+CSV/JSON import wizard: real date/time validation, duplicate slots, numbered issues, explicit 1000-record limit, mobile previews and retry through the existing upload contract.
 
 ## Read sequence
 

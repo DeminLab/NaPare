@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { apiFetch } from "@/lib/api";
+import { useWorkspaceQuery } from "@napare/ui/workspace-shell";
+import { apiFetch, apiFetchList } from "@/lib/api";
 import {
   Badge,
   Button,
@@ -19,6 +20,7 @@ interface Lesson {
   subject: string;
   groupName?: string;
   teacherName?: string;
+  startTime?: string;
 }
 
 interface Preparation {
@@ -83,13 +85,13 @@ function PreparationList({
           key={item.preparation.id}
           type="button"
           onClick={() => onOpen(item)}
-          className="group flex w-full items-start gap-3 px-1 py-4 text-left transition-colors hover:bg-[var(--color-surface-secondary)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-brand-soft)]"
+          className="group flex w-full flex-wrap items-start gap-3 px-1 py-4 text-left transition-colors hover:bg-[var(--color-surface-secondary)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-brand-soft)]"
         >
           <span
             className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-[var(--color-brand)]"
             aria-hidden="true"
           />
-          <span className="min-w-0 flex-1">
+          <span className="min-w-[min(12rem,100%)] flex-1">
             <span className="flex flex-wrap items-center gap-2">
               <span className="font-semibold text-[var(--color-text)]">
                 {item.preparation.title}
@@ -129,19 +131,32 @@ export default function AssignmentsPage() {
   const [selected, setSelected] = useState<PreparationWithLesson | null>(null);
   const [detail, setDetail] = useState<PairSpace | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState('');
+  const [partial, setPartial] = useState(0);
+  const [range, setRange] = useState('');
+  useWorkspaceQuery({ q: query, sort }, params => { setQuery((params.get('q') || '').slice(0,100)); setSort(params.get('sort') === 'subject' ? 'subject' : 'date'); });
 
   const load = () => {
     setLoading(true);
     setError("");
-    apiFetch<MyDayResponse>("/my-day")
-      .then(setDay)
-      .catch((reason: unknown) => {
-        setError(
-          reason instanceof Error
-            ? reason.message
-            : "Не удалось загрузить подготовку к парам.",
-        );
+    setPartial(0);
+    const localDate = (date: Date) => `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+    const start = new Date(); start.setDate(start.getDate()-7);
+    const end = new Date(); end.setDate(end.getDate()+14);
+    setRange(`${start.toLocaleDateString('ru-RU')}–${end.toLocaleDateString('ru-RU')}`);
+    apiFetchList<Lesson>(`/schedule/range?startDate=${localDate(start)}&endDate=${localDate(end)}&limit=100`)
+      .then(async lessons => {
+        const spaces: PairSpaceSummary[] = []; let cursor = 0; let failures = 0;
+        await Promise.all(Array.from({length:Math.min(4,lessons.length)},async()=>{
+          while(cursor < lessons.length) {
+            const lesson = lessons[cursor++];
+            try { const space=await apiFetch<PairSpaceSummary>(`/pair-spaces/${lesson.id}`); spaces.push({...space,lessonId:lesson.id}); }
+            catch { failures += 1; }
+          }
+        }));
+        setDay({lessons,pairSpaces:spaces}); setPartial(failures);
       })
+      .catch((reason: unknown) => setError(reason instanceof Error ? reason.message : 'Не удалось загрузить подготовку к парам.'))
       .finally(() => setLoading(false));
   };
 
@@ -164,7 +179,7 @@ export default function AssignmentsPage() {
     return preparations
       .filter((item) => {
         const text =
-          `${item.preparation.title} ${item.preparation.description || ""} ${item.lesson?.subject || ""}`.toLocaleLowerCase(
+          `${item.preparation.title} ${item.preparation.description || ""} ${item.lesson?.subject || ""} ${item.lesson?.groupName || ""}`.toLocaleLowerCase(
             "ru-RU",
           );
         return !normalizedQuery || text.includes(normalizedQuery);
@@ -186,11 +201,12 @@ export default function AssignmentsPage() {
   const openDetail = (item: PreparationWithLesson) => {
     setSelected(item);
     setDetail(null);
+    setDetailError("");
     if (!item.lesson) return;
     setDetailLoading(true);
     apiFetch<PairSpace>(`/pair-spaces/${item.lesson.id}`)
       .then(setDetail)
-      .catch(() => setDetail(null))
+      .catch(reason => setDetailError(reason instanceof Error ? reason.message : "Не удалось загрузить материалы пары."))
       .finally(() => setDetailLoading(false));
   };
 
@@ -241,12 +257,14 @@ export default function AssignmentsPage() {
           </p>
         </div>
         <Link href="/pair-space">
-          <Button>Открыть пространство пары</Button>
+          <Button>Выбрать пару для публикации</Button>
         </Link>
       </header>
 
+      <p className="text-sm text-[var(--color-text-secondary)]">Период занятий · {range}. Показано не более 100 доступных занятий; подготовка более ранних пар доступна через их пространство.</p>
+      {partial > 0 && <p role="status" className="rounded-xl bg-amber-50 p-3 text-sm text-amber-800">Не загрузились пространства {partial} занятий. Показаны доступные темы; повторите загрузку для полного списка. <button type="button" onClick={load} className="font-semibold underline">Повторить</button></p>}
       <section
-        className="grid gap-3 sm:grid-cols-3"
+        className="grid grid-cols-3 gap-2 sm:gap-3"
         aria-label="Сводка подготовки"
       >
         <Card padding="sm">
@@ -257,12 +275,12 @@ export default function AssignmentsPage() {
             {preparations.length}
           </p>
           <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-            в пространствах пар на сегодня
+            в загруженном периоде
           </p>
         </Card>
         <Card padding="sm">
           <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">
-            С указанной датой
+            С будущим сроком
           </p>
           <p className="mt-2 text-2xl font-bold text-[var(--color-text)]">
             {upcoming}
@@ -311,7 +329,7 @@ export default function AssignmentsPage() {
         {!visible.length ? (
           <EmptyState
             title={
-              query ? "Подготовка не найдена" : "Подготовки на сегодня пока нет"
+              query ? "Подготовка не найдена" : "В этом периоде подготовки нет"
             }
             description={
               query
@@ -373,7 +391,7 @@ export default function AssignmentsPage() {
             </div>
             {detailLoading ? (
               <Skeleton className="h-20" />
-            ) : detail?.files?.length ? (
+            ) : detailError ? <RequestState title="Материалы не загрузились" description={detailError} onRetry={() => openDetail(selected)} /> : detail?.files?.length ? (
               <div>
                 <h2 className="text-sm font-semibold text-[var(--color-text)]">
                   Материалы к паре
@@ -382,12 +400,12 @@ export default function AssignmentsPage() {
                   {detail.files.map((file, index) => (
                     <a
                       key={file.id || index}
-                      href={file.fileUrl || "#"}
+                      href={file.fileUrl?.startsWith("https://") ? file.fileUrl : undefined}
                       target="_blank"
                       rel="noreferrer"
                       className="block rounded-[var(--radius-md)] border p-3 text-sm font-medium text-[var(--color-brand)] hover:bg-[var(--color-surface-secondary)]"
                     >
-                      {file.fileName || "Материал"}
+                      {file.fileName || "Материал"}{!file.fileUrl?.startsWith("https://") && " · ссылка недоступна"}
                     </a>
                   ))}
                 </div>

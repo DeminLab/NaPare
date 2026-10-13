@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
+import { ConfirmDialog } from "@/components/ui";
 import { getToken, logout } from "@/lib/api";
 
-type SessionStatus = "Active" | "Expired";
+type SessionStatus = "Active" | "Expired" | "Unknown";
 
 interface SessionRecord {
   device: string;
@@ -48,14 +49,14 @@ function readLocalSession(token: string): SessionRecord {
       device,
       created: formatTimestamp(claims.iat),
       expiresAt: formatTimestamp(claims.exp),
-      status: expired ? "Expired" : "Active",
+      status: typeof claims.exp !== "number" ? "Unknown" : expired ? "Expired" : "Active",
     };
   } catch {
     return {
       device,
       created: "Недоступно",
       expiresAt: "Недоступно",
-      status: "Active",
+      status: "Unknown",
     };
   }
 }
@@ -72,17 +73,20 @@ function StatusBadge({ status }: { status: SessionStatus }) {
       }`}
     >
       <span className="h-1.5 w-1.5 rounded-full bg-current" />
-      {active ? "Активна" : "Истекла"}
+      {active ? "Срок не истёк" : status === "Expired" ? "Срок истёк" : "Не удалось прочитать"}
     </span>
   );
 }
 
 export default function SessionPage() {
   const [session, setSession] = useState<SessionRecord | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   useEffect(() => {
-    const token = getToken();
-    setSession(token ? readLocalSession(token) : null);
+    const refresh = () => { const token = getToken(); setSession(token ? readLocalSession(token) : null); };
+    refresh(); const timer = window.setInterval(refresh, 30_000);
+    return () => window.clearInterval(timer);
   }, []);
 
   return (
@@ -98,8 +102,7 @@ export default function SessionPage() {
             Текущая сессия
           </h1>
           <p className="mt-1 max-w-2xl text-sm text-white/45">
-            Здесь показаны сроки текущей сессии в этом браузере. Выход
-            отзовёт все активные токены аккаунта.
+            Здесь показаны локальные сроки токена в этом браузере. Его наличие не подтверждает доступ на сервере. Глобальный выход действует на все устройства.
           </p>
         </div>
 
@@ -119,11 +122,7 @@ export default function SessionPage() {
           <Card className="border-white/10 bg-white/[0.04]">
             <p className="text-xs text-white/40">Статус</p>
             <p className="mt-2 text-2xl font-bold text-emerald-300">
-              {session?.status === "Expired"
-                ? "Истекла"
-                : session
-                  ? "Активна"
-                  : "—"}
+              {session?.status === "Expired" ? "Истекла" : session?.status === "Unknown" ? "Неизвестно" : session ? "Срок не истёк" : "Нет токена"}
             </p>
             <span className="mt-1 block text-xs text-white/35">
               проверяется по данным JWT
@@ -166,7 +165,7 @@ export default function SessionPage() {
                 Сервер отзовёт access- и refresh-токены на всех устройствах,
                 затем текущий браузер вернётся на страницу входа.
               </p>
-              <Button variant="secondary" onClick={logout}>
+              <Button variant="danger" onClick={() => setConfirmOpen(true)}>
                 Выйти на всех устройствах
               </Button>
             </div>
@@ -194,6 +193,7 @@ export default function SessionPage() {
             выданные токены аккаунта.
           </p>
         </section>
+        <ConfirmDialog open={confirmOpen} onClose={() => setConfirmOpen(false)} title="Выйти на всех устройствах?" description="Все ранее выданные токены аккаунта будут отозваны. Вы и другие устройства должны будете войти заново." confirmLabel="Выйти везде" loading={loggingOut} onConfirm={() => { setLoggingOut(true); void logout().finally(() => setLoggingOut(false)); }} />
       </div>
     </div>
   );

@@ -2,17 +2,20 @@
 
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useWorkspaceQuery } from "@napare/ui/workspace-shell";
 import { apiFetch, apiFetchList } from "@/lib/api";
 import {
   Avatar,
   Badge,
   Button,
   Card,
+  ConfirmDialog,
   EmptyState,
   Input,
   Modal,
   RequestState,
   SearchInput,
+  Sheet,
   Skeleton,
 } from "@/components/ui";
 
@@ -116,13 +119,22 @@ export default function UsersPage() {
   const [faculty, setFaculty] = useState("all");
   const [group, setGroup] = useState("all");
   const [status, setStatus] = useState("all");
+  useWorkspaceQuery({ q: search, role, faculty, group, status }, query => {
+    setSearch((query.get('q') || '').slice(0, 100));
+    const requestedRole = query.get('role') || 'all';
+    setRole(['all', 'student', 'teacher', 'admin'].includes(requestedRole) ? requestedRole as Filter : 'all');
+    setFaculty(query.get('faculty') || 'all'); setGroup(query.get('group') || 'all');
+    setStatus(['active', 'blocked'].includes(query.get('status') || '') ? query.get('status')! : 'all');
+  });
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [pendingRole,setPendingRole]=useState<{id:string;role:string}|null>(null);
   const [detail, setDetail] = useState<AdminUser | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [newUser, setNewUser] = useState<NewUserForm>(emptyNewUser);
   const [resetTarget, setResetTarget] = useState<AdminUser | null>(null);
   const [replacementPassword, setReplacementPassword] = useState("");
   const [bulkRole, setBulkRole] = useState("teacher");
+  const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -205,6 +217,8 @@ export default function UsersPage() {
             : user,
         ),
       );
+      setDetail(current=>current?.id===id?{...current,role:nextRole,roles:[nextRole]}:current);
+      setPendingRole(null);
       setMessage("Роль пользователя обновлена.");
     } catch (err) {
       setError(
@@ -218,23 +232,14 @@ export default function UsersPage() {
     setSaving(true);
     setError("");
     try {
-      await Promise.all(
-        selectedIds.map((id) =>
-          apiFetch(`/admin/users/${id}/roles`, {
-            method: "PATCH",
-            body: JSON.stringify({ role: bulkRole }),
-          }),
-        ),
-      );
-      setUsers((items) =>
-        items.map((user) =>
-          selectedIds.includes(user.id)
-            ? { ...user, role: bulkRole, roles: [bulkRole] }
-            : user,
-        ),
-      );
-      setSelectedIds([]);
-      setMessage(`Роль изменена для ${selectedIds.length} пользователей.`);
+      const results = await Promise.allSettled(selectedIds.map(id => apiFetch(`/admin/users/${id}/roles`, { method: 'PATCH', body: JSON.stringify({ role: bulkRole }) })));
+      const succeeded = new Set(selectedIds.filter((_, index) => results[index].status === 'fulfilled'));
+      const failed = selectedIds.filter(id => !succeeded.has(id));
+      setUsers(items => items.map(user => succeeded.has(user.id) ? { ...user, role: bulkRole, roles: [bulkRole] } : user));
+      setSelectedIds(failed);
+      setBulkConfirmOpen(false);
+      setMessage(`Роль обновлена для ${succeeded.size} пользователей.`);
+      if (failed.length) setError(`Не удалось изменить роль для ${failed.length} пользователей. Они остаются выбранными; повторите действие после проверки доступа.`);
     } catch (err) {
       setError(
         err instanceof Error
@@ -416,14 +421,9 @@ export default function UsersPage() {
           </button>
         ))}
       </div>
-      <Card padding="sm">
-        <div className="grid gap-3 md:grid-cols-[minmax(220px,1.4fr)_repeat(4,minmax(130px,1fr))]">
-          <SearchInput
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            onSearch={setSearch}
-            placeholder="Поиск пользователей…"
-          />
+      <Card padding="sm"><SearchInput value={search} onChange={event => setSearch(event.target.value)} onSearch={setSearch} placeholder="Поиск пользователей…" />
+        <details className="mt-3"><summary className="min-h-11 cursor-pointer py-2 text-sm font-semibold text-slate-700">Роль, факультет, группа и статус</summary><div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+
           <select
             aria-label="Роль"
             value={role}
@@ -471,7 +471,7 @@ export default function UsersPage() {
             <option value="active">Активные</option>
             <option value="blocked">Заблокированные</option>
           </select>
-        </div>
+        </div></details>
       </Card>
       {selectedIds.length > 0 && (
         <Card
@@ -491,7 +491,7 @@ export default function UsersPage() {
             <option value="curator">Куратор</option>
             <option value="university_admin">Администратор</option>
           </select>
-          <Button size="sm" loading={saving} onClick={bulkChangeRole}>
+          <Button size="sm" loading={saving} onClick={() => setBulkConfirmOpen(true)}>
             Изменить роль
           </Button>
           <button
@@ -532,7 +532,7 @@ export default function UsersPage() {
         />
       ) : (
         <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-          <div className="hidden grid-cols-[36px_minmax(190px,1.4fr)_minmax(180px,1.2fr)_140px_140px_130px_110px_110px] gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 xl:grid">
+          <div className="hidden grid-cols-[36px_minmax(190px,1.4fr)_minmax(180px,1.2fr)_140px_140px_130px_110px_110px] gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 2xl:grid">
             <input
               type="checkbox"
               checked={allVisibleSelected}
@@ -555,9 +555,10 @@ export default function UsersPage() {
                 facultyMap.get(user.facultyId || groupItem?.facultyId || "") ||
                 "—";
               return (
+                <div key={user.id}>
+                  <article className="space-y-3 p-4 2xl:hidden"><div className="flex items-start justify-between gap-3"><div className="flex min-w-0 items-start gap-3"><input type="checkbox" checked={selectedIds.includes(user.id)} onChange={() => toggle(user.id)} aria-label={`Выбрать ${user.firstName} ${user.lastName}`} className="mt-1 h-5 w-5 shrink-0" /><div className="min-w-0"><button type="button" onClick={() => setDetail(user)} className="min-h-11 break-words text-left text-base font-semibold text-slate-900">{user.firstName} {user.lastName}</button><p className="text-sm text-slate-600">{roleLabels[currentRole] || currentRole} · {groupItem?.name || 'Группа не назначена'}</p></div></div><Badge variant={user.isActive ? 'green' : 'red'}>{user.isActive ? 'Активен' : 'Заблокирован'}</Badge></div><div className="flex flex-wrap items-center justify-between gap-2"><span className="min-w-0 break-all text-sm text-slate-500">{user.email}</span><Button variant="secondary" onClick={() => setDetail(user)}>Данные и действия →</Button></div></article>
                 <div
-                  key={user.id}
-                  className="grid gap-3 px-4 py-4 md:grid-cols-[36px_minmax(190px,1.4fr)_minmax(180px,1.2fr)_140px_140px_130px_110px_110px] md:items-center md:px-4"
+                  className="grid gap-3 px-4 py-4 hidden 2xl:grid-cols-[36px_minmax(190px,1.4fr)_minmax(180px,1.2fr)_140px_140px_130px_110px_110px] 2xl:grid 2xl:items-center 2xl:px-4"
                 >
                   <input
                     type="checkbox"
@@ -594,7 +595,7 @@ export default function UsersPage() {
                       disabled={saving}
                       value={currentRole}
                       onChange={(event) =>
-                        changeRole(user.id, event.target.value)
+                        setPendingRole({id:user.id,role:event.target.value})
                       }
                       className="h-9 max-w-full rounded-lg border border-slate-200 bg-white px-2 text-xs font-medium text-slate-700 outline-none focus:border-sky-500"
                     >
@@ -660,23 +661,16 @@ export default function UsersPage() {
                       Сброс пароля
                     </button>
                   </div>
-                </div>
+                </div></div>
               );
             })}
           </div>
         </div>
       )}
+      <ConfirmDialog open={Boolean(pendingRole)} onClose={()=>setPendingRole(null)} title="Изменить роль пользователя?" description={`Новая роль: ${roleLabels[pendingRole?.role || ''] || pendingRole?.role || ''}. Доступ пользователя изменится после успешного сохранения.`} confirmLabel="Изменить роль" loading={saving} onConfirm={()=>{if(pendingRole) void changeRole(pendingRole.id,pendingRole.role);}}/>
+      <ConfirmDialog open={bulkConfirmOpen} onClose={() => setBulkConfirmOpen(false)} title="Изменить роли выбранных пользователей?" description={`Новая роль: ${roleLabels[bulkRole] || bulkRole}. Пользователей: ${selectedIds.length}. Изменение затрагивает их доступ к разделам университета.`} confirmLabel="Применить роль" loading={saving} onConfirm={() => void bulkChangeRole()} />
       {detail && (
-        <div
-          className="fixed inset-0 z-50 flex justify-end bg-slate-950/40"
-          onClick={() => setDetail(null)}
-        >
-          <aside
-            role="dialog"
-            aria-modal="true"
-            className="h-full w-full max-w-md overflow-y-auto border-l border-slate-200 bg-white p-6 shadow-2xl"
-            onClick={(event) => event.stopPropagation()}
-          >
+        <Sheet open={!pendingRole && !resetTarget} onClose={()=>setDetail(null)} title={`${detail.firstName} ${detail.lastName}`}>{error&&<p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
@@ -744,16 +738,10 @@ export default function UsersPage() {
                 Роль
               </label>
               <select
+                aria-label="Роль пользователя"
                 disabled={saving}
                 value={userRole(detail)}
-                onChange={(event) => {
-                  changeRole(detail.id, event.target.value);
-                  setDetail({
-                    ...detail,
-                    role: event.target.value,
-                    roles: [event.target.value],
-                  });
-                }}
+                onChange={event=>setPendingRole({id:detail.id,role:event.target.value})}
                 className="mt-2 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-sky-500"
               >
                 <option value={userRole(detail)}>
@@ -786,8 +774,7 @@ export default function UsersPage() {
                 Сбросить пароль
               </Button>
             </div>
-          </aside>
-        </div>
+        </Sheet>
       )}
       <Modal
         open={createOpen}

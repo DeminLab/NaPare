@@ -24,3 +24,7 @@ Trace direct imports and the closest route or caller before changing this file.
 pnpm --filter @napare/web-developer exec tsc --noEmit
 ```
 
+
+## Empty successful responses
+
+Successful empty 200/201 and 204 responses return undefined. Nonempty malformed JSON remains an error. Notification read endpoints return no body; this is a successful action. Regression checks: `node scripts/test-workspace-api.cjs` and the developer variant with `NAPARE_API_TEST_APP=developer`.

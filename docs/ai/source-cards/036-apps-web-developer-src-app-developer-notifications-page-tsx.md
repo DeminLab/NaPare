@@ -6,7 +6,7 @@
 
 ## Scope
 
-Developer operations workspace UI and its data flow.
+Account notifications grouped by date, with explicit unread filtering and mark-read actions. Loading, failed fetch/action and an empty history remain distinct; failed reads are not presented as a successful empty response.
 
 ## Read sequence
 

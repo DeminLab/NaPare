@@ -6,7 +6,7 @@
 
 ## Scope
 
-Existing notification preferences GET/PATCH UI: event categories, explicit save, retained choices on error and Telegram availability from account status. Quiet-hour preferences are preserved rather than overwritten.
+Server-backed notification preferences grouped into schedule, preparation/conversation and system. Telegram availability remains separate; save bar is sticky only while dirty.
 
 ## Read sequence
 

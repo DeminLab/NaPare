@@ -6,7 +6,7 @@
 
 ## Scope
 
-Staff workspace daily summary and its data flow, including sending the device's IANA timezone to the My Day API.
+Daily role workspace uses actual open inbox items for attention counts instead of summed absences and schedule changes. Curator, dean, department head and administrators get a role-labelled queue/group panel. Notice bodies use the API body field.
 
 ## Read sequence
 

@@ -6,7 +6,7 @@
 
 ## Scope
 
-Student schedule provides day/week/list modes, URL-restored date/type/query/favourites and exact selected-date transitions to month. Existing offline cache, sharing, favourites and exports are preserved.
+Student week/day/agenda schedule with URL state, favorites and offline cache. Mobile week mode shows seven selectable dates and full lesson cards for the selected day; agenda keeps the full list. Export and share actions are progressively disclosed.
 
 ## Read sequence
 

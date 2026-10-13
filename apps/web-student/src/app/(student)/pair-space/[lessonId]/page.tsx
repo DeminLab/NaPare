@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { lessonTabFromSearch } from '@napare/ui/workspace-shell';
 import { apiFetch, apiFetchList } from '@/lib/api';
-import { Card, Badge, Button, Input, TabBar, EmptyState, Avatar, Skeleton, Icon, RequestState } from '@/components/ui';
+import { Card, Badge, Button, TabBar, EmptyState, Avatar, Skeleton, Icon, RequestState } from '@/components/ui';
 import { getLessonLocation } from '../../schedule-location';
 import { PreparationProgressControl, type PreparationProgress } from '../../PreparationProgressControl';
 import { PreparationChecklist } from '../../PreparationChecklist';
@@ -17,7 +17,7 @@ interface Announcement {
   id: string;
   text: string;
   isPinned: boolean;
-  authorName: string;
+  authorName?: string;
   createdAt: string;
 }
 
@@ -33,7 +33,7 @@ interface Homework {
 interface Message {
   id: string;
   text: string;
-  authorName: string;
+  authorName?: string;
   createdAt: string;
 }
 
@@ -191,6 +191,11 @@ export default function PairSpacePage() {
   const [pairSpace, setPairSpace] = useState<PairSpace | null>(null);
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    if (loading || activeTab !== 'homeworks') return;
+    const anchor = window.location.hash.slice(1);
+    if (/^preparation-[0-9a-f-]+$/i.test(anchor)) document.getElementById(anchor)?.scrollIntoView({ block: 'start', behavior: 'auto' });
+  }, [loading, activeTab, pairSpace]);
   const [offlineSavedAt, setOfflineSavedAt] = useState<string | null>(null);
   const [cacheRefreshing, setCacheRefreshing] = useState(false);
   const [loadWarning, setLoadWarning] = useState('');
@@ -373,7 +378,7 @@ export default function PairSpacePage() {
   };
 
   const handleSendMessage = async () => {
-    if (!newMessage.trim()) return;
+    if (messageSaving || !newMessage.trim()) return;
     setMessageSaving(true);
     setError('');
     try {
@@ -472,7 +477,7 @@ export default function PairSpacePage() {
         {pairSpace?.moodleUrl?.startsWith('https://') && <a href={pairSpace.moodleUrl} target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center rounded-xl px-3 text-sm font-semibold text-indigo-600 hover:bg-indigo-50">Сдача работ и оценки в Moodle ↗</a>}
       </div>
       {activeTab === 'overview' && <div className="grid gap-4 md:grid-cols-2">
-        <Card><h2 className="text-lg font-semibold text-slate-900">Подготовка к занятию</h2><p className="mt-2 text-sm text-slate-600">{pairSpace?.homeworks.length ? 'Тем подготовки: ' + pairSpace.homeworks.length + '. Откройте список, чтобы проверить сроки и отметить свой прогресс.' : 'Преподаватель пока не опубликовал подготовку.'}</p><Button className="mt-4" onClick={() => selectTab('homeworks')}>Открыть подготовку</Button></Card>
+        <Card className="md:col-span-2"><div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-lg font-semibold text-slate-900">Подготовка к занятию</h2><p className="mt-2 text-sm text-slate-600">{pairSpace?.homeworks.length ? 'Ближайшие темы и личный прогресс. Сдача работ и оценки находятся в Moodle.' : 'Преподаватель пока не опубликовал подготовку.'}</p></div>{Boolean(pairSpace?.homeworks.length) && <Button variant="secondary" onClick={() => selectTab('homeworks')}>Вся подготовка · {pairSpace?.homeworks.length}</Button>}</div>{Boolean(pairSpace?.homeworks.length) && <ul className="mt-4 divide-y divide-slate-100">{[...(pairSpace?.homeworks || [])].sort((a,b)=>(a.deadline || '9999').localeCompare(b.deadline || '9999')).slice(0,3).map(item => <li key={item.id} className="flex flex-wrap items-center justify-between gap-3 py-3"><button type="button" onClick={() => { window.history.replaceState(null,'',`${window.location.pathname}?tab=homeworks#preparation-${item.id}`); setActiveTab('homeworks'); }} className="min-w-0 flex-1 text-left"><span className="block break-words text-sm font-semibold text-indigo-700">{item.title}</span><span className="mt-1 block text-xs text-slate-500">{item.deadline ? `Срок · ${new Date(item.deadline).toLocaleDateString('ru-RU')}` : 'Без срока'}</span></button><PreparationProgressControl preparationId={item.id} initialState={item.progress} onSaved={state => setPairSpace(current => current ? {...current,homeworks:current.homeworks.map(preparation => preparation.id === item.id ? {...preparation,progress:state} : preparation)} : current)}/></li>)}</ul>}</Card>
         <Card><h2 className="text-lg font-semibold text-slate-900">Материалы занятия</h2><p className="mt-2 text-sm text-slate-600">{pairSpace?.files?.length ? 'Материалов: ' + pairSpace.files.length : 'Материалов пока нет.'} Сдача работ и оценки находятся в Moodle.</p><Button variant="secondary" className="mt-4" onClick={() => selectTab('materials')}>Открыть материалы</Button></Card>
         {nextLesson && <Card className="md:col-span-2"><h2 className="text-lg font-semibold text-slate-900">Следующее занятие</h2><Link href={'/pair-space/' + nextLesson.id} className="mt-3 flex min-h-11 flex-wrap items-center justify-between gap-3 text-sm font-semibold text-indigo-600"><span>{nextLesson.subject} · {displayLessonDate(nextLesson.startDate || nextLesson.date)} · {lessonTime(nextLesson.startTime)}–{lessonTime(nextLesson.endTime)}</span><span>{getLessonLocation(nextLesson.building, nextLesson.room) || 'Место не указано'} →</span></Link></Card>}
       </div>}
@@ -483,13 +488,13 @@ export default function PairSpacePage() {
           {pairSpace?.announcements.length === 0 ? (
             <EmptyState title="Нет объявлений" description="Объявления от преподавателя появятся здесь" />
           ) : (
-            pairSpace?.announcements.map(a => (
+            [...(pairSpace?.announcements || [])].sort((a,b)=>Number(b.isPinned)-Number(a.isPinned) || b.createdAt.localeCompare(a.createdAt)).map(a => (
               <Card key={a.id} padding="sm" className={a.isPinned ? 'border-amber-200 bg-amber-50/50' : ''}>
                 <div className="flex items-start gap-3">
                   <Icon name={a.isPinned ? 'Pin' : 'MessageCircle'} className="mt-0.5 h-5 w-5 flex-shrink-0 text-slate-400" />
-                  <div className="flex-1">
-                    <p className="text-sm text-slate-900">{a.text}</p>
-                    <p className="mt-1 text-xs text-slate-400">{a.authorName} · {timeAgo(a.createdAt)}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="whitespace-pre-wrap break-words text-sm text-slate-900">{a.text}</p>
+                    <p className="mt-1 text-xs text-slate-400">{a.authorName || "Автор не указан"} · {timeAgo(a.createdAt)}</p>
                   </div>
                 </div>
               </Card>
@@ -541,9 +546,9 @@ export default function PairSpacePage() {
             <EmptyState title="Подготовки пока нет" description="Темы и материалы от преподавателя появятся здесь." />
           ) : (
             pairSpace?.homeworks.map(h => (
-              <Card key={h.id} padding="sm">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="min-w-0">
+              <Card key={h.id} id={`preparation-${h.id}`} padding="sm" className="scroll-mt-24">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div className="min-w-0 flex-1">
                     <h3 className="font-semibold text-slate-900">{h.title}</h3>
                     {h.description && <p className="mt-1 text-sm text-slate-600">{h.description}</p>}
                     {h.deadline && (
@@ -570,28 +575,20 @@ export default function PairSpacePage() {
             pairSpace?.messages.map(m => (
               <Card key={m.id} padding="sm">
                 <div className="flex items-start gap-3">
-                  <Avatar name={m.authorName} size="sm" />
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-slate-900">{m.authorName}</span>
+                  <Avatar name={m.authorName || "Участник пары"} size="sm" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-sm font-semibold text-slate-900">{m.authorName || "Участник пары"}</span>
                       <span className="text-xs text-slate-400">{timeAgo(m.createdAt)}</span>
                     </div>
-                    <p className="mt-0.5 text-sm text-slate-700">{m.text}</p>
+                    <p className="mt-0.5 whitespace-pre-wrap break-words text-sm text-slate-700">{m.text}</p>
                   </div>
                 </div>
               </Card>
             ))
           )}
 
-          <div className="flex gap-2">
-            <Input
-              value={newMessage}
-              onChange={e => setNewMessage(e.target.value)}
-              placeholder="Сообщение..."
-              onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
-            />
-            <Button loading={messageSaving} onClick={handleSendMessage} aria-label="Отправить сообщение"><Icon name="Send" className="h-4 w-4" /></Button>
-          </div>
+          <form onSubmit={event => { event.preventDefault(); void handleSendMessage(); }} className="rounded-2xl border border-slate-200 bg-white p-4"><label htmlFor="discussion-message" className="text-sm font-semibold text-slate-900">Сообщение участникам пары</label><textarea id="discussion-message" value={newMessage} onChange={event => setNewMessage(event.target.value)} disabled={messageSaving} rows={3} placeholder="Напишите вопрос или дополнение к занятию…" className="mt-3 w-full resize-y rounded-xl border border-slate-200 p-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"/><div className="mt-3 flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-slate-500">Сообщение увидят участники этого пространства пары.</p><Button type="submit" loading={messageSaving} disabled={messageSaving || !newMessage.trim()}>Отправить сообщение</Button></div></form>
         </div>
       )}
     </div>

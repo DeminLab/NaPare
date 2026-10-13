@@ -6,7 +6,7 @@
 
 ## Scope
 
-Student absence reporting and history, including lesson context for affected lesson IDs and an entry point to the MAX camera QR check-in flow.
+Student absence requests and factual attendance are separated views with URL filters. Request totals do not claim attendance percentages. The current student contract has no teacher-mark history; the attendance view explains this and links to QR and schedule.
 
 ## Read sequence
 

@@ -6,7 +6,7 @@
 
 ## Scope
 
-Administration workspace UI and its data flow.
+Operational attention queue and daily schedule. Secondary structure metrics are collapsible; partial request failure is distinct from zero.
 
 ## Read sequence
 

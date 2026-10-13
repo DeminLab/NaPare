@@ -38,36 +38,10 @@ const roles = [
 ] as const;
 
 const features = [
-  {
-    icon: "calendar" as IconName,
-    title: "Расписание без сюрпризов",
-    text: "Персональное расписание, история изменений пар и коннекторы: изменения приходят туда, где вы работаете.",
-  },
-  {
-    icon: "layers" as IconName,
-    title: "Страница занятия",
-    text: "У каждого занятия своя страница: преподаватель, аудитория, объявления, подготовка к паре, файлы и обсуждение — в одном месте.",
-  },
-  {
-    icon: "home" as IconName,
-    title: "Сегодня",
-    text: "Персональная сводка учебного дня: текущая и следующая пара, горящие дедлайны, новые материалы и изменения.",
-  },
-  {
-    icon: "clipboard" as IconName,
-    title: "Отсутствия по правилам",
-    text: "Статус «болен / работа / другой город» рассчитывается по парам и подтверждается куратором — без устных договорённостей.",
-  },
-  {
-    icon: "bell" as IconName,
-    title: "Уведомления по делу",
-    text: "Изменения расписания, дедлайны и объявления приходят как уведомления, а не теряются в общих чатах.",
-  },
-  {
-    icon: "dashboard" as IconName,
-    title: "Единый вход и роли",
-    text: "Один аккаунт открывает нужную поверхность: студент, преподаватель, куратор или деканат — автоматически.",
-  },
+  { icon: "refresh" as IconName, title: "01 · Расписание обновилось", text: "Источник сообщает новое время или аудиторию. Изменение отмечается у конкретного занятия." },
+  { icon: "bell" as IconName, title: "02 · Событие в кабинете", text: "Студент и преподаватель видят уведомление и переход к изменённой паре." },
+  { icon: "layers" as IconName, title: "03 · Детали рядом с парой", text: "Время, место, объявления и материалы доступны в пространстве занятия." },
+  { icon: "clipboard" as IconName, title: "04 · Можно подготовиться", text: "Преподаватель публикует ориентиры, студент отмечает личный прогресс. Сдача и оценки остаются в Moodle." },
 ] as const;
 
 const steps = [
@@ -87,18 +61,6 @@ const steps = [
     "Откройте занятие",
     "Материалы, обсуждение и статусы привязаны к конкретному занятию.",
   ],
-] as const;
-
-const modules = [
-  ["Расписание", "Получение, хранение и детект изменений занятий"],
-  [
-    "Страница занятия",
-    "Объявления, подготовка к занятию, файлы и обсуждение урока",
-  ],
-  ["Сегодня", "Ближайшая пара, подготовка и изменения расписания"],
-  ["Отсутствия", "Статусы пропусков и подтверждение куратором"],
-  ["Уведомления", "Уведомления в кабинете о важных событиях"],
-  ["Администрирование", "Структура вуза, роли, импорт расписания"],
 ] as const;
 
 export default function HomePage() {
@@ -157,7 +119,7 @@ export default function HomePage() {
               <Link href="/login" className="primary-action">
                 Войти в НаПаре <Icon name="arrow-right" size={17} />
               </Link>
-              <a href="#roles" className="secondary-action">
+              <a href="#launch" className="secondary-action">
                 Для вашего вуза
               </a>
             </div>
@@ -171,25 +133,6 @@ export default function HomePage() {
               </li>
             </ul>
           </div>
-        </div>
-      </section>
-
-      <section className="proof-strip" aria-label="Ценность платформы">
-        <div>
-          <strong>1</strong>
-          <span>понятный контур вместо разрозненных сервисов</span>
-        </div>
-        <div>
-          <strong>3</strong>
-          <span>кабинета: студент, преподаватель и ВУЗ</span>
-        </div>
-        <div>
-          <strong>Pair</strong>
-          <span>объявления и подготовка привязаны к занятию</span>
-        </div>
-        <div>
-          <strong>LMS</strong>
-          <span>сдача заданий и оценки остаются в Moodle</span>
         </div>
       </section>
 
@@ -261,11 +204,10 @@ export default function HomePage() {
           <div className="section-head">
             <p className="eyebrow">Возможности</p>
             <h2 className="section-title">
-              Один интерфейс для всей учебной работы
+              От изменения расписания к понятному действию
             </h2>
             <p className="section-lead center">
-              Студент видит главное сразу, преподаватель работает с группой,
-              университет управляет структурой и расписанием.
+              Один учебный сценарий связывает источник расписания, кабинет и конкретное занятие.
             </p>
           </div>
           <div className="feature-grid">
@@ -303,7 +245,7 @@ export default function HomePage() {
                 <span className="role-icon" aria-hidden="true">
                   <Icon name={role.icon} size={20} />
                 </span>
-                <h2>{role.title}</h2>
+                <h3>{role.title}</h3>
                 <p>{role.text}</p>
                 <ul className="role-bullets">
                   {role.bullets.map((bullet) => (
@@ -316,22 +258,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section id="modules" className="section">
-        <div className="section-inner">
-          <div className="section-head">
-            <p className="eyebrow">Модули</p>
-            <h2 className="section-title">Из чего собрана платформа</h2>
-          </div>
-          <div className="module-table" role="list">
-            {modules.map(([name, description]) => (
-              <div key={name} className="module-row" role="listitem">
-                <strong>{name}</strong>
-                <span>{description}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <section id="launch" className="section"><div className="section-inner"><div className="section-head"><p className="eyebrow">Для университета</p><h2 className="section-title">Что нужно для начала работы</h2><p className="section-lead center">Администратор готовит структуру и расписание; студенты и сотрудники получают готовые аккаунты.</p></div><div className="steps">{[["01", "Назначьте администратора", "Определите, кто будет управлять пользователями и данными ВУЗа."], ["02", "Опишите структуру", "Добавьте факультеты и группы, назначьте доступ сотрудникам."], ["03", "Подключите расписание", "Настройте поддерживаемый источник или проверьте файл CSV / JSON перед импортом."], ["04", "Выдайте аккаунты", "Передайте учётные данные студентам и сотрудникам защищённым способом."]].map(([number,title,text]) => <article key={number}><span className="step-number">{number}</span><h3>{title}</h3><p>{text}</p></article>)}</div></div></section>
 
       <section id="how" className="section section-alt">
         <div className="section-inner">

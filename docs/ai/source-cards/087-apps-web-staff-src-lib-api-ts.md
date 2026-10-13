@@ -24,3 +24,7 @@ Trace direct imports and the closest route or caller before changing this file.
 pnpm --filter @napare/web-staff exec tsc --noEmit
 ```
 
+
+## Empty mutation responses
+
+The staff client accepts successful empty bodies, including after token refresh, without reporting a JSON parse error. Invalid nonempty JSON is rejected. Regression check: set `NAPARE_API_TEST_APP=staff` and run `node scripts/test-workspace-api.cjs`.

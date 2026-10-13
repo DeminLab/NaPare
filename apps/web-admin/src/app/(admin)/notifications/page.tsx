@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useWorkspaceQuery } from "@napare/ui/workspace-shell";
 import { useEffect, useMemo, useState } from "react";
 import { apiFetch, apiFetchList } from "@/lib/api";
 import {
@@ -45,7 +46,7 @@ const time = (value?: string) =>
         hour: "2-digit",
         minute: "2-digit",
       })
-    : "Только что";
+    : "Дата не указана";
 
 export default function UniversityNotificationsPage() {
   const [items, setItems] = useState<Notification[]>([]);
@@ -53,6 +54,9 @@ export default function UniversityNotificationsPage() {
   const [error, setError] = useState("");
   const [category, setCategory] = useState<Category>("all");
   const [readingId, setReadingId] = useState("");
+  const [view, setView] = useState('unread');
+  const [actionError, setActionError] = useState('');
+  useWorkspaceQuery({ category, view }, params => { const value = params.get('category'); setCategory(filters.some(filter => filter.id === value) ? value as Category : 'all'); setView(params.get('view') === 'history' ? 'history' : 'unread'); });
   const load = () => {
     setLoading(true);
     setError("");
@@ -70,18 +74,16 @@ export default function UniversityNotificationsPage() {
   useEffect(() => {
     load();
   }, []);
-  const visible = useMemo(
-    () =>
-      category === "all"
-        ? items
-        : items.filter((item) => item.category === category),
-    [items, category],
-  );
+  const visible = useMemo(() => items.filter(item => (view === 'history' ? item.isRead : !item.isRead) && (category === 'all' || (category === 'important' ? ['urgent', 'high'].includes(item.priority || '') : item.category === category))).sort((a,b) => {
+    const priority = (item: Notification) => item.priority === 'urgent' ? 2 : item.priority === 'high' ? 1 : 0;
+    return priority(b) - priority(a) || (b.createdAt || '').localeCompare(a.createdAt || '');
+  }), [items, category, view]);
   const unread = items.filter((item) => !item.isRead).length;
   const markRead = async (id: string) => {
     const item = items.find((current) => current.id === id);
     if (!item || item.isRead) return;
     setReadingId(id);
+    setActionError("");
     try {
       await apiFetch(`/notifications/${id}/read`, { method: "PATCH" });
       setItems((current) =>
@@ -90,7 +92,7 @@ export default function UniversityNotificationsPage() {
         ),
       );
     } catch (err) {
-      setError(
+      setActionError(
         err instanceof Error ? err.message : "Не удалось обновить уведомление.",
       );
     } finally {
@@ -99,11 +101,12 @@ export default function UniversityNotificationsPage() {
   };
   const markAll = async () => {
     setReadingId("all");
+    setActionError("");
     try {
       await apiFetch("/notifications/read-all", { method: "POST" });
       setItems((current) => current.map((item) => ({ ...item, isRead: true })));
     } catch (err) {
-      setError(
+      setActionError(
         err instanceof Error
           ? err.message
           : "Не удалось отметить события прочитанными.",
@@ -126,7 +129,7 @@ export default function UniversityNotificationsPage() {
             требуют решения.
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <Badge variant={unread ? "red" : "slate"}>
             {unread ? `${unread} непрочитанных` : "Всё прочитано"}
           </Badge>
@@ -135,6 +138,7 @@ export default function UniversityNotificationsPage() {
               size="sm"
               variant="secondary"
               loading={readingId === "all"}
+              disabled={Boolean(readingId)}
               onClick={markAll}
             >
               Прочитать все
@@ -142,8 +146,11 @@ export default function UniversityNotificationsPage() {
           )}
         </div>
       </div>
+      <div className="flex flex-wrap gap-2" aria-label="Просмотр событий">{[{ id: 'unread', label: `Непрочитанные · ${unread}` }, { id: 'history', label: 'История прочитанного' }].map(item => <button key={item.id} type="button" aria-pressed={view === item.id} onClick={() => setView(item.id)} className={`min-h-11 rounded-xl border px-4 text-sm font-semibold ${view === item.id ? 'bg-slate-900 text-white' : 'bg-white text-slate-600'}`}>{item.label}</button>)}</div>
+      <p className="text-sm text-slate-500">Прочтение отмечает просмотр события. Результат задачи проверяйте в её разделе.</p>
+      {actionError && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{actionError}</p>}
       <div
-        role="tablist"
+        role="group"
         aria-label="Категории событий"
         className="flex gap-1 overflow-x-auto border-b border-slate-200"
       >
@@ -151,8 +158,7 @@ export default function UniversityNotificationsPage() {
           <button
             key={filter.id}
             type="button"
-            role="tab"
-            aria-selected={category === filter.id}
+            aria-pressed={category === filter.id}
             onClick={() => setCategory(filter.id)}
             className={`shrink-0 border-b-2 px-3 py-3 text-sm font-medium ${category === filter.id ? "border-slate-900 text-slate-900" : "border-transparent text-slate-500 hover:text-slate-900"}`}
           >
@@ -174,8 +180,8 @@ export default function UniversityNotificationsPage() {
         />
       ) : !visible.length ? (
         <EmptyState
-          title="В этой категории событий нет"
-          description="Новые сигналы учебного процесса появятся здесь."
+          title={view === "unread" ? "Непрочитанных событий нет" : "История пока пуста"}
+          description="Выберите другую категорию или переключитесь между непрочитанными событиями и историей."
         />
       ) : (
         <Card padding="sm">
@@ -206,16 +212,15 @@ export default function UniversityNotificationsPage() {
                     {item.deepLink && (
                       <Link
                         href={item.deepLink}
-                        onClick={() => markRead(item.id)}
                         className="inline-flex min-h-9 items-center rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-700"
                       >
-                        Открыть задачу →
+                        Открыть связанный раздел →
                       </Link>
                     )}
                     {!item.isRead && (
                       <button
                         type="button"
-                        disabled={readingId === item.id}
+                        disabled={Boolean(readingId)}
                         onClick={() => markRead(item.id)}
                         className="min-h-9 rounded-lg px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-50"
                       >

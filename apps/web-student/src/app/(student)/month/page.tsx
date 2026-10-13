@@ -278,6 +278,8 @@ export default function MonthSchedulePage() {
       cells={cells}
       currentMonthCells={currentMonthCells}
       today={today}
+      selectedDate={selectedDate}
+      onSelectDate={setSelectedDate}
       hasFilters={hasFilters}
       loading={loading}
       error={error}

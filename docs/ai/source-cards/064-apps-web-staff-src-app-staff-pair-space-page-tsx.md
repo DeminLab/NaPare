@@ -6,7 +6,7 @@
 
 ## Scope
 
-Staff workspace UI and its data flow.
+Searchable list of role-scoped lessons from the preceding week and next two weeks. Recent and upcoming lessons lead directly to their workspaces using the existing schedule API. Loading, empty search and request failure are distinct states.
 
 ## Read sequence
 

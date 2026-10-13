@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { apiFetch, getHealth } from '@/lib/api';
+import { apiFetch } from '@/lib/api';
 import type { HealthInfo } from '@/lib/api';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
@@ -14,6 +14,7 @@ interface Endpoint {
   path: string;
   status: 'ok' | 'error' | 'unknown';
   latency?: number;
+  detail?: string;
 }
 
 const defaultEndpoints: Endpoint[] = [
@@ -23,14 +24,14 @@ const defaultEndpoints: Endpoint[] = [
 ];
 
 function formatUptime(seconds?: number): string {
-  if (!seconds) return '—';
+  if (seconds === undefined) return '—';
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
   return `${h}ч ${m}м`;
 }
 
 function formatLatency(ms?: number): string {
-  if (!ms) return '—';
+  if (ms === undefined) return '—';
   return `${ms}мс`;
 }
 
@@ -41,38 +42,35 @@ export default function ApiPage() {
   const [lastCheck, setLastCheck] = useState<string>('');
 
   const checkEndpoints = useCallback(async () => {
-    const now = new Date().toLocaleTimeString('ru-RU');
+    setLoading(true);
+    setHealth(null);
     const results: Endpoint[] = [...defaultEndpoints];
 
     const checks = [
-      { idx: 0, path: '/health', method: 'GET' },
-      { idx: 1, path: '/app', method: 'GET' },
-      { idx: 2, path: '/users/me', method: 'GET' },
+      { idx: 0, path: '/health' },
+      { idx: 1, path: '/app' },
+      { idx: 2, path: '/users/me' },
     ];
 
     await Promise.allSettled(
-      checks.map(async ({ idx, path, method }) => {
+      checks.map(async ({ idx, path }) => {
         const start = performance.now();
         try {
-          await apiFetch(path);
+          const response = await apiFetch<HealthInfo>(path);
+          if (idx === 0) setHealth(response);
           results[idx] = { ...results[idx], status: 'ok', latency: Math.round(performance.now() - start) };
-        } catch {
-          results[idx] = { ...results[idx], status: 'error', latency: Math.round(performance.now() - start) };
+        } catch (reason) {
+          results[idx] = { ...results[idx], status: 'error', latency: Math.round(performance.now() - start), detail: reason instanceof Error ? reason.message : 'Не удалось получить ответ' };
         }
       })
     );
 
     setEndpoints(results);
-    setLastCheck(now);
+    setLastCheck(new Date().toLocaleTimeString('ru-RU'));
+    setLoading(false);
   }, []);
 
-  useEffect(() => {
-    setLoading(true);
-    Promise.allSettled([
-      getHealth().then(setHealth).catch(() => {}),
-      checkEndpoints(),
-    ]).finally(() => setLoading(false));
-  }, [checkEndpoints]);
+  useEffect(() => { void checkEndpoints(); }, [checkEndpoints]);
 
   const healthStatus = health?.status === 'ok' || health?.status === 'healthy'
     ? 'healthy'
@@ -94,12 +92,13 @@ export default function ApiPage() {
           </div>
           <button
             onClick={checkEndpoints}
+            disabled={loading} aria-busy={loading}
             className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-md)] border bg-[var(--color-surface-secondary)] px-4 py-2 text-sm font-medium text-[var(--color-text)] transition-colors hover:bg-[var(--color-surface-tertiary)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-brand-soft)]"
           >
             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
-            Обновить
+            {loading ? 'Проверяем…' : 'Обновить'}
           </button>
         </div>
 
@@ -119,10 +118,10 @@ export default function ApiPage() {
             </div>
             <div>
               <h2 className="text-lg font-bold text-[var(--color-text)]">
-                {healthStatus === 'healthy' ? 'Сервер работает' : healthStatus === 'unhealthy' ? 'Сервер недоступен' : 'Статус сервера не определён'}
+                {loading ? 'Проверяем состояние сервера' : healthStatus === 'healthy' ? 'Сервер работает' : healthStatus === 'unhealthy' ? 'Сервер недоступен' : 'Статус сервера не определён'}
               </h2>
               <p className="text-sm text-[var(--color-text-secondary)]">
-                {health?.timestamp ? `Последняя проверка: ${health.timestamp}` : 'Не удалось получить ответ health-check.'}
+                {loading ? 'Ожидаем ответ текущей проверки…' : health?.timestamp ? `Последняя проверка: ${health.timestamp}` : 'Не удалось получить ответ health-check.'}
               </p>
             </div>
           </div>
@@ -174,9 +173,11 @@ export default function ApiPage() {
         {/* Endpoints table */}
         <Card>
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-base font-bold text-slate-900">Эндпоинты</h2>
+            <h2 className="text-base font-bold text-[var(--color-text)]">Три проверяемых запроса</h2>
           </div>
-          <div className="overflow-x-auto" aria-label="Таблица статусов API">
+          <p className="mb-4 text-sm text-[var(--color-text-secondary)]">Проверяем доступность этих запросов для текущего аккаунта. Это не проверка всех методов платформы.</p>
+          <div className="space-y-3 md:hidden" aria-label="Результаты проверки API">{endpoints.map(ep => <article key={ep.path} className="rounded-xl border p-4"><div className="flex flex-wrap items-center justify-between gap-2"><code className="break-all text-sm font-semibold">{ep.method} {ep.path}</code><Badge variant={ep.status === 'ok' ? 'success' : ep.status === 'error' ? 'danger' : 'default'}>{loading ? 'Проверяем…' : ep.status === 'ok' ? 'Доступен' : ep.status === 'error' ? 'Не проверен успешно' : 'Не проверен'}</Badge></div><h3 className="mt-2 text-sm font-medium">{ep.name}</h3><p className="mt-2 text-xs text-[var(--color-text-secondary)]">{formatLatency(ep.latency)} · {lastCheck ? `Проверено в ${lastCheck}` : 'Проверка ещё не завершена'}</p>{ep.detail && <p className="mt-2 break-words text-sm text-[var(--color-danger)]">{ep.detail}</p>}</article>)}</div>
+          <div className="hidden overflow-x-auto md:block" aria-label="Таблица статусов API">
             <table className="min-w-[680px] w-full text-sm">
               <thead>
                 <tr className="border-b border-[var(--color-border)]">
@@ -204,7 +205,7 @@ export default function ApiPage() {
                         {ep.path}
                       </code>
                     </td>
-                    <td className="py-3 pr-4 text-sm font-medium text-[var(--color-text)]">{ep.name}</td>
+                    <td className="py-3 pr-4 text-sm font-medium text-[var(--color-text)]">{ep.name}{ep.detail && <p className="mt-1 max-w-sm break-words text-xs font-normal text-[var(--color-danger)]">{ep.detail}</p>}</td>
                     <td className="py-3 pr-4">
                       <Badge variant={
                         ep.status === 'ok' ? 'success' :

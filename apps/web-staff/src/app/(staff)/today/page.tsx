@@ -51,6 +51,8 @@ interface Notice {
   id?: string;
   title?: string;
   message?: string;
+  body?: string;
+  isRead?: boolean;
   type?: string;
   createdAt?: string;
 }
@@ -80,6 +82,7 @@ export default function TodayPage() {
   const [user, setUser] = useState<Awaited<ReturnType<typeof getUser>> | null>(null);
   const [day, setDay] = useState<MyDayResponse | null>(null);
   const [notices, setNotices] = useState<Notice[]>([]);
+  const [attentionCount,setAttentionCount]=useState<number|null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const loadDay = () => {
@@ -89,11 +92,13 @@ export default function TodayPage() {
       getUser(),
       apiFetch<MyDayResponse>(`/my-day?timeZone=${encodeURIComponent(Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC")}`),
       getNotifications(),
+      apiFetch<Array<{id:string}>>("/notifications/inbox?status=open&limit=100").catch(()=>null),
     ])
-      .then(([profile, today, notificationItems]) => {
+      .then(([profile, today, notificationItems,inbox]) => {
         setUser(profile);
         setDay(today);
         setNotices(notificationItems);
+        setAttentionCount(inbox ? inbox.length : null);
       })
       .catch((err) =>
         setError(
@@ -127,13 +132,7 @@ export default function TodayPage() {
       ).length || 0),
     0,
   );
-  const unread =
-    day?.notifications?.unreadCount ??
-    notices.filter(
-      (notice) =>
-        notice.type?.toLowerCase().includes("message") ||
-        notice.type?.toLowerCase().includes("chat"),
-    ).length;
+  const unread = day?.notifications?.unreadCount ?? notices.filter(notice=>notice.isRead===false).length;
   const attention = useMemo(
     () => [
       {
@@ -150,12 +149,11 @@ export default function TodayPage() {
       {
         label: "Ожидают действия",
         value:
-          (day?.summary?.totalAbsences || 0) +
-          (day?.summary?.changedLessons || 0),
-        href: "/attendance",
+          attentionCount ?? "Нет данных",
+        href: "/inbox",
       },
     ],
-    [activeHomework, day, next, unread],
+    [activeHomework, day, next, unread,attentionCount],
   );
   if (loading)
     return (
@@ -191,7 +189,7 @@ export default function TodayPage() {
           </Link>
         }
       />
-      {user?.role === "curator" && <Card className="border-sky-200 bg-sky-50/50"><h2 className="text-lg font-semibold text-slate-900">Группы и обращения</h2><p className="mt-2 text-sm text-slate-600">Проверьте обращения студентов об отсутствии и назначенные вам группы.</p><div className="mt-4 flex flex-wrap gap-2"><Link href="/attendance"><Button>Рассмотреть обращения</Button></Link><Link href="/groups"><Button variant="secondary">Открыть группы</Button></Link><Link href="/inbox"><Button variant="ghost">Центр внимания</Button></Link></div></Card>}
+      {["curator","faculty_dean","department_head","university_admin","superadmin"].includes(user?.role || "") && <Card className="border-sky-200 bg-sky-50/50"><h2 className="text-lg font-semibold text-slate-900">{user?.role === "curator" ? "Группы и обращения" : user?.role === "faculty_dean" ? "Учебный день факультета" : user?.role === "department_head" ? "Учебный день кафедры" : "Учебные действия"}</h2><p className="mt-2 text-sm text-slate-600">Проверьте доступную очередь действий, затем группы и обращения. Сведения показаны в пределах прав вашего аккаунта.</p><div className="mt-4 flex flex-wrap gap-2"><Link href="/inbox"><Button>Открыть очередь · {attentionCount ?? "Нет данных"}</Button></Link><Link href="/attendance"><Button variant="secondary">Посещаемость и обращения</Button></Link><Link href="/groups"><Button variant="secondary">Открыть группы</Button></Link><Link href="/inbox"><Button variant="ghost">Центр внимания</Button></Link></div></Card>}
       <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         {[
           {
@@ -283,7 +281,8 @@ export default function TodayPage() {
             ) : (
               <EmptyState
                 title={lessons.length ? "Все занятия на сегодня завершены" : "Сегодня нет занятий"}
-                description="Расписание дня остаётся ниже. План следующих занятий доступен в разделе «Неделя»."
+                description="Проверьте незавершённые действия или подготовьте следующие занятия."
+                action={<div className="flex flex-wrap justify-center gap-3"><Link href="/inbox" className="inline-flex min-h-11 items-center rounded-xl bg-[var(--color-brand)] px-4 text-sm font-semibold text-white">Разобрать действия</Link><Link href="/pair-space" className="inline-flex min-h-11 items-center rounded-xl border px-4 text-sm font-semibold text-[var(--color-brand)]">Следующие занятия</Link></div>}
               />
             )}
           </section>

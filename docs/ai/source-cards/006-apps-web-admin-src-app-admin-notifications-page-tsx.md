@@ -6,7 +6,7 @@
 
 ## Scope
 
-Administration workspace UI and its data flow.
+University events with unread/history views, priority sorting and URL filters. Reading is explicit and does not imply task completion. Action errors retain the list.
 
 ## Read sequence
 

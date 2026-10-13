@@ -6,7 +6,7 @@
 
 ## Scope
 
-Developer operations workspace UI and its data flow.
+Developer operations overview with per-request availability, explicit missing telemetry, check timestamp and retry. Notifications accept list or paginated data responses.
 
 ## Read sequence
 

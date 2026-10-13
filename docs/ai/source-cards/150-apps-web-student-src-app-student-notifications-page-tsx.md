@@ -6,7 +6,7 @@
 
 ## Scope
 
-Student notification center, including account-scoped offline snapshots, queued offline read actions synchronized on reconnect, read state, filters, internal deep links, and keyboard-accessible notification actions.
+Account-scoped cached notification feed with queued offline read state, URL filters, important events and explicit read actions. Contextual lesson links and settings replace duplicate sidebar statistics.
 
 ## Read sequence
 

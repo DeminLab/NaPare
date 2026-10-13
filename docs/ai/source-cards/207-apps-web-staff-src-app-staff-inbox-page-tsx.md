@@ -6,7 +6,7 @@
 
 ## Scope
 
-Staff attention centre with URL-restored open/snoozed/done filters and the existing task completion endpoint. Marking a task handled does not approve a student absence request. Obsolete reads are aborted.
+Staff action queue grouped by event category. Real priority and dueAt determine ordering within each category. Completion is explicit, distinct from resolving the source absence or lesson operation.
 
 ## Read sequence
 

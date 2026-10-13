@@ -72,13 +72,13 @@ export default function LoginPage() {
 
   return (
     <main className="login-layout">
-      <section className="login-aside"><Link href="/" className="brand light"><Image src="/brand/np-mark.png" alt="" width={34} height={34} priority unoptimized />НаПаре</Link><div><p className="eyebrow">Единый вход</p><h1>Один аккаунт.<br />Свой кабинет.</h1><p>После входа НаПаре определит вашу роль и откроет нужное рабочее пространство.</p></div><small>Учётные данные выдаёт университет.</small></section>
+      <section className="login-aside"><Link href="/" className="brand light"><Image src="/brand/np-mark.png" alt="" width={34} height={34} priority unoptimized />НаПаре</Link><div><p className="eyebrow">Единый вход</p><h2>Один аккаунт.<br />Свой кабинет.</h2><p>После входа НаПаре определит вашу роль и откроет нужное рабочее пространство.</p></div><small>Учётные данные выдаёт университет.</small></section>
       <section className="login-panel">
         <div className="login-card">
           <MaxLaunchAuth captureOnly />
           <Link href="/" className="brand mobile-brand"><Image src="/brand/np-mark.png" alt="" width={34} height={34} priority unoptimized />НаПаре</Link>
-          <h2>Вход в НаПаре</h2>
-          <p className="muted">Введите email и пароль, выданные университетом. Ваш кабинет откроется автоматически.</p>
+          <h1>Вход в НаПаре</h1>
+          <p className="muted">Используйте аккаунт, выданный университетом. Кабинет откроется автоматически.</p><p className="login-account-help">Первый вход — по email и паролю. MAX можно подключить после входа.</p>
           <form onSubmit={submit} className="login-form" noValidate aria-busy={loading}>
             {error && <p className="error" role="alert">{error}</p>}
             <label htmlFor="login-email">Email
