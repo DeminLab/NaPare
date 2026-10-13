@@ -68,7 +68,7 @@ services:
       TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-}
       TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:-}
       PUBLIC_APP_URL: ${PUBLIC_APP_URL:-}
-    networks: [app, data]
+    networks: [app, data, egress]
     depends_on:
       postgres:
         condition: service_healthy
@@ -254,6 +254,8 @@ volumes:
   redis_data:
 
 networks:
+  # Backend needs outbound HTTPS for the schedule source and other integrations.
+  egress:
   edge:
   app:
     internal: true

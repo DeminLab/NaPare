@@ -8,7 +8,7 @@ The route adapters are `MaxBridgeNavigation.tsx` in student, staff, admin, and d
 
 ## Scope
 
-Connects MAX's native BackButton to each Next.js role application's internal route history. In a normal browser or when the SDK is unavailable, the component renders no UI and does not affect site navigation.
+Connects MAX's native BackButton to each Next.js role application's internal route history. Native controls require nonempty SDK initData; merely loading the SDK does not invoke them. In a normal browser or when the SDK is unavailable, the component renders no UI and does not affect site navigation.
 
 ## Read sequence
 

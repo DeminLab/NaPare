@@ -46,8 +46,18 @@ async function readApiResponse<T>(response: Response): Promise<T> {
   return (body.trim() ? JSON.parse(body) : null) as T;
 }
 
+function tokenExpiresSoon(token: string): boolean {
+  try {
+    const payload = token.split('.')[1];
+    if (!payload) return false;
+    const claims = JSON.parse(window.atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+    return typeof claims.exp === 'number' && claims.exp * 1000 <= Date.now() + 30_000;
+  } catch { return false; }
+}
+
 export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const token = getToken();
+  let token = getToken();
+  if (token && tokenExpiresSoon(token) && getRefreshToken() && await tryRefresh()) token = getToken();
   const response = await fetch(`${API_BASE}${path}`, {
     ...init,
     headers: {
@@ -58,7 +68,7 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
   });
 
   if (response.status === 401) {
-    const refreshed = await tryRefresh();
+    const refreshed = getToken() !== token && !!getToken() || await tryRefresh();
     if (refreshed) {
       const newToken = getToken();
       const retryResponse = await fetch(`${API_BASE}${path}`, {
@@ -69,11 +79,16 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
           ...init.headers,
         },
       });
+      if (retryResponse.status === 401) {
+        clearTokens();
+        if (typeof window !== 'undefined') window.location.href = '/login';
+        throw new Error('Сессия истекла');
+      }
       if (!retryResponse.ok) throw await toApiError(retryResponse);
       return readApiResponse<T>(retryResponse);
     }
     clearTokens();
-    if (typeof window !== 'undefined') window.location.href = '/student/login';
+    if (typeof window !== 'undefined') window.location.href = '/login';
     throw new Error('Сессия истекла');
   }
 
@@ -104,7 +119,15 @@ async function toApiError(response: Response): Promise<Error> {
   return new Error(data?.message || `Не удалось выполнить запрос (${response.status}).`);
 }
 
+let refreshPromise: Promise<boolean> | null = null;
 async function tryRefresh(): Promise<boolean> {
+  if (refreshPromise) return refreshPromise;
+  refreshPromise = refreshTokens();
+  try { return await refreshPromise; }
+  finally { refreshPromise = null; }
+}
+
+async function refreshTokens(): Promise<boolean> {
   const refreshToken = getRefreshToken();
   if (!refreshToken) return false;
   try {
@@ -115,6 +138,7 @@ async function tryRefresh(): Promise<boolean> {
     });
     if (!response.ok) return false;
     const data = await response.json();
+    if (!data.accessToken || !data.refreshToken) return false;
     saveTokens(data.accessToken, data.refreshToken);
     return true;
   } catch {
@@ -191,7 +215,7 @@ export async function getRaspGroups(year?: string): Promise<RaspGroup[]> {
 
 export function logout(): void {
   clearTokens();
-  if (typeof window !== 'undefined') window.location.href = '/student/login';
+  if (typeof window !== 'undefined') window.location.href = '/login';
 }
 
 export async function getNotifications(): Promise<any[]> {

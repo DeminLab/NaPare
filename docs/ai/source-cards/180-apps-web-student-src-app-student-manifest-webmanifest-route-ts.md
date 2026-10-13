@@ -6,7 +6,7 @@
 
 ## Scope
 
-PWA manifest for the Student web client, including `/student/` scope and install launch route.
+PWA manifest for the Student web client, including `/student/` scope and install launch route. Layout metadata points to `/student/manifest.webmanifest` because the application uses that basePath.
 
 ## Read sequence
 

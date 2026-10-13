@@ -6,7 +6,7 @@
 
 ## Scope
 
-Student API client retains authenticated request and refresh behaviour. Successful empty 200 responses become null, including retries; 204 remains undefined and malformed nonempty JSON is rejected. This prevents absent personal notes from looking like a network failure.
+Student API client refreshes JWTs within 30 seconds of expiry before requests and shares one token refresh across concurrent requests, retries with rotated tokens and returns to the shared login if authentication still fails. Successful empty 200 responses become null, including retries; 204 remains undefined and malformed nonempty JSON is rejected. This prevents absent personal notes from looking like a network failure.
 
 ## Change boundary
 

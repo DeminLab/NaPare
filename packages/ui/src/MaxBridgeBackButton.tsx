@@ -17,7 +17,10 @@ export function MaxBridgeBackButton({
   onBack: () => void;
 }) {
   useEffect(() => {
-    const button = (window as Window & { WebApp?: { BackButton?: MaxBackButtonApi } }).WebApp?.BackButton;
+    const webApp = (window as Window & { WebApp?: { initData?: string; BackButton?: MaxBackButtonApi } }).WebApp;
+    // Loading the SDK in a regular browser does not provide a native transport.
+    if (!webApp?.initData?.trim()) return;
+    const button = webApp.BackButton;
     if (!button) return;
 
     if (!visible) {

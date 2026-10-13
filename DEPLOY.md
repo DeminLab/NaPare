@@ -35,6 +35,12 @@ The checked-in production defaults target `napare.sano.ru`. If the hackathon dep
 
 Build the frontend images after changing the `.env` values because the `NEXT_PUBLIC_*_URL` settings are embedded at image build time. This Compose setup expects the browser to use the website origin and Nginx to proxy `/api/` to the backend. Hosting the API on a separate public origin needs an additional proxy/client configuration change and a matching `CORS_ORIGIN` entry.
 
+## Backend outbound connectivity
+
+The backend joins `egress` for outbound HTTPS to `rasp.sano.ru` and other integrations. The `app` and `data` networks remain internal; no new host port is published. A backend attached only to internal networks cannot reach the schedule source and returns 502 for `/api/v1/auth/rasp-years`.
+
+After updating Compose, recreate the backend with `docker compose -f docker-compose.prod.yml up -d --no-deps backend`. Verify the public source from inside the container and `/api/v1/auth/rasp-years` through Nginx. Rebuild changed web images for the manifest and MAX/client fixes.
+
 ## Server deployment
 
 After the repository has been cloned and the private `.env` has been configured, update `main` and rebuild the production Compose stack from the repository root:
