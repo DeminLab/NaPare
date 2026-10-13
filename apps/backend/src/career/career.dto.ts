@@ -23,6 +23,8 @@ export class CareerAdmissionDto {
   @ApiProperty() @IsString() @MinLength(10) @MaxLength(4000) evidence: string;
 }
 export class CareerTaskDto {
+  @ApiProperty({required:false}) @IsOptional() @IsIn(['starter','standard','advanced']) level?:string;
+  @ApiProperty({required:false}) @IsOptional() @IsString() @MaxLength(2000) requirements?:string;
   @ApiProperty() @IsUUID() companyId: string;
   @ApiProperty() @IsUUID() universityId: string;
   @ApiProperty() @IsString() @MinLength(5) @MaxLength(180) title: string;
@@ -82,4 +84,20 @@ export class CareerAiTaskDto extends CareerAiConsentDto {
 }
 export class CareerCaseTextDto {
   @ApiProperty() @IsString() @MaxLength(8000) caseText: string;
+}
+
+export class CareerWindowDto {
+  @ApiProperty() @IsInt() @Min(0) @Max(6) day:number;
+  @ApiProperty() @Matches(/^([01]\d|2[0-3]):[0-5]\d$/) start:string;
+  @ApiProperty() @Matches(/^([01]\d|2[0-3]):[0-5]\d$/) end:string;
+}
+export class CareerBlockedDateDto {
+  @ApiProperty() @Matches(/^\d{4}-\d{2}-\d{2}$/) start:string;
+  @ApiProperty() @Matches(/^\d{4}-\d{2}-\d{2}$/) end:string;
+}
+export class CareerAvailabilityDto {
+  @ApiProperty() @IsInt() @Min(1) @Max(40) weeklyHours:number;
+  @ApiProperty() @IsString() @MinLength(1) @MaxLength(80) timeZone:string;
+  @ApiProperty({type:[CareerWindowDto]}) @IsArray() @ArrayMinSize(1) @ArrayMaxSize(21) @ValidateNested({each:true}) @Type(()=>CareerWindowDto) windows:CareerWindowDto[];
+  @ApiProperty({type:[CareerBlockedDateDto]}) @IsArray() @ArrayMaxSize(12) @ValidateNested({each:true}) @Type(()=>CareerBlockedDateDto) blockedDates:CareerBlockedDateDto[];
 }

@@ -77,7 +77,8 @@ export class CareerService {
     // Employers receive only the professional profile of actual applicants, never university records.
     const candidateProfiles = mode==='employer' && applications.length ? await this.repo(CareerProfile).find({where:{studentId:In(applications.map(a=>a.studentId))}}) : [];
     const candidateNames=candidateProfiles.length?await this.repo(User).find({where:{id:In(candidateProfiles.map(p=>p.studentId))},select:{id:true,firstName:true,lastName:true}}):[];
-    const candidates=candidateProfiles.map(profile=>({...profile,name: candidateNames.find(u=>u.id===profile.studentId)?`${candidateNames.find(u=>u.id===profile.studentId)!.firstName} ${candidateNames.find(u=>u.id===profile.studentId)!.lastName}`:''}));
+    const candidateAdmissions=mode==='employer'&&candidateProfiles.length?await this.repo(CareerAdmission).find({where:{studentId:In(candidateProfiles.map(p=>p.studentId)),universityId:In([...new Set(tasks.map(t=>t.universityId))]),state:'approved'}}):[];
+    const candidates=candidateProfiles.map(profile=>({...profile,approvedSkills:candidateAdmissions.filter(a=>a.studentId===profile.studentId&&applications.some(app=>app.studentId===profile.studentId&&tasks.some(task=>task.id===app.taskId&&task.universityId===a.universityId&&task.profiled&&task.skill===a.skill))).map(a=>({skill:a.skill,basis:a.basis})),name: candidateNames.find(u=>u.id===profile.studentId)?`${candidateNames.find(u=>u.id===profile.studentId)!.firstName} ${candidateNames.find(u=>u.id===profile.studentId)!.lastName}`:''}));
     const contacts=mode==='center'&&partnerCompanies.length?await this.repo(User).find({where:{id:In(partnerCompanies.map(c=>c.createdBy))},select:{id:true,firstName:true,lastName:true,email:true}}):[];
     const relevantCompanies = [...companies,...partnerCompanies.map(company=>({...company,contact:contacts.find(u=>u.id===company.createdBy)?{name:`${contacts.find(u=>u.id===company.createdBy)!.firstName} ${contacts.find(u=>u.id===company.createdBy)!.lastName}`,email:contacts.find(u=>u.id===company.createdBy)!.email}:null}))];
     if (mode==='student' && tasks.length) relevantCompanies.push(...await this.repo(CareerCompany).find({where:{id:In(tasks.map(t=>t.companyId))}}));
@@ -105,12 +106,12 @@ export class CareerService {
     const universityId=this.student(actor);const skill=dto.skill.trim().toLowerCase();
     if (!skill) throw new BadRequestException('Укажите направление');
     const old=await this.repo(CareerAdmission).findOneBy({studentId:actor.id,skill});
-    return this.repo(CareerAdmission).save({...old,studentId:actor.id,universityId,skill,evidence:dto.evidence.trim(),state:'pending',reason:''});
+    return this.repo(CareerAdmission).save({...old,studentId:actor.id,universityId,skill,evidence:dto.evidence.trim(),state:'pending',reason:'',basis:'unspecified'});
   }
   async decideAdmission(actor:Actor,id:string,dto:CareerDecisionDto) {
     const admission=await this.repo(CareerAdmission).findOneBy({id}); if(!admission) throw new NotFoundException();
     await this.center(actor,admission.universityId);if(!['approved','rejected'].includes(dto.decision)||!dto.reason.trim()) throw new BadRequestException('Укажите решение и основание');
-    admission.state=dto.decision;admission.reason=dto.reason;return this.repo(CareerAdmission).save(admission);
+    admission.state=dto.decision;admission.basis=dto.decision==='approved'?'center':'unspecified';admission.reason=dto.reason;return this.repo(CareerAdmission).save(admission);
   }
   async createCompany(actor:Actor,dto:CareerCompanyDto) {
     if ([UserRole.STUDENT,UserRole.DEVELOPER,UserRole.SUPERADMIN].includes(actor.role)) throw new ForbiddenException('Нужен рабочий аккаунт работодателя');await this.university(dto.universityId);
@@ -136,7 +137,7 @@ export class CareerService {
     if(dto.title.trim().length<5||dto.description.trim().length<20||dto.criteria.trim().length<10)throw new BadRequestException('Опишите задачу и критерии приёмки');
     if(dto.profiled&&!dto.skill.trim()) throw new BadRequestException('Для профильной задачи требуется направление');
     if(!Number.isFinite(Date.parse(dto.deadline))||new Date(dto.deadline).toISOString().slice(0,10)!==dto.deadline||dto.deadline<new Date().toISOString().slice(0,10)) throw new BadRequestException('Нужна существующая будущая дата');
-    return this.repo(CareerTask).save({...dto,title:dto.title.trim(),skill:dto.skill.trim().toLowerCase(),state:'draft'});
+    return this.repo(CareerTask).save({...dto,title:dto.title.trim(),skill:dto.skill.trim().toLowerCase(),level:dto.level||'standard',requirements:dto.requirements?.trim()||'',state:'draft'});
   }
   async publishTask(actor:Actor,id:string,approve=false) {
     return this.db.transaction(async m=>{const task=await this.task(id,m,true);if(approve){await this.center(actor,task.universityId);if(await this.repo(CareerMembership,m).existsBy({userId:actor.id,companyId:task.companyId}))throw new ForbiddenException('Нельзя модерировать собственную задачу');assertCareerTransition(task.state,['review']);task.state='open';}else{await this.company(actor,task.companyId,false,m);assertCareerTransition(task.state,['draft']);task.state='review';}return this.repo(CareerTask,m).save(task);});
@@ -212,7 +213,7 @@ export class CareerService {
       if(await this.repo(CareerTestAttempt,m).countBy({studentId:actor.id,testId:id,createdAt:MoreThanOrEqual(new Date(Date.now()-86400000))})>=3)throw new ConflictException('Доступно три попытки за 24 часа');
       const score=Math.round(test.questions.filter((q,i)=>q.answer===dto.answers[i]).length*100/test.questions.length);const passed=score>=test.passingPercent;
       const attempt=await this.repo(CareerTestAttempt,m).save({testId:id,studentId:actor.id,score,passed});
-      if(passed){const old=await this.repo(CareerAdmission,m).findOneBy({studentId:actor.id,skill:test.skill});await this.repo(CareerAdmission,m).save({...old,studentId:actor.id,universityId,skill:test.skill,evidence:`Тест: ${test.title}`,state:'approved',reason:`Подтверждено тестированием: ${score}%`});}
+      if(passed){const old=await this.repo(CareerAdmission,m).findOneBy({studentId:actor.id,skill:test.skill});await this.repo(CareerAdmission,m).save({...old,studentId:actor.id,universityId,skill:test.skill,evidence:`Тест: ${test.title}`,state:'approved',basis:'test',reason:`Подтверждено тестированием: ${score}%`});}
       return {id:attempt.id,score,passed};
     });
   }

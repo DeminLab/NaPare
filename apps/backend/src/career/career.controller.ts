@@ -1,3 +1,4 @@
+import { CareerPlanningService } from './career-planning.service';
 import { CareerAiService } from './career-ai.service';
 import { Query, Body, Controller, Get, Param, ParseUUIDPipe, Post, Put, Patch, Request, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -5,7 +6,7 @@ import { Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { CareerService } from './career.service';
-import { CareerTestDto, CareerAttemptDto, EmployerRegistrationDto, CareerCompanyDto, CareerProfileDto, CareerTaskDto, CareerMessageDto, CareerSubmissionDto, CareerDecisionDto, CareerReviewDto, CareerMembershipDto, CareerAdmissionDto, CareerPublishDto, CareerPartnershipDto, CareerAiConsentDto, CareerAiTaskDto, CareerCaseTextDto } from './career.dto';
+import { CareerTestDto, CareerAttemptDto, EmployerRegistrationDto, CareerCompanyDto, CareerProfileDto, CareerTaskDto, CareerMessageDto, CareerSubmissionDto, CareerDecisionDto, CareerReviewDto, CareerMembershipDto, CareerAdmissionDto, CareerPublishDto, CareerPartnershipDto, CareerAiConsentDto, CareerAiTaskDto, CareerCaseTextDto, CareerAvailabilityDto } from './career.dto';
 type CareerRequest = {user:AuthenticatedUser};
 
 @ApiTags('career')
@@ -18,7 +19,9 @@ export class CareerAccountsController {
 }
 @ApiTags('career') @ApiBearerAuth() @UseGuards(JwtAuthGuard) @Controller('career')
 export class CareerController {
-  constructor(private readonly service:CareerService, private readonly ai:CareerAiService) {}
+  constructor(private readonly service:CareerService, private readonly ai:CareerAiService, private readonly planning:CareerPlanningService) {}
+  @Get('planning') planningStatus(@Request() req:CareerRequest){return this.planning.get(req.user);}
+  @Put('availability') saveAvailability(@Request() req:CareerRequest,@Body() dto:CareerAvailabilityDto){return this.planning.save(req.user,dto);}
   @Get('ai/status') aiStatus(){return this.ai.status();}
   @Post('ai/task-draft') @Throttle({default:{ttl:60000,limit:3}}) taskDraft(@Request() req:CareerRequest,@Body() dto:CareerAiTaskDto){return this.ai.task(req.user,dto);}
   @Post('portfolio/:id/ai-draft') @Throttle({default:{ttl:60000,limit:3}}) caseDraft(@Request() req:CareerRequest,@Param('id',ParseUUIDPipe) id:string,@Body() dto:CareerAiConsentDto){return this.ai.portfolio(req.user,id,dto.consent);}

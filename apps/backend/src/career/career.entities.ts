@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index } from 'typeorm';
+import { Entity, PrimaryColumn, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index } from 'typeorm';
 
 @Entity('career_company')
 export class CareerCompany {
@@ -51,6 +51,7 @@ export class CareerProfile {
 @Entity('career_admission')
 @Index(['studentId', 'skill'], { unique: true })
 export class CareerAdmission {
+  @Column({default: 'unspecified'}) basis: string;
   @PrimaryGeneratedColumn('uuid') id: string;
   @Column({type: 'uuid'}) studentId: string;
   @Column({type: 'uuid'}) universityId: string;
@@ -64,6 +65,8 @@ export class CareerAdmission {
 
 @Entity('career_task')
 export class CareerTask {
+  @Column({default: 'standard'}) level: string;
+  @Column({type: 'text', default: ''}) requirements: string;
   @PrimaryGeneratedColumn('uuid') id: string;
   @Column({type: 'uuid'}) companyId: string;
   @Column({type: 'uuid'}) universityId: string;
@@ -174,4 +177,15 @@ export class CareerAiRequest {
   @Column() kind: string;
   @Column({default: 'started'}) state: string;
   @CreateDateColumn() createdAt: Date;
+}
+
+@Entity('career_availability')
+export class CareerAvailability {
+  @PrimaryColumn({type:'uuid'}) studentId:string;
+  @Column({type:'uuid'}) universityId:string;
+  @Column({type:'integer'}) weeklyHours:number;
+  @Column() timeZone:string;
+  @Column({type:'jsonb'}) windows:Array<{day:number;start:string;end:string}>;
+  @Column({type:'jsonb',default:[]}) blockedDates:Array<{start:string;end:string}>;
+  @UpdateDateColumn() updatedAt:Date;
 }
