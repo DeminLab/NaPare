@@ -6,7 +6,7 @@
 
 ## Scope
 
-Week schedule with day view and full list mode, collapsible filters and URL restoration. Group filters accept group ID or legacy name; status uses date before time. Up to 100 lessons are requested for the week.
+Compact weekly agenda is the default at every width; optional day view, collapsible filters and URL restoration. Each lesson exposes direct attendance and materials links. Legacy list view resolves to the weekly agenda. Group filters accept group ID or legacy name; status uses date before time. Up to 100 lessons are requested for the week.
 
 ## Read sequence
 
