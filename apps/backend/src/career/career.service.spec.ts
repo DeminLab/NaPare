@@ -3,7 +3,7 @@ import { DataSource } from 'typeorm';
 import { AuthService } from '../auth/auth.service';
 import { UserRole } from '../auth/interfaces/user-role';
 import { CareerService, assertCareerResultUrl, assertCareerTransition } from './career.service';
-import { CareerTask, CareerProfile, CareerMembership, CareerAdmission, CareerTest } from './career.entities';
+import { CareerTask, CareerProfile, CareerMembership, CareerAdmission, CareerTest, CareerPortfolio, CareerWork, CareerReview } from './career.entities';
 
 const student={id:'student-a',email:'student@test',role:UserRole.STUDENT,universityId:'university-a'};
 describe('Career resource boundaries',()=>{
@@ -39,4 +39,21 @@ describe('Career resource boundaries',()=>{
     await expect(service.attempt({...student,role:UserRole.EMPLOYER,universityId:null},'test-a',{answers:[0,0,0]})).rejects.toThrow(ForbiddenException);
   });
 
+});
+
+
+describe('Career case descriptions',()=>{
+  it('denies another student case before reading accepted work',async()=>{
+    const repository={findOneBy:jest.fn().mockResolvedValue(null)};
+    const service=new CareerService({manager:{getRepository:()=>repository}} as unknown as DataSource,{} as AuthService);
+    await expect(service.saveCaseText(student,'foreign','Описание')).rejects.toThrow();
+    expect(repository.findOneBy).toHaveBeenCalledWith({id:'foreign',studentId:student.id});
+  });
+  it('stores author text separately and hides an edited published case',async()=>{
+    const item={id:'case',workId:'work',studentId:student.id,published:true,caseText:''};const update=jest.fn(async (_where,value)=>Object.assign(item,value));
+    const getRepository=jest.fn(entity=>entity===CareerPortfolio?{findOneBy:jest.fn().mockResolvedValue(item),update}:entity===CareerWork?{findOneBy:jest.fn().mockResolvedValue({submission:'Original accepted result',taskId:'task'})}:entity===CareerReview?{findOneBy:jest.fn().mockResolvedValue({body:'Original review'})}:{findOne:jest.fn().mockResolvedValue({title:'Task',criteria:'Criteria'})});
+    const service=new CareerService({manager:{getRepository}} as unknown as DataSource,{} as AuthService);
+    await expect(service.saveCaseText(student,'case','  Описание автора  ')).resolves.toMatchObject({caseText:'Описание автора',published:false});
+    expect(update).toHaveBeenCalledWith({id:'case',studentId:student.id},{caseText:'Описание автора',published:false});
+  });
 });

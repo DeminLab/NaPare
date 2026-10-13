@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsBoolean, IsEmail, IsIn, IsInt, IsOptional, IsString, IsUUID, Max, MaxLength, Min, MinLength, Matches, IsArray, ArrayMinSize, ValidateNested, ArrayMaxSize } from 'class-validator';
+import { IsBoolean, IsEmail, IsIn, IsInt, IsOptional, IsString, IsUUID, Max, MaxLength, Min, MinLength, Matches, IsArray, ArrayMinSize, ValidateNested, ArrayMaxSize, Equals } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class EmployerRegistrationDto {
@@ -71,4 +71,15 @@ export class CareerTestDto {
 }
 export class CareerAttemptDto {
   @ApiProperty() @IsArray() @ArrayMinSize(3) @ArrayMaxSize(20) @IsInt({each:true}) @Min(0,{each:true}) @Max(5,{each:true}) answers:number[];
+}
+
+export class CareerAiConsentDto {
+  @ApiProperty() @IsBoolean() @Equals(true) consent: boolean;
+}
+export class CareerAiTaskDto extends CareerAiConsentDto {
+  @ApiProperty() @IsUUID() companyId: string;
+  @ApiProperty() @IsString() @MinLength(20) @MaxLength(4000) brief: string;
+}
+export class CareerCaseTextDto {
+  @ApiProperty() @IsString() @MaxLength(8000) caseText: string;
 }

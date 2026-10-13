@@ -252,3 +252,11 @@ Choose the card matching the task area, read the canonical source and then follo
 - [223 — `apps/web-portal/src/app/career/portfolio/[studentId]/page.tsx`](223-apps-web-portal-src-app-career-portfolio-studentid-page-tsx.md)
 
 - [224 — `apps/web-portal/src/app/career/api.ts`](224-apps-web-portal-src-app-career-api-ts.md)
+
+- [225 — `apps/backend/src/career/career-ai.service.ts`](225-apps-backend-src-career-career-ai-service-ts.md)
+
+- [226 — `apps/backend/src/career/career-ai.service.spec.ts`](226-apps-backend-src-career-career-ai-service-spec-ts.md)
+
+- [227 — `apps/backend/src/migrations/1700000000018-CareerAiDrafts.ts`](227-apps-backend-src-migrations-1700000000018-careeraidrafts-ts.md)
+
+- [228 — `apps/web-portal/src/app/career/CareerAssistants.tsx`](228-apps-web-portal-src-app-career-careerassistants-tsx.md)

@@ -164,15 +164,29 @@ export class CareerService {
   async review(actor:Actor,id:string,dto:CareerReviewDto) {
     return this.db.transaction(async m=>{const work=await this.work(id,m);const task=await this.task(work.taskId,m);await this.company(actor,task.companyId,false,m);assertCareerTransition(work.state,['accepted']);if(await this.repo(CareerReview,m).existsBy({workId:id})) throw new ConflictException('Отзыв уже сохранён');const review=await this.repo(CareerReview,m).save({...dto,workId:id,authorId:actor.id});await this.repo(CareerPortfolio,m).save({workId:id,studentId:work.studentId,published:false});await this.notify(m,work.studentId,'Новый отзыв и кейс портфолио',task.title);return review;});
   }
+  async assertCompanyAccess(actor:Actor,id:string) { await this.company(actor,id); }
+  async portfolioSource(actor:Actor,id:string) {
+    this.student(actor);
+    const item=await this.repo(CareerPortfolio).findOneBy({id,studentId:actor.id});if(!item)throw new NotFoundException();
+    const work=await this.repo(CareerWork).findOneBy({id:item.workId,studentId:actor.id,state:'accepted'});
+    const review=await this.repo(CareerReview).findOneBy({workId:item.workId});if(!work||!review)throw new ConflictException('Нужна принятая работа с отзывом');
+    const task=await this.task(work.taskId);
+    return {title:task.title,criteria:task.criteria,result:work.submission,review:review.body};
+  }
+  async saveCaseText(actor:Actor,id:string,caseText:string) {
+    await this.portfolioSource(actor,id);
+    const item=await this.repo(CareerPortfolio).findOneBy({id,studentId:actor.id});if(!item)throw new NotFoundException();
+    await this.repo(CareerPortfolio).update({id,studentId:actor.id},{caseText:caseText.trim(),published:false});return this.repo(CareerPortfolio).findOneBy({id,studentId:actor.id});
+  }
   async publishPortfolio(actor:Actor,id:string,published:boolean) {
-    this.student(actor);const item=await this.repo(CareerPortfolio).findOneBy({id,studentId:actor.id});if(!item) throw new NotFoundException();const review=await this.repo(CareerReview).findOneBy({workId:item.workId});if(published&&!review?.publishAllowed) throw new ForbiddenException('Работодатель не разрешил публикацию результата');item.published=published;return this.repo(CareerPortfolio).save(item);
+    this.student(actor);const item=await this.repo(CareerPortfolio).findOneBy({id,studentId:actor.id});if(!item) throw new NotFoundException();const review=await this.repo(CareerReview).findOneBy({workId:item.workId});if(published&&!review?.publishAllowed) throw new ForbiddenException('Работодатель не разрешил публикацию результата');await this.repo(CareerPortfolio).update({id,studentId:actor.id},{published});return this.repo(CareerPortfolio).findOneBy({id,studentId:actor.id});
   }
   async publicPortfolio(studentId: string) {
     const items=await this.repo(CareerPortfolio).find({where:{studentId,published:true},take:100});
     const student=await this.repo(User).findOneBy({id:studentId,isActive:true,role:UserRole.STUDENT});
     if(!student||!items.length) throw new NotFoundException('Публичное портфолио не найдено');
-    const result: Array<{id:string;title:string;skill:string;company:string|undefined;result:string;resultUrl:string;review:string;rating:number;paymentConfirmed:boolean}> = [];
-    for(const item of items){const review=await this.repo(CareerReview).findOneBy({workId:item.workId,publishAllowed:true});const work=await this.repo(CareerWork).findOneBy({id:item.workId,studentId,state:'accepted'});if(!review||!work)continue;const task=await this.task(work.taskId);const company=await this.repo(CareerCompany).findOneBy({id:task.companyId});result.push({id:item.id,title:task.title,skill:task.skill,company:company?.name,result:work.submission,resultUrl:work.resultUrl,review:review.body,rating:review.rating,paymentConfirmed:false});}
+    const result: Array<{id:string;title:string;skill:string;company:string|undefined;result:string;resultUrl:string;review:string;rating:number;paymentConfirmed:boolean;caseText:string}> = [];
+    for(const item of items){const review=await this.repo(CareerReview).findOneBy({workId:item.workId,publishAllowed:true});const work=await this.repo(CareerWork).findOneBy({id:item.workId,studentId,state:'accepted'});if(!review||!work)continue;const task=await this.task(work.taskId);const company=await this.repo(CareerCompany).findOneBy({id:task.companyId});result.push({id:item.id,title:task.title,skill:task.skill,company:company?.name,result:work.submission,resultUrl:work.resultUrl,review:review.body,rating:review.rating,paymentConfirmed:false,caseText:item.caseText});}
     return {name:`${student.firstName} ${student.lastName}`,cases:result};
   }
 

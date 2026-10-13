@@ -122,6 +122,7 @@ export class CareerReview {
 @Entity('career_portfolio')
 @Index(['workId'], { unique: true })
 export class CareerPortfolio {
+  @Column({type: 'text', default: ''}) caseText: string;
   @PrimaryGeneratedColumn('uuid') id: string;
   @Column({type: 'uuid'}) workId: string;
   @Column({type: 'uuid'}) studentId: string;
@@ -163,4 +164,14 @@ export class CareerNotice {
   @Column({type:'boolean',default:false}) isRead:boolean;
   @CreateDateColumn() createdAt:Date;
   @UpdateDateColumn() updatedAt:Date;
+}
+
+@Entity('career_ai_request')
+@Index(['userId', 'createdAt'])
+export class CareerAiRequest {
+  @PrimaryGeneratedColumn('uuid') id: string;
+  @Column({type: 'uuid'}) userId: string;
+  @Column() kind: string;
+  @Column({default: 'started'}) state: string;
+  @CreateDateColumn() createdAt: Date;
 }
