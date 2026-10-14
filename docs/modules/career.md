@@ -61,3 +61,7 @@ GET /career/planning и PUT /career/availability доступны только �
 CareerAdmission.basis хранит test/center/unspecified. Старые записи остаются unspecified; их основание не угадывается. Работодатель видит только skill+basis для направлений своих задач, на которые студент действительно откликнулся. Достижения/evidence, reason, оценки, посещаемость, расписание и availability не передаются ему или модели.
 
 Миграция 1700000000019 сохраняет прежние данные. Проверки текущего этапа фиксируются в [плане](../product/career-ai-development-plan.md).
+
+## Interface refinement — 14 October 2026
+
+Task catalogue uses compact summaries with expandable requirements, criteria, and fit explanations. Availability settings open in a native modal; the time calculation is collapsed by default. Task creation has three steps and an explicit draft preview. Applicant and profile review use a selected-record queue. Tabs and filters restore from URL. Skill tags preserve the existing array contract. Acceptance criteria appear beside submitted results; published portfolio separates author text, accepted result and employer review. Payments and live AI remain unconfigured.

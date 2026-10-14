@@ -104,37 +104,36 @@ export default function HomePage() {
         />
         <div className="hero-inner">
           <div className="hero-copy">
-            <p className="eyebrow">Цифровая среда университета</p>
+            <p className="eyebrow">Учёба и первый профессиональный опыт</p>
             <h1>
-              Университет,
+              Учитесь. Пробуйте профессию.
               <br />
-              <em>который работает</em> как единая система.
+              Собирайте опыт.
             </h1>
             <p className="lead">
-              Расписание, учебный день, подготовка к парам, материалы и коммуникация — в
-              одном понятном пространстве для студентов, преподавателей и
-              деканата.
+              Учебный день и реальные задачи работодателей в одной среде.
+              Выбирайте посильную работу, совмещайте её с парами и собирайте
+              портфолио из принятых результатов и отзывов.
             </p>
             <div className="hero-actions">
               <Link href="/login" className="primary-action">
-                Войти в НаПаре <Icon name="arrow-right" size={17} />
+                Я студент <Icon name="arrow-right" size={17} />
               </Link>
-              <a href="#launch" className="secondary-action">
-                Для вашего вуза
-              </a>
+              <Link href="/career/register" className="secondary-action">Я работодатель</Link>
             </div>
-            <ul className="hero-points" aria-label="Ключевые преимущества">
+            <ul className="hero-points" aria-label="Что даёт НаПаре">
               <li>
-                <Icon name="check" size={16} /> Один контур вместо разрозненных
-                чатов
+                <Icon name="check" size={16} /> Задачи с понятным объёмом и сроком
               </li>
               <li>
-                <Icon name="check" size={16} /> Свой кабинет для каждой роли
+                <Icon name="check" size={16} /> Подтверждённые кейсы после приёмки
               </li>
             </ul>
           </div>
         </div>
       </section>
+
+      <section id="career" className="section"><div className="section-inner"><div className="section-head"><p className="eyebrow">Практика и работа</p><h2 className="section-title">От учебных навыков к задачам работодателей</h2><p className="section-lead center">Студент, карьерный центр и компания работают в одной среде: допуск, задача, результат и отзыв.</p></div><div className="role-grid role-grid-page">{[["Студенту", "Профильные и непрофильные задачи с понятными сроками и занятостью. Принятые работы с отзывами формируют портфолио."], ["Работодателю", "Публикация конкретных задач, выбор исполнителя, сдача и приёмка результата на сайте."], ["Карьерному центру", "Проверка студентов и достижений, допуски через тестирование, работа с компаниями-партнёрами."]].map(([title,text])=><article key={title}><h3>{title}</h3><p>{text}</p></article>)}</div><div className="hero-actions"><Link href="/career" className="primary-action">Открыть практику и работу</Link><Link href="/career/register" className="secondary-action">Я работодатель</Link></div><p className="section-lead center">Сервис для студентов бесплатен. Онлайн-оплата пока не подключена.</p></div></section>
 
       <section className="product-overview section">
         <div className="section-inner product-overview-inner">
@@ -258,7 +257,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section id="career" className="section"><div className="section-inner"><div className="section-head"><p className="eyebrow">Практика и работа</p><h2 className="section-title">От учебных навыков к задачам работодателей</h2><p className="section-lead center">Студент, карьерный центр и компания работают в одной среде: допуск, задача, результат и отзыв.</p></div><div className="role-grid role-grid-page">{[["Студенту", "Профильные и непрофильные задачи с понятными сроками и занятостью. Принятые работы с отзывами формируют портфолио."], ["Работодателю", "Публикация конкретных задач, выбор исполнителя, сдача и приёмка результата на сайте."], ["Карьерному центру", "Проверка студентов и достижений, допуски через тестирование, работа с компаниями-партнёрами."]].map(([title,text])=><article key={title}><h3>{title}</h3><p>{text}</p></article>)}</div><div className="hero-actions"><Link href="/career" className="primary-action">Открыть практику и работу</Link><Link href="/career/register" className="secondary-action">Я работодатель</Link></div><p className="section-lead center">Сервис для студентов бесплатен. Онлайн-оплата пока не подключена.</p></div></section>
+
 
       <section id="launch" className="section"><div className="section-inner"><div className="section-head"><p className="eyebrow">Для университета</p><h2 className="section-title">Что нужно для начала работы</h2><p className="section-lead center">Администратор готовит структуру и расписание; студенты и сотрудники получают готовые аккаунты.</p></div><div className="steps">{[["01", "Назначьте администратора", "Определите, кто будет управлять пользователями и данными ВУЗа."], ["02", "Опишите структуру", "Добавьте факультеты и группы, назначьте доступ сотрудникам."], ["03", "Подключите расписание", "Настройте поддерживаемый источник или проверьте файл CSV / JSON перед импортом."], ["04", "Выдайте аккаунты", "Передайте учётные данные студентам и сотрудникам защищённым способом."]].map(([number,title,text]) => <article key={number}><span className="step-number">{number}</span><h3>{title}</h3><p>{text}</p></article>)}</div></div></section>
 
@@ -348,7 +347,7 @@ export default function HomePage() {
             НаПаре
           </Link>
           <p>
-            Цифровая среда университета: расписание, пары, посещаемость и
+            Учёба и первый профессиональный опыт: расписание, пары, посещаемость и
             объявления.
           </p>
           <Link href="/login" className="text-link">

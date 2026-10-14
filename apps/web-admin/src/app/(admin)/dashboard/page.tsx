@@ -8,21 +8,22 @@ import { Badge, Button, Card, EmptyState, PageHeader, RequestState, Skeleton } f
 interface AdminUser { id: string; firstName: string; lastName: string; role?: string; lastLoginAt?: string; isActive?: boolean; }
 interface Group { id: string; name: string; }
 interface Faculty { id: string; name: string; }
-interface Lesson { id: string; startTime?: string; endTime?: string; subject?: string; groupName?: string; room?: string; teacherName?: string; isChanged?: boolean; changeDescription?: string; }
+interface Lesson { id: string; startDate?:string; date?:string; startTime?: string; endTime?: string; subject?: string; groupName?: string; room?: string; teacherName?: string; isChanged?: boolean; changeDescription?: string; }
 interface Notice { id?: string; title?: string; body?: string; type?: string; createdAt?: string; isRead?: boolean; }
 interface Sync { status?: string; lastSync?: string | null; }
 interface PendingAbsences { meta?: { total?: number }; }
 interface UniversityStats { totalUsers: number; totalStudents: number; totalTeachers: number; totalLessons: number; activeToday: number; }
 type BackendStatus = 'online' | 'offline' | 'unknown';
 
-const dateKey = (value: Date) => value.toISOString().split('T')[0];
+const dateKey = (value: Date) => `${value.getFullYear()}-${String(value.getMonth()+1).padStart(2,'0')}-${String(value.getDate()).padStart(2,'0')}`;
 const displayNumber = (value: number | null) => value === null ? 'Нет данных' : new Intl.NumberFormat('ru-RU').format(value);
 const time = (value?: string) => value?.includes('T') ? value.slice(11, 16) : value || '—';
 const formatDate = (value: string) => new Date(value).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
 const formatDateTime = (value?: string) => value ? new Date(value).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Нет данных';
 
 function isUpcoming(lesson: Lesson) {
-  const start = lesson.startTime ? new Date(lesson.startTime).getTime() : Number.POSITIVE_INFINITY;
+  const date=lesson.startDate?.slice(0,10)||lesson.date||dateKey(new Date());
+  const start = lesson.startTime ? new Date(lesson.startTime.includes('T')?lesson.startTime:`${date}T${lesson.startTime.slice(0,5)}`).getTime() : Number.POSITIVE_INFINITY;
   return start >= Date.now();
 }
 

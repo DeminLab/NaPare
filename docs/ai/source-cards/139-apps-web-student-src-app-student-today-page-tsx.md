@@ -6,7 +6,7 @@
 
 ## Scope
 
-Student Today prioritises the current/next lesson, important events and preparation. Quick actions expose QR attendance, absence requests and schedule; preparation links open the exact lesson tab.
+Student Today prioritises the current/next lesson, important events and preparation. Quick actions expose absence requests and schedule; attendance is marked by the teacher. Career access appears below academic priorities; preparation links open the exact lesson tab.
 
 ## Read sequence
 

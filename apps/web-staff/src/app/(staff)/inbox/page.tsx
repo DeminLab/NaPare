@@ -1,6 +1,7 @@
 "use client";
 
-import Link from "next/link";
+import { RecordQueue } from '@napare/ui';
+
 import { AttentionNavigation } from "../AttentionNavigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useWorkspaceQuery } from "@napare/ui/workspace-shell";
@@ -36,6 +37,14 @@ const category = (type: string) =>
         : type.includes("homework")
           ? "Подготовка к парам"
           : "Системные действия";
+
+function eventHref(value?:string){
+  if(!value||!value.startsWith('/')||value.startsWith('//')||value.includes('\\'))return '/staff/notifications';
+  const url=new URL(value,'https://workspace.invalid');
+  if(url.origin!=='https://workspace.invalid')return '/staff/notifications';
+  const path=url.pathname.startsWith('/staff/')||url.pathname==='/staff'?url.pathname:'/staff'+url.pathname;
+  return path+url.search+url.hash;
+}
 
 export default function InboxPage() {
   const [items, setItems] = useState<InboxItem[]>([]);
@@ -89,7 +98,7 @@ export default function InboxPage() {
     [items],
   );
   return (
-    <div className="mx-auto max-w-[1000px] space-y-6">
+    <div className="mx-auto max-w-[var(--layout-content-max)] space-y-6">
       <div>
         <p className="text-sm font-medium text-sky-700">Центр внимания</p>
         <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">
@@ -123,20 +132,7 @@ export default function InboxPage() {
           description="Новые события доступны в разделе «Все уведомления»."
         />
       ) : (
-        <div className="space-y-5">
-          {Object.entries(grouped).map(([name, inboxItems]) => (
-            <section key={name}>
-              <div className="mb-2 flex items-center gap-2">
-                <h2 className="text-sm font-bold uppercase tracking-wide text-slate-500">
-                  {name}
-                </h2>
-                <Badge size="sm" variant="slate">
-                  {inboxItems.length}
-                </Badge>
-              </div>
-              <div className="divide-y divide-slate-100 overflow-hidden rounded-2xl border border-slate-200 bg-white">
-                {inboxItems.map((item) => (
-                  <article
+        <RecordQueue label="Очередь действий" items={Object.values(grouped).flat().map(item=>({id:item.id,title:item.title,summary:category(item.type),status:item.priority==='urgent'?'Срочно':item.priority==='high'?'Важно':item.status==='done'?'Разобрано':item.status==='snoozed'?'Отложено':'Открыто'}))} render={id=>{const item=items.find(record=>record.id===id)!;return                   <article
                     key={item.id}
                     className={`block px-4 py-4 transition-colors hover:bg-slate-50 ${item.status === "open" ? "border-l-2 border-l-sky-500 bg-sky-50/30" : ""}`}
                   >
@@ -164,13 +160,8 @@ export default function InboxPage() {
                       </div>
                     </div>
                     {item.dueAt && <p className="mt-2 text-xs font-medium text-slate-600">Срок · {new Date(item.dueAt).toLocaleString('ru-RU', { day:'numeric',month:'short',hour:'2-digit',minute:'2-digit' })}</p>}
-                    <div className="mt-3 flex flex-wrap items-center gap-2"><Link href={item.deepLink || "/notifications"} className="inline-flex min-h-11 items-center rounded-lg border border-slate-200 px-3 text-sm font-semibold text-sky-700">Открыть событие</Link>{item.status !== "done" && <Button variant="ghost" size="sm" disabled={!!savingId} onClick={() => void complete(item.id)}>{savingId === item.id ? "Сохраняем…" : "Отметить разобранным"}</Button>}</div>
-                  </article>
-                ))}
-              </div>
-            </section>
-          ))}
-        </div>
+                    <div className="mt-3 flex flex-wrap items-center gap-2"><a href={eventHref(item.deepLink)} className="inline-flex min-h-11 items-center rounded-lg border border-slate-200 px-3 text-sm font-semibold text-sky-700">Открыть событие</a>{item.status !== "done" && <Button variant="ghost" size="sm" disabled={!!savingId} onClick={() => void complete(item.id)}>{savingId === item.id ? "Сохраняем…" : "Отметить разобранным"}</Button>}</div>
+</article>;}}/>
       )}
     </div>
   );

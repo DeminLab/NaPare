@@ -268,3 +268,13 @@ Choose the card matching the task area, read the canonical source and then follo
 - [231 — `apps/backend/src/migrations/1700000000019-CareerAvailability.ts`](231-apps-backend-src-migrations-1700000000019-careeravailability-ts.md)
 
 - [232 — `apps/web-portal/src/app/career/StudentPlanning.tsx`](232-apps-web-portal-src-app-career-studentplanning-tsx.md)
+
+- [233 — `apps/web-portal/src/app/career/TaskCard.tsx`](233-apps-web-portal-src-app-career-taskcard-tsx.md)
+
+- [234 — `apps/web-portal/src/app/career/TaskComposer.tsx`](234-apps-web-portal-src-app-career-taskcomposer-tsx.md)
+
+- [235 — `apps/web-portal/src/app/career/ReviewQueue.tsx`](235-apps-web-portal-src-app-career-reviewqueue-tsx.md)
+
+- [236 — `apps/web-portal/src/app/career/SkillInput.tsx`](236-apps-web-portal-src-app-career-skillinput-tsx.md)
+
+- [237 — `packages/ui/src/RecordQueue.tsx`](237-packages-ui-src-recordqueue-tsx.md)

@@ -11,6 +11,18 @@ const exported = {};
 new Script(compiled).runInNewContext({ exports: exported, URL, URLSearchParams, Date });
 const { activeNavigationIndex, uniqueCommands, searchCommands, lessonTabFromSearch, parseCalendarDate } = exported;
 
+test('old student lesson notifications open the supported lesson route without accepting external URLs', () => {
+  const source = readFileSync(join(__dirname,'../apps/web-student/src/app/(student)/internal-navigation.ts'),'utf8');
+  const js = ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText;
+  const student = {};
+  new Script(js).runInNewContext({exports:student,URL});
+  const id='a1000000-0000-4000-8000-000000000105';
+  assert.equal(student.getInternalHref(`/student/lesson/${id}?tab=materials#file`),`/pair-space/${id}?tab=materials#file`);
+  assert.equal(student.getInternalHref('/student/today'),'/today');
+  assert.equal(student.getInternalHref('https://outside.test/lesson/'+id),null);
+  assert.equal(student.getInternalHref('//outside.test/lesson/'+id),null);
+});
+
 test('navigation distinguishes similar paths and supports nested lessons', () => {
   const items = [{ href: '/pair-space' }, { href: '/pair-space-extra' }, { href: '/' }];
   assert.equal(activeNavigationIndex(items, '/pair-space/lesson-1'), 0);

@@ -106,7 +106,7 @@ export default function PairSpaceIndex() {
     const days = daysUntil(item.deadline);
     return days === null ? 'Без срока' : days < 0 ? 'Срок прошёл' : days === 0 ? 'Сегодня' : days === 1 ? 'Завтра' : days <= 7 ? 'На неделе' : 'Позже';
   };
-  const grouped = ['Сегодня', 'Завтра', 'На неделе', 'Позже', 'Без срока', 'Срок прошёл'].map(title => ({ title, items: visible.filter(item => bucket(item) === title) })).filter(group => group.items.length);
+  const grouped = ['Срок прошёл', 'Сегодня', 'Завтра', 'На неделе', 'Позже', 'Без срока'].map(title => ({ title, items: visible.filter(item => bucket(item) === title) })).filter(group => group.items.length);
 
   if (loading) return <div className="mx-auto max-w-5xl space-y-4"><Skeleton className="h-20" /><Skeleton className="h-40" /><Skeleton className="h-40" /></div>;
   if (error && !preparations.length) return <div className="mx-auto max-w-3xl"><RequestState title="Не удалось загрузить список" description={error} onRetry={() => window.location.reload()} /></div>;
@@ -134,7 +134,7 @@ export default function PairSpaceIndex() {
         <label className="mt-3 flex min-h-11 cursor-pointer items-center gap-3 text-sm text-slate-700"><input type="checkbox" checked={unfinishedOnly} onChange={event => setUnfinishedOnly(event.target.checked)} className="h-5 w-5 accent-indigo-600" />Только незавершённая подготовка</label>
       </Card>
 
-      {visible.length ? <div className="space-y-6">{grouped.map(group => <details key={group.title} open={group.title === 'Сегодня' || group.title === 'Завтра' || filter !== 'all' || Boolean(search.trim()) || unfinishedOnly} className="space-y-3"><summary className="min-h-11 cursor-pointer py-2 text-lg font-semibold text-slate-900"><h2 className="inline">{group.title} <span className="ml-2 text-sm font-normal text-slate-500">{group.items.length}</span></h2></summary>{group.items.map((item) => {
+      {visible.length ? <div className="space-y-6">{grouped.map(group => <details key={group.title} open={group.title === 'Срок прошёл' || group.title === 'Сегодня' || group.title === 'Завтра' || filter !== 'all' || Boolean(search.trim()) || unfinishedOnly} className="space-y-3"><summary className="min-h-11 cursor-pointer py-2 text-lg font-semibold text-slate-900"><h2 className="inline">{group.title} <span className="ml-2 text-sm font-normal text-slate-500">{group.items.length}</span></h2></summary>{group.items.map((item) => {
         const days = daysUntil(item.deadline);
         const status = days === null ? 'Без срока' : days < 0 ? 'Срок прошёл' : days === 0 ? 'Сегодня' : days === 1 ? 'Завтра' : days <= 7 ? 'На неделе' : 'Позже';
         return <Card key={item.id} padding="sm" className="transition-colors hover:border-indigo-200">

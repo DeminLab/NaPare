@@ -165,7 +165,7 @@ export default function TodayPage() {
   if (error && !day) return <div className="mx-auto max-w-3xl"><RequestState title="Учебный день недоступен" description={error} onRetry={() => void loadDay()} /></div>;
   if (!day || !user) return <EmptyState title="Учебный день пока не сформирован" description="Попробуйте обновить данные позже." action={<Button onClick={() => void loadDay()}>Обновить</Button>} />;
 
-  return <div className="mx-auto max-w-[1240px] space-y-7"><a href="/career" className="flex min-h-11 items-center justify-between gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-sm font-semibold text-[var(--color-text)]"><span>Практика и работа</span><span>Открыть карьерный кабинет →</span></a>
+  return <div className="mx-auto max-w-[1240px] space-y-7">
     <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-sm font-medium text-[var(--color-brand)]">Сегодня</p><h1 className="mt-1 ds-page-title">Добрый день, {user.firstName}</h1><p className="mt-2 text-sm capitalize text-[var(--color-text-secondary)]">{dateLabel(day.date)}</p>{offlineSavedAt && <p role="status" className="mt-2 text-xs font-medium text-[var(--color-warning)]">{cacheRefreshing ? 'Сохраненная копия · проверяем актуальность' : 'Офлайн · сохранено'} {new Date(offlineSavedAt).toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' })}</p>}</div><div className="flex items-center gap-2">{stale && <Badge variant="warning">Данные могли устареть</Badge>}<Button variant="ghost" size="sm" onClick={() => void loadDay()}><Icon name="refresh" size={16} />Обновить</Button></div></header>
     <nav aria-label="Быстрые действия" className="flex flex-wrap gap-2">
       <Link href="/week" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 text-sm font-semibold"><Icon name="calendar" />Расписание</Link>
@@ -200,5 +200,6 @@ export default function TodayPage() {
       </div>
     </section>
 
+    <section className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4"><div><h2 className="text-base font-semibold">Первый профессиональный опыт</h2><p className="mt-1 text-sm text-[var(--color-text-secondary)]">Подберите задачу под навыки и время вне учёбы.</p></div><a href="/career" className="inline-flex min-h-11 items-center rounded-lg bg-[var(--color-brand)] px-4 text-sm font-semibold text-white">Посмотреть задачи</a></section>
   </div>;
 }

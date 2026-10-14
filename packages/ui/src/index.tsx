@@ -120,3 +120,6 @@ export function ToastProvider({ children }: { children: ReactNode }) { const [to
 const ToastContext = React.createContext<{ toast: (message: string, type?: 'success' | 'error' | 'info') => void }>({ toast: () => undefined });
 export const useToast = () => React.useContext(ToastContext);
 export default Button;
+
+export { RecordQueue } from './RecordQueue';
+export type { QueueRecord } from './RecordQueue';

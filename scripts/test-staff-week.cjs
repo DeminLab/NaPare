@@ -22,3 +22,27 @@ test('past and future lessons are compared by date before time', () => {
 test('cancellation remains explicit even for past lessons', () => {
   assert.equal(model.statusOf({startDate:'2026-10-12',startTime:'09:00',endTime:'10:30',status:'cancelled'},new Date('2026-10-13T09:15:00')).label,'Отменено');
 });
+
+test('attendance asks for the academic date without shifting to the preceding UTC day', () => {
+  const attendance = readFileSync('apps/web-staff/src/app/(staff)/attendance/page.tsx','utf8');
+  const a = attendance.indexOf('const localDayRange');
+  const b = attendance.indexOf('\nconst displayTime',a);
+  const js = ts.transpileModule(attendance.slice(a,b)+'\nexports.range=localDayRange;', {compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText;
+  const exported = {};
+  new Script(js).runInNewContext({exports:exported,Date});
+  assert.equal(exported.range('2026-10-14').startDate,'2026-10-14');
+  assert.equal(exported.range('2026-10-14').endDate,'2026-10-14');
+});
+
+test('lesson/material index sorts academic dates before HH:mm and does not produce invalid dates', () => {
+  const index = readFileSync('apps/web-staff/src/app/(staff)/pair-space/page.tsx','utf8');
+  const a = index.indexOf('const lessonDate');
+  const b = index.indexOf('export default function',a);
+  const js = ts.transpileModule(index.slice(a,b)+'\nexports.day=lessonDate;exports.label=lessonLabel;',{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText;
+  const exported = {};
+  new Script(js).runInNewContext({exports:exported,Date});
+  const lesson = {startDate:'2026-10-14',startTime:'09:00'};
+  assert.equal(exported.day(lesson),'2026-10-14');
+  assert.match(exported.label(lesson),/09:00/);
+  assert.doesNotMatch(exported.label(lesson),/Invalid/);
+});
