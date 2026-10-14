@@ -278,3 +278,7 @@ Choose the card matching the task area, read the canonical source and then follo
 - [236 — `apps/web-portal/src/app/career/SkillInput.tsx`](236-apps-web-portal-src-app-career-skillinput-tsx.md)
 
 - [237 — `packages/ui/src/RecordQueue.tsx`](237-packages-ui-src-recordqueue-tsx.md)
+
+- [238 — Android WebView Activity](238-apps-android-webview-mainactivity-java.md)
+
+- [239 — Android build script](239-scripts-build-android-ps1.md)
