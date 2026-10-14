@@ -6,7 +6,7 @@
 
 ## Scope
 
-Student week/day/agenda schedule with URL state, favorites and offline cache. Mobile week mode shows seven selectable dates and full lesson cards for the selected day; agenda keeps the full list. Export and share actions are progressively disclosed.
+Student week/day/agenda schedule with URL state, favorites and offline cache. Week mode shows wide day panels on every screen; day mode uses the date picker and previous/next-day controls. An optional wide, horizontally scrollable table keeps a sticky time column. Lesson titles are 16px and wrap instead of truncating; teacher and location are separate 14px lines. Agenda keeps the full list. Export and share actions are progressively disclosed.
 
 ## Read sequence
 
