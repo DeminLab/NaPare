@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { lessonTabFromSearch } from '@napare/ui/workspace-shell';
 import { apiFetch, apiFetchList } from '@/lib/api';
-import { Card, Badge, TabBar, Avatar, Skeleton, Icon, RequestState } from '@/components/ui';
+import { Card, Badge, Avatar, Skeleton, Icon, RequestState } from '@/components/ui';
 import { EmptyState, Button } from '@napare/ui';
 import { getLessonLocation } from '../../schedule-location';
 import { PreparationProgressControl, type PreparationProgress } from '../../PreparationProgressControl';
@@ -429,14 +429,14 @@ export default function PairSpacePage() {
     <div className="mx-auto max-w-[1400px] space-y-6">
       {/* Header */}
       <div>
-        <div className="mb-4 text-xs font-medium text-slate-400">НаПаре <span aria-hidden="true">/</span> Расписание <span aria-hidden="true">/</span> <span className="text-slate-600">{lesson?.subject || 'Занятие'}</span></div><button onClick={() => router.push('/week?date=' + (lesson?.startDate || lesson?.date || lesson?.startTime || '').slice(0, 10))} className="mb-4 flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-indigo-600">
+        <button onClick={() => router.push('/week?date=' + (lesson?.startDate || lesson?.date || lesson?.startTime || '').slice(0, 10))} className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-indigo-600">
           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
-          Назад к расписанию
+          Расписание
         </button>
         {lesson && (
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"><div><h1 className="break-words text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">{lesson.subject}</h1><div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-slate-500"><span>{displayLessonDate(lesson.startDate || lesson.date || lesson.startTime.slice(0, 10))}</span><Badge variant="subject">{typeLabels[lesson.subjectType] || lesson.subjectType}</Badge><span>{lessonTime(lesson.startTime)}–{lessonTime(lesson.endTime)}</span>{getLessonLocation(lesson.building, lesson.room) && <span>· {getLessonLocation(lesson.building, lesson.room)}</span>}</div><p className="mt-3 text-sm text-slate-600"><span className="font-medium">Преподаватель:</span> {lesson.teacherName || 'Не указан'}</p></div><button onClick={() => selectTab('discussion')} className="rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700">Обсудить занятие</button></div>
+          <div><h1 className="break-words text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">{lesson.subject}</h1><div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-slate-500"><span>{displayLessonDate(lesson.startDate || lesson.date || lesson.startTime.slice(0, 10))}</span><Badge variant="subject">{typeLabels[lesson.subjectType] || lesson.subjectType}</Badge><span>{lessonTime(lesson.startTime)}–{lessonTime(lesson.endTime)}</span>{getLessonLocation(lesson.building, lesson.room) && <span>· {getLessonLocation(lesson.building, lesson.room)}</span>}</div><p className="mt-2 text-sm text-slate-600">{lesson.teacherName || 'Преподаватель не указан'}</p></div>
         )}
       </div>
 
@@ -469,17 +469,20 @@ export default function PairSpacePage() {
 
       {offlineSavedAt && <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900" role="status"><span>{cacheRefreshing ? 'Сохранённая копия · проверяем актуальность' : `Офлайн · сохранено ${new Date(offlineSavedAt).toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' })}`}{loadWarning ? ` · ${loadWarning}` : ''}</span><button type="button" onClick={() => window.location.reload()} className="font-semibold underline">Обновить</button></div>}
 
-      <div className="sticky top-16 z-20 -mx-2 overflow-x-auto border-b border-slate-200 bg-slate-50/95 px-2 py-2 backdrop-blur sm:mx-0"><TabBar tabs={tabs} activeTab={activeTab} onChange={selectTab} /></div>
+      <nav aria-label="Разделы занятия" className="grid grid-cols-2 gap-1 border-b border-[var(--color-border)] pb-1 sm:grid-cols-4">{tabs.map(tab => <button type="button" key={tab.id} aria-pressed={activeTab === tab.id} onClick={() => selectTab(tab.id)} className={`flex min-h-11 items-center justify-center gap-2 rounded-lg px-2 py-2 text-sm font-medium ${activeTab === tab.id ? 'bg-[var(--color-brand-soft)] text-[var(--color-brand)]' : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-secondary)]'}`}>{tab.label}{Boolean(tab.count) && <span className="text-xs">{tab.count}</span>}</button>)}</nav>
       {error && <RequestState title="Не удалось выполнить действие" description={error} onRetry={() => setError('')} />}
 
-      <div className="flex flex-wrap items-center gap-2" aria-label="Дополнительные действия">
+      <details className="border-b border-[var(--color-border)]">
+        <summary className="cursor-pointer py-3 text-sm font-medium text-[var(--color-text-secondary)]">{activeTab === 'notes' ? 'Личные заметки' : activeTab === 'timeline' ? 'История предмета' : 'Ещё'}</summary>
+        <div className="flex flex-wrap items-center gap-2 pb-2" aria-label="Дополнительные действия">
         <Button variant={activeTab === 'notes' ? 'primary' : 'ghost'} onClick={() => selectTab('notes')}>Личные заметки</Button>
         <Button variant={activeTab === 'timeline' ? 'primary' : 'ghost'} onClick={() => selectTab('timeline')}>История предмета</Button>
         {pairSpace?.moodleUrl?.startsWith('https://') && <a href={pairSpace.moodleUrl} target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center rounded-xl px-3 text-sm font-semibold text-indigo-600 hover:bg-indigo-50">Сдача работ и оценки в Moodle ↗</a>}
-      </div>
+        </div>
+      </details>
       {activeTab === 'overview' && <div className="grid gap-4 md:grid-cols-2">
-        <Card className="md:col-span-2"><div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-lg font-semibold text-slate-900">Подготовка к занятию</h2><p className="mt-2 text-sm text-slate-600">{pairSpace?.homeworks.length ? 'Ближайшие темы и личный прогресс. Сдача работ и оценки находятся в Moodle.' : 'Преподаватель пока не опубликовал подготовку.'}</p></div>{Boolean(pairSpace?.homeworks.length) && <Button variant="secondary" onClick={() => selectTab('homeworks')}>Вся подготовка · {pairSpace?.homeworks.length}</Button>}</div>{Boolean(pairSpace?.homeworks.length) && <ul className="mt-4 divide-y divide-slate-100">{[...(pairSpace?.homeworks || [])].sort((a,b)=>(a.deadline || '9999').localeCompare(b.deadline || '9999')).slice(0,3).map(item => <li key={item.id} className="flex flex-wrap items-center justify-between gap-3 py-3"><button type="button" onClick={() => { window.history.replaceState(null,'',`${window.location.pathname}?tab=homeworks#preparation-${item.id}`); setActiveTab('homeworks'); }} className="min-w-0 flex-1 text-left"><span className="block break-words text-sm font-semibold text-indigo-700">{item.title}</span><span className="mt-1 block text-xs text-slate-500">{item.deadline ? `Срок · ${new Date(item.deadline).toLocaleDateString('ru-RU')}` : 'Без срока'}</span></button><PreparationProgressControl preparationId={item.id} initialState={item.progress} onSaved={state => setPairSpace(current => current ? {...current,homeworks:current.homeworks.map(preparation => preparation.id === item.id ? {...preparation,progress:state} : preparation)} : current)}/></li>)}</ul>}</Card>
-        <Card><h2 className="text-lg font-semibold text-slate-900">Материалы занятия</h2><p className="mt-2 text-sm text-slate-600">{pairSpace?.files?.length ? 'Материалов: ' + pairSpace.files.length : 'Материалов пока нет.'} Сдача работ и оценки находятся в Moodle.</p><Button variant="secondary" className="mt-4" onClick={() => selectTab('materials')}>Открыть материалы</Button></Card>
+        <Card className="md:col-span-2"><div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-lg font-semibold text-slate-900">Подготовка</h2>{!pairSpace?.homeworks.length && <p className="mt-2 text-sm text-slate-600">Тем пока нет.</p>}</div>{Boolean(pairSpace?.homeworks.length) && <Button variant="secondary" onClick={() => selectTab('homeworks')}>Все темы</Button>}</div>{Boolean(pairSpace?.homeworks.length) && <ul className="mt-4 divide-y divide-slate-100">{[...(pairSpace?.homeworks || [])].sort((a,b)=>(a.deadline || '9999').localeCompare(b.deadline || '9999')).slice(0,3).map(item => <li key={item.id} className="flex flex-col items-stretch gap-3 py-3 sm:flex-row sm:items-center sm:justify-between"><button type="button" onClick={() => { window.history.replaceState(null,'',`${window.location.pathname}?tab=homeworks#preparation-${item.id}`); setActiveTab('homeworks'); }} className="min-w-0 flex-1 text-left"><span className="block break-words text-sm font-semibold text-indigo-700">{item.title}</span><span className="mt-1 block text-xs text-slate-500">{item.deadline ? `Срок · ${new Date(item.deadline).toLocaleDateString('ru-RU')}` : 'Без срока'}</span></button><PreparationProgressControl preparationId={item.id} initialState={item.progress} onSaved={state => setPairSpace(current => current ? {...current,homeworks:current.homeworks.map(preparation => preparation.id === item.id ? {...preparation,progress:state} : preparation)} : current)}/></li>)}</ul>}</Card>
+        <Card><h2 className="text-lg font-semibold text-slate-900">Материалы занятия</h2><p className="mt-2 text-sm text-slate-600">{pairSpace?.files?.length ? 'Материалов: ' + pairSpace.files.length : 'Материалов пока нет.'}</p><Button variant="secondary" className="mt-4" onClick={() => selectTab('materials')}>Открыть материалы</Button></Card>
         {nextLesson && <Card className="md:col-span-2"><h2 className="text-lg font-semibold text-slate-900">Следующее занятие</h2><Link href={'/pair-space/' + nextLesson.id} className="mt-3 flex min-h-11 flex-wrap items-center justify-between gap-3 text-sm font-semibold text-indigo-600"><span>{nextLesson.subject} · {displayLessonDate(nextLesson.startDate || nextLesson.date)} · {lessonTime(nextLesson.startTime)}–{lessonTime(nextLesson.endTime)}</span><span>{getLessonLocation(nextLesson.building, nextLesson.room) || 'Место не указано'} →</span></Link></Card>}
       </div>}
 
@@ -487,7 +490,7 @@ export default function PairSpacePage() {
       {activeTab === 'overview' && (
         <div className="space-y-3"><h2 className="text-lg font-semibold text-slate-900">Объявления преподавателя</h2>
           {pairSpace?.announcements.length === 0 ? (
-            <EmptyState title="Нет объявлений" description="Объявления от преподавателя появятся здесь" />
+            <EmptyState title="Нет объявлений" />
           ) : (
             [...(pairSpace?.announcements || [])].sort((a,b)=>Number(b.isPinned)-Number(a.isPinned) || b.createdAt.localeCompare(a.createdAt)).map(a => (
               <Card key={a.id} padding="sm" className={a.isPinned ? 'border-amber-200 bg-amber-50/50' : ''}>
@@ -525,18 +528,18 @@ export default function PairSpacePage() {
                   </div>}
                 </article>
               ))
-                : <EmptyState title="Истории занятий пока нет" description="Для этого предмета ещё не найдено других занятий в вашем учебном пространстве."/>}
+                : <EmptyState title="Истории занятий пока нет"/>}
         </div>
       )}
 
       {activeTab === 'materials' && (
-        <Card><div className="flex items-center gap-3"><Icon name="Paperclip" className="h-5 w-5 text-indigo-500" /><div><h3 className="font-semibold text-slate-900">Материалы</h3><p className="text-sm text-slate-500">Файлы и ссылки для подготовки к занятию.</p></div></div>{pairSpace?.files?.length ? <div className="mt-5 divide-y divide-slate-100">{pairSpace.files.map(file => <div key={file.id} className="flex items-center justify-between gap-4 py-3 text-sm"><div><p className="font-medium text-slate-800">{file.name || file.fileName || 'Файл'}</p><p className="mt-1 text-xs text-slate-400">{timeAgo(file.createdAt)}</p></div>{file.fileUrl?.startsWith('https://') ? <a href={file.fileUrl} target="_blank" rel="noreferrer" className="shrink-0 rounded-lg px-3 py-2 text-sm font-semibold text-indigo-600 hover:bg-indigo-50">Открыть</a> : <span className="text-xs text-slate-400">Файл недоступен</span>}</div>)}</div> : <EmptyState title="Материалов пока нет" description="Файлы от преподавателя появятся здесь." />}</Card>
+        <Card><div className="flex items-center gap-3"><Icon name="Paperclip" className="h-5 w-5 text-indigo-500" /><div><h2 className="font-semibold text-slate-900">Материалы</h2></div></div>{pairSpace?.files?.length ? <div className="mt-5 divide-y divide-slate-100">{pairSpace.files.map(file => <div key={file.id} className="flex items-center justify-between gap-4 py-3 text-sm"><div><p className="font-medium text-slate-800">{file.name || file.fileName || 'Файл'}</p><p className="mt-1 text-xs text-slate-400">{timeAgo(file.createdAt)}</p></div>{file.fileUrl?.startsWith('https://') ? <a href={file.fileUrl} target="_blank" rel="noreferrer" className="shrink-0 rounded-lg px-3 py-2 text-sm font-semibold text-indigo-600 hover:bg-indigo-50">Открыть</a> : <span className="text-xs text-slate-400">Файл недоступен</span>}</div>)}</div> : <EmptyState title="Материалов пока нет" />}</Card>
       )}
 
       {activeTab === 'notes' && (
         <Card>
-          <div className="flex items-center gap-3"><Icon name="FileText" className="h-5 w-5 text-indigo-500" /><div><h3 className="font-semibold text-slate-900">Личные заметки</h3><p className="text-sm text-slate-500" role="status">{notesSync || 'Заметки видны только вам и синхронизируются с аккаунтом.'}</p></div></div>
-          <textarea value={notes} onChange={e => saveNotes(e.target.value)} disabled={!notesReady} placeholder={notesReady ? 'Запишите важные мысли по занятию...' : 'Загружаем заметку…'} className="mt-5 min-h-48 w-full resize-y rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-indigo-400 focus:bg-white focus:ring-4 focus:ring-indigo-100 disabled:cursor-wait disabled:opacity-60" />
+          <div className="flex items-center gap-3"><Icon name="FileText" className="h-5 w-5 text-indigo-500" /><div><h2 id="lesson-notes-heading" className="font-semibold text-slate-900">Личные заметки</h2><p id="lesson-notes-status" className="text-sm text-slate-500" role="status">{notesSync || 'Заметки видны только вам и синхронизируются с аккаунтом.'}</p></div></div>
+          <textarea aria-labelledby="lesson-notes-heading" aria-describedby="lesson-notes-status" value={notes} onChange={e => saveNotes(e.target.value)} disabled={!notesReady} placeholder={notesReady ? 'Запишите важные мысли по занятию...' : 'Загружаем заметку…'} className="mt-5 min-h-48 w-full resize-y rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-indigo-400 focus:bg-white focus:ring-4 focus:ring-indigo-100 disabled:cursor-wait disabled:opacity-60" />
         </Card>
       )}
 
@@ -544,13 +547,13 @@ export default function PairSpacePage() {
       {activeTab === 'homeworks' && (
         <div className="space-y-3">
           {pairSpace?.homeworks.length === 0 ? (
-            <EmptyState title="Подготовки пока нет" description="Темы и материалы от преподавателя появятся здесь." />
+            <EmptyState title="Подготовки пока нет" />
           ) : (
             pairSpace?.homeworks.map(h => (
               <Card key={h.id} id={`preparation-${h.id}`} padding="sm" className="scroll-mt-24">
-                <div className="flex flex-wrap items-start justify-between gap-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div className="min-w-0 flex-1">
-                    <h3 className="font-semibold text-slate-900">{h.title}</h3>
+                    <h2 className="font-semibold text-slate-900">{h.title}</h2>
                     {h.description && <p className="mt-1 text-sm text-slate-600">{h.description}</p>}
                     {h.deadline && (
                       <p className="mt-2 text-xs text-slate-400">
@@ -571,7 +574,7 @@ export default function PairSpacePage() {
       {activeTab === 'discussion' && (
         <div className="space-y-3">
           {pairSpace?.messages.length === 0 ? (
-            <EmptyState title="Нет сообщений" description="Начните обсуждение" />
+            <EmptyState title="Нет сообщений" />
           ) : (
             pairSpace?.messages.map(m => (
               <Card key={m.id} padding="sm">

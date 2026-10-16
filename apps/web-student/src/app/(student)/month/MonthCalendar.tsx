@@ -42,10 +42,16 @@ const time = (value: string) => value.includes('T') ? value.slice(11, 16) : valu
 const isCancelled = (lesson: Lesson) => /отмен/i.test(lesson.changeDescription || '');
 const hasPairSpace = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 
+export function lessonCountLabel(count: number) {
+  const lastTwo = count % 100;
+  const ending = lastTwo >= 11 && lastTwo <= 14 ? 'занятий' : count % 10 === 1 ? 'занятие' : count % 10 >= 2 && count % 10 <= 4 ? 'занятия' : 'занятий';
+  return `${count} ${ending}`;
+}
+
 function LessonChip({ lesson }: { lesson: Lesson }) {
   const cancelled = isCancelled(lesson);
   const content = <>
-    <span className="block truncate font-semibold">{lesson.subject}</span>
+    <span className="block break-words font-semibold">{lesson.subject}</span>
     <span className="mt-1 block text-sm tabular-nums">{time(lesson.startTime)}–{time(lesson.endTime)}</span>
     {getLessonLocation(lesson.building, lesson.room) && <span className="mt-1 block break-words text-sm">{getLessonLocation(lesson.building, lesson.room)}</span>}
     {lesson.subgroup?.trim() && <span className="mt-1 block text-xs">Подгруппа {lesson.subgroup}</span>}
@@ -75,7 +81,6 @@ export function MonthCalendar({
     || currentMonthCells.find(cell => cell.lessons.length > 0)
     || currentMonthCells[0];
   const chooseDay = onSelectDate;
-  const hasCurrentMonthLessons = currentMonthCells.some(cell => cell.lessons.length > 0);
   if (loading) {
     return <div aria-busy="true" aria-label="Загрузка месячного расписания" className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-7">{Array.from({ length: 14 }, (_, index) => <Skeleton key={index} className="h-28 rounded-xl" />)}</div>;
   }
@@ -83,18 +88,17 @@ export function MonthCalendar({
   if (error) return <RequestState title="Не удалось загрузить расписание" description={error} onRetry={onRetry} />;
 
   return <>
-    {!hasCurrentMonthLessons && <p role="status" className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-600">{hasFilters ? 'По этим фильтрам занятий не найдено.' : 'В этом месяце занятий нет.'}</p>}
     <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
       <section aria-label="Выбор дня месяца" className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
         <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50">{weekDayNames.map(name => <span key={name} className="py-3 text-center text-xs font-semibold text-slate-600">{name}</span>)}</div>
-        <div className="grid grid-cols-7">{cells.map(cell => <button key={cell.key} type="button" disabled={!cell.inCurrentMonth} onClick={() => chooseDay(cell.key)} aria-pressed={selectedCell?.key === cell.key} aria-label={`${cell.date.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' })}, ${cell.lessons.length} занятий${cell.key === today ? ', сегодня' : ''}`} className={`min-h-[64px] min-w-0 border-b border-r border-slate-100 p-1 text-left focus-visible:relative focus-visible:z-10 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-indigo-300 sm:min-h-28 sm:p-3 ${selectedCell?.key === cell.key ? 'bg-indigo-50 ring-2 ring-inset ring-indigo-500' : 'hover:bg-slate-50'} ${!cell.inCurrentMonth ? 'bg-slate-50 text-slate-400' : 'text-slate-800'}`}>
-          <time dateTime={cell.key} aria-current={cell.key === today ? 'date' : undefined} className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-sm font-semibold ${cell.key === today ? 'bg-indigo-600 text-white' : ''}`}>{cell.date.getDate()}</time>
-          {cell.lessons.length > 0 && <><span className="mt-1 block text-center text-xs font-semibold text-indigo-700 sm:text-left">{cell.lessons.length}<span className="hidden sm:inline"> занятий</span></span><span className="mt-2 flex flex-wrap gap-1" aria-hidden="true">{cell.lessons.slice(0,5).map(lesson=><span key={lesson.id} className={`h-1.5 w-1.5 rounded-full ${lesson.isChanged?'bg-amber-500':'bg-indigo-300'}`}/>)}</span></>}
+        <div className="grid grid-cols-7">{cells.map(cell => <button key={cell.key} type="button" disabled={!cell.inCurrentMonth} onClick={() => chooseDay(cell.key)} aria-pressed={selectedCell?.key === cell.key} aria-label={`${cell.date.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' })}, ${lessonCountLabel(cell.lessons.length)}${cell.key === today ? ', сегодня' : ''}`} className={`min-h-[64px] min-w-0 border-b border-r border-slate-100 p-1 text-left focus-visible:relative focus-visible:z-10 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-[var(--color-brand)] sm:min-h-28 sm:p-3 ${selectedCell?.key === cell.key ? 'bg-[var(--color-brand-soft)] ring-2 ring-inset ring-[var(--color-brand)]' : 'hover:bg-slate-50'} ${!cell.inCurrentMonth ? 'bg-slate-50 text-slate-400' : 'text-slate-800'}`}>
+          <time dateTime={cell.key} aria-current={cell.key === today ? 'date' : undefined} className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-sm font-semibold ${cell.key === today ? 'bg-[var(--color-brand)] text-[var(--color-on-brand)]' : ''}`}>{cell.date.getDate()}</time>
+          {cell.lessons.length > 0 && <><span className="mt-1 block text-center text-xs font-semibold text-[var(--color-brand)] sm:text-left"><span className="sm:hidden">{cell.lessons.length}</span><span className="hidden sm:inline">{lessonCountLabel(cell.lessons.length)}</span></span><span className="mt-2 flex flex-wrap gap-1" aria-hidden="true">{cell.lessons.slice(0,5).map(lesson=><span key={lesson.id} className={`h-1.5 w-1.5 rounded-full ${lesson.isChanged?'bg-amber-500':'bg-[var(--color-brand)]'}`}/>)}</span></>}
         </button>)}</div>
       </section>
       {selectedCell && <section aria-label="Занятия выбранного дня" aria-live="polite" className="rounded-2xl border border-slate-200 bg-white p-4 xl:sticky xl:top-24">
-        <h2 className="text-base font-semibold capitalize text-slate-900">{selectedCell.date.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' })}</h2><p className="mt-1 text-sm text-slate-500">{selectedCell.lessons.length} занятий{selectedCell.key === today ? ' · Сегодня' : ''}</p>
-        <div className="mt-4 space-y-3">{selectedCell.lessons.length ? selectedCell.lessons.map(lesson => <LessonChip key={lesson.id} lesson={lesson} />) : <p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-600">{hasFilters ? 'По выбранным фильтрам занятий нет.' : 'Свободный день. Выберите другую дату в календаре.'}</p>}</div>
+        <h2 className="text-base font-semibold capitalize text-slate-900">{selectedCell.date.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' })}</h2><p className="mt-1 text-sm text-slate-500">{lessonCountLabel(selectedCell.lessons.length)}{selectedCell.key === today ? ' · Сегодня' : ''}</p>
+        <div className="mt-4 space-y-3">{selectedCell.lessons.length ? selectedCell.lessons.map(lesson => <LessonChip key={lesson.id} lesson={lesson} />) : <p className="py-2 text-sm text-slate-600">{hasFilters ? 'Нет совпадений.' : 'Занятий нет.'}</p>}</div>
       </section>}
     </div>
   </>;

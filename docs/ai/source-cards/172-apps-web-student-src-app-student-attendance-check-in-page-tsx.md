@@ -6,7 +6,7 @@
 
 ## Scope
 
-Historical check-in URL now displays an explanation: the teacher records present, absent and late in the group roster. The page does not scan, submit tokens or request camera access. Attendance self-check-in is no longer exposed in the student UI.
+Historical check-in URL offers direct links to the schedule and absence requests, with one short note that the teacher owns attendance marks. The page does not scan, submit tokens or request camera access. Attendance self-check-in is no longer exposed in the student UI.
 
 ## Change boundary
 

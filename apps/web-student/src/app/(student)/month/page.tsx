@@ -5,7 +5,7 @@ import { useWorkspaceQuery, parseCalendarDate } from '@napare/ui/workspace-shell
 import { useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '@/lib/api';
 import type { PaginatedResponse } from '@/lib/api';
-import { MonthCalendar, type MonthDayCell } from './MonthCalendar';
+import { MonthCalendar, lessonCountLabel, type MonthDayCell } from './MonthCalendar';
 import { getLessonLocation } from '../schedule-location';
 
 interface Lesson {
@@ -233,33 +233,29 @@ export default function MonthSchedulePage() {
   };
 
   return <div className="mx-auto max-w-[1400px] space-y-6">
-    <header className="space-y-4">
-      <div>
-        <p className="text-xs font-medium text-slate-400">НаПаре / Расписание</p>
-        <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">Расписание на месяц</h1>
-        <p className="mt-2 text-sm text-slate-500">Пары, изменения и типы занятий в календаре месяца.</p>
+    <header className="space-y-3 sm:grid sm:grid-cols-[minmax(0,24rem)_1fr] sm:gap-x-4 sm:gap-y-3 sm:space-y-0">
+      <div className="flex items-center justify-between gap-3 sm:col-span-2">
+        <h1 className="text-2xl font-bold tracking-tight text-slate-950">Месяц</h1>
+        <Link href={"/week?" + new URLSearchParams({ date: selectedDate, filter, q: search }).toString()} className="inline-flex min-h-11 items-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50">Неделя</Link>
       </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <Link href={"/week?" + new URLSearchParams({ date: selectedDate, filter, q: search }).toString()} className="inline-flex h-11 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50">Неделя</Link>
-        <button type="button" onClick={() => downloadCalendar(monthLessons, monthKey)} disabled={loading || !monthLessons.some(lesson => !isCancelled(lesson))} className="h-11 rounded-xl border border-indigo-200 bg-white px-4 text-sm font-semibold text-indigo-700 hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-50">Скачать месяц (.ics)</button>
-        <button type="button" onClick={() => selectMonth(new Date())} className="h-11 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50">Этот месяц</button>
-        <button type="button" onClick={() => changeMonth(-1)} aria-label="Предыдущий месяц" className="h-11 w-11 rounded-xl border border-slate-200 bg-white text-lg text-slate-600 hover:bg-slate-50">‹</button>
-        <label className="flex h-11 items-center rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-600">
+      <div className="grid grid-cols-[44px_minmax(0,1fr)_44px] items-center gap-2 sm:max-w-sm">
+        <button type="button" onClick={() => changeMonth(-1)} aria-label="Предыдущий месяц" className="h-11 rounded-lg border border-slate-200 bg-white text-lg text-slate-600 hover:bg-slate-50">‹</button>
+        <label className="flex h-11 min-w-0 items-center rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-600">
           <span className="sr-only">Выбрать месяц</span>
-          <input type="month" value={monthKey} onChange={event => chooseMonth(event.target.value)} className="bg-transparent text-sm outline-none" aria-label="Выбрать месяц" />
+          <input type="month" value={monthKey} onChange={event => chooseMonth(event.target.value)} className="min-w-0 w-full bg-transparent text-sm outline-none" aria-label="Выбрать месяц" />
         </label>
-        <button type="button" onClick={() => changeMonth(1)} aria-label="Следующий месяц" className="h-11 w-11 rounded-xl border border-slate-200 bg-white text-lg text-slate-600 hover:bg-slate-50">›</button>
+        <button type="button" onClick={() => changeMonth(1)} aria-label="Следующий месяц" className="h-11 rounded-lg border border-slate-200 bg-white text-lg text-slate-600 hover:bg-slate-50">›</button>
       </div>
-      {offlineSavedAt && <p role="status" className="text-xs font-medium text-amber-700">{cacheRefreshing ? 'Сохраненная копия · проверяем актуальность' : 'Офлайн · сохранено'} {new Date(offlineSavedAt).toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' })}</p>}
+      <div className="flex flex-wrap items-center justify-between gap-x-4 text-sm sm:justify-end">
+        <div className="flex flex-wrap items-center gap-2 text-slate-500"><span>{lessonCountLabel(currentMonthLessons.length)}</span>{changedCount > 0 && <span className="text-amber-800">{changedCount} изменено</span>}</div>
+        <button type="button" onClick={() => selectMonth(new Date())} className="min-h-11 font-semibold text-indigo-700">Этот месяц</button>
+      </div>
+      {offlineSavedAt && <p role="status" className="text-xs font-medium text-amber-700 sm:col-span-2">{cacheRefreshing ? 'Сохраненная копия · проверяем актуальность' : 'Офлайн · сохранено'} {new Date(offlineSavedAt).toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' })}</p>}
     </header>
 
-    <section className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4" aria-label="Фильтры расписания">
-      <div className="flex flex-wrap items-center gap-2 text-sm" aria-live="polite">
-        <span className="font-semibold capitalize text-slate-900">{firstDay.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' })}</span>
-        <span className="text-slate-400">·</span><span className="text-slate-600">{currentMonthLessons.length} пар</span>
-        {changedCount > 0 && <span className="rounded-md bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-800">{changedCount} изменено</span>}
-      </div>
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+    <details className="border-y border-slate-200">
+      <summary className="flex cursor-pointer items-center justify-between gap-3 py-2 text-sm font-medium text-slate-700"><span>Поиск и фильтры{hasFilters ? ' · применены' : ''}</span><span aria-hidden="true">⌄</span></summary>
+      <div className="flex flex-col gap-2 pb-3 sm:flex-row sm:items-center">
         <label className="relative flex-1 sm:max-w-xs">
           <span className="sr-only">Поиск по предмету, преподавателю или аудитории</span>
           <input type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder="Предмет, преподаватель, аудитория" className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm outline-none focus:border-indigo-400 focus:bg-white focus:ring-4 focus:ring-indigo-100" />
@@ -271,8 +267,9 @@ export default function MonthSchedulePage() {
             {Object.entries(typeLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
           </select>
         </label>
+        {hasFilters && <button type="button" onClick={() => { setSearch(''); setFilter('all'); }} className="min-h-11 px-3 text-sm font-semibold text-indigo-700">Сбросить</button>}
       </div>
-    </section>
+    </details>
 
     <MonthCalendar
       cells={cells}
@@ -285,6 +282,10 @@ export default function MonthSchedulePage() {
       error={error}
       onRetry={() => setRetryCount(count => count + 1)}
     />
+    <details className="border-t border-slate-200">
+      <summary className="cursor-pointer py-3 text-sm font-medium text-slate-600">Экспорт календаря</summary>
+      <button type="button" onClick={() => downloadCalendar(monthLessons, monthKey)} disabled={loading || !monthLessons.some(lesson => !isCancelled(lesson))} className="mb-3 min-h-11 rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-indigo-700 disabled:cursor-not-allowed disabled:opacity-50">Скачать календарь (.ics)</button>
+    </details>
   </div>;
 }
 
