@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import {
   WorkspaceShell,
@@ -84,24 +84,36 @@ const AppLink = ({ href, children, ...props }: NavigationLinkProps) => href === 
 
 export default function DeveloperLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [user, setUser] = useState<UserInfo | null>(null);
   const [health, setHealth] = useState<HealthInfo | null>(null);
   const [healthChecked, setHealthChecked] = useState(false);
   const [unread, setUnread] = useState(0);
   useEffect(() => {
+    let active = true;
     getUser()
-      .then(setUser)
-      .catch(() => undefined);
-    getHealth()
-      .then(setHealth)
-      .catch(() => setHealth(null))
-      .finally(() => setHealthChecked(true));
-    apiFetch<{ data: Array<{ isRead: boolean }> }>("/notifications")
-      .then((response) =>
-        setUnread(response.data.filter((item) => !item.isRead).length),
-      )
-      .catch(() => undefined);
-  }, []);
+      .then((profile) => {
+        if (!active) return;
+        if (!['developer', 'superadmin'].includes(profile.role)) {
+          router.replace('/login');
+          return;
+        }
+        setUser(profile);
+        getHealth()
+          .then(setHealth)
+          .catch(() => setHealth(null))
+          .finally(() => setHealthChecked(true));
+        apiFetch<{ data: Array<{ isRead: boolean }> }>("/notifications")
+          .then((response) =>
+            setUnread(response.data.filter((item) => !item.isRead).length),
+          )
+          .catch(() => undefined);
+      })
+      .catch(() => {
+        if (active) router.replace('/login');
+      });
+    return () => { active = false; };
+  }, [router]);
   const commands: WorkspaceCommand[] = [
     {
       id: "developer:api",
@@ -129,6 +141,13 @@ export default function DeveloperLayout({ children }: { children: ReactNode }) {
   const apiAvailable = health
     ? ["ok", "healthy"].includes(health.status.toLowerCase())
     : false;
+  if (!user) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[var(--color-background)] text-sm text-[var(--color-text-secondary)]">
+        Проверяем доступ…
+      </div>
+    );
+  }
   return (
     <WorkspaceShell
       className="developer-shell"
