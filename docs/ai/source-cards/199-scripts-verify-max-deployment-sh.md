@@ -8,6 +8,8 @@
 
 Read-only post-deploy smoke check that confirms `/` and `/max/` both serve the existing NaPare portal and load the MAX Bridge script. Detects the retired Vite mini-app by its `/max/assets/` bundle path.
 
+Uses the portal header and role-section HTML markers instead of a marketing heading that can change independently. Both structural checks and the bridge script must be present.
+
 ## Read sequence
 
 1. Read [deployment checks](../../../DEPLOY.md) and [the MAX client guide](../../clients/max-miniapp.md).

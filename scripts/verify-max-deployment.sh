@@ -12,11 +12,14 @@ fetch_page() {
 root_html="$(fetch_page "$base_url/")"
 max_html="$(fetch_page "$base_url/max/")"
 
-landing_marker='Цифровая среда университета'
+# Structural markers survive copy edits and distinguish the portal from login/Vite.
+is_landing_page() {
+  grep -Fq 'class="portal-header"' <<< "$1" && grep -Fq 'id="roles"' <<< "$1"
+}
 bridge_marker='max-web-app.js'
 failed=0
 
-if ! grep -Fq "$landing_marker" <<< "$root_html"; then
+if ! is_landing_page "$root_html"; then
   echo "The public root did not return the NaPare landing page: $base_url/" >&2
   failed=1
 fi
@@ -26,7 +29,7 @@ if ! grep -Fq "$bridge_marker" <<< "$root_html"; then
   failed=1
 fi
 
-if ! grep -Fq "$landing_marker" <<< "$max_html"; then
+if ! is_landing_page "$max_html"; then
   if grep -Fq '/max/assets/' <<< "$max_html"; then
     echo "The MAX route still serves the retired standalone Vite mini-app: $base_url/max/" >&2
   else
