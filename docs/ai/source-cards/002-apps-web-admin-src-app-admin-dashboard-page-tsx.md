@@ -8,6 +8,8 @@
 
 Operational attention queue and daily schedule. Secondary structure metrics are collapsible; partial request failure is distinct from zero.
 
+With no pending signals, a short success line replaces the empty attention card. The next lesson is accented; zero schedule changes are omitted while unavailable counts remain explicit.
+
 ## Read sequence
 
 1. Start with [AI context](../../../AI_CONTEXT.md) and the relevant role or backend map.

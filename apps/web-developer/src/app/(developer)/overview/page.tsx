@@ -88,14 +88,8 @@ export default function DeveloperOverviewPage() {
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       <div className="mx-auto max-w-7xl space-y-6">
-        <div className="flex items-center gap-2 text-xs text-white/60">
-          Разработчик <span>/</span>{" "}
-          <span className="text-white/80">Обзор</span>
-        </div>
         <PageHeader
-          eyebrow="Developer workspace"
           title="Состояние системы"
-          description="Результаты проверки текущего стенда и доступные доменные события"
           actions={
             <Button variant="secondary" onClick={load} loading={loading} disabled={loading}>
               Обновить
@@ -117,7 +111,7 @@ export default function DeveloperOverviewPage() {
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+          <div className="system-metrics">
             {metrics.map((metric) => (
               <Card
                 key={metric.label}
@@ -181,8 +175,8 @@ export default function DeveloperOverviewPage() {
                     ))}
                 </div>
               ) : (
-                <p className="py-10 text-center text-sm text-white/60">
-                  {loading ? "Загружаем события…" : failed.includes("события") ? "Поток событий не загрузился. Повторите проверку." : "События появятся после действий в учебных сценариях."}
+                <p className="py-3 text-sm text-white/60">
+                  {loading ? "Загружаем события…" : failed.includes("события") ? "Поток событий не загрузился. Повторите проверку." : "Новых событий нет"}
                 </p>
               )}
             </Card>

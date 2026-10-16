@@ -72,13 +72,12 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="login-layout">
-      <section className="login-aside"><Link href="/" className="brand light"><Image src="/brand/np-mark.png" alt="" width={34} height={34} priority unoptimized />НаПаре</Link><div><p className="eyebrow">Единый вход</p><h2>Один аккаунт.<br />Свой кабинет.</h2><p>После входа НаПаре определит вашу роль и откроет нужное рабочее пространство.</p></div><small>Учебные аккаунты выдаёт университет. Работодатели регистрируются самостоятельно.</small></section>
+    <main className="login-layout login-focused">
       <section className="login-panel">
         <div className="login-card">
           <MaxLaunchAuth captureOnly />
-          <Link href="/" className="brand mobile-brand"><Image src="/brand/np-mark.png" alt="" width={34} height={34} priority unoptimized />НаПаре</Link>
-          <h1>Войти в НаПаре</h1>
+          <Link href="/" className="brand login-brand"><Image src="/brand/np-mark.png" alt="" width={34} height={34} priority unoptimized />НаПаре</Link>
+          <h1>С возвращением</h1>
 
           <form onSubmit={submit} className="login-form" noValidate aria-busy={loading}>
             {error && <p className="error" role="alert">{error}</p>}

@@ -1361,6 +1361,24 @@ footer {
 .login-card h1 { font-size: clamp(26px, 4vw, 32px); margin-bottom: 24px; }
 .login-card .login-career-link { margin-top: 16px; color: var(--color-text-secondary); font-size: 13px; }
 .login-card .login-support-details { margin-top: 8px; }
+.login-layout.login-focused { display: flex; justify-content: center; background: #f3f5f9; }
+.login-focused .login-panel { width: 100%; padding: 48px 24px; }
+.login-focused .login-card { max-width: 440px; padding: 36px; border: 1px solid #e1e6ef; border-radius: 20px; background: #fff; box-shadow: 0 12px 40px rgb(23 32 51 / .05); }
+.login-focused .login-brand { display: inline-flex; margin-bottom: 36px; color: #172033; }
+.login-focused .login-card h1 { margin-bottom: 28px; font-size: 28px; }
+.login-focused .login-form input { min-height: 48px; border-radius: 9px; background: #fff; }
+.login-focused .login-form label { font-size: 13px; }
+.login-focused .login-form > button { min-height: 48px; border-radius: 9px; }
+.login-focused .login-form .login-password-toggle { min-width: 72px; background: transparent; color: #5f6b80; }
+.login-focused .login-alt-method, .login-focused .login-support-details { border-top: 0; padding-top: 0; margin-top: 8px; }
+.login-focused .login-alt-method summary, .login-focused .login-support-details summary { font-size: 13px; }
+.login-focused .login-career-link { width: 100%; justify-content: center; border-top: 1px solid #e1e6ef; padding-top: 20px; }
+@media (max-width: 639px) {
+  .login-layout.login-focused { background: #fff; }
+  .login-focused .login-panel { align-items: flex-start; padding: 32px 24px; }
+  .login-focused .login-card { padding: 0; border: 0; border-radius: 0; box-shadow: none; }
+  .login-focused .login-brand { margin-bottom: 44px; }
+}
 .connections-page { max-width: 640px; }
 .connections-heading { margin-block: 24px; }
 .connections-heading h1 { font-size: 28px; }

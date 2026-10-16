@@ -146,15 +146,9 @@ export default function DeveloperLayout({ children }: { children: ReactNode }) {
       }}
       commands={commands}
       mobileHrefs={["/overview", "/api", "/notifications", "/docs"]}
-      help={{ title: "Инструменты разработчика", description: "Проверка API, события платформы и документация.", steps: [
-        { title: "Проверить состояние системы", description: "Доступность API и сведения о текущем окружении.", href: "/overview" },
-        { title: "Открыть API", description: "Проверка доступности методов с текущими правами доступа.", href: "/api" },
-        { title: "Найти документацию", description: "Описание устройства платформы и её контрактов.", href: "/docs" },
-        { title: "Проверить текущую сессию", description: "Сведения об авторизации вашего аккаунта.", href: "/session" },
-      ]}}
       onLogout={logout}
     >
-      {children}
+      <div className="role-content">{children}</div>
     </WorkspaceShell>
   );
 }

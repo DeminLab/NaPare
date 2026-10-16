@@ -10,6 +10,8 @@ University workspace uses grouped navigation for overview, schedule, users, stru
 
 ## Read sequence
 
+Curation context conditionally adds a navigation destination after the account loads. A repeated page banner is no longer rendered; shared header rendering is preserved.
+
 1. Start with [AI context](../../../AI_CONTEXT.md) and the relevant role or backend map.
 2. Read this canonical source file.
 3. Trace direct imports and its nearest caller before widening the investigation.

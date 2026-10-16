@@ -8,6 +8,8 @@
 
 Developer operations overview with per-request availability, explicit missing telemetry, check timestamp and retry. Notifications accept list or paginated data responses.
 
+The October 16 revision removes duplicate introductory labels and renders metrics as a compact strip. Missing telemetry still differs from a real zero.
+
 ## Read sequence
 
 1. Start with [AI context](../../../AI_CONTEXT.md) and the relevant role or backend map.

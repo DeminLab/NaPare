@@ -22,6 +22,7 @@
   --color-brand-strong: var(--indigo-700);
   --color-brand-soft: var(--indigo-50);
   --color-on-brand: #ffffff;
+  --color-on-danger: #ffffff;
   --color-success: var(--green-700); --color-success-soft: var(--green-50);
   --color-warning: var(--amber-700); --color-warning-soft: var(--amber-50);
   --color-danger: var(--red-700); --color-danger-soft: var(--red-50);
@@ -62,7 +63,7 @@
 }
 
 html { scroll-behavior: smooth; }
-body { min-width: 320px; overflow-x: hidden; background: var(--color-background); color: var(--color-text); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+body { min-width: 0; overflow-x: hidden; background: var(--color-background); color: var(--color-text); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
 *, *::before, *::after { border-color: var(--color-border); }
 button, input, select, textarea { font: inherit; }
 img, svg, video { max-width: 100%; }
@@ -86,6 +87,12 @@ img, svg, video { max-width: 100%; }
 .ds-focus-within:focus-within { border-color: var(--color-role); box-shadow: 0 0 0 4px var(--color-role-soft); }
 .ds-card { border: var(--border-width) solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: var(--shadow-sm); }
 .ds-input { border: var(--border-width) solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-text); }
+.ds-empty { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 16px; padding: 28px 20px; text-align: left; }
+.ds-empty__icon { display: grid; place-items: center; flex: 0 0 40px; height: 40px; border-radius: 12px; background: var(--color-brand-soft); color: var(--color-brand); }
+.ds-empty__copy { flex: 1 1 200px; min-width: 0; }
+.ds-empty__copy .ds-card-title { font-size: 16px; }
+.ds-empty__copy p { max-width: 48ch; margin-top: 6px; color: var(--color-text-secondary); font-size: 14px; line-height: 1.6; }
+.ds-empty__action { flex: 0 1 auto; }
 .ds-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 
 @keyframes ds-page-enter { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }

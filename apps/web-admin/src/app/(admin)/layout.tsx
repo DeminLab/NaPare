@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { CurationEntry } from '@napare/ui/curation';
+import { useCurationContext } from '@napare/ui/curation';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 import { WorkspaceShell, type NavigationLinkProps, type WorkspaceCommand, type WorkspaceNavGroup } from '@napare/ui/workspace-shell';
@@ -23,6 +23,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [user, setUser] = useState<Me | null>(null);
   const [notificationCount, setNotificationCount] = useState(0);
+  const curation = useCurationContext(apiFetch, Boolean(user));
   const [systemStatus, setSystemStatus] = useState<'checking' | 'online' | 'offline'>('checking');
   useEffect(() => {
     getUser().then(setUser).catch(() => router.push('/login'));
@@ -36,7 +37,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   ];
   if (!user) return <div className="flex min-h-screen items-center justify-center bg-[var(--color-background)] text-sm text-[var(--color-text-secondary)]">Загрузка панели…</div>;
   const fullName = user.firstName + ' ' + user.lastName;
-  const resolvedGroups = groups.map((group) => ({ ...group, items: group.items.map((item) => item.href === '/notifications' ? { ...item, badge: notificationCount } : item) }));
+  const curationItems: WorkspaceNavGroup['items'] = curation?.canCurate || curation?.canManage ? [{ href: '/curation', label: 'Кураторство', icon: 'users', keywords: ['куратор', 'назначения'] }] : [];
+  const resolvedGroups = groups.map((group) => ({ ...group, items: [...group.items, ...(group.label === 'Университет' ? curationItems : [])].map((item) => item.href === '/notifications' ? { ...item, badge: notificationCount } : item) }));
   const status = systemStatus === 'online' ? { label: 'Система работает', tone: 'success' as const } : systemStatus === 'offline' ? { label: 'Система недоступна', tone: 'danger' as const } : { label: 'Проверка системы', tone: 'warning' as const };
-  return <WorkspaceShell LinkComponent={AppLink} pathname={pathname} groups={resolvedGroups} roleLabel="Кабинет ВУЗа" homeHref="/dashboard" user={{ name: fullName, role: 'Сотрудник ВУЗа', id: user.id }} unreadCount={notificationCount} status={status} commands={commands} mobileHrefs={['/dashboard', '/schedule-import', '/users', '/structure']} onLogout={logout}><div className="role-content">{!pathname.endsWith('/curation') && <CurationEntry apiFetch={apiFetch} basePath="/deanery" />}{children}</div></WorkspaceShell>;
+  return <WorkspaceShell LinkComponent={AppLink} pathname={pathname} groups={resolvedGroups} roleLabel="Кабинет ВУЗа" homeHref="/dashboard" user={{ name: fullName, role: 'Сотрудник ВУЗа', id: user.id }} unreadCount={notificationCount} status={status} commands={commands} mobileHrefs={['/dashboard', '/schedule-import', '/users', '/structure']} onLogout={logout}><div className="role-content">{children}</div></WorkspaceShell>;
 }

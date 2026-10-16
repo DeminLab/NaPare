@@ -10,6 +10,11 @@ Choose the card matching the task area, read the canonical source and then follo
 
 ## Cards
 
+- [285 — Shared UI primitives](285-packages-ui-src-index-tsx.md)
+- [286 — Shared design tokens and workspace styles](286-packages-design-tokens-styles-css.md)
+- [287 — University absence queue](287-apps-web-admin-src-app-admin-absences-page-tsx.md)
+- [288 — Shared workspace content styles](288-packages-ui-content-styles-css.md)
+
 - [241 — `apps/backend/src/curation/curation.service.ts`](241-apps-backend-src-curation-curationservicets.md)
 - [242 — `apps/backend/src/curation/curation.controller.ts`](242-apps-backend-src-curation-curationcontrollerts.md)
 - [243 — `apps/backend/src/curation/curation.module.ts`](243-apps-backend-src-curation-curationmodulets.md)
@@ -20,7 +25,7 @@ Choose the card matching the task area, read the canonical source and then follo
 - [248 — `apps/web-student/src/app/(student)/curation/page.tsx`](248-apps-web-student-src-app-student-curation-pagetsx.md)
 - [249 — `apps/web-staff/src/app/(staff)/curation/page.tsx`](249-apps-web-staff-src-app-staff-curation-pagetsx.md)
 - [250 — `apps/web-admin/src/app/(admin)/curation/page.tsx`](250-apps-web-admin-src-app-admin-curation-pagetsx.md)
-- [251 — `apps/web-student/src/app/(student)/CurationAccess.tsx`](251-apps-web-student-src-app-student-curationaccesstsx.md)
+- [289 — Student shell](289-student-shell.md)
 - [252 — `apps/backend/test/curation.fixture.ts`](252-apps-backend-test-curationfixturets.md)
 - [253 — `apps/backend/test/curation.e2e-spec.ts`](253-apps-backend-test-curatione2e-spects.md)
 

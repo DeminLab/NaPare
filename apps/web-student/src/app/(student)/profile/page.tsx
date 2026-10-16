@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { apiFetch, apiFetchList, getUser, StudentUser } from '@/lib/api';
-import { Avatar, Badge, Card, EmptyState, Icon, RequestState, Skeleton } from '@/components/ui';
+import { Avatar, Badge, Card, Icon, RequestState, Skeleton } from '@/components/ui';
+import { EmptyState } from '@napare/ui';
 
 type ProfileTab = 'profile' | 'study' | 'security' | 'activity';
 

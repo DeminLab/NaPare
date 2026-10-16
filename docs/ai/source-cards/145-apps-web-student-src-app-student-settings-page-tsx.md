@@ -8,6 +8,8 @@
 
 Settings with URL section state, real notification preferences grouped into schedule, preparation/conversation and system/delivery. Dirty save state is visible; security explains administrator-managed passwords. One workspace main landmark is retained.
 
+The October 16 revision shows the save bar only for real edits in the current section; profile and appearance dirty states are separate. Loading preferences preserves the server timezone instead of silently substituting the device zone and triggering a false unsaved-changes warning. Quiet-hours settings offer an explicit action to use the device timezone. The sidebar and section headings omit generic descriptions.
+
 ## Read sequence
 
 1. Read [the Notifications module](../../modules/notifications.md).

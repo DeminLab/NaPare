@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { CurationEntry } from '@napare/ui/curation';
+import { useCurationContext } from '@napare/ui/curation';
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import {
@@ -74,6 +74,7 @@ export default function StaffLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [user, setUser] = useState<Awaited<ReturnType<typeof getUser>> | null>(null);
   const [unread, setUnread] = useState(0);
+  const curation = useCurationContext(apiFetch, Boolean(user));
   useEffect(() => {
     if (!isLoggedIn()) {
       router.push("/login");
@@ -124,9 +125,10 @@ export default function StaffLayout({ children }: { children: ReactNode }) {
       </div>
     );
   const fullName = user.firstName + " " + user.lastName;
+  const curationItems: WorkspaceNavGroup['items'] = curation?.canCurate || curation?.canManage ? [{ href: '/curation', label: 'Кураторство', icon: 'users', keywords: ['куратор', 'назначения'] }] : [];
   const resolvedGroups = groups.map((group) => ({
     ...group,
-    items: group.items.filter(item => item.href !== "/absences" || ["curator", "faculty_dean", "department_head", "university_admin", "superadmin"].includes(user.role)).map((item) =>
+    items: [...group.items, ...(group.label === 'Работа' ? curationItems : [])].filter(item => item.href !== "/absences" || ["curator", "faculty_dean", "department_head", "university_admin", "superadmin"].includes(user.role)).map((item) =>
       item.href === "/inbox" ? { ...item, badge: unread } : item,
     ),
   }));
@@ -146,7 +148,7 @@ export default function StaffLayout({ children }: { children: ReactNode }) {
       mobileHrefs={["/today", "/week", "/groups", "/inbox"]}
       onLogout={logout}
     >
-      <div className="role-content">{!pathname.endsWith('/curation') && <CurationEntry apiFetch={apiFetch} basePath="/staff" />}{children}</div>
+      <div className="role-content">{children}</div>
     </WorkspaceShell>
   );
 }

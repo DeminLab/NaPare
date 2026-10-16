@@ -6,7 +6,8 @@ import { useWorkspaceQuery } from '@napare/ui/workspace-shell';
 import { useRouter } from 'next/navigation';
 import { apiFetchList, markAllRead, markNotificationRead } from '@/lib/api';
 import { getInternalHref } from '../internal-navigation';
-import { Badge, Button, EmptyState, Icon, IconName, RequestState, Skeleton } from '@/components/ui';
+import { Badge, Icon, IconName, RequestState, Skeleton } from '@/components/ui';
+import { EmptyState, Button } from '@napare/ui';
 
 type Notification = { id: string; title: string; body: string; type: string; isRead: boolean; createdAt: string; deepLink?: string; priority?: string; category?: string; };
 interface NotificationCache {

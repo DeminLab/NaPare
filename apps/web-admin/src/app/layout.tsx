@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import Script from 'next/script';
 import './globals.css';
 import { NetworkStatus } from '@/components/ui';
 import { MaxBridgeNavigation } from './MaxBridgeNavigation';
@@ -17,7 +16,6 @@ export default function RootLayout({
   return (
     <html lang="ru">
       <body className="min-h-screen bg-[var(--color-background)] text-[var(--color-text)] antialiased">
-        <Script src="https://st.max.ru/js/max-web-app.js" strategy="beforeInteractive" />
         {children}
         <NetworkStatus />
         <MaxBridgeNavigation />

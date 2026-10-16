@@ -6,7 +6,7 @@
 
 ## Scope
 
-Developer workspace groups system state, API, events and documentation, and distinguishes checking, successful health checks and unavailable verification. Includes mobile shortcuts and role help.
+Developer workspace groups system state, API, events and documentation, and distinguishes checking, successful health checks and unavailable verification. Includes mobile shortcuts. The October 16 revision removes the onboarding help configuration and applies content-scoped styling; the shared shell implementation is unchanged.
 
 Navigation data includes `/control`; the shared header/navigation implementation is unchanged. Management permissions are checked by the platform API, not by the presence of this link.
 

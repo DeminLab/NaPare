@@ -8,6 +8,8 @@
 
 Portal login shows university email/password immediately, offers password visibility and inline validation, and keeps MAX as an alternative; MAX launch data opens the relevant section automatically. Session contracts are unchanged.
 
+The October 16 visual revision uses one centered form with the brand; the explanatory desktop aside is removed. Mobile has no surrounding card border.
+
 ## Read sequence
 
 1. Start with [AI context](../../../AI_CONTEXT.md) and the backend auth source card.

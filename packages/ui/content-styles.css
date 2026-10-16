@@ -1,0 +1,104 @@
+/* Content styles shared by role applications. Shell navigation is outside this scope. */
+.curation-entry { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; min-height: 44px; margin-bottom: 20px; padding: 8px 12px; border-left: 3px solid var(--color-brand); border-radius: 0 8px 8px 0; background: var(--color-brand-soft); color: var(--color-brand); font-size: 13px; font-weight: 600; }
+.curation-workspace { min-width: 0; color: var(--color-text); }
+.curation-button { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; max-width: 100%; gap: 8px; padding: 9px 12px; border: 1px solid var(--color-border-strong); border-radius: 8px; background: var(--color-surface); color: var(--color-text); font-size: 13px; font-weight: 600; line-height: 1.5; overflow-wrap: anywhere; cursor: pointer; }
+.curation-button:hover { background: var(--color-surface-secondary); }
+.curation-button--primary { border-color: var(--color-brand); background: var(--color-brand); color: var(--color-on-brand); }
+.curation-button--primary:hover { background: var(--color-brand-strong); }
+.curation-button:disabled { cursor: default; opacity: .5; }
+.curation-input { display: block; width: 100%; min-width: 0; min-height: 44px; padding: 10px 12px; border: 1px solid var(--color-border-strong); border-radius: 8px; background: var(--color-surface); color: var(--color-text); font-size: 14px; line-height: 1.5; }
+.curation-input:focus-visible, .curation-button:focus-visible, .curation-entry:focus-visible { outline: 2px solid var(--color-brand); outline-offset: 3px; }
+.curation-groups .curation-button { justify-content: flex-start; text-align: left; }
+.curation-modes { display: inline-flex; max-width: 100%; gap: 4px; padding: 4px; border-radius: 10px; background: var(--color-surface-secondary); }
+.curation-modes .curation-button { border: 0; background: transparent; color: var(--color-text-secondary); }
+.curation-modes .curation-button[aria-pressed="true"] { background: var(--color-surface); color: var(--color-brand); box-shadow: 0 1px 2px rgb(15 23 42 / .06); }
+.curation-tabs { display: flex; gap: 0; overflow-x: auto; border-bottom: 1px solid var(--color-border); }
+.curation-tabs .curation-button { flex-shrink: 0; padding-inline: 8px; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: transparent; color: var(--color-text-secondary); }
+.curation-tabs .curation-button[aria-pressed="true"] { border-bottom-color: var(--color-brand); color: var(--color-brand); }
+@media (min-width: 768px) {
+  .curation-layout > section:first-child { padding-right: 20px; border-right: 1px solid var(--color-border); }
+}
+
+/* Workspaces share a reading hierarchy, while keeping each role's own accent.
+   Scope stays inside page content: navigation, avatars and the shell are untouched. */
+:is(.student-content.student-content, .role-content.role-content) {
+  --radius-sm: 6px; --radius-md: 9px; --radius-lg: 12px; --radius-xl: 16px;
+  --type-page-size: clamp(1.5rem, 2.5vw, 2rem);
+  font-size: 14px; line-height: 1.55;
+}
+:is(.student-content, .role-content) :is(button, summary) { min-height: 44px; }
+:is(.student-content, .role-content) :where(.border, .border-t, .border-b, .divide-y > :not([hidden]) ~ :not([hidden])) { border-color: var(--color-border); }
+:is(.student-content.student-content, .role-content.role-content) .ds-card {
+  border-radius: 12px; box-shadow: none;
+}
+:is(.student-content.student-content, .role-content.role-content) .ds-card .ds-card {
+  box-shadow: none;
+}
+:is(.student-content, .role-content) .ds-page-header {
+  align-items: center; padding-bottom: 20px; border-bottom: 1px solid var(--color-border);
+}
+:is(.student-content, .role-content) .ds-page-header__title { letter-spacing: -.035em; }
+:is(.student-content, .role-content) .ds-kicker {
+  margin-bottom: 6px; font-size: 12px; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--color-text-secondary);
+}
+:is(.student-content, .role-content) .ds-input {
+  min-height: 44px; border-radius: 8px; border-color: var(--color-border-strong); background: var(--color-surface);
+}
+:is(.student-content, .role-content) table thead {
+  background: var(--color-surface-secondary); color: var(--color-text-secondary); font-size: 12px;
+}
+:is(.student-content, .role-content) table :is(th, td) { padding: 12px 16px; }
+:is(.student-content, .role-content) table th { font-weight: 600; }
+:is(.student-content, .role-content) table tbody tr:hover { background: var(--color-brand-soft); }
+.student-content.student-content .day-next {
+  border: 0; border-left: 4px solid var(--color-brand); background: var(--color-brand-soft);
+}
+.student-content .day-next > div:first-child { border-bottom-color: color-mix(in srgb, var(--color-brand) 18%, transparent); }
+.student-content.student-content .day-free { border-style: dashed; background: transparent; }
+.student-content .day-actions a { border-radius: 8px; }
+.student-content .day-actions { display: flex; flex-wrap: nowrap; }
+.student-content .day-actions a { justify-content: center; }
+.student-content .day-next h2 { max-width: 44ch; }
+.role-content.role-content .work-next { border: 0; border-left: 4px solid var(--color-brand); background: var(--color-brand-soft); padding: 24px; }
+.role-content.role-content .review-priority { border-left: 3px solid var(--color-brand); }
+.student-content .group-catalog { border: 0; padding: 0; background: transparent; }
+.student-content .group-catalog-list { border-top: 1px solid var(--color-border); }
+.student-content .group-catalog-row { border-bottom: 1px solid var(--color-border); border-radius: 0; min-height: 68px; }
+.student-content .group-catalog-row:has(button[aria-pressed="true"]:first-child) { border-left: 3px solid var(--color-brand); }
+.student-content .group-agenda-day { overflow: hidden; border-radius: 10px; }
+.student-content .group-agenda-day > div:first-child { background: var(--color-surface-secondary); }
+.student-content .group-agenda-day article { min-height: 76px; }
+.schedule-empty-day { display: flex; min-width: 0; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 4px; border-bottom: 1px solid var(--color-border); }
+.schedule-empty-day :is(h2, h3) { font-size: 14px; font-weight: 500; color: var(--color-text-secondary); }
+.schedule-empty-day p { margin-top: 2px; font-size: 12px; color: var(--color-text-secondary); }
+.schedule-empty-day > span { font-size: 12px; color: var(--color-text-secondary); }
+.student-content .absence-compose summary { padding: 12px 16px; border-radius: 9px; background: var(--color-brand); color: var(--color-on-brand); font-size: 14px; font-weight: 600; }
+.student-content .absence-compose details[open] { padding: 16px; border: 1px solid var(--color-border); border-radius: 12px; background: var(--color-surface); }
+.student-content .absence-compose details[open] summary { margin: -4px -4px 12px; padding: 8px 4px; background: transparent; color: var(--color-text); }
+.student-content .absence-filters { padding-block: 4px; border-block: 1px solid var(--color-border); }
+.student-content .absence-filters summary { font-size: 13px; }
+.student-content .absence-history:has(> .ds-empty):not(:has(> div:not(.ds-empty))) { border: 0; background: transparent; }
+:is(.student-content, .role-content) table thead { text-transform: none; letter-spacing: 0; }
+.developer-shell .role-content > div { padding: 0; }
+.developer-shell .role-content h2 { font-size: 15px; font-weight: 600; text-transform: none; letter-spacing: 0; }
+.developer-shell .role-content .system-metrics { display: flex; flex-wrap: wrap; gap: 16px 32px; padding-block: 16px; border-block: 1px solid var(--color-border); }
+.developer-shell .role-content .system-metrics .ds-card { border: 0; padding: 0; background: transparent; }
+.developer-shell .system-metrics p:first-child { text-transform: none; letter-spacing: 0; }
+.developer-shell .system-metrics p + p { margin-top: 4px; font-size: 18px; }
+@media (min-width: 640px) {
+  .student-content .absence-compose details:not([open]) { width: fit-content; max-width: 100%; }
+}
+@media (max-width: 639px) {
+  :is(.student-content, .role-content) :is(input, select, textarea) { font-size: 16px; }
+  .role-content.role-content .work-next { padding: 16px; }
+  .student-content .day-heading h1 { font-size: 23px; }
+  .student-content .day-heading button { padding-inline: 10px; }
+  .student-content .day-heading p { font-size: 13px; }
+  .student-content .day-actions a { flex: 1 1 0; padding-inline: 10px; font-size: 13px; }
+  .student-content .day-next > div { padding: 16px; }
+  .student-content .day-next .text-3xl { font-size: 24px; }
+  .student-content .day-next h2 { font-size: 19px; line-height: 1.4; }
+  :is(.student-content, .role-content) .ds-page-header { gap: 12px; padding-bottom: 16px; }
+  .ds-empty { padding: 24px 4px; gap: 12px; }
+  .ds-empty__action { margin-left: 0; }
+}

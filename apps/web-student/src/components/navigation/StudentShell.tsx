@@ -5,6 +5,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { WorkspaceShell, searchCommands, type WorkspaceSearchResponse, type NavigationLinkProps, type WorkspaceCommand, type WorkspaceNavGroup } from '@napare/ui/workspace-shell';
 import { apiFetch, getUnreadCount, getUser, isLoggedIn, logout, StudentUser } from '@/lib/api';
+import { useCurationContext } from '@napare/ui/curation';
 
 const groups: WorkspaceNavGroup[] = [
   { label: 'Главное', items: [{ href: '/today', label: 'Сегодня', icon: 'home', keywords: ['мой день', 'сейчас', 'дальше'] }, { href: '/week', activePaths: ['/month'], label: 'Расписание', icon: 'calendar', keywords: ['день', 'неделя', 'месяц'] }, { href: '/pair-space', label: 'Подготовка', icon: 'book', keywords: ['материалы', 'задания', 'пространства пар'] }, { href: '/notifications', label: 'Уведомления', icon: 'bell' }] },
@@ -20,6 +21,7 @@ export default function StudentShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [user, setUser] = useState<StudentUser | null>(null);
   const [unread, setUnread] = useState(0);
+  const curation = useCurationContext(apiFetch, Boolean(user));
 
   useEffect(() => {
     if (!isLoggedIn()) { router.push('/login'); return; }
@@ -36,6 +38,7 @@ export default function StudentShell({ children }: { children: ReactNode }) {
 
   if (!user) return <div className="flex min-h-screen items-center justify-center bg-[var(--color-background)] text-sm text-[var(--color-text-secondary)]">Загрузка…</div>;
   const name = user.firstName + ' ' + user.lastName;
-  const resolvedGroups = groups.map(group => ({ ...group, items: group.items.map(item => item.href === '/notifications' ? { ...item, badge: unread } : item) }));
+  const curationItems: WorkspaceNavGroup['items'] = curation?.canCurate || curation?.canManage ? [{ href: '/curation', label: 'Кураторство', icon: 'users', keywords: ['куратор', 'назначения'] }] : [];
+  const resolvedGroups = groups.map(group => ({ ...group, items: [...group.items, ...(group.label === 'Другие действия' ? curationItems : [])].map(item => item.href === '/notifications' ? { ...item, badge: unread } : item) }));
   return <WorkspaceShell LinkComponent={AppLink} pathname={pathname} groups={resolvedGroups} roleLabel="Студент" homeHref="/today" user={{ name, role: user.groupName || 'Студент', id: user.id }} unreadCount={unread} commands={commands} onSearch={searchWorkspace} searchPlaceholder="Предмет, преподаватель, материал или раздел…" mobileHrefs={['/today', '/week', '/pair-space', '/notifications']} onLogout={logout}>{children}</WorkspaceShell>;
 }

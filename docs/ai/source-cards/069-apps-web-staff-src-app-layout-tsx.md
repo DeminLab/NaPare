@@ -24,3 +24,5 @@ Trace direct imports and the closest route or caller before changing this file.
 pnpm --filter @napare/web-staff exec tsc --noEmit
 ```
 
+
+MAX SDK loads through MaxBridgeNavigation after interactivity. Do not duplicate it as beforeInteractive in the root: an unavailable external SDK must not prevent the workspace from hydrating.
