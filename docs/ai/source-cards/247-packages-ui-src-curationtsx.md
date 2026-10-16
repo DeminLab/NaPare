@@ -6,7 +6,7 @@
 
 ## Scope
 
-Shared curation workspace for student, staff and deanery apps; context discovery, assignments, roster, schedule, scoped absence decisions and paginated lists.
+Shared curation workspace for student, staff and deanery apps; context discovery, assignments, roster, schedule with shared lesson-type badges, scoped absence decisions and paginated lists.
 
 The October 16 revision uses semantic controls from `packages/ui/content-styles.css`, native mobile group selection and compact tabs. Group search is shown for more than ten results or an active query. `useCurationContext` supplies conditional role navigation after account loading; the optional `CurationEntry` remains available but is no longer repeated above every page. API paths and mutation behavior are unchanged.
 

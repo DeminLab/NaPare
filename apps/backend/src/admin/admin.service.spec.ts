@@ -15,6 +15,7 @@ import { AuditLog } from "../common/entities/audit-log.entity";
 import { Lesson } from "../schedule/entities/lesson.entity";
 import { EventBusService } from "../events/event-bus.service";
 import { MoodleConnectorService } from "../moodle/moodle-connector.service";
+import { RaspScraperService } from "../auth/rasp-scraper.service";
 
 describe("AdminService", () => {
   let service: AdminService;
@@ -52,6 +53,7 @@ describe("AdminService", () => {
     configure: jest.fn(),
     testConnection: jest.fn(),
   };
+  const mockRaspScraperService = { isValidGroup: jest.fn().mockResolvedValue(false) };
 
   const mockRepo = (defaults: any = {}) => ({
     find: jest.fn().mockResolvedValue(defaults.find || []),
@@ -62,18 +64,19 @@ describe("AdminService", () => {
     count: jest.fn().mockResolvedValue(0),
     delete: jest.fn(),
   });
+  let mockUniversityRepository: ReturnType<typeof mockRepo>;
 
   beforeEach(async () => {
+    mockUniversityRepository = mockRepo({ findOne: { id: "uni-1", name: "Test Uni" } });
+    mockRaspScraperService.isValidGroup.mockReset().mockResolvedValue(false);
     module = await Test.createTestingModule({
       providers: [
         AdminService,
         { provide: UsersService, useValue: mockUsersService },
         { provide: ScheduleService, useValue: mockScheduleService },
         { provide: SibitConnectorService, useValue: mockSibitConnectorService },
-        {
-          provide: getRepositoryToken(University),
-          useValue: mockRepo({ findOne: { id: "uni-1", name: "Test Uni" } }),
-        },
+        { provide: RaspScraperService, useValue: mockRaspScraperService },
+        { provide: getRepositoryToken(University), useValue: mockUniversityRepository },
         { provide: getRepositoryToken(Faculty), useValue: mockRepo() },
         { provide: getRepositoryToken(Group), useValue: mockRepo() },
         {
@@ -178,6 +181,32 @@ describe("AdminService", () => {
         }),
       );
       expect(result.passwordHash).not.toBe("temporary-password-2026");
+    });
+
+    it("creates a student with the validated external SIBIT group id", async () => {
+      mockUniversityRepository.findOne.mockResolvedValue({
+        id: "uni-1",
+        name: "СИБИТ",
+        city: "Омск",
+        connectorType: "rasp-sano",
+      });
+      mockRaspScraperService.isValidGroup.mockResolvedValue(true);
+
+      const result = await service.createUniversityUser(
+        "uni-1",
+        {
+          email: "student@university.ru",
+          password: "temporary-password-2026",
+          firstName: "Анна",
+          lastName: "Иванова",
+          role: UserRole.STUDENT,
+          groupId: "12131",
+        },
+        UserRole.UNIVERSITY_ADMIN,
+      );
+
+      expect(mockRaspScraperService.isValidGroup).toHaveBeenCalledWith("12131");
+      expect(result.groupId).toBe("12131");
     });
 
     it("does not let an operator deactivate their own account", async () => {

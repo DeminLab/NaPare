@@ -6,7 +6,7 @@
 
 ## Scope
 
-Compact month selector on desktop and mobile. The parent owns the selected date and URL state; selecting a day reveals every lesson in a readable adjacent/below panel. Location/subgroup/week parity come from the source, and Pair Space links are restricted to persisted lesson IDs.
+Compact month selector on desktop and mobile. The parent owns the selected date and URL state; selecting a day reveals every lesson in a readable adjacent/below panel. Lesson dots and text badges share type colors, while accessible day labels announce localized lesson types. Location/subgroup/week parity come from the source, and Pair Space links are restricted to persisted lesson IDs.
 
 Selected-day subject names wrap rather than truncate. `lessonCountLabel` supplies Russian count labels for the month summary and selected day.
 

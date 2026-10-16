@@ -1,4 +1,4 @@
-import { IsEmail, IsEnum, IsOptional, IsString, IsUUID, MinLength } from 'class-validator';
+import { IsEmail, IsEnum, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 import { UserRole } from '../../auth/interfaces/user-role';
@@ -25,8 +25,9 @@ export class CreateUniversityUserDto {
   @IsEnum(UserRole)
   role: UserRole;
 
-  @ApiPropertyOptional({ example: 'uuid-of-group' })
+  @ApiPropertyOptional({ example: '12131', description: 'UUID локальной группы или внешний числовой ID группы СИБИТ из каталога rasp.sano.ru' })
   @IsOptional()
-  @IsUUID()
+  @IsString()
+  @MaxLength(36)
   groupId?: string;
 }

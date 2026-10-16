@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { lessonTypeKey } from '@napare/ui';
 import { useWorkspaceQuery, parseCalendarDate } from '@napare/ui/workspace-shell';
 import { useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '@/lib/api';
@@ -215,7 +216,7 @@ export default function MonthSchedulePage() {
   }, [queryReady, monthKey, retryCount]);
 
   const visibleLessons = useMemo(() => lessons.filter(lesson =>
-    (filter === 'all' || lesson.subjectType === filter)
+    (filter === 'all' || lessonTypeKey(lesson.subjectType) === filter)
     && (!search || `${lesson.subject} ${lesson.teacherName || ''} ${lesson.building || ''} ${lesson.room || ''}`.toLowerCase().includes(search.trim().toLowerCase())),
   ), [lessons, filter, search]);
   const cells = useMemo(() => getMonthDays(month, visibleLessons), [month, visibleLessons]);
@@ -235,7 +236,7 @@ export default function MonthSchedulePage() {
   return <div className="mx-auto max-w-[1400px] space-y-6">
     <header className="space-y-3 sm:grid sm:grid-cols-[minmax(0,24rem)_1fr] sm:gap-x-4 sm:gap-y-3 sm:space-y-0">
       <div className="flex items-center justify-between gap-3 sm:col-span-2">
-        <h1 className="text-2xl font-bold tracking-tight text-slate-950">Месяц</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-[var(--color-text)]">Месяц</h1>
         <Link href={"/week?" + new URLSearchParams({ date: selectedDate, filter, q: search }).toString()} className="inline-flex min-h-11 items-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50">Неделя</Link>
       </div>
       <div className="grid grid-cols-[44px_minmax(0,1fr)_44px] items-center gap-2 sm:max-w-sm">

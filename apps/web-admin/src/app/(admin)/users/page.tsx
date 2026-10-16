@@ -40,6 +40,19 @@ interface Faculty {
   id: string;
   name: string;
 }
+interface RaspGroup {
+  groupId: string;
+  name: string;
+  faculty: string;
+  course: number;
+  academicYear: string;
+}
+interface UniversityContext {
+  id: string;
+  name: string;
+  city: string;
+  connectorType?: string;
+}
 type Filter = "all" | "student" | "teacher" | "admin";
 type NewUserForm = {
   firstName: string;
@@ -117,6 +130,8 @@ function roleMatches(role: string, filter: Filter) {
 export default function UsersPage() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
+  const [raspGroups, setRaspGroups] = useState<RaspGroup[]>([]);
+  const [university, setUniversity] = useState<UniversityContext | null>(null);
   const [faculties, setFaculties] = useState<Faculty[]>([]);
   const [search, setSearch] = useState("");
   const [role, setRole] = useState<Filter>("all");
@@ -151,11 +166,14 @@ export default function UsersPage() {
       apiFetchList<AdminUser>("/admin/users"),
       apiFetchList<Group>("/admin/groups").catch(() => []),
       apiFetchList<Faculty>("/admin/faculties").catch(() => []),
+      apiFetch<UniversityContext>("/admin/university").catch(() => null),
     ])
-      .then(([userItems, groupItems, facultyItems]) => {
+      .then(async ([userItems, groupItems, facultyItems, universityItem]) => {
         setUsers(userItems);
         setGroups(groupItems);
         setFaculties(facultyItems);
+        setUniversity(universityItem);
+        setRaspGroups(universityItem?.connectorType === "rasp-sano" ? await apiFetch<RaspGroup[]>("/auth/rasp-groups").catch(() => []) : []);
       })
       .catch((err) =>
         setError(
@@ -191,7 +209,7 @@ export default function UsersPage() {
               .includes(query))
         );
       }),
-    [users, groups, faculties, search, role, faculty, group, status],
+    [users, groups, faculties, raspGroups, search, role, faculty, group, status],
   );
   const allVisibleSelected =
     filtered.length > 0 &&
@@ -551,12 +569,14 @@ export default function UsersPage() {
             {filtered.map((user) => {
               const currentRole = userRole(user);
               const groupItem = groupMap.get(user.groupId || "");
+              const raspGroupItem = raspGroups.find((item) => item.groupId === user.groupId);
+              const groupName = groupItem?.name || raspGroupItem?.name;
               const facultyName =
                 facultyMap.get(user.facultyId || groupItem?.facultyId || "") ||
-                "—";
+                raspGroupItem?.faculty || "—";
               return (
                 <div key={user.id}>
-                  <article className="space-y-3 p-4 2xl:hidden"><div className="flex items-start justify-between gap-3"><div className="flex min-w-0 items-start gap-3"><input type="checkbox" checked={selectedIds.includes(user.id)} onChange={() => toggle(user.id)} aria-label={`Выбрать ${user.firstName} ${user.lastName}`} className="mt-1 h-5 w-5 shrink-0" /><div className="min-w-0"><button type="button" onClick={() => setDetail(user)} className="min-h-11 break-words text-left text-base font-semibold text-slate-900">{user.firstName} {user.lastName}</button><p className="text-sm text-slate-600">{roleLabels[currentRole] || currentRole} · {groupItem?.name || 'Группа не назначена'}</p></div></div><Badge variant={user.isActive ? 'green' : 'red'}>{user.isActive ? 'Активен' : 'Заблокирован'}</Badge></div><div className="flex flex-wrap items-center justify-between gap-2"><span className="min-w-0 break-all text-sm text-slate-500">{user.email}</span><Button variant="secondary" onClick={() => setDetail(user)}>Данные и действия →</Button></div></article>
+                  <article className="space-y-3 p-4 2xl:hidden"><div className="flex items-start justify-between gap-3"><div className="flex min-w-0 items-start gap-3"><input type="checkbox" checked={selectedIds.includes(user.id)} onChange={() => toggle(user.id)} aria-label={`Выбрать ${user.firstName} ${user.lastName}`} className="mt-1 h-5 w-5 shrink-0" /><div className="min-w-0"><button type="button" onClick={() => setDetail(user)} className="min-h-11 break-words text-left text-base font-semibold text-slate-900">{user.firstName} {user.lastName}</button><p className="text-sm text-slate-600">{roleLabels[currentRole] || currentRole} · {groupName || 'Группа не назначена'}</p></div></div><Badge variant={user.isActive ? 'green' : 'red'}>{user.isActive ? 'Активен' : 'Заблокирован'}</Badge></div><div className="flex flex-wrap items-center justify-between gap-2"><span className="min-w-0 break-all text-sm text-slate-500">{user.email}</span><Button variant="secondary" onClick={() => setDetail(user)}>Данные и действия →</Button></div></article>
                 <div
                   className="grid gap-3 px-4 py-4 hidden 2xl:grid-cols-[36px_minmax(190px,1.4fr)_minmax(180px,1.2fr)_140px_140px_130px_110px_110px] 2xl:grid 2xl:items-center 2xl:px-4"
                 >
@@ -618,7 +638,7 @@ export default function UsersPage() {
                     <span className="md:hidden text-xs text-slate-400">
                       Группа ·{" "}
                     </span>
-                    {groupItem?.name || "—"}
+                    {groupName || "—"}
                   </div>
                   <div>
                     <Badge variant={user.isActive ? "green" : "red"} size="sm">
@@ -719,13 +739,13 @@ export default function UsersPage() {
                     detail.facultyId ||
                       groupMap.get(detail.groupId || "")?.facultyId ||
                       "",
-                  ) || "—"}
+                  ) || raspGroups.find((item) => item.groupId === detail.groupId)?.faculty || "—"}
                 </dd>
               </div>
               <div className="flex justify-between gap-4 py-3">
                 <dt className="text-sm text-slate-500">Группа</dt>
                 <dd className="text-right text-sm font-medium text-slate-800">
-                  {groupMap.get(detail.groupId || "")?.name || "—"}
+                  {groupMap.get(detail.groupId || "")?.name || raspGroups.find((item) => item.groupId === detail.groupId)?.name || "—"}
                 </dd>
               </div>
               <div className="flex justify-between gap-4 py-3">
@@ -837,7 +857,7 @@ export default function UsersPage() {
               <select
                 value={newUser.role}
                 onChange={(event) =>
-                  setNewUser((item) => ({ ...item, role: event.target.value }))
+                  setNewUser((item) => ({ ...item, role: event.target.value, groupId: "" }))
                 }
                 className="mt-1.5 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-sky-500"
               >
@@ -861,11 +881,17 @@ export default function UsersPage() {
                 className="mt-1.5 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-sky-500"
               >
                 <option value="">Не назначать</option>
-                {groups.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name}
-                  </option>
-                ))}
+                {newUser.role === "student" && university?.connectorType === "rasp-sano"
+                  ? raspGroups.map((item) => (
+                      <option key={item.groupId} value={item.groupId}>
+                        {item.name} · {item.faculty} · {item.course} курс · ID {item.groupId}
+                      </option>
+                    ))
+                  : groups.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.name}
+                      </option>
+                    ))}
               </select>
             </label>
           </div>

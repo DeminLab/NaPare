@@ -1,4 +1,9 @@
 /* Content styles shared by role applications. Shell navigation is outside this scope. */
+.lesson-type-badge { display: inline-flex; align-items: center; gap: 6px; width: fit-content; max-width: 100%; border: 1px solid currentColor; border-color: color-mix(in srgb, currentColor 22%, transparent); border-radius: 9999px; padding: 3px 9px; background: var(--color-lesson-other-soft); color: var(--color-lesson-other); font-size: 12px; font-weight: 600; line-height: 1.4; }
+.lesson-type-badge[data-type="lecture"] { background: var(--color-lesson-lecture-soft); color: var(--color-lesson-lecture); }
+.lesson-type-badge[data-type="practice"] { background: var(--color-lesson-practice-soft); color: var(--color-lesson-practice); }
+.lesson-type-badge[data-type="lab"] { background: var(--color-lesson-lab-soft); color: var(--color-lesson-lab); }
+.lesson-type-badge__dot { width: 7px; height: 7px; flex: 0 0 7px; border-radius: 50%; background: currentColor; }
 .curation-entry { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; min-height: 44px; margin-bottom: 20px; padding: 8px 12px; border-left: 3px solid var(--color-brand); border-radius: 0 8px 8px 0; background: var(--color-brand-soft); color: var(--color-brand); font-size: 13px; font-weight: 600; }
 .curation-workspace { min-width: 0; color: var(--color-text); }
 .curation-button { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; max-width: 100%; gap: 8px; padding: 9px 12px; border: 1px solid var(--color-border-strong); border-radius: 8px; background: var(--color-surface); color: var(--color-text); font-size: 13px; font-weight: 600; line-height: 1.5; overflow-wrap: anywhere; cursor: pointer; }

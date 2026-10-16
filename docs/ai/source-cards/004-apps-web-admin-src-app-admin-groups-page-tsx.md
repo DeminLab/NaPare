@@ -6,7 +6,7 @@
 
 ## Scope
 
-Administration workspace UI and its data flow.
+Administration workspace UI and its data flow. Group schedule details show the shared lesson-type badge when source type data is available.
 
 ## Read sequence
 

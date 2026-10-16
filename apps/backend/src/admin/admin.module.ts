@@ -16,6 +16,7 @@ import { Lesson } from "../schedule/entities/lesson.entity";
 import { User } from "../users/entities/user.entity";
 import { MoodleModule } from "../moodle/moodle.module";
 import { CurationModule } from "../curation/curation.module";
+import { RaspModule } from "../rasp/rasp.module";
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { CurationModule } from "../curation/curation.module";
     EventsModule,
     MoodleModule,
     CurationModule,
+    RaspModule,
   ],
   providers: [AdminService, SuperadminService],
   controllers: [AdminController, SuperadminController],

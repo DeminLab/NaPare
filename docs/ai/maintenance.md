@@ -12,11 +12,14 @@ For each documentation change, classify it as current implementation, operationa
 node scripts/verify-ai-documentation.cjs
 node scripts/verify-role-workspace-boundaries.cjs
 pnpm lint
+pnpm lint:docs
 ```
 
 The documentation validator checks the minimum Markdown inventory, required entry points and canonical source paths. It does not verify factual freshness or local Markdown links; run a separate link check during broad documentation reviews. Do not lower the count threshold to pass a temporary change.
 
 Keep browser diagnostics in ignored `/output/` and `/.playwright-cli/`; Python `__pycache__` and bytecode are ignored too. Local screenshots can support a dated verification record but must not become required repository links or imply production validation.
+
+Use [the documentation writing guide](documentation-guide.md) when creating or materially revising project documentation. It applies Diátaxis by reader need without requiring a repository-wide folder migration.
 
 ## Sharing archive
 

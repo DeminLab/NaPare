@@ -8,6 +8,7 @@ import { toPaginatedResponse } from '../common/dto/pagination-query.dto';
 import { User } from '../users/entities/user.entity';
 import { University } from '../users/entities/university.entity';
 import { UserRole } from '../auth/interfaces/user-role';
+import { RaspScraperService, SIBIT_UNIVERSITY } from '../auth/rasp-scraper.service';
 import { PlatformControl, PlatformGrant } from './platform.entity';
 import { PLATFORM_PERMISSIONS, PlatformAccountDto, PlatformCreateAccountDto, PlatformGrantDto, PlatformJobDto, PlatformPermission, PlatformQueryDto, PlatformSettingsDto, PlatformUniversityDto, SERVICE_IDS } from './platform.dto';
 import { ControlAgentClient } from './control-agent.client';
@@ -17,7 +18,7 @@ const safeAccount = ({ id, email, firstName, lastName, role, universityId, group
 
 @Injectable()
 export class PlatformService {
-  constructor(private readonly db: DataSource, private readonly tenant: TenantContext, private readonly agent: ControlAgentClient) {}
+  constructor(private readonly db: DataSource, private readonly tenant: TenantContext, private readonly agent: ControlAgentClient, private readonly raspScraper: RaspScraperService) {}
   async access() {
     const actor = this.tenant.getUser();
     if (!actor || ![UserRole.DEVELOPER, UserRole.SUPERADMIN].includes(actor.role)) throw new ForbiddenException('Требуется доступ к управлению платформой.');
@@ -89,12 +90,18 @@ export class PlatformService {
     if (!access.owner && [UserRole.DEVELOPER, UserRole.SUPERADMIN].includes(dto.role)) throw new ForbiddenException('Платформенные роли назначает только владелец.');
     if (dto.universityId && !await this.db.getRepository(University).existsBy({ id: dto.universityId })) throw new BadRequestException('Университет не найден.');
     if (![UserRole.DEVELOPER, UserRole.SUPERADMIN, UserRole.EMPLOYER, UserRole.CAREER_STAFF, UserRole.CAREER_ADMIN].includes(dto.role) && !dto.universityId) throw new BadRequestException('Для учебного аккаунта требуется университет.');
+    if (dto.groupId) {
+      if (dto.role !== UserRole.STUDENT) throw new BadRequestException('Учебная группа назначается аккаунту студента.');
+      const university = dto.universityId ? await this.db.getRepository(University).findOneBy({ id: dto.universityId }) : null;
+      if (university?.name !== SIBIT_UNIVERSITY.name || university.city !== SIBIT_UNIVERSITY.city || university.connectorType !== 'rasp-sano') throw new BadRequestException('Выберите университет СИБИТ с подключённым каталогом расписания.');
+      if (!/^\d+$/.test(dto.groupId) || !await this.raspScraper.isValidGroup(dto.groupId)) throw new BadRequestException('Выберите группу из каталога СИБИТ.');
+    }
     const email = dto.email.trim().toLowerCase();
     if (await this.db.getRepository(User).createQueryBuilder('u').where('LOWER(u.email) = :email', { email }).getExists()) throw new ConflictException('Email уже используется.');
     const passwordHash = await bcrypt.hash(dto.password, 12);
     return this.db.transaction(async manager => {
       let user: User;
-      try { user = await manager.save(User, manager.create(User, { email, firstName: dto.firstName!.trim(), lastName: dto.lastName!.trim(), role: dto.role, universityId: dto.universityId ?? null, passwordHash, isActive: dto.isActive ?? true })); }
+      try { user = await manager.save(User, manager.create(User, { email, firstName: dto.firstName!.trim(), lastName: dto.lastName!.trim(), role: dto.role, universityId: dto.universityId ?? null, groupId: dto.groupId ?? undefined, passwordHash, isActive: dto.isActive ?? true })); }
       catch (error) { if ((error as { code?: string }).code === '23505') throw new ConflictException('Email уже используется.'); throw error; }
       await manager.save(AuditLog, { userId: access.actorId, action: 'platform.account.created', entity: 'platform', entityId: user.id, newValues: { role: user.role } });
       return safeAccount(user);

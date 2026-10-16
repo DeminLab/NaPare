@@ -8,8 +8,8 @@ import {
   Param,
   UseGuards,
   Request,
-  ClassSerializerInterceptor,
-  UseInterceptors,
+  ForbiddenException,
+  NotFoundException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 
@@ -17,11 +17,11 @@ import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { BindGroupDto } from './dto/bind-group.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { User } from './entities/user.entity';
 
 @ApiTags('users')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
-@UseInterceptors(ClassSerializerInterceptor)
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
@@ -31,7 +31,7 @@ export class UsersController {
   @ApiResponse({ status: 200, description: 'Профиль пользователя получен' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getProfile(@Request() req) {
-    return this.usersService.findById(req.user.id);
+    return this.toProfileResponse(await this.usersService.findById(req.user.id));
   }
 
   @Patch('me')
@@ -67,7 +67,28 @@ export class UsersController {
   @ApiResponse({ status: 200, description: 'Пользователь найден' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Not found' })
-  async findById(@Param('id') id: string) {
-    return this.usersService.findById(id);
+  async findById(@Param('id') id: string, @Request() req) {
+    if (id !== req.user.id) {
+      throw new ForbiddenException('Можно просматривать только собственный профиль.');
+    }
+    return this.toProfileResponse(await this.usersService.findById(id));
+  }
+
+  private toProfileResponse(user: User | null) {
+    if (!user) throw new NotFoundException('Профиль не найден.');
+    return {
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      phone: user.phone,
+      avatarUrl: user.avatarUrl,
+      role: user.role,
+      universityId: user.universityId,
+      groupId: user.groupId,
+      isActive: user.isActive,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    };
   }
 }

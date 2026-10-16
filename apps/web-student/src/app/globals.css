@@ -136,6 +136,14 @@ html[data-student-palette="dark"] {
   --color-danger-soft: #3a2028;
   --color-info: #7dd3fc;
   --color-info-soft: #123047;
+  --color-lesson-lecture: #bfdbfe;
+  --color-lesson-lecture-soft: #1e3a5f;
+  --color-lesson-practice: #a7f3d0;
+  --color-lesson-practice-soft: #123b2d;
+  --color-lesson-lab: #fde68a;
+  --color-lesson-lab-soft: #4a3514;
+  --color-lesson-other: #c7d0dd;
+  --color-lesson-other-soft: #2b3a54;
 }
 html[data-student-palette="dark"][data-student-accent] {
   --color-brand: var(--student-accent-400);

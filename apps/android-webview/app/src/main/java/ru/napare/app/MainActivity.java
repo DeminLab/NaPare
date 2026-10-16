@@ -58,29 +58,13 @@ public final class MainActivity extends Activity {
         super.onCreate(state);
         FrameLayout root = new FrameLayout(this);
         root.setBackgroundColor(Color.WHITE);
-        LinearLayout content = new LinearLayout(this);
-        content.setOrientation(LinearLayout.VERTICAL);
-        root.addView(content,new FrameLayout.LayoutParams(-1,-1));
-        FrameLayout browser = new FrameLayout(this);
-        content.addView(browser,new LinearLayout.LayoutParams(-1,0,1));
         web = new WebView(this);
         web.setVisibility(View.INVISIBLE);
         web.setSaveEnabled(false);
-        browser.addView(web, new FrameLayout.LayoutParams(-1, -1));
+        root.addView(web, new FrameLayout.LayoutParams(-1, -1));
         progress = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
-        browser.addView(progress, new FrameLayout.LayoutParams(-1, dp(3), Gravity.TOP));
-        createErrorPanel(browser);
-        LinearLayout tools = new LinearLayout(this);
-        tools.setGravity(Gravity.CENTER_VERTICAL);
-        Button offline = new Button(this);offline.setText("План офлайн");offline.setAllCaps(false);offline.setMinHeight(dp(48));
-        offline.setOnClickListener(view->startActivity(new Intent(this,OfflinePlanActivity.class)));
-        tools.addView(offline,new LinearLayout.LayoutParams(0,-2,1));
-        Button about = new Button(this);about.setText("О приложении");about.setAllCaps(false);about.setMinHeight(dp(48));
-        about.setOnClickListener(view->new AlertDialog.Builder(this).setTitle("НаПаре · " + appVersion())
-                .setMessage("Кабинет НаПаре работает через защищённое соединение с сайтом. План офлайн хранится только на устройстве и не синхронизируется с аккаунтом. Удалить его можно в разделе «План офлайн → Ещё». Нативных push-уведомлений нет.")
-                .setPositiveButton("Политика данных",(dialog,which)->web.loadUrl(ORIGIN+"/privacy"))
-                .setNegativeButton("Закрыть",null).show());
-        tools.addView(about,new LinearLayout.LayoutParams(0,-2,1));content.addView(tools);
+        root.addView(progress, new FrameLayout.LayoutParams(-1, dp(3), Gravity.TOP));
+        createErrorPanel(root);
         setContentView(root);
         if (Build.VERSION.SDK_INT >= 30) {
             root.setOnApplyWindowInsetsListener((view, insets) -> {
@@ -272,7 +256,6 @@ public final class MainActivity extends Activity {
         errorPanel.setVisibility(View.VISIBLE);
     }
     private int dp(int value) { return Math.round(value * getResources().getDisplayMetrics().density); }
-    private String appVersion() { try { return getPackageManager().getPackageInfo(getPackageName(),0).versionName; } catch(android.content.pm.PackageManager.NameNotFoundException error) { return "Android"; } }
     private void toast(String message) { Toast.makeText(this, message, Toast.LENGTH_SHORT).show(); }
     @Override protected void onActivityResult(int request, int result, Intent data) {
         super.onActivityResult(request, result, data);

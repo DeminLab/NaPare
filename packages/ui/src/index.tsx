@@ -17,6 +17,7 @@ import {
   useState,
 } from 'react';
 import { Icon, type IconName } from './icons';
+export { LessonTypeBadge, lessonTypeKey, lessonTypeLabel, lessonTypeDotClass } from './LessonTypeBadge';
 export { Icon };
 export type { IconName } from './icons';
 const cn = (...values: Array<string | number | bigint | false | null | undefined>) => values.filter(Boolean).join(' ');

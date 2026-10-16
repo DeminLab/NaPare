@@ -12,3 +12,5 @@ Before analysing, reviewing or changing code, read [AI_CONTEXT.md](AI_CONTEXT.md
 ## Required completion checks
 
 Run the smallest relevant checks first, then the repository guard and lint before claiming completion. See [docs/ai/change-safety.md](docs/ai/change-safety.md).
+
+@RTK.md

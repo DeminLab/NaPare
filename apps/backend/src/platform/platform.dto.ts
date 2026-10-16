@@ -30,6 +30,7 @@ export class PlatformCreateAccountDto extends PlatformAccountDto {
   @ApiProperty() @IsEmail() email: string;
   @ApiProperty() @IsString() @MinLength(12) @MaxLength(72) password: string;
   @ApiPropertyOptional() @IsOptional() @IsUUID() universityId?: string;
+  @ApiPropertyOptional({ description: 'Внешний числовой ID группы SIBIT из расписания rasp.sano.ru' }) @IsOptional() @IsString() @MaxLength(32) groupId?: string;
 }
 export class PlatformPasswordDto {
   @ApiProperty() @IsString() @MinLength(12) @MaxLength(72) password: string;

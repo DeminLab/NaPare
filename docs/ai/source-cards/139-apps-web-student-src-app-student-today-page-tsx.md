@@ -8,7 +8,7 @@
 
 Student Today prioritises the current/next lesson, important events and preparation. Quick actions expose absence requests and schedule; attendance is marked by the teacher. Career access appears below academic priorities; preparation links open the exact lesson tab.
 
-The next lesson has one accented panel. A separate following-lesson teaser is omitted because the day list already includes it. Mobile actions stay on one row and the refresh action has an accessible name. Day-list subject names wrap.
+The next lesson has one accented panel with a shared lesson-type badge; day-list entries use the same badge. A separate following-lesson teaser is omitted because the day list already includes it. Mobile actions stay on one row and the refresh action has an accessible name. Day-list subject names wrap.
 
 ## Read sequence
 

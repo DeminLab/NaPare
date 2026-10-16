@@ -14,7 +14,7 @@ import { UsersService } from "../users/users.service";
 import { CurationService } from "../curation/curation.service";
 import { ScheduleService } from "../schedule/schedule.service";
 import { SibitConnectorService } from "../schedule/connectors/sibit-connector.service";
-import { RaspCatalog } from "../auth/rasp-scraper.service";
+import { RaspCatalog, RaspScraperService, SIBIT_UNIVERSITY } from "../auth/rasp-scraper.service";
 import { University } from "../users/entities/university.entity";
 import { Faculty } from "../users/entities/faculty.entity";
 import { Group } from "../users/entities/group.entity";
@@ -93,6 +93,7 @@ export class AdminService {
     private readonly lessonRepository: Repository<Lesson>,
     private readonly tenantContext: TenantContext,
     private readonly moodleConnectorService: MoodleConnectorService,
+    private readonly raspScraperService: RaspScraperService,
     @Optional() private readonly eventBus?: EventBusService,
     @Optional() private readonly curation?: CurationService,
   ) {}
@@ -175,13 +176,23 @@ export class AdminService {
     if (await this.usersService.findByEmail(data.email.trim()))
       throw new ConflictException("Пользователь с такой почтой уже существует");
     if (data.groupId) {
-      const group = await this.groupRepository.findOne({
-        where: { id: data.groupId, universityId },
-      });
-      if (!group)
-        throw new BadRequestException(
-          "Группа не найдена в структуре этого ВУЗа",
-        );
+      if (/^\d+$/.test(data.groupId)) {
+        if (data.role !== UserRole.STUDENT) {
+          throw new BadRequestException("Внешний ID учебной группы назначается аккаунту студента.");
+        }
+        const university = await this.getUniversity(universityId);
+        if (university.name !== SIBIT_UNIVERSITY.name || university.city !== SIBIT_UNIVERSITY.city || university.connectorType !== "rasp-sano" || !await this.raspScraperService.isValidGroup(data.groupId)) {
+          throw new BadRequestException("Выберите группу из каталога СИБИТ для этого университета.");
+        }
+      } else {
+        const group = await this.groupRepository.findOne({
+          where: { id: data.groupId, universityId },
+        });
+        if (!group)
+          throw new BadRequestException(
+            "Группа не найдена в структуре этого ВУЗа",
+          );
+      }
     }
     return this.usersService.create({
       email: data.email.trim(),

@@ -2,12 +2,14 @@
 
 import Link from 'next/link';
 
+import { LessonTypeBadge, lessonTypeDotClass, lessonTypeLabel } from '@napare/ui';
 import { RequestState, Skeleton } from '@/components/ui';
 import { getLessonLocation } from '../schedule-location';
 
 interface Lesson {
   id: string;
   subject: string;
+  subjectType?: string;
   startTime: string;
   endTime: string;
   building?: string;
@@ -55,6 +57,7 @@ function LessonChip({ lesson }: { lesson: Lesson }) {
     <span className="mt-1 block text-sm tabular-nums">{time(lesson.startTime)}–{time(lesson.endTime)}</span>
     {getLessonLocation(lesson.building, lesson.room) && <span className="mt-1 block break-words text-sm">{getLessonLocation(lesson.building, lesson.room)}</span>}
     {lesson.subgroup?.trim() && <span className="mt-1 block text-xs">Подгруппа {lesson.subgroup}</span>}
+    {lesson.subjectType && <span className="mt-2 block"><LessonTypeBadge subjectType={lesson.subjectType} /></span>}
     {lesson.weekType && lesson.weekType !== 'both' && <span className="block text-xs">{lesson.weekType === 'odd' ? 'Нечётная неделя' : 'Чётная неделя'}</span>}
     {lesson.isChanged && <span className="mt-2 inline-flex rounded px-1 py-0.5 text-xs font-bold">{cancelled ? 'Отменено' : 'Изменено'}</span>}
     {lesson.changeDescription && <p className="mt-1 break-words text-sm">{lesson.changeDescription}</p>}
@@ -91,9 +94,9 @@ export function MonthCalendar({
     <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
       <section aria-label="Выбор дня месяца" className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
         <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50">{weekDayNames.map(name => <span key={name} className="py-3 text-center text-xs font-semibold text-slate-600">{name}</span>)}</div>
-        <div className="grid grid-cols-7">{cells.map(cell => <button key={cell.key} type="button" disabled={!cell.inCurrentMonth} onClick={() => chooseDay(cell.key)} aria-pressed={selectedCell?.key === cell.key} aria-label={`${cell.date.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' })}, ${lessonCountLabel(cell.lessons.length)}${cell.key === today ? ', сегодня' : ''}`} className={`min-h-[64px] min-w-0 border-b border-r border-slate-100 p-1 text-left focus-visible:relative focus-visible:z-10 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-[var(--color-brand)] sm:min-h-28 sm:p-3 ${selectedCell?.key === cell.key ? 'bg-[var(--color-brand-soft)] ring-2 ring-inset ring-[var(--color-brand)]' : 'hover:bg-slate-50'} ${!cell.inCurrentMonth ? 'bg-slate-50 text-slate-400' : 'text-slate-800'}`}>
+        <div className="grid grid-cols-7">{cells.map(cell => <button key={cell.key} type="button" disabled={!cell.inCurrentMonth} onClick={() => chooseDay(cell.key)} aria-pressed={selectedCell?.key === cell.key} aria-label={`${cell.date.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' })}, ${lessonCountLabel(cell.lessons.length)}${cell.lessons.length ? `: ${[...new Set(cell.lessons.map(lesson => lesson.subjectType).filter(Boolean))].map(lessonTypeLabel).join(', ')}` : ''}${cell.key === today ? ', сегодня' : ''}`} className={`min-h-[64px] min-w-0 border-b border-r border-slate-100 p-1 text-left focus-visible:relative focus-visible:z-10 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-[var(--color-brand)] sm:min-h-28 sm:p-3 ${selectedCell?.key === cell.key ? 'bg-[var(--color-brand-soft)] ring-2 ring-inset ring-[var(--color-brand)]' : 'hover:bg-slate-50'} ${!cell.inCurrentMonth ? 'bg-slate-50 text-slate-400' : 'text-slate-800'}`}>
           <time dateTime={cell.key} aria-current={cell.key === today ? 'date' : undefined} className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-sm font-semibold ${cell.key === today ? 'bg-[var(--color-brand)] text-[var(--color-on-brand)]' : ''}`}>{cell.date.getDate()}</time>
-          {cell.lessons.length > 0 && <><span className="mt-1 block text-center text-xs font-semibold text-[var(--color-brand)] sm:text-left"><span className="sm:hidden">{cell.lessons.length}</span><span className="hidden sm:inline">{lessonCountLabel(cell.lessons.length)}</span></span><span className="mt-2 flex flex-wrap gap-1" aria-hidden="true">{cell.lessons.slice(0,5).map(lesson=><span key={lesson.id} className={`h-1.5 w-1.5 rounded-full ${lesson.isChanged?'bg-amber-500':'bg-[var(--color-brand)]'}`}/>)}</span></>}
+          {cell.lessons.length > 0 && <><span className="mt-1 block text-center text-xs font-semibold text-[var(--color-brand)] sm:text-left"><span className="sm:hidden">{cell.lessons.length}</span><span className="hidden sm:inline">{lessonCountLabel(cell.lessons.length)}</span></span><span className="mt-2 flex flex-wrap gap-1" aria-hidden="true">{cell.lessons.slice(0,5).map(lesson=><span key={lesson.id} className={`h-1.5 w-1.5 rounded-full ${lesson.isChanged?'bg-amber-500':lessonTypeDotClass(lesson.subjectType)}`}/>)}</span></>}
         </button>)}</div>
       </section>
       {selectedCell && <section aria-label="Занятия выбранного дня" aria-live="polite" className="rounded-2xl border border-slate-200 bg-white p-4 xl:sticky xl:top-24">

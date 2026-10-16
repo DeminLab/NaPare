@@ -4,6 +4,51 @@ import {
   Injectable,
 } from "@nestjs/common";
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
+import type { LookupAddress, LookupOptions } from "node:dns";
+import { lookup as dnsLookup } from "node:dns/promises";
+import { request as httpsRequest } from "node:https";
+import { BlockList, isIP } from "node:net";
+
+const blockedMoodleAddresses = new BlockList();
+const globalMoodleIpv6Addresses = new BlockList();
+globalMoodleIpv6Addresses.addSubnet("2000::", 3, "ipv6");
+for (const [subnet, prefix] of [
+  ["0.0.0.0", 8],
+  ["10.0.0.0", 8],
+  ["100.64.0.0", 10],
+  ["127.0.0.0", 8],
+  ["169.254.0.0", 16],
+  ["172.16.0.0", 12],
+  ["192.0.0.0", 24],
+  ["192.0.2.0", 24],
+  ["192.88.99.0", 24],
+  ["192.168.0.0", 16],
+  ["198.18.0.0", 15],
+  ["198.51.100.0", 24],
+  ["203.0.113.0", 24],
+  ["224.0.0.0", 4],
+  ["240.0.0.0", 4],
+] as const) {
+  blockedMoodleAddresses.addSubnet(subnet, prefix, "ipv4");
+}
+for (const [subnet, prefix] of [
+  ["::", 128],
+  ["::1", 128],
+  ["::", 96],
+  ["::ffff:0:0", 96],
+  ["64:ff9b::", 96],
+  ["64:ff9b:1::", 48],
+  ["100::", 64],
+  ["2001::", 23],
+  ["2001:db8::", 32],
+  ["2002::", 16],
+  ["3fff::", 20],
+  ["fc00::", 7],
+  ["fe80::", 10],
+  ["ff00::", 8],
+] as const) {
+  blockedMoodleAddresses.addSubnet(subnet, prefix, "ipv6");
+}
 
 export interface MoodleConnectionConfig {
   baseUrl: string;
@@ -41,24 +86,51 @@ export class MoodleConnectorService {
   async testConnection(
     config: MoodleConnectionConfig,
   ): Promise<MoodleConnectionInfo> {
-    const endpoint = new URL("webservice/rest/server.php", config.baseUrl);
+    const endpoint = new URL(
+      "webservice/rest/server.php",
+      normalizeMoodleBaseUrl(config.baseUrl),
+    );
     endpoint.searchParams.set("wstoken", this.decryptToken(config));
     endpoint.searchParams.set("wsfunction", "core_webservice_get_site_info");
     endpoint.searchParams.set("moodlewsrestformat", "json");
 
-    let response: Response;
+    const hostname = endpoint.hostname.replace(/^\[|\]$/g, "");
+    let addresses: LookupAddress[];
     try {
-      response = await fetch(endpoint, { signal: AbortSignal.timeout(10_000) });
+      addresses = await dnsLookup(hostname, { all: true, verbatim: true });
     } catch {
       throw new BadGatewayException(
-        "Moodle недоступен или не ответил за 10 секунд.",
+        "Не удалось определить публичный адрес Moodle.",
       );
     }
-    if (!response.ok) {
-      throw new BadGatewayException(`Moodle вернул HTTP ${response.status}.`);
+    if (
+      addresses.length === 0 ||
+      addresses.some(({ address, family }) =>
+        isIP(address) !== family ||
+        blockedMoodleAddresses.check(address, family === 4 ? "ipv4" : "ipv6") ||
+        (family === 6 && !globalMoodleIpv6Addresses.check(address, "ipv6")),
+      )
+    ) {
+      throw new BadRequestException(
+        "Адрес Moodle должен разрешаться только в публичные IP-адреса.",
+      );
     }
 
-    const body = (await response.json()) as Record<string, unknown>;
+    const response = await requestPinnedMoodleEndpoint(endpoint, addresses);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw new BadGatewayException(`Moodle вернул HTTP ${response.statusCode}.`);
+    }
+
+    let body: Record<string, unknown>;
+    try {
+      const parsed: unknown = JSON.parse(response.body);
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        throw new Error("Invalid Moodle response");
+      }
+      body = parsed as Record<string, unknown>;
+    } catch {
+      throw new BadGatewayException("Moodle вернул некорректный ответ.");
+    }
     if (
       typeof body.exception === "string" ||
       typeof body.errorcode === "string"
@@ -112,6 +184,54 @@ export class MoodleConnectorService {
   }
 }
 
+function requestPinnedMoodleEndpoint(
+  endpoint: URL,
+  addresses: LookupAddress[],
+): Promise<{ statusCode: number; body: string }> {
+  return new Promise((resolve, reject) => {
+    const pinnedLookup = (
+      _hostname: string,
+      options: LookupOptions,
+      callback: (
+        error: NodeJS.ErrnoException | null,
+        address: string | LookupAddress[],
+        family?: number,
+      ) => void,
+    ) => {
+      if (options.all) callback(null, addresses);
+      else callback(null, addresses[0].address, addresses[0].family);
+    };
+    const request = httpsRequest(
+      endpoint,
+      { method: "GET", lookup: pinnedLookup, maxHeaderSize: 16 * 1024 },
+      (response) => {
+        const chunks: Buffer[] = [];
+        let size = 0;
+        response.on("data", (chunk: Buffer | string) => {
+          const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+          size += buffer.length;
+          if (size > 1024 * 1024) {
+            request.destroy(new Error("Moodle response exceeded the size limit"));
+            return;
+          }
+          chunks.push(buffer);
+        });
+        response.on("end", () => {
+          resolve({
+            statusCode: response.statusCode ?? 502,
+            body: Buffer.concat(chunks).toString("utf8"),
+          });
+        });
+        response.on("error", reject);
+        response.on("aborted", () => reject(new Error("Moodle response was aborted")));
+      },
+    );
+    request.setTimeout(10_000, () => request.destroy(new Error("Moodle request timed out")));
+    request.on("error", () => reject(new BadGatewayException("Moodle недоступен или не ответил за 10 секунд.")));
+    request.end();
+  });
+}
+
 export function normalizeMoodleBaseUrl(value: string): string {
   let url: URL;
   try {
@@ -124,13 +244,9 @@ export function normalizeMoodleBaseUrl(value: string): string {
       "Moodle должен быть доступен по HTTPS без данных входа в URL.",
     );
   }
-  if (
-    url.hostname === "localhost" ||
-    /^127\./.test(url.hostname) ||
-    url.hostname === "::1"
-  ) {
+  if (url.hostname.toLowerCase() === "localhost" || isIP(url.hostname.replace(/^\[|\]$/g, ""))) {
     throw new BadRequestException(
-      "Локальный адрес нельзя использовать как Moodle-коннектор.",
+      "Используйте доменное имя Moodle, а не IP-адрес или localhost.",
     );
   }
   url.hash = "";

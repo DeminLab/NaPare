@@ -27,6 +27,11 @@
   --color-warning: var(--amber-700); --color-warning-soft: var(--amber-50);
   --color-danger: var(--red-700); --color-danger-soft: var(--red-50);
   --color-info: var(--sky-700); --color-info-soft: var(--sky-50);
+  /* Lesson types: cool lecture, green practice, warm lab; unknown types stay neutral. */
+  --color-lesson-lecture: #1d4ed8; --color-lesson-lecture-soft: #eff6ff;
+  --color-lesson-practice: #15803d; --color-lesson-practice-soft: #ecfdf3;
+  --color-lesson-lab: #b45309; --color-lesson-lab-soft: #fffaeb;
+  --color-lesson-other: #64748b; --color-lesson-other-soft: #f1f5f9;
   --color-role: var(--color-brand);
   --color-role-soft: var(--color-brand-soft);
   --color-overlay: rgb(15 23 42 / 0.42);
@@ -59,6 +64,10 @@
     --color-background: #111827; --color-surface: #172033; --color-surface-elevated: #1d293d; --color-surface-secondary: #223049; --color-surface-tertiary: #2b3a54;
     --color-text: #f8fafc; --color-text-secondary: #c7d0dd; --color-text-muted: #94a3b8; --color-border: #31405a; --color-border-strong: #4b5d7a;
     --color-brand-soft: #242a60; --color-success-soft: #163d2b; --color-warning-soft: #4a3514; --color-danger-soft: #4a2424; --color-info-soft: #173b55;
+    --color-lesson-lecture: #bfdbfe; --color-lesson-lecture-soft: #1e3a5f;
+    --color-lesson-practice: #a7f3d0; --color-lesson-practice-soft: #123b2d;
+    --color-lesson-lab: #fde68a; --color-lesson-lab-soft: #4a3514;
+    --color-lesson-other: #c7d0dd; --color-lesson-other-soft: #2b3a54;
   }
 }
 

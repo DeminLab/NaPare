@@ -8,7 +8,7 @@
 
 External SIBIT group catalog and favourite schedule UI. Loading has an explicit status; source failure shows retry without the contradictory empty search result. Academic-year selection is disabled while loading or unavailable, and the page uses the shell's single main landmark.
 
-Read-only SIBIT group schedule browser. Loads and caches the public academic-year and group catalogs, restores the last selected group, fetches that group's published schedule through the existing `/auth/rasp-*` endpoints, and supports server-synced per-account favorite groups with a queued local offline fallback/migration, Monday-to-Sunday week navigation, subject/teacher/room/subgroup search and source week parity, and a local cache of the selected public group schedule for offline viewing.
+Read-only SIBIT group schedule browser. Loads and caches the public academic-year and group catalogs, restores the last selected group, fetches that group's published schedule through the existing `/auth/rasp-*` endpoints, and supports server-synced per-account favorite groups with a queued local offline fallback/migration, Monday-to-Sunday week navigation, subject/teacher/room/subgroup search and source week parity, type-colored lesson badges, and a local cache of the selected public group schedule for offline viewing.
 
 ## Read sequence
 

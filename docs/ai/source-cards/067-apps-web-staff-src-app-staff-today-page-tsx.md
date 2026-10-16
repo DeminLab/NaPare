@@ -8,7 +8,7 @@
 
 Current role-aware home: reviewers see absence queue and groups first; teachers see their next lesson, attendance and materials. The day list and recent events remain compact, tutorial banners and duplicate metric cards are removed. Counts distinguish unavailable requests from zero. Existing API contracts are preserved.
 
-Attention counts use actual open inbox items. Absence counts come from the pending queue metadata; no faculty-wide totals are inferred from personal lessons. Recent events link to the notifications list.
+Attention counts use actual open inbox items. Absence counts come from the pending queue metadata; no faculty-wide totals are inferred from personal lessons. The upcoming lesson and daily schedule rows show the shared lesson-type badge. Recent events link to the notifications list.
 
 ## Read sequence
 

@@ -6,7 +6,7 @@
 
 ## Scope
 
-Accessible groups with URL search/faculty state and shared Sheet details. Student roster and schedule failures are independent. Week links pass group ID; preparation links carry group name search; nearest future lesson is explicitly labelled.
+Accessible groups with URL search/faculty state and shared Sheet details. Student roster and schedule failures are independent. Week links pass group ID; preparation links carry group name search; nearest lesson and group schedule entries show the shared lesson-type badge.
 
 ## Read sequence
 

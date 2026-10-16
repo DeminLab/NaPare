@@ -17,6 +17,7 @@
     "build:admin": "turbo run build --filter=@napare/web-admin",
     "build:developer": "turbo run build --filter=@napare/web-developer",
     "lint": "eslint \"apps/**/*.{ts,tsx}\" \"packages/**/*.{ts,tsx}\"",
+    "lint:docs": "markdownlint-cli2 README.md \"docs/**/*.md\" \"apps/*/README.md\"",
     "typecheck": "pnpm --filter @napare/backend exec tsc --noEmit && pnpm --filter @napare/web-portal exec tsc --noEmit && pnpm --filter @napare/web-student exec tsc --noEmit && pnpm --filter @napare/web-staff exec tsc --noEmit && pnpm --filter @napare/web-admin exec tsc --noEmit && pnpm --filter @napare/web-developer exec tsc --noEmit",
     "test": "turbo run test",
     "test:unit": "pnpm --filter @napare/backend exec jest --ci --runInBand",
@@ -26,10 +27,25 @@
     "clean": "turbo run clean"
   },
   "devDependencies": {
-    "turbo": "^2.0.0",
-    "typescript": "5.9.3",
+    "@typescript-eslint/parser": "^7.18.0",
     "eslint": "^8.57.1",
-    "@typescript-eslint/parser": "^7.18.0"
+    "markdownlint-cli2": "^0.23.3",
+    "turbo": "^2.0.0",
+    "typescript": "5.9.3"
   },
-  "packageManager": "pnpm@9.0.0"
+  "packageManager": "pnpm@9.0.0",
+  "pnpm": {
+    "overrides": {
+      "brace-expansion": "2.1.6",
+      "js-yaml": "4.3.2",
+      "lodash": "4.18.1",
+      "multer": "2.3.0",
+      "postcss": "8.5.23",
+      "proxy-addr": "2.0.8",
+      "qs": "6.16.0",
+      "sharp": "0.35.5",
+      "source-map-js": "1.2.2",
+      "tar": "7.5.21"
+    }
+  }
 }

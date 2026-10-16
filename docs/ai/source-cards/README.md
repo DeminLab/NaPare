@@ -11,6 +11,7 @@ Choose the card matching the task area, read the canonical source and then follo
 ## Cards
 
 - [285 — Shared UI primitives](285-packages-ui-src-index-tsx.md)
+- [290 — Shared lesson type badge](290-packages-ui-src-lessontypebadge-tsx.md)
 - [286 — Shared design tokens and workspace styles](286-packages-design-tokens-styles-css.md)
 - [287 — University absence queue](287-apps-web-admin-src-app-admin-absences-page-tsx.md)
 - [288 — Shared workspace content styles](288-packages-ui-content-styles-css.md)

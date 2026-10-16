@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useWorkspaceQuery } from "@napare/ui/workspace-shell";
+import { LessonTypeBadge } from "@napare/ui";
 import { apiFetchList } from "@/lib/api";
 import {
   Badge,
@@ -30,6 +31,7 @@ interface Student {
 interface Lesson {
   id: string;
   subject: string;
+  subjectType?: string;
   groupName: string;
   startDate?: string;
   startTime: string;
@@ -220,6 +222,7 @@ export default function GroupsPage() {
                   <p className="mt-1 font-semibold text-slate-800">
                     {scheduleError ? "Нет данных расписания" : nearest?.subject || "Ближайших занятий нет"}
                   </p>
+                  {nearest?.subjectType && <div className="mt-2"><LessonTypeBadge subjectType={nearest.subjectType} /></div>}
                   <div className="mt-4 flex gap-2 border-t border-slate-100 pt-4">
                     <Link
                       href={`/attendance?group=${group.id}`}
@@ -351,6 +354,7 @@ export default function GroupsPage() {
                       <span className="text-sm font-medium text-slate-900">
                         {lesson.subject}
                       </span>
+                      <LessonTypeBadge subjectType={lesson.subjectType} />
                       <span className="ml-auto text-xs text-slate-500">
                         ауд. {lesson.room || "—"}
                       </span>

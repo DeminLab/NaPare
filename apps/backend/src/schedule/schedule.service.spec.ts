@@ -127,24 +127,30 @@ describe("ScheduleService", () => {
       );
     });
 
-    it("uses an imported group for a still-numeric source group id", async () => {
-      mockGroupRepo.findOne.mockResolvedValue({ id: "group-uuid" });
+    it("keeps using the external schedule when the group is imported locally", async () => {
+      mockGroupRepo.findOne.mockResolvedValue({ id: "group-uuid", externalId: "12136" });
+      mockRaspScraper.getSchedule.mockResolvedValue([{
+        lessonId: "source-lesson",
+        groupId: "12136",
+        groupName: "ГМУ-25",
+        date: "2026-09-28",
+        startTime: "09:00",
+        endTime: "10:30",
+        pairNumber: 1,
+        subject: "История",
+      }]);
 
-      await service.findForStudentDateRange(
+      const result = await service.findForStudentDateRange(
         "uni-1",
         "12136",
         "2026-09-26",
         "2026-10-02",
       );
 
-      expect(mockGroupRepo.findOne).toHaveBeenCalledWith({
-        where: { universityId: "uni-1", externalId: "12136" },
-      });
-      expect(mockLessonRepo.findAndCount).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({ groupId: "group-uuid" }),
-        }),
-      );
+      expect(mockRaspScraper.getSchedule).toHaveBeenCalledWith("12136");
+      expect(mockGroupRepo.findOne).not.toHaveBeenCalled();
+      expect(mockLessonRepo.findAndCount).not.toHaveBeenCalled();
+      expect(result.data.map((lesson) => lesson.id)).toEqual(["rasp-source-lesson-12136"]);
     });
 
     it("filters SIBIT lessons by the calendar-day portions of timezone-adjusted bounds", async () => {
@@ -206,6 +212,37 @@ describe("ScheduleService", () => {
       await service.findForStudentDateRange("uni-1", "group-1", "2026-10-10T18:00:00.000Z", "2026-10-11T17:59:59.999Z");
       const options = mockLessonRepo.findAndCount.mock.calls[0][0];
       expect(options.where.startDate.value.map((date: Date) => date.toISOString())).toEqual(["2026-10-10T18:00:00.000Z", "2026-10-11T17:59:59.999Z"]);
+    });
+    it("uses the SIBIT external id even when a matching local group exists", async () => {
+      mockGroupRepo.findOne.mockResolvedValue({ id: "local-group-uuid", externalId: "12131" });
+      mockRaspScraper.getSchedule.mockResolvedValue([{
+        lessonId: "lesson-1",
+        groupId: "12131",
+        groupName: "ИН-25",
+        date: "2026-10-05",
+        dayOfWeek: 1,
+        dayName: "Понедельник",
+        startTime: "09:00",
+        endTime: "10:30",
+        pairNumber: 1,
+        subject: "Гражданское право",
+        subjectType: "пр",
+        weekType: "both",
+        academicYear: "2026-2027",
+        isReplacement: false,
+      }]);
+
+      const result = await service.findForStudentDateRange(
+        "uni-1",
+        "12131",
+        "2026-10-05",
+        "2026-10-11",
+      );
+
+      expect(mockRaspScraper.getSchedule).toHaveBeenCalledWith("12131");
+      expect(mockLessonRepo.findAndCount).not.toHaveBeenCalled();
+      expect(result.data.map((lesson) => lesson.id)).toEqual(["rasp-lesson-1-12131"]);
+      expect(result.data[0].subject).toBe("Гражданское право");
     });
   });
 

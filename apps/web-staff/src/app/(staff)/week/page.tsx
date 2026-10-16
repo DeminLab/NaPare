@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useWorkspaceQuery } from '@napare/ui/workspace-shell';
+import { LessonTypeBadge, lessonTypeKey } from '@napare/ui';
 import { apiFetchList } from '@/lib/api';
 import { Badge, Button, EmptyState, RequestState, Skeleton } from '@/components/ui';
 
@@ -41,7 +42,7 @@ export default function WeekPage() {
 
   const groups = [...new Map(lessons.filter(lesson=>lesson.groupName).map(lesson=>[lesson.groupId || lesson.groupName!,{id:lesson.groupId || lesson.groupName!,name:lesson.groupName!}])).values()].sort((a,b)=>a.name.localeCompare(b.name,'ru-RU'));
   const subjects = [...new Set(lessons.map((lesson) => lesson.subject).filter(Boolean))].sort();
-  const filtered = lessons.filter((lesson) => (groupFilter === 'all' || lesson.groupId === groupFilter || lesson.groupName === groupFilter) && (subjectFilter === 'all' || lesson.subject === subjectFilter) && (typeFilter === 'all' || lesson.subjectType === typeFilter));
+  const filtered = lessons.filter((lesson) => (groupFilter === 'all' || lesson.groupId === groupFilter || lesson.groupName === groupFilter) && (subjectFilter === 'all' || lesson.subject === subjectFilter) && (typeFilter === 'all' || lessonTypeKey(lesson.subjectType) === typeFilter));
   const schedule = useMemo<DaySchedule[]>(() => Array.from({ length: 7 }, (_, index) => { const date = new Date(weekStart); date.setDate(date.getDate() + index); const key = dateKey(date); return { date: key, dayName: weekDays[index], lessons: filtered.filter((lesson) => lessonDay(lesson)===key).sort((a, b) => a.startTime.localeCompare(b.startTime)) }; }), [filtered, weekStart]);
   const selectedDay = schedule.find((day) => day.date === selectedDate) || schedule[0];
   const todayKey = dateKey(now);
@@ -58,7 +59,7 @@ export default function WeekPage() {
       <div className="flex items-start gap-3">
         {!compact&&<div className="w-16 shrink-0 text-base font-semibold tabular-nums text-[var(--color-text)]"><time>{time(lesson.startTime)}</time><span className="mt-1 block text-sm font-normal text-[var(--color-text-secondary)]">{time(lesson.endTime)}</span></div>}
         <div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><Link href={`/pair-space/${lesson.id}`} className="break-words text-base font-bold leading-6 text-[var(--color-text)] hover:text-[var(--color-brand)]">{lesson.subject || 'Без названия'}</Link>{['Сейчас','Замена','Отменено'].includes(state.label) && <Badge size="sm" variant={state.variant}>{state.label}</Badge>}</div>
-          <p className="mt-2 text-sm font-semibold leading-5 text-[var(--color-text)]">{lesson.groupName || 'Группа не указана'}{lesson.subgroup && ` · Подгруппа ${lesson.subgroup}`}</p><p className="mt-1 text-sm leading-5 text-[var(--color-text-secondary)]">{lesson.room ? `Аудитория ${lesson.room}` : 'Аудитория не назначена'}</p><p className="mt-1 text-sm leading-5 text-[var(--color-text-secondary)]">{typeLabels[lesson.subjectType || ''] || lesson.subjectType || 'Занятие'}</p>
+          <p className="mt-2 text-sm font-semibold leading-5 text-[var(--color-text)]">{lesson.groupName || 'Группа не указана'}{lesson.subgroup && ` · Подгруппа ${lesson.subgroup}`}</p><p className="mt-1 text-sm leading-5 text-[var(--color-text-secondary)]">{lesson.room ? `Аудитория ${lesson.room}` : 'Аудитория не назначена'}</p><div className="mt-2"><LessonTypeBadge subjectType={lesson.subjectType} /></div>
           {compact&&<p className="mt-2 text-sm tabular-nums text-[var(--color-text-secondary)]">До {time(lesson.endTime)}</p>}{!compact&&lesson.teacherName && <p className="mt-1 text-sm text-[var(--color-text-secondary)]">{lesson.teacherName}</p>}
           {(lesson.weekType && lesson.weekType !== 'both') && <p className="mt-1 text-xs text-[var(--color-text-secondary)]">{`${lesson.weekType === 'odd' ? 'Нечётная неделя' : 'Чётная неделя'}`}</p>}
           {lesson.changeDescription && <p className="mt-2 text-xs font-medium text-[var(--color-warning)]">{lesson.changeDescription}</p>}

@@ -160,17 +160,13 @@ export class ScheduleService {
     pagination: PaginationQueryDto = new PaginationQueryDto(),
     timeZone?: string,
   ): Promise<PaginatedResponse<Lesson>> {
-    const resolvedGroupId = await this.resolveStudentGroupId(
-      universityId,
-      groupId,
-    );
     if (
-      resolvedGroupId &&
-      /^\d+$/.test(resolvedGroupId) &&
+      groupId &&
+      /^\d+$/.test(groupId) &&
       this.raspScraperService
     ) {
       const sourceLessons =
-        await this.raspScraperService.getSchedule(resolvedGroupId);
+        await this.raspScraperService.getSchedule(groupId);
       const startDateKey = this.getCalendarDateKey(startDate, timeZone);
       const endDateKey = this.getCalendarDateKey(endDate, timeZone);
       const lessons = sourceLessons
@@ -178,6 +174,7 @@ export class ScheduleService {
         .map((lesson) => this.mapRaspLesson(lesson, universityId));
       return toPaginatedResponse(lessons, lessons.length, pagination);
     }
+    const resolvedGroupId = groupId;
     if (!resolvedGroupId) {
       return toPaginatedResponse([], 0, pagination);
     }
@@ -200,44 +197,23 @@ export class ScheduleService {
     date: string,
     pagination: PaginationQueryDto = new PaginationQueryDto(),
   ): Promise<PaginatedResponse<Lesson>> {
-    const resolvedGroupId = await this.resolveStudentGroupId(
-      universityId,
-      groupId,
-    );
     if (
-      resolvedGroupId &&
-      /^\d+$/.test(resolvedGroupId) &&
+      groupId &&
+      /^\d+$/.test(groupId) &&
       this.raspScraperService
     ) {
       const sourceLessons =
-        await this.raspScraperService.getSchedule(resolvedGroupId);
+        await this.raspScraperService.getSchedule(groupId);
       const lessons = sourceLessons
         .filter((lesson) => lesson.date === date)
         .map((lesson) => this.mapRaspLesson(lesson, universityId));
       return toPaginatedResponse(lessons, lessons.length, pagination);
     }
+    const resolvedGroupId = groupId;
     if (!resolvedGroupId) {
       return toPaginatedResponse([], 0, pagination);
     }
     return this.findByGroup(universityId, resolvedGroupId, date, pagination);
-  }
-
-  /**
-   * Students who registered before a SIBIT sync can still carry the numeric
-   * source id in an unexpired token. Resolve it to the imported local group so
-   * downstream actions receive persisted lesson UUIDs immediately.
-   */
-  private async resolveStudentGroupId(
-    universityId: string,
-    groupId: string | null | undefined,
-  ): Promise<string | null | undefined> {
-    if (!groupId || !/^\d+$/.test(groupId) || !this.groupRepository) {
-      return groupId;
-    }
-    const group = await this.groupRepository.findOne({
-      where: { universityId, externalId: groupId },
-    });
-    return group?.id ?? groupId;
   }
 
   private getCalendarDateKey(value: string, timeZone?: string): string {

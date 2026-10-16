@@ -59,9 +59,12 @@ async function bootstrap() {
     // Production requests pass through host Nginx and the Docker Nginx gateway.
     httpAdapter.getInstance().set('trust proxy', 2);
   }
-  httpAdapter.get('/', (_req, res) => {
-    res.redirect('/api/v1/docs');
-  });
+  const isProduction = configService.getOrThrow('nodeEnv') === 'production';
+  if (!isProduction) {
+    httpAdapter.get('/', (_req, res) => {
+      res.redirect('/api/v1/docs');
+    });
+  }
   httpAdapter.get('/favicon.ico', (_req, res) => {
     res.status(204).end();
   });
@@ -70,17 +73,19 @@ async function bootstrap() {
   app.setGlobalPrefix('api/v1');
 
   // Swagger
-  const config = new DocumentBuilder()
-    .setTitle('НаПаре API')
-    .setDescription('Версионированный API НаПаре. Коллекции возвращают { data, meta }; ошибки возвращают statusCode, code, message, details, timestamp и path.')
-    .setVersion('1.0')
-    .addBearerAuth()
-    .build();
+  if (!isProduction) {
+    const config = new DocumentBuilder()
+      .setTitle('НаПаре API')
+      .setDescription('Версионированный API НаПаре. Коллекции возвращают { data, meta }; ошибки возвращают statusCode, code, message, details, timestamp и path.')
+      .setVersion('1.0')
+      .addBearerAuth()
+      .build();
 
-  const document = SwaggerModule.createDocument(app, config, {
-    extraModels: [ApiErrorResponseDto, PaginatedResponseDto],
-  });
-  SwaggerModule.setup('api/v1/docs', app, document);
+    const document = SwaggerModule.createDocument(app, config, {
+      extraModels: [ApiErrorResponseDto, PaginatedResponseDto],
+    });
+    SwaggerModule.setup('api/v1/docs', app, document);
+  }
 
   // Start
   const port = configService.get('PORT', 3000);
