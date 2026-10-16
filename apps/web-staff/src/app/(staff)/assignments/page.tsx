@@ -247,60 +247,16 @@ export default function AssignmentsPage() {
     <div className="mx-auto max-w-[var(--layout-content-max)] space-y-6">
       <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-[.1em] text-[var(--color-brand)]">
-            Контур преподавателя
-          </p>
+
           <h1 className="ds-page-title">Подготовка к парам</h1>
-          <p className="mt-2 max-w-3xl text-sm text-[var(--color-text-secondary)]">
-            Ориентиры для конкретных занятий: что прочитать, принести или
-            подготовить группе. Сдача работ и оценки остаются в Moodle.
-          </p>
+
         </div>
-        <Link href="/pair-space">
-          <Button>Выбрать пару для публикации</Button>
-        </Link>
+        <Link href="/pair-space" className="role-link role-link-primary">Добавить подготовку</Link>
       </header>
 
-      <p className="text-sm text-[var(--color-text-secondary)]">Период занятий · {range}. Показано не более 100 доступных занятий; подготовка более ранних пар доступна через их пространство.</p>
+      <p className="text-xs text-[var(--color-text-secondary)]">Период · {range} · до 100 занятий</p>
       {partial > 0 && <p role="status" className="rounded-xl bg-amber-50 p-3 text-sm text-amber-800">Не загрузились пространства {partial} занятий. Показаны доступные темы; повторите загрузку для полного списка. <button type="button" onClick={load} className="font-semibold underline">Повторить</button></p>}
-      <section
-        className="grid grid-cols-3 gap-2 sm:gap-3"
-        aria-label="Сводка подготовки"
-      >
-        <Card padding="sm">
-          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">
-            Опубликовано
-          </p>
-          <p className="mt-2 text-2xl font-bold text-[var(--color-text)]">
-            {preparations.length}
-          </p>
-          <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-            в загруженном периоде
-          </p>
-        </Card>
-        <Card padding="sm">
-          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">
-            С будущим сроком
-          </p>
-          <p className="mt-2 text-2xl font-bold text-[var(--color-text)]">
-            {upcoming}
-          </p>
-          <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-            помогают спланировать пару
-          </p>
-        </Card>
-        <Card padding="sm">
-          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">
-            Без даты
-          </p>
-          <p className="mt-2 text-2xl font-bold text-[var(--color-text)]">
-            {withoutDate}
-          </p>
-          <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-            общие ориентиры для группы
-          </p>
-        </Card>
-      </section>
+<p className="text-sm text-slate-500">{visible.length} материалов · {upcoming} с будущим сроком</p>
 
       <Card padding="sm">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

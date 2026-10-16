@@ -16,6 +16,8 @@ pnpm lint
 
 The documentation validator checks the minimum Markdown inventory, required entry points and canonical source paths. It does not verify factual freshness or local Markdown links; run a separate link check during broad documentation reviews. Do not lower the count threshold to pass a temporary change.
 
+Keep browser diagnostics in ignored `/output/` and `/.playwright-cli/`; Python `__pycache__` and bytecode are ignored too. Local screenshots can support a dated verification record but must not become required repository links or imply production validation.
+
 ## Sharing archive
 
 The shareable archive must exclude `.git`, `node_modules`, `.next`, coverage/build output and local `.env*` files. Keep lockfiles, docs, source, infrastructure and example environment files.

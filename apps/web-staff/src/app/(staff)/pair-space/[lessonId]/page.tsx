@@ -235,7 +235,7 @@ export default function PairSpacePage() {
               <h1 className="text-2xl font-bold text-slate-900">
                 {lesson.subject}
               </h1>
-              <Badge variant="sky">Рабочее пространство</Badge>
+
             </div>
             <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-500">
               <span className="font-semibold text-slate-800">
@@ -263,7 +263,7 @@ export default function PairSpacePage() {
                 Открыть Moodle
               </a>
             )}
-            <Button size="sm" onClick={() => action("announcement")}>
+<details className="relative"><summary className="role-link role-link-primary cursor-pointer">Добавить к занятию</summary><div className="absolute right-0 z-20 mt-2 grid w-60 gap-2 rounded-xl border bg-white p-3 shadow-md">            <Button size="sm" onClick={() => action("announcement")}>
               <Icon name="bell" size={15} />
               Объявление
             </Button>
@@ -273,7 +273,7 @@ export default function PairSpacePage() {
               onClick={() => action("homework")}
             >
               <Icon name="clipboard" size={15} />
-              Подготовка к паре
+              Подготовка
             </Button>
             <Button
               size="sm"
@@ -281,8 +281,8 @@ export default function PairSpacePage() {
               onClick={() => action("file")}
             >
               <Icon name="upload" size={15} />
-              Ссылка на материал
-            </Button>
+              Материал
+            </Button></div></details>
           </div>
         </div>
       </Card>

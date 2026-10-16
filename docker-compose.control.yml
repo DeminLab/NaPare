@@ -1,0 +1,10 @@
+# Optional host control-agent connection; never mount docker.sock into the API.
+services:
+  backend:
+    environment:
+      PLATFORM_AGENT_SOCKET: /run/napare-control/agent.sock
+      PLATFORM_AGENT_SECRET: ${PLATFORM_AGENT_SECRET:?Set a separate control-agent shared secret}
+    volumes:
+      - /run/napare-control:/run/napare-control:ro
+    group_add:
+      - ${PLATFORM_AGENT_GID:?Set the numeric napare-control group id on the host}

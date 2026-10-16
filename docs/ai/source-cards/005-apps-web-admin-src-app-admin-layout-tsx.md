@@ -6,7 +6,7 @@
 
 ## Scope
 
-University workspace uses grouped navigation for overview, schedule, users, structure and data sources; removes the unused analytics query route, adds mobile shortcuts and role help.
+University workspace uses grouped navigation for overview, schedule, users, structure and data sources, with mobile shortcuts. Tutorial help is no longer promoted. Compact page styles are scoped to role-content and do not alter the shared shell or other applications.
 
 ## Read sequence
 

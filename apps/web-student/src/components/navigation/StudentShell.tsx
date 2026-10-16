@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState, type ReactNode } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { WorkspaceShell, searchCommands, type WorkspaceSearchResponse, type WorkspaceHelp, type NavigationLinkProps, type WorkspaceCommand, type WorkspaceNavGroup } from '@napare/ui/workspace-shell';
+import { WorkspaceShell, searchCommands, type WorkspaceSearchResponse, type NavigationLinkProps, type WorkspaceCommand, type WorkspaceNavGroup } from '@napare/ui/workspace-shell';
 import { apiFetch, getUnreadCount, getUser, isLoggedIn, logout, StudentUser } from '@/lib/api';
 
 const groups: WorkspaceNavGroup[] = [
@@ -14,12 +14,6 @@ const groups: WorkspaceNavGroup[] = [
 
 const AppLink = ({ href, children, ...props }: NavigationLinkProps) => href === '/connections' ? <a href={href} {...props}>{children}</a> : <Link href={href} {...props}>{children}</Link>;
 const searchWorkspace = async (query: string, signal: AbortSignal) => searchCommands(await apiFetch<WorkspaceSearchResponse>('/search?q=' + encodeURIComponent(query), { signal }));
-const help: WorkspaceHelp = { title: 'Ваш учебный день в одном месте', description: 'Начните с ближайшей пары, затем откройте подготовку или расписание.', steps: [
-  { title: 'Узнать, куда идти сейчас', description: 'Время, аудитория и изменения ближайшего занятия.', href: '/today' },
-  { title: 'Проверить расписание', description: 'Неделя и месяц, поиск по предметам и избранные преподаватели.', href: '/week' },
-  { title: 'Подготовиться к занятию', description: 'Темы, материалы и ваш прогресс. Сдача работ и оценки — в Moodle.', href: '/pair-space' },
-  { title: 'Сообщить об отсутствии', description: 'Отправьте причину и проверьте статус заявки.', href: '/absences' },
-] };
 
 export default function StudentShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -43,5 +37,5 @@ export default function StudentShell({ children }: { children: ReactNode }) {
   if (!user) return <div className="flex min-h-screen items-center justify-center bg-[var(--color-background)] text-sm text-[var(--color-text-secondary)]">Загрузка…</div>;
   const name = user.firstName + ' ' + user.lastName;
   const resolvedGroups = groups.map(group => ({ ...group, items: group.items.map(item => item.href === '/notifications' ? { ...item, badge: unread } : item) }));
-  return <WorkspaceShell LinkComponent={AppLink} pathname={pathname} groups={resolvedGroups} roleLabel="Студент" homeHref="/today" user={{ name, role: user.groupName || 'Студент', id: user.id }} unreadCount={unread} commands={commands} onSearch={searchWorkspace} searchPlaceholder="Предмет, преподаватель, материал или раздел…" mobileHrefs={['/today', '/week', '/pair-space', '/notifications']} help={help} onLogout={logout}>{children}</WorkspaceShell>;
+  return <WorkspaceShell LinkComponent={AppLink} pathname={pathname} groups={resolvedGroups} roleLabel="Студент" homeHref="/today" user={{ name, role: user.groupName || 'Студент', id: user.id }} unreadCount={unread} commands={commands} onSearch={searchWorkspace} searchPlaceholder="Предмет, преподаватель, материал или раздел…" mobileHrefs={['/today', '/week', '/pair-space', '/notifications']} onLogout={logout}>{children}</WorkspaceShell>;
 }

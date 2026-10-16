@@ -6,7 +6,7 @@
 
 ## Scope
 
-Staff workspace uses actual teacher/curator/dean/department-head labels, grouped navigation, a shared attention centre, one search, mobile shortcuts and role help. Personal connections route to the portal.
+Staff workspace uses actual teacher/curator/dean/department-head labels, grouped navigation, one search and mobile shortcuts. The absence queue link is shown to reviewer roles. Tutorial help is no longer promoted in this workspace. Page density styles are scoped to role-content; personal connections route to the portal.
 
 ## Read sequence
 

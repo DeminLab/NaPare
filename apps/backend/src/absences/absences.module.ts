@@ -12,6 +12,7 @@ import { AbsencesService } from "./absences.service";
 import { AbsencesController } from "./absences.controller";
 import { CuratorController } from "./curator.controller";
 import { EventsModule } from "../events/events.module";
+import { CurationModule } from "../curation/curation.module";
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { EventsModule } from "../events/events.module";
       Group,
     ]),
     EventsModule,
+    CurationModule,
   ],
   providers: [AbsencesService],
   controllers: [AbsencesController, CuratorController],

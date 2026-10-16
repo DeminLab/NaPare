@@ -18,7 +18,7 @@
 | ---------- | ------------------------------------ |
 | University | CRUD, настройка коннектора           |
 | Faculty    | CRUD, назначение декана              |
-| Group      | CRUD, назначение куратора            |
+| Group      | Структура групп; кураторство через отдельный модуль curation |
 | User       | Назначение ролей, привязка к группам |
 | Lesson     | Загрузка расписания                  |
 
@@ -80,7 +80,7 @@
 
 ## 6. Бизнес-правила и edge-cases
 
-1. **Назначение ролей:** admin назначает teacher/curator, superadmin — все роли
+1. **Назначение ролей:** изменение основной роли проверяется по полномочиям оператора; назначение платформенных ролей и защита владельца дополнительно проверяются backend. Кураторство назначается существующему аккаунту через `/api/v1/curation`, а не сменой основной роли или `Group.curatorId`. См. [кураторство](../product/account-curatorship.md) и [управление платформой](../product/platform-control.md).
 2. **Привязка преподавателя:** к конкретным парам / группам
 3. **Загрузка расписания:** backend upload endpoint uses the current spreadsheet parser/import path. Do not assume iCal, user-defined column mapping or a preview step without checking the controller/UI implementation.
 4. **Статистика:** количество активных студентов, % преподавателей с контентом, отсутствия

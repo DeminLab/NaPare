@@ -11,6 +11,7 @@ import { In, MoreThanOrEqual, Repository } from "typeorm";
 import * as bcrypt from "bcrypt";
 
 import { UsersService } from "../users/users.service";
+import { CurationService } from "../curation/curation.service";
 import { ScheduleService } from "../schedule/schedule.service";
 import { SibitConnectorService } from "../schedule/connectors/sibit-connector.service";
 import { RaspCatalog } from "../auth/rasp-scraper.service";
@@ -93,6 +94,7 @@ export class AdminService {
     private readonly tenantContext: TenantContext,
     private readonly moodleConnectorService: MoodleConnectorService,
     @Optional() private readonly eventBus?: EventBusService,
+    @Optional() private readonly curation?: CurationService,
   ) {}
 
   async getUniversityUsers(
@@ -116,6 +118,9 @@ export class AdminService {
     requesterRole?: UserRole,
   ): Promise<PaginatedResponse<User>> {
     this.tenantContext.assertAccess(universityId);
+    if (requesterRole === UserRole.CURATOR && this.curation) {
+      await this.curation.assertGroup(groupId);
+    }
     if (requesterRole === UserRole.TEACHER && requesterId) {
       const groupIds = await this.scheduleService.getTeacherGroupIds(
         universityId,
@@ -136,6 +141,7 @@ export class AdminService {
     updateUserRoleDto: UpdateUserRoleDto,
     requesterRole: UserRole,
   ): Promise<User> {
+    if (updateUserRoleDto.role === UserRole.CURATOR) throw new BadRequestException('Кураторство назначается существующему аккаунту через раздел «Кураторство», без изменения основной роли.');
     if (!this.canManageRole(requesterRole, updateUserRoleDto.role)) {
       throw new ForbiddenException(
         "Insufficient permissions to assign this role",
@@ -161,6 +167,7 @@ export class AdminService {
     requesterRole: UserRole,
   ): Promise<User> {
     this.tenantContext.assertAccess(universityId);
+    if (data.role === UserRole.CURATOR) throw new BadRequestException('Создайте аккаунт студента или сотрудника и назначьте ему кураторские группы.');
     if (!this.canManageRole(requesterRole, data.role))
       throw new ForbiddenException(
         "Insufficient permissions to create this role",
@@ -602,6 +609,12 @@ export class AdminService {
     pagination: PaginationQueryDto,
   ): Promise<PaginatedResponse<Group>> {
     this.tenantContext.assertAccess(universityId);
+    if (requesterRole === UserRole.CURATOR && this.curation) {
+      const result = await this.curation.groups(pagination);
+      const ids = result.data.map(group => group.id);
+      const data = ids.length ? await this.groupRepository.find({ where: { id: In(ids), universityId }, order: { name: 'ASC' } }) : [];
+      return { ...result, data };
+    }
     if (requesterRole !== UserRole.TEACHER)
       return this.getGroups(universityId, pagination);
     const groupIds = await this.scheduleService.getTeacherGroupIds(
@@ -623,6 +636,7 @@ export class AdminService {
     data: CreateGroupDto,
   ): Promise<Group> {
     this.tenantContext.assertAccess(universityId);
+    if (data.curatorId) throw new BadRequestException('Назначьте кураторов через управление кураторством после создания группы.');
     const group = this.groupRepository.create({
       name: data.name,
       specialization: data.specialization,
@@ -635,6 +649,7 @@ export class AdminService {
   }
 
   async updateGroup(id: string, data: UpdateGroupDto): Promise<Group> {
+    if (data.curatorId !== undefined) throw new BadRequestException('Используйте управление кураторством для назначения и снятия кураторов.');
     const group = await this.groupRepository.findOne({ where: { id } });
 
     if (!group) {

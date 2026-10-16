@@ -8,6 +8,8 @@
 
 Builds the independent Android Gradle project, runs release lint, verifies the APK signature and copies the installable artifact into ignored output. Signing JSON, keystore and passwords are supplied from outside Git; process environment is restored after the run.
 
+Also runs testReleaseUnitTest, extracts version/application ID from aapt, writes a public build-result.json and optionally compares the release certificate with PreviousApkPath. Artifact names follow the APK version rather than a hardcoded release name. Never include the private signing config in the release package.
+
 ## Read sequence
 
 Read the Android README, this script, app/build.gradle and the Gradle wrapper configuration.

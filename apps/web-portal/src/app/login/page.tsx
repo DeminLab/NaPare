@@ -78,8 +78,8 @@ export default function LoginPage() {
         <div className="login-card">
           <MaxLaunchAuth captureOnly />
           <Link href="/" className="brand mobile-brand"><Image src="/brand/np-mark.png" alt="" width={34} height={34} priority unoptimized />НаПаре</Link>
-          <h1>Вход в НаПаре</h1><a href="/career/register" className="login-career-link">Регистрация работодателя →</a>
-          <p className="muted">Войдите в свой аккаунт. Нужный кабинет откроется автоматически.</p><p className="login-account-help">Первый вход — по email и паролю. MAX можно подключить после входа.</p>
+          <h1>Войти в НаПаре</h1>
+
           <form onSubmit={submit} className="login-form" noValidate aria-busy={loading}>
             {error && <p className="error" role="alert">{error}</p>}
             <label htmlFor="login-email">Email
@@ -94,7 +94,7 @@ export default function LoginPage() {
               </div>
               {fieldErrors.password && <span id="login-password-error" className="login-field-error" role="alert">{fieldErrors.password}</span>}
             </div>
-            <button type="submit" disabled={loading}>{loading ? 'Входим…' : 'Войти в кабинет'}</button>
+            <button type="submit" disabled={loading}>{loading ? 'Входим…' : 'Войти'}</button>
           </form>
           <details className="login-alt-method" open={maxAvailable}>
             <summary>Войти через MAX</summary>
@@ -105,6 +105,7 @@ export default function LoginPage() {
             <summary>Не получается войти?</summary>
             <p className="support">Проверьте email и раскладку клавиатуры. Если вам не выдали пароль или вы его забыли, обратитесь в учебную часть или к администратору университета.</p>
           </details>
+          <a href="/career/register" className="login-career-link">Регистрация работодателя</a>
         </div>
       </section>
     </main>

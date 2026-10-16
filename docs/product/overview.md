@@ -16,7 +16,8 @@
 | **University admin web** | Next.js, браузер | Администраторы вуза | Реализованная web-поверхность |
 | **Developer web** | Next.js, браузер | Операции платформы | Реализованная web-поверхность |
 | **Portal / MAX entry** | `web-portal`, браузер или MAX WebView | Вход и привязка аккаунта | MAX production setup требует внешней конфигурации |
-| **Native mobile app** | iOS / Android | Студенты, преподаватели | Целевое направление; Flutter-приложения нет |
+| **Android** | WebView + нативный ручной план | Пользователи сайта | Релиз-кандидат 1.1.0; проверка на устройстве и RuStore отдельно |
+| **iOS / Flutter** | Возможное развитие | Студенты, преподаватели | Отдельного клиента нет |
 
 Для MAX используется `web-portal`; отдельный legacy-каталог `apps/max-miniapp` не включён в обычную сборку и не является deployed client. Проверяйте Nginx route в актуальном `DEPLOY.md`. Bot configuration и реальные MAX launches требуют проверки на стороне платформы.
 
@@ -28,7 +29,7 @@
 | Пространство пары | Объявления, ДЗ, файлы, обсуждение | [modules/pair-space.md](../modules/pair-space.md) |
 | Отсутствия | Статусы + дашборд куратора | [modules/absences.md](../modules/absences.md) |
 | Мой день | Персональная сводка | [modules/my-day.md](../modules/my-day.md) |
-| Уведомления | Push + in-app | [modules/notifications.md](../modules/notifications.md) |
+| Уведомления | In-app; доставка FCM/APNs не реализована | [modules/notifications.md](../modules/notifications.md) |
 | Роли и доступ | 8 ролей | [architecture/roles-and-permissions.md](../architecture/roles-and-permissions.md) |
 
 ## Что НЕ входит в MVP

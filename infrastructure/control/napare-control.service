@@ -1,0 +1,24 @@
+[Unit]
+Description=NaPare service control agent
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+User=napare-control
+Group=napare-control
+SupplementaryGroups=docker
+EnvironmentFile=/etc/napare-control.env
+ExecStart=/usr/bin/node /opt/NaPare/infrastructure/control/agent.mjs
+Restart=on-failure
+RestartSec=5
+RuntimeDirectory=napare-control
+RuntimeDirectoryMode=0750
+StateDirectory=napare-control
+StateDirectoryMode=0700
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

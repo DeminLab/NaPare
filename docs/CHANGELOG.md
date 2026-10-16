@@ -2,7 +2,22 @@
 
 > Entries below preserve the original change history and may mention paths/components that were subsequently renamed, removed, or never implemented. Treat them as historical notes, not as a current file index. Current behavior is described by code/configuration and the docs linked from [00_START_HERE](00_START_HERE.md).
 
-## [Unreleased] — 2026-09-30
+## [Unreleased] — 2026-10-16
+
+### Кураторство и управление платформой
+- Назначения кураторов существующим аккаунтам, общие экраны кабинетов, проверка группы/университета и история решений; миграция `1700000000020`.
+- Панель `/developer/control`: владелец, делегированные разрешения, аккаунты, университеты, настройки, аудит и экстренный отзыв; миграция `1700000000021`.
+- Приватный host-агент для операций Compose и control overlay; требует установки оператором.
+
+### Клиенты
+- Упрощены рабочие страницы студента, сотрудника, администрации и разработчика, вход и подключения portal.
+- Android WebView 1.1.0 (2): ручной локальный план, JVM-тесты, материалы для RuStore и проверка совместимости подписи. Публикация и проверка на устройстве отдельно.
+
+### Документация и очистка
+- Обновлены точки входа, модель данных, схема, руководство администратора, мобильный клиент, проверки и source cards; [отчёт сверки](project-log/2026-10-16-repository-sync.md).
+- Браузерные логи, локальные снимки и Python-кэш исключены из Git; их удаление заблокировано политикой среды, файлы остаются локально. История, legacy-исходники и материалы проверок сохранены.
+
+## Изменения до 2026-09-30
 
 ### MAX
 - The login page offers an explicit choice between MAX and university credentials. MAX account linking moved to account connections in settings and is available across all role workspaces.

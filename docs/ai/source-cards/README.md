@@ -1,5 +1,7 @@
 # Source-card index
 
+- [240 — Staff absence-review queue](240-apps-web-staff-src-app-staff-absences-page-tsx.md)
+
 Each card points to one existing canonical source file. Cards are navigation aids: they do not replace reading the source, its imports, tests or product documentation.
 
 ## How to use
@@ -7,6 +9,20 @@ Each card points to one existing canonical source file. Cards are navigation aid
 Choose the card matching the task area, read the canonical source and then follow its local imports. Do not bulk-edit files merely because a card exists.
 
 ## Cards
+
+- [241 — `apps/backend/src/curation/curation.service.ts`](241-apps-backend-src-curation-curationservicets.md)
+- [242 — `apps/backend/src/curation/curation.controller.ts`](242-apps-backend-src-curation-curationcontrollerts.md)
+- [243 — `apps/backend/src/curation/curation.module.ts`](243-apps-backend-src-curation-curationmodulets.md)
+- [244 — `apps/backend/src/curation/curation-query.dto.ts`](244-apps-backend-src-curation-curation-querydtots.md)
+- [245 — `apps/backend/src/curation/entities/curator-assignment.entity.ts`](245-apps-backend-src-curation-entities-curator-assignmententityts.md)
+- [246 — `apps/backend/src/migrations/1700000000020-CuratorAssignments.ts`](246-apps-backend-src-migrations-1700000000020-curatorassignmentsts.md)
+- [247 — `packages/ui/src/Curation.tsx`](247-packages-ui-src-curationtsx.md)
+- [248 — `apps/web-student/src/app/(student)/curation/page.tsx`](248-apps-web-student-src-app-student-curation-pagetsx.md)
+- [249 — `apps/web-staff/src/app/(staff)/curation/page.tsx`](249-apps-web-staff-src-app-staff-curation-pagetsx.md)
+- [250 — `apps/web-admin/src/app/(admin)/curation/page.tsx`](250-apps-web-admin-src-app-admin-curation-pagetsx.md)
+- [251 — `apps/web-student/src/app/(student)/CurationAccess.tsx`](251-apps-web-student-src-app-student-curationaccesstsx.md)
+- [252 — `apps/backend/test/curation.fixture.ts`](252-apps-backend-test-curationfixturets.md)
+- [253 — `apps/backend/test/curation.e2e-spec.ts`](253-apps-backend-test-curatione2e-spects.md)
 
 - [116 — `apps/web-portal/src/app/login/page.tsx`](116-apps-web-portal-src-app-login-page-tsx.md)
 
@@ -282,3 +298,65 @@ Choose the card matching the task area, read the canonical source and then follo
 - [238 — Android WebView Activity](238-apps-android-webview-mainactivity-java.md)
 
 - [239 — Android build script](239-scripts-build-android-ps1.md)
+
+- [254 — `apps/backend/src/platform/bootstrap-owner.ts`](254-apps-backend-src-platform-bootstrap-owner-ts.md)
+
+- [255 — `apps/backend/src/platform/control-agent.client.ts`](255-apps-backend-src-platform-control-agent-client-ts.md)
+
+- [256 — `apps/backend/src/platform/platform-maintenance.interceptor.ts`](256-apps-backend-src-platform-platform-maintenance-interceptor-ts.md)
+
+- [257 — `apps/backend/src/platform/platform.controller.ts`](257-apps-backend-src-platform-platform-controller-ts.md)
+
+- [258 — `apps/backend/src/platform/platform.dto.ts`](258-apps-backend-src-platform-platform-dto-ts.md)
+
+- [259 — `apps/backend/src/platform/platform.entity.ts`](259-apps-backend-src-platform-platform-entity-ts.md)
+
+- [260 — `apps/backend/src/platform/platform.module.ts`](260-apps-backend-src-platform-platform-module-ts.md)
+
+- [261 — `apps/backend/src/platform/platform.service.ts`](261-apps-backend-src-platform-platform-service-ts.md)
+
+- [262 — `apps/backend/src/migrations/1700000000021-PlatformControl.ts`](262-apps-backend-src-migrations-1700000000021-platformcontrol-ts.md)
+
+- [263 — `apps/web-developer/src/app/(developer)/control/AccountsPanel.tsx`](263-apps-web-developer-src-app-developer-control-accountspanel-tsx.md)
+
+- [264 — `apps/web-developer/src/app/(developer)/control/AuditPanel.tsx`](264-apps-web-developer-src-app-developer-control-auditpanel-tsx.md)
+
+- [265 — `apps/web-developer/src/app/(developer)/control/control-ui.tsx`](265-apps-web-developer-src-app-developer-control-control-ui-tsx.md)
+
+- [266 — `apps/web-developer/src/app/(developer)/control/page.tsx`](266-apps-web-developer-src-app-developer-control-page-tsx.md)
+
+- [267 — `apps/web-developer/src/app/(developer)/control/PermissionsPanel.tsx`](267-apps-web-developer-src-app-developer-control-permissionspanel-tsx.md)
+
+- [268 — `apps/web-developer/src/app/(developer)/control/ServicesPanel.tsx`](268-apps-web-developer-src-app-developer-control-servicespanel-tsx.md)
+
+- [269 — `apps/web-developer/src/app/(developer)/control/SettingsPanel.tsx`](269-apps-web-developer-src-app-developer-control-settingspanel-tsx.md)
+
+- [270 — `apps/web-developer/src/app/(developer)/control/UniversitiesPanel.tsx`](270-apps-web-developer-src-app-developer-control-universitiespanel-tsx.md)
+
+- [271 — `infrastructure/control/agent.mjs`](271-infrastructure-control-agent-mjs.md)
+
+- [272 — `infrastructure/control/agent.test.mjs`](272-infrastructure-control-agent-test-mjs.md)
+
+- [273 — `infrastructure/control/napare-control.service`](273-infrastructure-control-napare-control-service.md)
+
+- [274 — `docker-compose.control.yml`](274-docker-compose-control-yml.md)
+
+- [275 — `apps/backend/test/platform.fixture.ts`](275-apps-backend-test-platform-fixture-ts.md)
+
+- [276 — `apps/backend/test/platform.e2e-spec.ts`](276-apps-backend-test-platform-e2e-spec-ts.md)
+
+- [277 — `apps/android-webview/app/src/main/java/ru/napare/app/PlanRepository.java`](277-apps-android-webview-app-src-main-java-ru-napare-app-planrepository-java.md)
+
+- [278 — `apps/android-webview/app/src/main/java/ru/napare/app/OfflinePlanActivity.java`](278-apps-android-webview-app-src-main-java-ru-napare-app-offlineplanactivity-java.md)
+
+- [279 — `apps/android-webview/app/src/test/java/ru/napare/app/PlanRepositoryTest.java`](279-apps-android-webview-app-src-test-java-ru-napare-app-planrepositorytest-java.md)
+
+- [280 — `apps/android-webview/app/src/main/res/values/strings.xml`](280-apps-android-webview-app-src-main-res-values-strings-xml.md)
+
+- [281 — `apps/android-webview/rustore/listing.json`](281-apps-android-webview-rustore-listing-json.md)
+
+- [282 — `apps/android-webview/rustore/description.txt`](282-apps-android-webview-rustore-description-txt.md)
+
+- [283 — `apps/android-webview/rustore/whats-new.txt`](283-apps-android-webview-rustore-whats-new-txt.md)
+
+- [284 — `apps/android-webview/rustore/moderator-notes.txt`](284-apps-android-webview-rustore-moderator-notes-txt.md)

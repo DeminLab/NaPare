@@ -12,5 +12,7 @@
 | `apps/web-developer` | Platform diagnostics and technical operations | `apps/web-developer/src/app` |
 | `packages/*` | Shared contracts and API client code | package-level source cards |
 | `infrastructure` | Reverse proxy and deployment support | infrastructure source cards |
+| `apps/backend/src/curation`, `packages/ui/src/Curation.tsx` | Group assignments independent of primary roles; shared role screens | `docs/product/account-curatorship.md` |
+| `apps/backend/src/platform`, `infrastructure/control` | Owner/delegated platform control and optional host agent | `docs/product/platform-control.md`, `docs/deployment/platform-control.md` |
 
 The root scripts use pnpm workspaces. Docker uses a backend hostname only inside the Compose network; local browser development must use the local backend URL configuration documented in the application configs.

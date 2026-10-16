@@ -29,6 +29,7 @@ import { Lesson } from "../schedule/entities/lesson.entity";
 import { Group } from "../users/entities/group.entity";
 import { University } from "../users/entities/university.entity";
 import { UserRole } from "../auth/interfaces/user-role";
+import { CurationService } from '../curation/curation.service';
 import {
   PaginatedResponse,
   PaginationQueryDto,
@@ -37,7 +38,6 @@ import {
 
 const CONTENT_AUTHOR_ROLES: UserRole[] = [
   UserRole.TEACHER,
-  UserRole.CURATOR,
   UserRole.DEPARTMENT_HEAD,
   UserRole.FACULTY_DEAN,
   UserRole.UNIVERSITY_ADMIN,
@@ -93,6 +93,7 @@ export class PairSpaceService {
     @InjectRepository(University)
     private readonly universityRepository?: Repository<University>,
     @Optional() private readonly eventBus?: EventBusService,
+    @Optional() private readonly curation?: CurationService,
   ) {}
 
   async findById(id: string): Promise<PairSpaceResponse> {
@@ -142,7 +143,7 @@ export class PairSpaceService {
     const scope = {
       universityId,
       subject: currentLesson.subject,
-      ...(user?.role === UserRole.STUDENT
+      ...([UserRole.STUDENT, UserRole.CURATOR].includes(user?.role as UserRole)
         ? { groupId: currentLesson.groupId }
         : user?.role === UserRole.TEACHER
           ? { teacherId: user.id }
@@ -574,6 +575,12 @@ export class PairSpaceService {
   private async assertRoleScopedAccess(pairSpace: PairSpace): Promise<void> {
     this.tenantContext.assertAccess(pairSpace.universityId);
     const user = this.tenantContext.getUser();
+    if (user?.role === UserRole.CURATOR && this.curation) {
+      const lesson = await this.lessonRepository?.findOne({ where: { id: pairSpace.lessonId, universityId: pairSpace.universityId } });
+      if (!lesson) throw new ForbiddenException('Занятие недоступно.');
+      await this.curation.assertGroup(lesson.groupId);
+      return;
+    }
     if (user?.role === UserRole.TEACHER) {
       const lesson = await this.lessonRepository?.findOne({
         where: { id: pairSpace.lessonId, universityId: pairSpace.universityId },
@@ -606,6 +613,7 @@ export class PairSpaceService {
   private async assertLessonScopedAccess(lesson: Lesson): Promise<void> {
     const user = this.tenantContext.getUser();
     if (!user) throw new ForbiddenException("Authenticated user required");
+    if (user.role === UserRole.CURATOR && this.curation) await this.curation.assertGroup(lesson.groupId);
     const groupId = await this.resolveStudentGroupId(
       lesson.universityId,
       user.groupId,

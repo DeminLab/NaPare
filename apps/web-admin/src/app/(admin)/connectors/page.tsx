@@ -235,27 +235,18 @@ export default function ConnectorsPage() {
     );
   return (
     <div className="mx-auto max-w-[1200px] space-y-6">
-      <div className="flex items-center gap-2 text-sm text-slate-500">
-        <Link href="/dashboard" className="hover:text-slate-900">
-          Кабинет ВУЗа
-        </Link>
-        <span>/</span>
-        <span className="text-slate-900">Источники данных</span>
-      </div>
+
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
         <div>
           <p className="text-sm font-medium text-sky-700">Кабинет ВУЗа</p>
           <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
             Источники данных
           </h1>
-          <p className="mt-2 max-w-2xl text-sm text-slate-500">
-            Расписание, Moodle и другие системы подключаются без копирования
-            чувствительных данных в интерфейс.
-          </p>
+
         </div>
-        <Badge variant="slate">Данные ВУЗа</Badge>
+
       </div>
-      {connectors.length > 0 && <div className="grid grid-cols-3 gap-3">
+      {connectors.length > 0 && <div className="metric-strip">
         <Card padding="sm">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
             Работают
@@ -376,7 +367,7 @@ export default function ConnectorsPage() {
                   <div className="mt-4 space-y-4 border-t border-slate-100 pt-4">
                     <div className="rounded-xl bg-sky-50 p-3 text-sm text-sky-950">
                       <p className="font-semibold">
-                        Moodle — источник сдач и оценок
+                        Подключение Moodle
                       </p>
                       <p className="mt-1 text-sky-800">
                         NaPare показывает контекст пары и подготовку; задания,
@@ -447,12 +438,8 @@ export default function ConnectorsPage() {
                 ) : (
                   <div className="mt-4 grid gap-3 border-t border-slate-100 pt-4 text-sm sm:grid-cols-2">
                     <div>
-                      <p className="text-xs text-slate-400">
-                        Результат синхронизации
-                      </p>
-                      <p className="mt-1 text-slate-700">
-                        Смотрите в журнале после запуска.
-                      </p>
+
+
                     </div>
                     <div>
                       <p className="text-xs text-slate-400">

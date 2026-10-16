@@ -7,6 +7,7 @@ import { TelegramLinkChallenge } from "./entities/telegram-link-challenge.entity
 import { CreateUserDto } from "./dto/create-user.dto";
 import { TenantContext } from "../common/tenant/tenant-context";
 import { UserRole } from "../auth/interfaces/user-role";
+import { PlatformService } from '../platform/platform.service';
 import {
   PaginatedResponse,
   PaginationQueryDto,
@@ -21,9 +22,11 @@ export class UsersService {
     private readonly tenantContext: TenantContext,
     @Optional() @InjectRepository(TelegramLinkChallenge)
     private readonly telegramChallenges?: Repository<TelegramLinkChallenge>,
+    @Optional() private readonly platform?: PlatformService,
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<User> {
+    if (this.tenantContext.getUser() && [UserRole.DEVELOPER, UserRole.SUPERADMIN].includes(createUserDto.role)) await this.platform?.requireOwner();
     this.tenantContext.assertAccess(createUserDto.universityId);
     const user = this.usersRepository.create(createUserDto);
     return this.usersRepository.save(user);
@@ -174,6 +177,9 @@ export class UsersService {
   }
 
   async update(id: string, updateData: Partial<User>): Promise<User> {
+    if (updateData.role && [UserRole.DEVELOPER, UserRole.SUPERADMIN].includes(updateData.role)) await this.platform?.requireOwner();
+    if (['role', 'isActive', 'passwordHash', 'email', 'universityId'].some(key => key in updateData)) await this.platform?.protectLegacyMutation(id);
+    if (updateData.role !== undefined) await this.platform?.clearLegacyGrant(id);
     const user = await this.findById(id);
 
     if (!user) {
@@ -195,12 +201,14 @@ export class UsersService {
   }
 
   async invalidateSessions(id: string): Promise<void> {
+    if (this.tenantContext.getUser()?.id !== id) await this.platform?.protectLegacyMutation(id);
     const user = await this.findById(id);
     if (!user) throw new NotFoundException(`User with id ${id} not found`);
     await this.usersRepository.increment({ id: user.id }, "sessionVersion", 1);
   }
 
   async deactivate(id: string): Promise<void> {
+    await this.platform?.protectLegacyMutation(id);
     const user = await this.findById(id);
     if (!user) throw new NotFoundException(`User with id ${id} not found`);
     await this.usersRepository.update(user.id, { isActive: false });

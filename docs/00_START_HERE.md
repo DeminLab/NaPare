@@ -9,6 +9,8 @@ B2B2C SaaS для вузов: расписание, задания, матери
 
 ## Быстрый старт
 
+Состояние репозитория и проверки от 16 октября: [сводка изменений](project-log/2026-10-16-repository-sync.md). Новые возможности: [кураторство](product/account-curatorship.md), [управление платформой](product/platform-control.md), [установка агента](deployment/platform-control.md), [Android и RuStore](deployment/rustore-publication.md). Отправка кода в GitHub не подтверждает развёртывание этих возможностей.
+
 | Я | Мне нужно | Куда идти |
 |---|-----------|-----------|
 | Новый разработчик | Поднять проект и начать кодить | [01_ONBOARDING.md](01_ONBOARDING.md) |

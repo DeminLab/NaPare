@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { CurationEntry } from '@napare/ui/curation';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 import { WorkspaceShell, type NavigationLinkProps, type WorkspaceCommand, type WorkspaceNavGroup } from '@napare/ui/workspace-shell';
@@ -37,10 +38,5 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const fullName = user.firstName + ' ' + user.lastName;
   const resolvedGroups = groups.map((group) => ({ ...group, items: group.items.map((item) => item.href === '/notifications' ? { ...item, badge: notificationCount } : item) }));
   const status = systemStatus === 'online' ? { label: 'Система работает', tone: 'success' as const } : systemStatus === 'offline' ? { label: 'Система недоступна', tone: 'danger' as const } : { label: 'Проверка системы', tone: 'warning' as const };
-  return <WorkspaceShell LinkComponent={AppLink} pathname={pathname} groups={resolvedGroups} roleLabel="Кабинет ВУЗа" homeHref="/dashboard" user={{ name: fullName, role: 'Сотрудник ВУЗа', id: user.id }} unreadCount={notificationCount} status={status} commands={commands} mobileHrefs={['/dashboard', '/schedule-import', '/users', '/structure']} help={{ title: 'Управление университетом', description: 'Начните с пользователей и структуры, затем проверьте расписание и источники данных.', steps: [
-    { title: 'Проверить общую сводку', description: 'Статистика и состояние данных университета.', href: '/dashboard' },
-    { title: 'Добавить пользователей', description: 'Учётные записи и доступ к кабинетам.', href: '/users' },
-    { title: 'Настроить расписание', description: 'Импорт, проверка ошибок и публикация занятий.', href: '/schedule-import' },
-    { title: 'Подключить источники данных', description: 'Интеграции университета; подключение MAX находится в меню аккаунта.', href: '/connectors' },
-  ] }} onLogout={logout}>{children}</WorkspaceShell>;
+  return <WorkspaceShell LinkComponent={AppLink} pathname={pathname} groups={resolvedGroups} roleLabel="Кабинет ВУЗа" homeHref="/dashboard" user={{ name: fullName, role: 'Сотрудник ВУЗа', id: user.id }} unreadCount={notificationCount} status={status} commands={commands} mobileHrefs={['/dashboard', '/schedule-import', '/users', '/structure']} onLogout={logout}><div className="role-content">{!pathname.endsWith('/curation') && <CurationEntry apiFetch={apiFetch} basePath="/deanery" />}{children}</div></WorkspaceShell>;
 }

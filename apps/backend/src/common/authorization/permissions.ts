@@ -31,11 +31,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     PERMISSIONS.ACADEMIC_SERIES_MANAGE,
     PERMISSIONS.ACADEMIC_OCCURRENCE_MANAGE,
   ],
-  [UserRole.CURATOR]: [
-    ...allAcademicRead,
-    PERMISSIONS.ACADEMIC_SERIES_MANAGE,
-    PERMISSIONS.ACADEMIC_OCCURRENCE_MANAGE,
-  ],
+  [UserRole.CURATOR]: allAcademicRead,
   [UserRole.DEPARTMENT_HEAD]: [
     ...allAcademicRead,
     PERMISSIONS.ACADEMIC_COURSE_MANAGE,

@@ -1,6 +1,9 @@
 import { CareerModule } from './career/career.module';
+import { CurationModule } from './curation/curation.module';
 import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { PlatformModule } from './platform/platform.module';
+import { PlatformMaintenanceInterceptor } from './platform/platform-maintenance.interceptor';
 import { join } from 'node:path';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -75,6 +78,8 @@ import { SearchModule } from './search/search.module';
       }],
     }),
     CareerModule,
+    PlatformModule,
+    CurationModule,
     AuthModule,
     UsersModule,
     ScheduleModule,
@@ -91,7 +96,7 @@ import { SearchModule } from './search/search.module';
     SearchModule,
   ],
   controllers: [AppController, HealthController],
-  providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
+  providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }, { provide: APP_INTERCEPTOR, useClass: PlatformMaintenanceInterceptor }],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

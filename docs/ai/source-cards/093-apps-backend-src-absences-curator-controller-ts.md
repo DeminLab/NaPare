@@ -6,7 +6,7 @@
 
 ## Scope
 
-NestJS backend module, HTTP boundary, authorization or data-service behavior.
+Existing curator absence routes now accept authenticated accounts and enforce assignment/resource checks in CurationService. Decisions flow through AbsencesService into a transaction; primary roles are not replaced and unrelated student access is not globally broadened.
 
 ## Read sequence
 

@@ -35,7 +35,9 @@ University ownership is represented on relevant domain records and enforced by b
 3. Update the related [module documentation](../modules/) and [schema overview](../database/schema-overview.md).
 4. Production backend executes pending migrations at startup; operators must take a backup and review logs.
 
-The current migration inventory is `apps/backend/src/migrations/` (17 migrations as of 2026-09-29). TypeORM is the ORM; no Prisma schema exists.
+The current migration inventory is `apps/backend/src/migrations/`; the latest additions are `1700000000020-CuratorAssignments.ts` and `1700000000021-PlatformControl.ts` (reviewed 2026-10-16). TypeORM is the ORM; no Prisma schema exists.
+
+`curator_assignments` records active and revoked user/group assignments without replacing the primary role. `Group.curatorId` is a compatibility pointer, not an authorization source. `platform_control` stores the immutable owner UUID and platform settings; `platform_grants` stores delegated capabilities. See [curatorship](../product/account-curatorship.md) and [platform control](../product/platform-control.md).
 
 ## Related documents
 

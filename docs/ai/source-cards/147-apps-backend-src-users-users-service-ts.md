@@ -8,6 +8,8 @@
 
 Tenant-aware user persistence, including atomic MAX binding and one-time Telegram account-link challenges stored as hashes and consumed transactionally.
 
+PlatformService protects the bound owner and existing platform identities from legacy administrative mutations, requires owner permission for platform-role promotion and clears stale grants on role changes. Self logout remains available. Read [platform control](../../product/platform-control.md).
+
 ## Read sequence
 
 1. Read [the Auth module](../../modules/auth.md).

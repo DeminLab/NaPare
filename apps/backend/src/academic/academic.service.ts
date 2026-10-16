@@ -1,6 +1,7 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, In, Repository } from 'typeorm';
+import { CurationService } from '../curation/curation.service';
 
 import { EventBusService } from '../events/event-bus.service';
 import { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
@@ -57,6 +58,7 @@ export class AcademicService {
     private readonly tenantContext: TenantContext,
     private readonly dataSource: DataSource,
     private readonly eventBus: EventBusService,
+    @Optional() private readonly curation?: CurationService,
   ) {}
 
   async findCourses(universityId: string, pagination: PaginationQueryDto): Promise<PaginatedResponse<Course>> {
@@ -278,6 +280,10 @@ export class AcademicService {
   async getOccurrenceContext(id: string): Promise<{ course: Course; series: LessonSeries; occurrence: LessonOccurrence }> {
     const occurrence = await this.occurrenceRepository.findOne({ where: { id } });
     if (!occurrence) throw new NotFoundException(`Lesson occurrence with id ${id} not found`);
+    if (this.requireUser().role === UserRole.CURATOR) {
+      if (!this.curation) throw new ForbiddenException('Curator scope unavailable');
+      await this.curation.assertGroup(occurrence.groupId);
+    }
     const course = await this.getCourse(occurrence.courseId);
     const series = await this.seriesRepository.findOne({ where: { id: occurrence.seriesId } });
     if (!series) throw new NotFoundException(`Lesson series with id ${occurrence.seriesId} not found`);
@@ -377,7 +383,7 @@ export class AcademicService {
     }
     if (user.role === UserRole.CURATOR) {
       query.innerJoin(LessonSeries, 'curator_series', 'curator_series.courseId = course.id')
-        .innerJoin(Group, 'curator_group', 'curator_group.id = curator_series.groupId AND curator_group.curatorId = :curatorId', { curatorId: user.id });
+        .andWhere('EXISTS (SELECT 1 FROM curator_assignments ca WHERE ca."groupId" = curator_series."groupId" AND ca."universityId" = course."universityId" AND ca."userId" = :curatorId AND ca."revokedAt" IS NULL)', { curatorId: user.id });
       return;
     }
     query.andWhere('1 = 0');
@@ -387,7 +393,7 @@ export class AcademicService {
     if (UNIVERSITY_OPERATORS.includes(user.role)) return;
     if (user.role === UserRole.TEACHER) query.andWhere('occurrence.teacherId = :teacherId', { teacherId: user.id });
     else if (user.role === UserRole.STUDENT && user.groupId) query.andWhere('occurrence.groupId = :studentGroupId', { studentGroupId: user.groupId });
-    else if (user.role === UserRole.CURATOR) query.innerJoin(Group, 'occurrence_group', 'occurrence_group.id = occurrence.groupId AND occurrence_group.curatorId = :curatorId', { curatorId: user.id });
+    else if (user.role === UserRole.CURATOR) query.andWhere('EXISTS (SELECT 1 FROM curator_assignments ca WHERE ca."groupId" = occurrence."groupId" AND ca."universityId" = occurrence."universityId" AND ca."userId" = :curatorId AND ca."revokedAt" IS NULL)', { curatorId: user.id });
     else query.andWhere('1 = 0');
   }
 
@@ -395,7 +401,7 @@ export class AcademicService {
     if (UNIVERSITY_OPERATORS.includes(user.role)) return;
     if (user.role === UserRole.TEACHER) query.andWhere('(event.actorId = :teacherId OR EXISTS (SELECT 1 FROM lesson_series event_series WHERE event_series.courseId = event.courseId AND event_series.teacherId = :teacherId))', { teacherId: user.id });
     else if (user.role === UserRole.STUDENT && user.groupId) query.andWhere('(event.groupId = :studentGroupId OR EXISTS (SELECT 1 FROM lesson_series event_series WHERE event_series.courseId = event.courseId AND event_series.groupId = :studentGroupId))', { studentGroupId: user.groupId });
-    else if (user.role === UserRole.CURATOR) query.innerJoin(Group, 'event_group', 'event_group.id = event.groupId AND event_group.curatorId = :curatorId', { curatorId: user.id });
+    else if (user.role === UserRole.CURATOR) query.andWhere('EXISTS (SELECT 1 FROM curator_assignments ca WHERE ca."groupId" = event."groupId" AND ca."universityId" = event."universityId" AND ca."userId" = :curatorId AND ca."revokedAt" IS NULL)', { curatorId: user.id });
     else query.andWhere('1 = 0');
   }
 
@@ -406,8 +412,8 @@ export class AcademicService {
     if (user.role === UserRole.TEACHER && await this.seriesRepository.exists({ where: { courseId: course.id, teacherId: user.id } })) return;
     if (user.role === UserRole.STUDENT && user.groupId && await this.seriesRepository.exists({ where: { courseId: course.id, groupId: user.groupId } })) return;
     if (user.role === UserRole.CURATOR) {
-      const group = await this.groupRepository.findOne({ where: { universityId: course.universityId, curatorId: user.id } });
-      if (group && await this.seriesRepository.exists({ where: { courseId: course.id, groupId: group.id } })) return;
+      const ids = this.curation ? await this.curation.assignedGroupIds() : [];
+      if (ids.length && await this.seriesRepository.exists({ where: { courseId: course.id, groupId: In(ids) } })) return;
     }
     throw new ForbiddenException('Course is outside the user resource scope');
   }
@@ -432,7 +438,10 @@ export class AcademicService {
     const group = await this.groupRepository.findOne({ where: { id: groupId, universityId } });
     if (!group) throw new NotFoundException('Group not found in this university');
     const user = this.requireUser();
-    if (user.role === UserRole.CURATOR && group.curatorId !== user.id) throw new ForbiddenException('Group is outside curator scope');
+    if (user.role === UserRole.CURATOR) {
+      if (!this.curation) throw new ForbiddenException('Curator scope unavailable');
+      await this.curation.assertGroup(group.id);
+    }
     return group;
   }
 

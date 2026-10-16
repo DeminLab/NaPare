@@ -90,7 +90,6 @@ const assignableRoles = [
   "career_admin",
   "student",
   "teacher",
-  "curator",
   "faculty_dean",
   "department_head",
   "university_admin",
@@ -386,11 +385,7 @@ export default function UsersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-2 text-sm text-slate-500">
-        <span>Администратор</span>
-        <span>/</span>
-        <span className="text-slate-900">Пользователи</span>
-      </div>
+
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
@@ -400,26 +395,27 @@ export default function UsersPage() {
             {filtered.length} из {users.length} пользователей
           </p>
         </div>
-        <Button onClick={() => setCreateOpen(true)}>
+        <div className="flex flex-wrap gap-2"><Link className="role-link role-link-secondary" href="/curation">Назначить куратора</Link><Button onClick={() => setCreateOpen(true)}>
           Добавить пользователя
-        </Button>
+        </Button></div>
       </div>
-      <div className="grid grid-cols-2 gap-3 xl:grid-cols-5">
+      <div className="flex gap-2 overflow-x-auto pb-1" aria-label="Быстрые фильтры пользователей">
         {statCards.map((stat) => (
           <button
             key={stat.label}
             type="button"
-            onClick={() => setRole(stat.filter)}
-            className="text-left"
+            aria-pressed={stat.label === "Заблокированы" ? status === "blocked" : role === stat.filter && status === "all"}
+            onClick={() => { setRole(stat.filter); setStatus(stat.label === "Заблокированы" ? "blocked" : "all"); }}
+            className="min-h-11 shrink-0 text-left"
           >
             <Card
-              className={`h-full transition-shadow hover:shadow-md ${role === stat.filter && stat.label !== "Заблокированы" ? "border-slate-900" : ""}`}
+              className={`flex items-center gap-2 rounded-lg !px-3 !py-2 transition-colors ${(stat.label === "Заблокированы" ? status === "blocked" : role === stat.filter && status === "all") ? "border-slate-900" : ""}`}
               padding="sm"
             >
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+              <p className="text-sm font-medium text-slate-600">
                 {stat.label}
               </p>
-              <p className="mt-2 text-2xl font-bold text-slate-950">
+              <p className="text-sm font-semibold text-slate-950">
                 {stat.value}
               </p>
             </Card>
@@ -493,7 +489,6 @@ export default function UsersPage() {
           >
             <option value="teacher">Преподаватель</option>
             <option value="student">Студент</option>
-            <option value="curator">Куратор</option>
             <option value="university_admin">Администратор</option>
           </select>
           <Button size="sm" loading={saving} onClick={() => setBulkConfirmOpen(true)}>
@@ -597,6 +592,7 @@ export default function UsersPage() {
                       Роль ·{" "}
                     </span>
                     <select
+                      aria-label={`Роль: ${user.firstName} ${user.lastName}`}
                       disabled={saving}
                       value={currentRole}
                       onChange={(event) =>
@@ -604,6 +600,7 @@ export default function UsersPage() {
                       }
                       className="h-9 max-w-full rounded-lg border border-slate-200 bg-white px-2 text-xs font-medium text-slate-700 outline-none focus:border-sky-500"
                     >
+                      {currentRole === 'curator' && <option value="curator">Куратор · прежняя роль</option>}
                       {assignableRoles.map((item) => (
                         <option key={item} value={item}>
                           {roleLabels[item]}

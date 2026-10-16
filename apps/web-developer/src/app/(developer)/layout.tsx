@@ -20,6 +20,7 @@ const groups: WorkspaceNavGroup[] = [
   {
     label: "Платформа",
     items: [
+      { href: '/control', label: 'Управление платформой', icon: 'settings', keywords: ['сервер', 'сервисы', 'рестарт', 'ребилд', 'аккаунты', 'права'] },
       {
         href: "/api",
         label: "API",

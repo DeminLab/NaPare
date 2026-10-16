@@ -108,6 +108,7 @@ npx @openapitools/openapi-generator-cli generate \
 | Pair Space       | `/api/v1/pair-spaces`                      | [modules/pair-space.md](../modules/pair-space.md)                                                               |
 | Search           | `/api/v1/search`                            | Авторизованный Spotlight по данным, доступным роли пользователя                                                |
 | Absences         | `/api/v1/absences`, `/api/v1/curator`      | [modules/absences.md](../modules/absences.md)                                                                   |
+| Curation         | `/api/v1/curation`                       | Дополнительные назначения на существующие аккаунты; [контракт](../product/account-curatorship.md) |
 | Notifications    | `/api/v1/notifications`, `/api/v1/devices` | [modules/notifications.md](../modules/notifications.md)                                                         |
 | Events           | `/api/v1/events`                           | `GET /events`, SSE `GET /events/stream` — лента событий текущего пользователя                                   |
 | Admin            | `/api/v1/admin`, `/api/v1/superadmin`      | [modules/admin.md](../modules/admin.md)                                                                         |
@@ -119,3 +120,9 @@ npx @openapitools/openapi-generator-cli generate \
 ## Примеры нестандартных кейсов
 
 См. [api/examples.md](examples.md).
+
+## Управление платформой
+
+Только владелец: `POST /api/v1/platform/trust/emergency-revoke` с текущим паролем и точной фразой подтверждения. Атомарно отзывает делегированные платформенные назначения и сессии технических аккаунтов, сохраняя доступ владельца; подробные границы — в контракте ниже.
+
+Новые маршруты /api/v1/platform: access, services, services/:service/logs, jobs, jobs/:id, accounts, accounts/:id/password, accounts/:id/revoke-sessions, permissions, settings, universities и audit. GET public-settings доступен без входа; остальные проверяют владельца или отдельные разрешения на сервере. [Контракт и ограничения](../product/platform-control.md), [установка](../deployment/platform-control.md).

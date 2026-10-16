@@ -1,6 +1,5 @@
 "use client";
 
-import { RecordQueue } from '@napare/ui';
 
 import { AttentionNavigation } from "../AttentionNavigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -48,6 +47,7 @@ function eventHref(value?:string){
 
 export default function InboxPage() {
   const [items, setItems] = useState<InboxItem[]>([]);
+  const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [filter, setFilter] = useState<InboxItem["status"]>("open");
@@ -100,18 +100,15 @@ export default function InboxPage() {
   return (
     <div className="mx-auto max-w-[var(--layout-content-max)] space-y-6">
       <div>
-        <p className="text-sm font-medium text-sky-700">Центр внимания</p>
+
         <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">
           Центр внимания
         </h1>
-        <p className="mt-2 text-sm text-slate-500">
-          Откройте событие и выполните связанное действие, затем отметьте пункт
-          разобранным. Эта отметка не заменяет решение по заявке студента.
-        </p>
+
       </div>
       <AttentionNavigation active="tasks" />
-      <div role="group" aria-label="Статус действий" className="flex flex-wrap gap-2">{([{ id: "open", label: "Требуют внимания" }, { id: "snoozed", label: "Отложены" }, { id: "done", label: "Разобраны" }] as const).map(item => <button type="button" key={item.id} aria-pressed={filter === item.id} onClick={() => { setActionError(""); setActionStatus(""); setFilter(item.id); }} className={"min-h-11 rounded-xl border px-4 text-sm font-semibold " + (filter === item.id ? "border-sky-700 bg-sky-50 text-sky-700" : "border-slate-200 bg-white text-slate-600")}>{item.label}</button>)}</div>
-      <p className="text-sm text-slate-500">В каждой категории сначала показаны срочные пункты, затем ближайшие сроки. Загружаются последние 100 пунктов выбранного статуса.</p>
+      <div role="group" aria-label="Статус действий" className="flex gap-2 overflow-x-auto">{([{ id: "open", label: "Открытые" }, { id: "snoozed", label: "Отложены" }, { id: "done", label: "Разобраны" }] as const).map(item => <button type="button" key={item.id} aria-pressed={filter === item.id} onClick={() => { setActionError(""); setActionStatus(""); setFilter(item.id); }} className={"min-h-11 shrink-0 rounded-xl border px-3 text-sm font-semibold " + (filter === item.id ? "border-sky-700 bg-sky-50 text-sky-700" : "border-slate-200 bg-white text-slate-600")}>{item.label}</button>)}</div>
+
       {actionError && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{actionError}</p>}
       {actionStatus && <p role="status" className="rounded-xl bg-sky-50 p-3 text-sm text-sky-800">{actionStatus}</p>}
       {loading ? (
@@ -132,15 +129,13 @@ export default function InboxPage() {
           description="Новые события доступны в разделе «Все уведомления»."
         />
       ) : (
-        <RecordQueue label="Очередь действий" items={Object.values(grouped).flat().map(item=>({id:item.id,title:item.title,summary:category(item.type),status:item.priority==='urgent'?'Срочно':item.priority==='high'?'Важно':item.status==='done'?'Разобрано':item.status==='snoozed'?'Отложено':'Открыто'}))} render={id=>{const item=items.find(record=>record.id===id)!;return                   <article
+        <div className="space-y-3"><label className="block"><span className="sr-only">Поиск событий</span><input type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder="Найти событие…" className="min-h-11 w-full rounded-xl border bg-white px-3 text-sm" /></label>{Object.values(grouped).flat().filter(item => `${item.title} ${item.description}`.toLocaleLowerCase('ru-RU').includes(search.toLocaleLowerCase('ru-RU'))).map(item => <details key={item.id} open={items.length === 1} className="overflow-hidden rounded-xl border bg-white"><summary className="min-h-11 cursor-pointer p-4 text-sm font-semibold">{item.title}<span className="ml-2 text-xs font-normal text-slate-500">{category(item.type)}</span></summary><article
                     key={item.id}
-                    className={`block px-4 py-4 transition-colors hover:bg-slate-50 ${item.status === "open" ? "border-l-2 border-l-sky-500 bg-sky-50/30" : ""}`}
+                    className={`block px-3 py-3 transition-colors hover:bg-slate-50 ${item.status === "open" ? "border-l-2 border-l-sky-500 bg-sky-50/30" : ""}`}
                   >
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
-                        <p className="break-words text-sm font-semibold text-slate-900">
-                          {item.title}
-                        </p>
+
                         {(item.priority === 'high' || item.priority === 'urgent') && <Badge variant="red" className="mt-2">{item.priority === 'urgent' ? 'Срочно' : 'Важно'}</Badge>}
                         <p className="mt-1 break-words text-sm text-slate-600">
                           {item.description}
@@ -161,7 +156,7 @@ export default function InboxPage() {
                     </div>
                     {item.dueAt && <p className="mt-2 text-xs font-medium text-slate-600">Срок · {new Date(item.dueAt).toLocaleString('ru-RU', { day:'numeric',month:'short',hour:'2-digit',minute:'2-digit' })}</p>}
                     <div className="mt-3 flex flex-wrap items-center gap-2"><a href={eventHref(item.deepLink)} className="inline-flex min-h-11 items-center rounded-lg border border-slate-200 px-3 text-sm font-semibold text-sky-700">Открыть событие</a>{item.status !== "done" && <Button variant="ghost" size="sm" disabled={!!savingId} onClick={() => void complete(item.id)}>{savingId === item.id ? "Сохраняем…" : "Отметить разобранным"}</Button>}</div>
-</article>;}}/>
+</article></details>)}{search && !items.some(item => `${item.title} ${item.description}`.toLocaleLowerCase('ru-RU').includes(search.toLocaleLowerCase('ru-RU'))) && <p className="py-4 text-sm text-slate-500">Событий не найдено.</p>}</div>
       )}
     </div>
   );

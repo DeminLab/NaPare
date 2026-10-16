@@ -18,5 +18,31 @@
 }
 html, body { min-width: 320px; overflow-x: clip; } img, svg, video { max-width: 100%; } button, input, select, textarea { max-width: 100%; } input, select, textarea { font-size: max(16px, 1rem); } button, [role="button"], nav a { min-height: 2.75rem; } nav[aria-label="Мобильная навигация"] { padding-bottom: max(.375rem, env(safe-area-inset-bottom)); }
 button, a, input, select, textarea { touch-action: manipulation; }
-@media (max-width: 639px) { .grid-cols-3 { grid-template-columns: minmax(0, 1fr); } .action-card { padding: 1rem; } }
+@media (max-width: 639px) { .action-card { padding: 1rem; } }
 @media (min-width: 640px) { .table-shell, [role="table"] { scrollbar-gutter: stable; } }
+
+/* Work pages share a compact content rhythm; the shell keeps its own layout. */
+.role-content { --color-brand: var(--role-accent); --color-brand-strong: var(--role-accent); --color-brand-soft: var(--role-accent-soft); --type-page-size: clamp(1.5rem, 2.4vw, 1.875rem); }
+.role-content :is(h1, .ds-page-header__title) { font-size: var(--type-page-size); line-height: 1.25; }
+.role-content .ds-page-header { margin-bottom: 0; }
+.role-content .ds-card { box-shadow: none; }
+.role-content .ds-card.p-6:not(.p-0) { padding: 20px; }
+.role-content .ds-card.p-8 { padding: 24px; }
+.role-content .ds-card.p-0 { padding: 0; }
+.role-content [role="status"].min-h-\[220px\] { min-height: 0; padding-block: 28px; }
+.role-content [role="alert"].min-h-\[240px\] { min-height: 0; padding-block: 28px; }
+.role-content .role-link { display: inline-flex; min-height: 44px; align-items: center; justify-content: center; gap: 8px; border: 1px solid transparent; border-radius: var(--radius-md); padding: 8px 14px; font-size: 14px; font-weight: 600; }
+.role-content .role-link-primary { color: white; background: var(--color-brand); }
+.role-content .role-link-secondary { border-color: var(--color-border); background: var(--color-surface); color: var(--color-text); }
+.role-content .role-link-ghost { color: var(--color-brand); }
+.role-content .role-link:hover { filter: brightness(.96); }
+.role-content :is(a, button, summary, input, select, textarea):focus-visible { outline: 2px solid var(--role-accent); outline-offset: 3px; }
+.role-content .metric-strip { display: flex; flex-wrap: wrap; gap: 8px 24px; padding-block: 12px; border-block: 1px solid var(--color-border); }
+.role-content .metric-strip .ds-card { border: 0; padding: 0; border-radius: 0; background: transparent; }
+.role-content .metric-strip .ds-card > p { display: inline; margin: 0; font-size: 13px; text-transform: none; letter-spacing: normal; }
+.role-content .metric-strip .ds-card > p + p { margin-left: 6px; }
+.role-content input[type="date"] { min-width: 0; }
+@media (max-width: 639px) {
+  .role-content .ds-card.p-6:not(.p-0), .role-content .ds-card.p-8 { padding: 16px; }
+  .role-content > .space-y-6 > :not([hidden]) ~ :not([hidden]) { margin-top: 20px; }
+}

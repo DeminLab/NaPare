@@ -78,6 +78,7 @@ export default function DeveloperOverviewPage() {
     },
   ];
   const actions = [
+    { label: 'Управление платформой', href: '/control' },
     { label: "API Explorer", href: "/api" },
     { label: "Документация", href: "/docs" },
     { label: "Архитектура", href: "/architecture" },

@@ -9,9 +9,11 @@ import { Teacher } from './entities/teacher.entity';
 import { TelegramLinkChallenge } from './entities/telegram-link-challenge.entity';
 import { UsersService } from './users.service';
 import { UsersController } from './users.controller';
+import { PlatformModule } from '../platform/platform.module';
 
 @Module({
   imports: [
+    PlatformModule,
     TypeOrmModule.forFeature([User, University, Faculty, Group, Teacher, TelegramLinkChallenge]),
   ],
   providers: [UsersService],

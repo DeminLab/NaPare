@@ -24,7 +24,9 @@ MAX opens the existing portal. Login offers an explicit choice between MAX and u
 
 ## Backend modules
 
-NestJS modules cover authentication, users, schedule, academic context, Pair Space, absences/QR attendance, favorites, notifications, search, administration, events, and tenant context. They run in one backend process. Source registration is in `apps/backend/src/app.module.ts`.
+NestJS modules cover authentication, users, schedule, academic context, Pair Space, absences/QR attendance, favorites, notifications, search, administration, events, tenant context, account curatorship and platform control. They run in one backend process. Source registration is in `apps/backend/src/app.module.ts`.
+
+Added 2026-10-16: [curatorship](../product/account-curatorship.md) uses group assignments independent of the primary role. [Platform control](../product/platform-control.md) uses owner/delegated permissions and an optional host agent over a signed Unix-socket transport; backend does not mount the Docker socket. Agent installation requires the explicit [control overlay procedure](../deployment/platform-control.md). Android uses the existing website plus a manual local plan; see [mobile clients](../clients/mobile.md). These additions are repository state, not confirmation of production installation.
 
 ## Tenant and role checks
 

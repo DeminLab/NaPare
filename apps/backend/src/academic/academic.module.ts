@@ -13,6 +13,7 @@ import { LessonSpace } from './entities/lesson-space.entity';
 import { ScheduleChange } from './entities/schedule-change.entity';
 import { AcademicController } from './academic.controller';
 import { AcademicService } from './academic.service';
+import { CurationModule } from '../curation/curation.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { AcademicService } from './academic.service';
       Faculty,
     ]),
     EventsModule,
+    CurationModule,
   ],
   providers: [AcademicService],
   controllers: [AcademicController],

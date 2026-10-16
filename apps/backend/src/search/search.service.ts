@@ -34,6 +34,7 @@ interface SearchScope {
   groupId?: string;
   teacherId?: string;
   sourceGroupId?: string;
+  curatorId?: string;
 }
 
 function searchPattern(value: string): string {
@@ -48,6 +49,7 @@ function constrainLessons<T extends ObjectLiteral>(query: SelectQueryBuilder<T>,
   query.andWhere(`${alias}.universityId = :searchUniversityId`, { searchUniversityId: scope.universityId });
   if (scope.groupId) query.andWhere(`${alias}.groupId = :searchGroupId`, { searchGroupId: scope.groupId });
   if (scope.teacherId) query.andWhere(`${alias}.teacherId = :searchTeacherId`, { searchTeacherId: scope.teacherId });
+  if (scope.curatorId) query.andWhere(`EXISTS (SELECT 1 FROM curator_assignments ca WHERE ca."groupId" = ${alias}."groupId" AND ca."universityId" = ${alias}."universityId" AND ca."userId" = :searchCuratorId AND ca."revokedAt" IS NULL)`, { searchCuratorId: scope.curatorId });
   return query;
 }
 
@@ -231,6 +233,7 @@ export class SearchService {
       return { universityId: requireUniversityId(user), groupId, sourceGroupId };
     }
     if (user.role === UserRole.TEACHER) return { universityId: requireUniversityId(user), teacherId: user.id };
+    if (user.role === UserRole.CURATOR) return { universityId: requireUniversityId(user), curatorId: user.id };
     return { universityId: requireUniversityId(user) };
   }
 }

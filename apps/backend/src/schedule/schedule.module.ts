@@ -14,6 +14,7 @@ import { EventsModule } from "../events/events.module";
 import { LessonOccurrence } from "../academic/entities/lesson-occurrence.entity";
 import { ScheduleChange } from "../academic/entities/schedule-change.entity";
 import { Group } from "../users/entities/group.entity";
+import { CurationModule } from "../curation/curation.module";
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { Group } from "../users/entities/group.entity";
     HttpModule,
     RaspModule,
     EventsModule,
+    CurationModule,
   ],
   providers: [
     ScheduleService,

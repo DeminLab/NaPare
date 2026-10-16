@@ -51,7 +51,7 @@ export class Group {
   specialization: string;
 
   @Column({ type: "uuid", nullable: true })
-  curatorId: string;
+  curatorId: string | null;
 
   @CreateDateColumn()
   createdAt: Date;

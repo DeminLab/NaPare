@@ -1,13 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { CurationEntry } from '@napare/ui/curation';
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import {
   WorkspaceShell,
   searchCommands,
   type WorkspaceSearchResponse,
-  type WorkspaceHelp,
   type NavigationLinkProps,
   type WorkspaceCommand,
   type WorkspaceNavGroup,
@@ -43,6 +43,7 @@ const groups: WorkspaceNavGroup[] = [
       },
       { href: "/groups", label: "Группы", icon: "users" },
       { href: "/attendance", label: "Посещаемость", icon: "check" },
+      { href: "/absences", label: "Обращения", icon: "clipboard" },
       { href: "/pair-space", label: "Занятия и материалы", icon: "book", keywords: ["пространства пар"] },
     ],
   },
@@ -65,12 +66,7 @@ const AppLink = ({ href, children, ...props }: NavigationLinkProps) => (
   href === "/connections" ? <a href={href} {...props}>{children}</a> : <Link href={href} {...props}>{children}</Link>
 );
 const searchWorkspace = async (query: string, signal: AbortSignal) => searchCommands(await apiFetch<WorkspaceSearchResponse>("/search?q=" + encodeURIComponent(query), { signal }));
-const help: WorkspaceHelp = { title: "Ваш рабочий день", description: "Расписание, группы и действия, которые требуют вашего внимания.", steps: [
-  { title: "Начать с ближайшей пары", description: "Время, группа и аудитория на странице «Сегодня».", href: "/today" },
-  { title: "Подготовить занятие", description: "Добавьте тему и ссылки на материалы для студентов.", href: "/assignments" },
-  { title: "Проверить посещаемость", description: "Откройте список группы и отметьте присутствие, отсутствие и опоздание.", href: "/attendance" },
-  { title: "Разобрать важные события", description: "Заявки и сообщения собраны в центре внимания.", href: "/inbox" },
-] };
+
 const roleLabels: Record<string, string> = { teacher: "Преподаватель", curator: "Куратор", faculty_dean: "Декан", department_head: "Заведующий кафедрой" };
 
 export default function StaffLayout({ children }: { children: ReactNode }) {
@@ -130,7 +126,7 @@ export default function StaffLayout({ children }: { children: ReactNode }) {
   const fullName = user.firstName + " " + user.lastName;
   const resolvedGroups = groups.map((group) => ({
     ...group,
-    items: group.items.map((item) =>
+    items: group.items.filter(item => item.href !== "/absences" || ["curator", "faculty_dean", "department_head", "university_admin", "superadmin"].includes(user.role)).map((item) =>
       item.href === "/inbox" ? { ...item, badge: unread } : item,
     ),
   }));
@@ -148,10 +144,9 @@ export default function StaffLayout({ children }: { children: ReactNode }) {
       onSearch={searchWorkspace}
       searchPlaceholder="Предмет, группа, материал или раздел…"
       mobileHrefs={["/today", "/week", "/groups", "/inbox"]}
-      help={help}
       onLogout={logout}
     >
-      {children}
+      <div className="role-content">{!pathname.endsWith('/curation') && <CurationEntry apiFetch={apiFetch} basePath="/staff" />}{children}</div>
     </WorkspaceShell>
   );
 }

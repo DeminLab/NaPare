@@ -1,6 +1,6 @@
 # Обзор схемы базы данных
 
-**Актуально на 2026-09-29.** PostgreSQL — основное хранилище backend. Источник схемы — TypeORM entities и миграции в `apps/backend/src`; Prisma-схемы в проекте нет. Изменения схемы оформляются новой миграцией, а не редактированием уже выпущенной.
+**Сверено с исходниками 2026-10-16.** PostgreSQL — основное хранилище backend. Источник схемы — TypeORM entities и миграции в `apps/backend/src`; Prisma-схемы в проекте нет. Изменения схемы оформляются новой миграцией, а не редактированием уже выпущенной. Эта сверка не подтверждает применение миграций на production.
 
 ## Основные области данных
 
@@ -10,6 +10,8 @@
 | Расписание | `lessons`, `lesson_changes` | `apps/backend/src/schedule/entities/` |
 | Пространство пары | `pair_spaces`, `announcements`, `homeworks`, `homework_submissions`, `file_attachments`, `discussion_messages` | `apps/backend/src/pair-space/entities/` |
 | Учёт отсутствий | `absences`, `absence_confirmations`, `attendance_records`, `attendance_qr_sessions` | `apps/backend/src/absences/` |
+| Кураторство | `curator_assignments` | `apps/backend/src/curation/`, миграция `1700000000020-CuratorAssignments.ts` |
+| Управление платформой | `platform_control`, `platform_grants` | `apps/backend/src/platform/`, миграция `1700000000021-PlatformControl.ts` |
 | Уведомления и аудит | `notifications`, `notification_preferences`, `inbox_items`, `device_tokens`, `event_records`, `audit_logs` | `apps/backend/src/notifications/`, `apps/backend/src/events/` |
 | Учебный контекст | `academic_courses`, `lesson_series`, `lesson_occurrences`, `course_spaces`, `lesson_spaces`, `academic_events`, `academic_schedule_changes` | `apps/backend/src/academic/` и миграция `1700000000004-AcademicContext.ts` |
 | Дополнительные функции | `personal_lesson_notes`, `homework_progress`, `favorites`, Telegram link tables | профильные entities и миграции `1700000000010`–`1700000000016` |

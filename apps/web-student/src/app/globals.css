@@ -169,3 +169,27 @@ html[data-student-palette="dark"] .border-indigo-300 { border-color: #334155 !im
 html[data-student-palette="dark"] .focus\:ring-indigo-100:focus,
 html[data-student-palette="dark"] .ring-indigo-100,
 html[data-student-palette="dark"] .ring-indigo-50 { --tw-ring-color: #334155 !important; }
+
+/* Student pages: quiet surfaces and compact, readable daily information. */
+.student-content { --type-page-size: clamp(1.5rem, 2.3vw, 1.875rem); }
+.student-content h1 { font-size: var(--type-page-size); line-height: 1.25; }
+.student-content .ds-card,
+.student-content .student-panel { box-shadow: none; border-radius: 16px; }
+.student-content .student-panel { border-color: var(--color-border); }
+.student-content .ds-card.p-6:not(.p-0) { padding: 20px; }
+.student-content .ds-card.p-0 { padding: 0; }
+.student-content .py-16 { padding-block: 32px; padding-inline: 16px; }
+.student-content [role="status"].min-h-\[220px\] { min-height: 0; padding-block: 28px; }
+.student-content .schedule-views > * { flex-shrink: 0; display: inline-flex; align-items: center; min-height: 44px; }
+.student-content .schedule-filters { min-width: 0; flex: 1; }
+.student-content :is(button, a, summary, select, input):focus-visible { outline: 2px solid var(--color-brand); outline-offset: 3px; }
+.student-content input[type="date"] { min-width: 0; }
+.student-content input::placeholder { color: #737e90; }
+html[data-student-palette="dark"] .student-content .student-panel { background: #111827; border-color: #334155; }
+@media (max-width: 639px) {
+  .student-content > .space-y-6 > :not([hidden]) ~ :not([hidden]) { margin-top: 20px; }
+  .student-content .schedule-tools { gap: 4px; padding: 8px 12px; }
+  .student-content .schedule-views { margin-inline: -4px; }
+  .student-content .schedule-views > * { padding-inline: 12px; }
+  .student-content .ds-card.p-6:not(.p-0) { padding: 16px; }
+}

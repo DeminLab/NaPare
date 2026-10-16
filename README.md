@@ -51,7 +51,9 @@
 | **Developer web** | Next.js | Платформенные разработчики | Текущая web-поверхность |
 | **Portal / MAX entry** | Next.js `web-portal` | Вход и привязка аккаунта | MAX требует настроенного бота и проверки на платформе |
 
-Нативного iOS/Android-приложения в этой версии репозитория нет; продукт и кейс доступны через сайт и MAX WebApp.
+Android-приложение `apps/android-webview` открывает сайт и содержит нативный ручной «План офлайн»; текущий релиз-кандидат — 1.1.0 (versionCode 2), Android 8.0+. Отдельного iOS-клиента нет. Сборка не подтверждает работу на устройстве или публикацию в RuStore: см. [мобильные клиенты](docs/clients/mobile.md) и [инструкцию публикации](docs/deployment/rustore-publication.md).
+
+Актуальные изменения: [кураторство существующего аккаунта](docs/product/account-curatorship.md), [управление платформой](docs/product/platform-control.md), [обзор состояния и проверок](docs/project-log/2026-10-16-repository-sync.md). Эти документы описывают код репозитория; установка новых возможностей на production требует отдельного развёртывания.
 
 ---
 
@@ -140,6 +142,8 @@ Redis присутствует в Compose, но backend client/queues не по�
 napare/
 ├── apps/
 │   ├── backend/          # NestJS API и TypeORM миграции
+│   ├── android-webview/  # Android WebView и ручной локальный план; Gradle
+│   ├── web-portal/       # Публичный сайт, вход и MAX Bridge
 │   ├── web/              # Legacy монолит до разделения на portal и кабинеты
 │   ├── max-miniapp/      # Legacy исходники отдельного клиента; MAX открывает web-portal
 │   ├── web-student/      # Next.js для студентов
@@ -148,6 +152,7 @@ napare/
 │   └── web-developer/    # Next.js консоль разработчика
 ├── packages/
 │   ├── api-client/       # TypeScript API-клиент
+│   ├── ui/               # Общие интерфейсы, включая кураторство
 │   └── shared/           # Общие типы, константы и валидаторы
 ├── infrastructure/       # Docker и nginx конфигурация
 ├── docs/                 # Документация продукта, архитектуры, безопасности

@@ -124,10 +124,7 @@ export default function UniversityNotificationsPage() {
           <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
             События ВУЗа
           </h1>
-          <p className="mt-2 text-sm text-slate-500">
-            Операционные сигналы, изменения учебного процесса и задачи, которые
-            требуют решения.
-          </p>
+
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <Badge variant={unread ? "red" : "slate"}>
@@ -147,7 +144,7 @@ export default function UniversityNotificationsPage() {
         </div>
       </div>
       <div className="flex flex-wrap gap-2" aria-label="Просмотр событий">{[{ id: 'unread', label: `Непрочитанные · ${unread}` }, { id: 'history', label: 'История прочитанного' }].map(item => <button key={item.id} type="button" aria-pressed={view === item.id} onClick={() => setView(item.id)} className={`min-h-11 rounded-xl border px-4 text-sm font-semibold ${view === item.id ? 'bg-slate-900 text-white' : 'bg-white text-slate-600'}`}>{item.label}</button>)}</div>
-      <p className="text-sm text-slate-500">Прочтение отмечает просмотр события. Результат задачи проверяйте в её разделе.</p>
+      <p className="text-sm text-slate-500">Просмотр события не меняет решение по обращению.</p>
       {actionError && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{actionError}</p>}
       <div
         role="group"

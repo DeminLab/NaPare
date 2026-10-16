@@ -1,0 +1,32 @@
+{
+  "status": "release-candidate-not-ready-for-moderation",
+  "applicationId": "ru.napare.app",
+  "versionCode": 2,
+  "versionName": "1.1.0",
+  "name": "НаПаре",
+  "shortDescription": "Расписание, подготовка к занятиям и личный план офлайн",
+  "categorySuggestion": "Образование",
+  "ageRating": null,
+  "publisher": {
+    "name": "Индивидуальный предприниматель Демин Данила Алексеевич",
+    "inn": "550146543714",
+    "ogrnip": "325554300088638",
+    "supportEmail": null,
+    "correspondenceAddress": null
+  },
+  "website": "https://napare.sano.ru",
+  "privacyUrl": "https://napare.sano.ru/privacy",
+  "distribution": "free",
+  "adsInAndroidWrapper": false,
+  "nativePush": false,
+  "offlineScope": "Manual local plan only; university account and schedule require Internet",
+  "moderationAccount": "Must be created separately with synthetic data; do not store credentials here",
+  "releaseBlockers": [
+    "Publisher support email and correspondence address are not supplied",
+    "Public privacy URL returned 404 during preparation",
+    "DELETE users/me currently deactivates an account; removal/anonymization and in-app flow require completion",
+    "No connected Android device or emulator: installation and UI not verified",
+    "Need at least three genuine Android screenshots and opaque 512x512 store icon",
+    "Age classification and declarations must be confirmed by publisher against deployed service"
+  ]
+}

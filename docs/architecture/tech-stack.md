@@ -2,6 +2,8 @@
 
 ## Сводная таблица
 
+Android-клиент уже реализован отдельно от целевого Flutter-стека: Java 17, Android WebView, AndroidX WebKit 1.12.1, compile/target SDK 35, minSdk 26. Содержит ручной локальный план. Сборка Gradle и её ограничения описаны в [Android README](../../apps/android-webview/README.md); публикация и runtime на устройстве требуют отдельных проверок.
+
 > Статус: строки **Mobile** — целевой стек, `apps/mobile` и Flutter/Dart-кода в репозитории нет
 > (см. [mobile-architecture.md](mobile-architecture.md) — спецификация, не реализация).
 > Redis runtime service есть в Compose, но backend client/queues не подключены; S3, push delivery, PostHog и Kubernetes deployment не настроены.

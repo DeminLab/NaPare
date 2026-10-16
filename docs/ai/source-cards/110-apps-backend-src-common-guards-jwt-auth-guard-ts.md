@@ -6,7 +6,7 @@
 
 ## Scope
 
-NestJS backend module, HTTP boundary, authorization or data-service behavior.
+JWT request boundary. University-less developer/superadmin accounts may access platform routes, where PlatformService checks owner/delegated permissions on every request. This exception does not grant access to campus routes.
 
 ## Read sequence
 

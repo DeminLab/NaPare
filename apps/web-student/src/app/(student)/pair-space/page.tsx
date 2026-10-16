@@ -114,12 +114,11 @@ export default function PairSpaceIndex() {
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <header>
-        <p className="text-xs font-medium text-slate-400">НаПаре / Учёба</p>
-        <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">Подготовка к парам</h1>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">Опубликованные преподавателями темы и материалы с ближайшими сроками. Сдача работ и оценки остаются в Moodle.</p>
+
+        <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">Подготовка</h1>
       </header>
 
-      <Card>
+      {preparations.length > 0 && <Card>
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <label className="relative block w-full lg:max-w-sm">
             <span className="sr-only">Поиск подготовки</span>
@@ -131,8 +130,8 @@ export default function PairSpaceIndex() {
         <div className="mt-4 flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Фильтр по сроку">
           {filters.map((item) => <button key={item.id} type="button" aria-pressed={filter === item.id} onClick={() => setFilter(item.id)} className={`min-h-11 shrink-0 rounded-full border px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-100 ${filter === item.id ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'}`}>{item.label}</button>)}
         </div>
-        <label className="mt-3 flex min-h-11 cursor-pointer items-center gap-3 text-sm text-slate-700"><input type="checkbox" checked={unfinishedOnly} onChange={event => setUnfinishedOnly(event.target.checked)} className="h-5 w-5 accent-indigo-600" />Только незавершённая подготовка</label>
-      </Card>
+        <label className="mt-3 flex min-h-11 cursor-pointer items-center gap-3 text-sm text-slate-700"><input type="checkbox" checked={unfinishedOnly} onChange={event => setUnfinishedOnly(event.target.checked)} className="h-5 w-5 accent-indigo-600" />Незавершённые</label>
+      </Card>}
 
       {visible.length ? <div className="space-y-6">{grouped.map(group => <details key={group.title} open={group.title === 'Срок прошёл' || group.title === 'Сегодня' || group.title === 'Завтра' || filter !== 'all' || Boolean(search.trim()) || unfinishedOnly} className="space-y-3"><summary className="min-h-11 cursor-pointer py-2 text-lg font-semibold text-slate-900"><h2 className="inline">{group.title} <span className="ml-2 text-sm font-normal text-slate-500">{group.items.length}</span></h2></summary>{group.items.map((item) => {
         const days = daysUntil(item.deadline);
@@ -148,7 +147,7 @@ export default function PairSpaceIndex() {
             <div className="flex shrink-0 flex-wrap items-center gap-3 sm:flex-col sm:items-end"><PreparationProgressControl preparationId={item.id} initialState={item.progress} onSaved={progress => setPreparations(current => current.map(preparation => preparation.id === item.id ? { ...preparation, progress } : preparation))} /><Link href={`/pair-space/${item.lessonId}?tab=homeworks#preparation-${item.id}`} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 text-sm font-semibold text-slate-700 hover:border-indigo-300 hover:text-indigo-700">Открыть занятие <Icon name="arrow-right" size={16} /></Link></div>
           </div>
         </Card>;
-      })}</details>)}</div> : <Card><EmptyState title={preparations.length ? 'Ничего не найдено' : 'Подготовки пока нет'} description={preparations.length ? 'Измените запрос или фильтр.' : 'Когда преподаватель добавит тему или материал к паре, он появится здесь.'} action={preparations.length ? <Button variant="secondary" onClick={() => { setSearch(''); setFilter('all'); setUnfinishedOnly(false); }}>Сбросить фильтры</Button> : <Link href="/week" className="inline-flex min-h-11 items-center rounded-xl bg-indigo-600 px-4 text-sm font-semibold text-white">Открыть расписание</Link>} /></Card>}
+      })}</details>)}</div> : <Card><EmptyState title={preparations.length ? 'Ничего не найдено' : 'Подготовки пока нет'} description={preparations.length ? 'Измените запрос или фильтр.' : 'Все материалы к занятиям появятся здесь.'} action={preparations.length ? <Button variant="secondary" onClick={() => { setSearch(''); setFilter('all'); setUnfinishedOnly(false); }}>Сбросить фильтры</Button> : <Link href="/week" className="inline-flex min-h-11 items-center rounded-xl bg-indigo-600 px-4 text-sm font-semibold text-white">Открыть расписание</Link>} /></Card>}
     </div>
   );
 }

@@ -6,7 +6,8 @@ import {
   Optional,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { DataSource, FindManyOptions, Repository, Between } from "typeorm";
+import { DataSource, FindManyOptions, Repository, Between, In, And, Equal } from "typeorm";
+import { CurationService } from '../curation/curation.service';
 import { EventEmitter2 } from "@nestjs/event-emitter";
 
 import { Lesson } from "./entities/lesson.entity";
@@ -51,6 +52,7 @@ export class ScheduleService {
     @Optional()
     @InjectRepository(Group)
     private readonly groupRepository?: Repository<Group>,
+    @Optional() private readonly curation?: CurationService,
   ) {}
 
   async findById(id: string): Promise<Lesson> {
@@ -60,6 +62,7 @@ export class ScheduleService {
       throw new NotFoundException(`Lesson with id ${id} not found`);
     }
     this.tenantContext.assertAccess(lesson.universityId);
+    if (this.tenantContext.getUser()?.role === UserRole.CURATOR && this.curation) await this.curation.assertGroup(lesson.groupId);
 
     return lesson;
   }
@@ -79,6 +82,7 @@ export class ScheduleService {
     if (!lesson) {
       throw new NotFoundException(`Lesson with id ${id} not found`);
     }
+    if (user.role === UserRole.CURATOR && this.curation) await this.curation.assertGroup(lesson.groupId);
     if (
       user.role === UserRole.STUDENT &&
       (!user.groupId || lesson.groupId !== user.groupId)
@@ -374,6 +378,7 @@ export class ScheduleService {
       this.tenantContext.assertAccess(createLessonDto.universityId);
     }
     const actor = this.tenantContext.getUser();
+    if (actor?.role === UserRole.CURATOR) throw new ForbiddenException('Кураторство не даёт права изменять расписание.');
     if (
       actor?.role === UserRole.TEACHER &&
       createLessonDto.teacherId &&
@@ -517,6 +522,7 @@ export class ScheduleService {
 
   private assertTeacherCanManageLesson(lesson: Lesson): void {
     const user = this.tenantContext.getUser();
+    if (user?.role === UserRole.CURATOR) throw new ForbiddenException('Кураторство не даёт права изменять расписание.');
     if (user?.role === UserRole.TEACHER && lesson.teacherId !== user.id) {
       throw new ForbiddenException(
         "Teachers can only manage their own lessons",
@@ -607,6 +613,11 @@ export class ScheduleService {
     options: FindManyOptions<Lesson>,
     pagination: PaginationQueryDto,
   ): Promise<PaginatedResponse<Lesson>> {
+    if (this.tenantContext.getUser()?.role === UserRole.CURATOR && this.curation) {
+      const groupIds = await this.curation.assignedGroupIds();
+      const where = Array.isArray(options.where) ? options.where : [options.where || {}];
+      options = { ...options, where: where.map(item => ({ ...item, groupId: item.groupId ? And(typeof item.groupId === 'string' ? Equal(item.groupId) : item.groupId, In(groupIds)) : In(groupIds) })) };
+    }
     const [data, total] = await this.lessonRepository.findAndCount({
       ...options,
       skip: (pagination.page - 1) * pagination.limit,

@@ -8,6 +8,8 @@
 
 Developer workspace groups system state, API, events and documentation, and distinguishes checking, successful health checks and unavailable verification. Includes mobile shortcuts and role help.
 
+Navigation data includes `/control`; the shared header/navigation implementation is unchanged. Management permissions are checked by the platform API, not by the presence of this link.
+
 ## Read sequence
 
 1. Start with [AI context](../../../AI_CONTEXT.md) and the relevant role or backend map.

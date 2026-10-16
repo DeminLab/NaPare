@@ -11,6 +11,9 @@
 | MAX | Существующий `web-portal` + MAX Bridge; аккаунт связывается после серверной проверки `initData` | [MAX guide](../clients/max-miniapp.md) |
 | Tenant access | University context, role guards и resource checks в backend | [Roles and permissions](roles-and-permissions.md) |
 | Database | Entities и миграции TypeORM | [Schema overview](../database/schema-overview.md) |
+| Кураторство | Назначения на группы независимо от основной роли | [Описание](../product/account-curatorship.md) |
+| Управление платформой | Владелец, делегирование и host-агент | [Описание](../product/platform-control.md), [установка](../deployment/platform-control.md) |
+| Android | WebView и ручной локальный план | [Мобильный клиент](../clients/mobile.md) |
 | Deployment | Docker Compose, shared-origin Nginx, GitHub Actions staging | [Deployment guide](../../DEPLOY.md), [CI/CD](../ops/cicd.md) |
 
 PostgreSQL RLS policies не настроены. В production Compose есть Redis, но backend Redis client/queues не подключены. S3 storage adapter, FCM/APNs delivery, PostHog и Kubernetes deployment не являются реализованными компонентами.

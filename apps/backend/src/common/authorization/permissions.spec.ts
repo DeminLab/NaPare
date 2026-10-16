@@ -13,5 +13,7 @@ describe('academic permission matrix', () => {
     expect(hasPermission(UserRole.UNIVERSITY_ADMIN, PERMISSIONS.ACADEMIC_COURSE_MANAGE)).toBe(true);
     expect(hasPermission(UserRole.FACULTY_DEAN, PERMISSIONS.ACADEMIC_EVENT_MANAGE)).toBe(true);
     expect(hasPermission(UserRole.CURATOR, PERMISSIONS.ACADEMIC_COURSE_MANAGE)).toBe(false);
+    expect(hasPermission(UserRole.CURATOR, PERMISSIONS.ACADEMIC_SERIES_MANAGE)).toBe(false);
+    expect(hasPermission(UserRole.CURATOR, PERMISSIONS.ACADEMIC_OCCURRENCE_MANAGE)).toBe(false);
   });
 });

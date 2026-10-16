@@ -8,6 +8,8 @@
 
 HTTPS-only wrapper for napare.sano.ru. Cold activity creation opens login and clears only the site's two auth tokens before displaying the form. Website auth controls role routing. Native back, progress, network retry, JS confirmations, document selection and origin-scoped calendar save are implemented. External HTTPS/mail/tel/MAX links leave the WebView. No native push, camera or arbitrary JavaScriptInterface.
 
+Version 1.1.0 includes a bottom native toolbar opening OfflinePlanActivity even without Internet, plus an About dialog linking to /privacy. The public policy must be deployed separately; adding the link is not publication proof. Keep native toolbar space outside the WebView so it does not obscure website controls.
+
 ## Read sequence
 
 1. [Android README](../../../apps/android-webview/README.md).

@@ -137,13 +137,7 @@ export default function GroupsPage() {
 
   return (
     <div className="mx-auto max-w-[1400px] space-y-6">
-      <div className="flex items-center gap-2 text-sm text-slate-500">
-        <Link href="/today" className="hover:text-sky-600">
-          НаПаре
-        </Link>
-        <span>/</span>
-        <span className="text-slate-900">Группы</span>
-      </div>
+
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
