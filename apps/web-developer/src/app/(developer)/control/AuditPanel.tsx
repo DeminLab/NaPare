@@ -1,6 +1,6 @@
 'use client';
-import { useState } from 'react';
-import { type Access, type Page, Notice, Pager, inputClass, panelClass, useResource } from './control-ui';
+import { useEffect, useState } from 'react';
+import { type Access, type Page, Notice, Pager, inputClass, panelClass, useResource, useTargetUserId } from './control-ui';
 
 interface Entry {
   id: string;
@@ -18,8 +18,10 @@ interface Entry {
 interface UniversityOption { id: string; name: string; city: string }
 
 export default function AuditPanel({ access }: { access: Access }) {
+  const targetUserId = useTargetUserId();
   const [page, setPage] = useState(1);
   const [query, setQuery] = useState('');
+  useEffect(() => { if (targetUserId) setQuery(targetUserId); }, [targetUserId]);
   const [universityId, setUniversityId] = useState('');
   const universities = useResource<Page<UniversityOption>>(access.permissions.includes('universities.read') ? '/platform/universities?limit=100' : null);
   const filters = new URLSearchParams({ page: String(page), limit: '20' });

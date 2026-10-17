@@ -5,6 +5,7 @@ export const inputClass = 'mt-1.5 min-h-11 w-full min-w-0 rounded-lg border bord
 export const panelClass = 'rounded-xl border border-slate-700 bg-slate-900/70 p-4 sm:p-5';
 export interface Access { owner: boolean; ownerConfigured: boolean; permissions: string[]; serviceIds: string[]; agentConfigured: boolean; actorId: string }
 export interface Page<T> { data: T[]; meta: { total: number; page: number; totalPages: number } }
+export function useTargetUserId(): string { const [userId, setUserId] = useState(''); useEffect(() => { setUserId(new URLSearchParams(window.location.search).get('userId') || ''); }, []); return userId; }
 export const errorText = (error: unknown) => error instanceof Error ? error.message : 'Не удалось выполнить запрос.';
 export function Button({ className = '', children, ...props }: ButtonHTMLAttributes<HTMLButtonElement>) { return <button type="button" {...props} className={`min-h-11 rounded-lg border border-slate-600 px-3 py-2 text-sm font-semibold text-slate-100 hover:border-cyan-400 hover:bg-cyan-400/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-400 disabled:cursor-not-allowed disabled:opacity-40 ${className}`}>{children}</button>; }
 export function Notice({ children, error = false }: { children: ReactNode; error?: boolean }) { return <p role={error ? 'alert' : 'status'} className={`break-words rounded-lg border p-3 text-sm ${error ? 'border-amber-400/40 bg-amber-400/10 text-amber-100' : 'border-cyan-400/30 bg-cyan-400/10 text-cyan-100'}`}>{children}</p>; }

@@ -1,15 +1,22 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api';
-import { type Access, type Page, Button, Notice, Pager, errorText, inputClass, panelClass, roles, useResource } from './control-ui';
+import { type Access, type Page, Button, Notice, Pager, errorText, inputClass, panelClass, roles, useResource, useTargetUserId } from './control-ui';
 interface Account { id: string; email: string; firstName: string; lastName: string; role: string; universityId: string | null; groupId?: string | null; isActive: boolean; isOwner?: boolean; phone?: string | null; avatarUrl?: string | null; lastLoginAt?: string | null; createdAt?: string; updatedAt?: string; university?: { id: string; name: string; city: string } | null; group?: { id: string | null; name: string; externalId: string | null } | null; linkedAccounts?: { max: boolean; telegram: boolean }; curatorAssignments?: Array<{ id: string; groupId: string; groupName: string; createdAt: string }>; recentActions?: Array<{ id: string; action: string; actorId: string; createdAt: string; oldValues?: Record<string, unknown>; newValues?: Record<string, unknown> }> }
 interface University { id: string; name: string; city: string; connectorType?: string }
 interface RaspGroup { groupId: string; name: string; faculty: string; course: number; academicYear: string }
 interface LocalGroup { id: string; name: string; externalId: string | null; curriculumYear: number }
 export default function AccountsPanel({ access }: { access: Access }) {
+  const targetUserId = useTargetUserId();
   const [q, setQ] = useState(''), [page, setPage] = useState(1), [selected, setSelected] = useState<Account | null>(null), [creating, setCreating] = useState(false), [password, setPassword] = useState(''), [reason, setReason] = useState(''), [busy, setBusy] = useState(false), [notice, setNotice] = useState(''), [error, setError] = useState(''), [confirm, setConfirm] = useState<'sessions' | 'password' | null>(null);
+  useEffect(() => { if (targetUserId) setQ(targetUserId); }, [targetUserId]);
   const list = useResource<Page<Account>>(`/platform/accounts?q=${encodeURIComponent(q)}&page=${page}&limit=20`);
   const details = useResource<Account>(selected && !creating ? `/platform/accounts/${selected.id}` : null);
+  useEffect(() => {
+    if (!targetUserId || !list.data || creating || selected?.id === targetUserId) return;
+    const target = list.data.data.find(account => account.id === targetUserId);
+    if (target) setSelected({ ...target });
+  }, [targetUserId, list.data, creating, selected?.id]);
   const universities = useResource<Page<University>>(access.permissions.includes('universities.read') ? '/platform/universities?limit=100' : null);
   const selectedUniversity = universities.data?.data.find(item => item.id === selected?.universityId);
   const localGroups = useResource<LocalGroup[]>(selected?.universityId && access.permissions.includes('universities.read') ? `/platform/groups?universityId=${encodeURIComponent(selected.universityId)}` : null);

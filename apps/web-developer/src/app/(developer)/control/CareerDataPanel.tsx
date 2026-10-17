@@ -1,7 +1,7 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api';
-import { type Access, type Page, Button, Notice, Pager, errorText, inputClass, panelClass, roles, useResource } from './control-ui';
+import { type Access, type Page, Button, Notice, Pager, errorText, inputClass, panelClass, roles, useResource, useTargetUserId } from './control-ui';
 
 type CareerTab = 'profiles' | 'admissions';
 interface UniversityOption { id: string; name: string; city: string }
@@ -12,8 +12,10 @@ const profileStates = { pending: 'Ожидает проверки', verified: '�
 const admissionStates = { pending: 'Ожидает решения', approved: 'Допущен', rejected: 'Отклонён' };
 
 export default function CareerDataPanel({ access }: { access: Access }) {
+  const targetUserId = useTargetUserId();
   const [tab, setTab] = useState<CareerTab>('profiles');
   const [query, setQuery] = useState('');
+  useEffect(() => { if (targetUserId) setQuery(targetUserId); }, [targetUserId]);
   const [state, setState] = useState('');
   const [universityId, setUniversityId] = useState('');
   const [page, setPage] = useState(1);

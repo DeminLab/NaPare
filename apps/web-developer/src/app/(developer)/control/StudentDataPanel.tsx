@@ -1,7 +1,7 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api';
-import { type Access, type Page, Button, Notice, Pager, errorText, inputClass, panelClass, useResource } from './control-ui';
+import { type Access, type Page, Button, Notice, Pager, errorText, inputClass, panelClass, useResource, useTargetUserId } from './control-ui';
 
 type DataTab = 'absences' | 'attendance';
 interface UniversityOption { id: string; name: string; city: string }
@@ -46,8 +46,10 @@ const localDateTime = (value: string) => {
 };
 
 export default function StudentDataPanel({ access }: { access: Access }) {
+  const targetUserId = useTargetUserId();
   const [tab, setTab] = useState<DataTab>('absences');
   const [query, setQuery] = useState('');
+  useEffect(() => { if (targetUserId) setQuery(targetUserId); }, [targetUserId]);
   const [universityId, setUniversityId] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');

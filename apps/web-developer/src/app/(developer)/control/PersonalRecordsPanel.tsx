@@ -1,7 +1,7 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api';
-import { type Access, type Page, Button, Notice, Pager, errorText, inputClass, panelClass, roles, useResource } from './control-ui';
+import { type Access, type Page, Button, Notice, Pager, errorText, inputClass, panelClass, roles, useResource, useTargetUserId } from './control-ui';
 
 type UserRow = { id: string; email: string; firstName: string; lastName: string; role: string; universityId: string | null; universityName: string | null; groupId: string | null; isActive: boolean };
 type UserCard = { id: string; email: string; firstName: string; lastName: string; role: string; universityId: string | null; groupId: string | null; isActive: boolean; createdAt: string; updatedAt: string; university: { id: string; name: string; city: string } | null; group: { id: string | null; name: string; externalId: string | null } | null };
@@ -16,10 +16,12 @@ const preferenceLabels: Record<(typeof boolPreferenceKeys)[number], string> = { 
 const progressLabels = { todo: 'Не начато', in_progress: 'В процессе', done: 'Подготовка завершена' };
 
 export default function PersonalRecordsPanel({ access }: { access: Access }) {
+  const targetUserId = useTargetUserId();
   const [query, setQuery] = useState('');
   const [role, setRole] = useState('');
   const [page, setPage] = useState(1);
   const [userId, setUserId] = useState('');
+  useEffect(() => { if (targetUserId) { setQuery(targetUserId); setUserId(targetUserId); } }, [targetUserId]);
   const [editor, setEditor] = useState<Editor | null>(null);
   const [draft, setDraft] = useState<Record<string, unknown>>({});
   const [reason, setReason] = useState('');

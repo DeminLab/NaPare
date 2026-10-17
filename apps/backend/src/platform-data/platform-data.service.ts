@@ -80,7 +80,7 @@ export class PlatformDataService {
     if (query.confirmationRequired !== undefined) qb.andWhere('a.confirmationRequired = :confirmationRequired', { confirmationRequired: query.confirmationRequired });
     if (query.startDate) qb.andWhere('a.startDate >= :startDate', { startDate: new Date(query.startDate) });
     if (query.endDate) qb.andWhere('a.startDate <= :endDate', { endDate: new Date(query.endDate) });
-    if (query.q?.trim()) this.applySearch(qb, query.q.trim(), ['a.id::text', 'student.email', "concat_ws(' ', student.firstName, student.lastName)", 'COALESCE(a.comment, \'\')']);
+    if (query.q?.trim()) this.applySearch(qb, query.q.trim(), ['a.id::text', 'student.id::text', 'student.email', "concat_ws(' ', student.firstName, student.lastName)", 'COALESCE(a.comment, \'\')']);
 
     const [data, total] = await this.paginateRaw<AbsenceSearchRow>(qb, query.page, query.limit, 'a.createdAt', 'a.id');
     return toPaginatedResponse(data, total, query);
@@ -110,7 +110,7 @@ export class PlatformDataService {
     if (query.status) qb.andWhere('record.status = :status', { status: query.status });
     if (query.startDate) qb.andWhere('lesson.startDate >= :startDate', { startDate: new Date(query.startDate) });
     if (query.endDate) qb.andWhere('lesson.startDate <= :endDate', { endDate: new Date(query.endDate) });
-    if (query.q?.trim()) this.applySearch(qb, query.q.trim(), ['record.id::text', 'student.email', "concat_ws(' ', student.firstName, student.lastName)", 'lesson.subject', 'COALESCE(record.comment, \'\')']);
+    if (query.q?.trim()) this.applySearch(qb, query.q.trim(), ['record.id::text', 'student.id::text', 'student.email', "concat_ws(' ', student.firstName, student.lastName)", 'lesson.subject', 'COALESCE(record.comment, \'\')']);
 
     const [data, total] = await this.paginateRaw<AttendanceSearchRow>(qb, query.page, query.limit, 'record.updatedAt', 'record.id');
     return toPaginatedResponse(data, total, query);

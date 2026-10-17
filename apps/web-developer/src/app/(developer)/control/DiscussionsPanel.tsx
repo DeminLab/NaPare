@@ -1,12 +1,14 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api';
-import { type Access, type Page, Button, Notice, Pager, errorText, inputClass, panelClass, useResource } from './control-ui';
+import { type Access, type Page, Button, Notice, Pager, errorText, inputClass, panelClass, useResource, useTargetUserId } from './control-ui';
 
 interface Discussion { id: string; pairSpaceId: string; lessonId: string; universityId: string; universityName: string; subject: string; lessonDate: string; pairNumber: number; groupId: string; authorId: string; authorName: string; authorEmail: string; textPreview: string; parentId: string | null; moderationState: 'visible' | 'hidden'; createdAt: string; updatedAt: string; text?: string; moderationReason?: string | null }
 
 export default function DiscussionsPanel({ access }: { access: Access }) {
+  const targetUserId = useTargetUserId();
   const [query, setQuery] = useState('');
+  useEffect(() => { if (targetUserId) setQuery(targetUserId); }, [targetUserId]);
   const [state, setState] = useState('');
   const [universityId, setUniversityId] = useState('');
   const [page, setPage] = useState(1);

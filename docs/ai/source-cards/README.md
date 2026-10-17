@@ -396,3 +396,4 @@ Choose the card matching the task area, read the canonical source and then follo
 - [317 — Platform career operations DTO](317-apps-backend-src-platform-career-platform-career-operations-dto-ts.md)
 - [318 — Platform career operations service](318-apps-backend-src-platform-career-platform-career-operations-service-ts.md)
 - [319 — Developer career operations panel](319-apps-web-developer-src-app-developer-control-careeroperationspanel-tsx.md)
+- [320 — Developer user directory hub](320-apps-web-developer-src-app-developer-control-userhubpanel-tsx.md)

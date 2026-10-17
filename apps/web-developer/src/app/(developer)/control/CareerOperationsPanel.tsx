@@ -1,7 +1,7 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api';
-import { type Access, type Page, Button, Notice, Pager, errorText, inputClass, panelClass, useResource } from './control-ui';
+import { type Access, type Page, Button, Notice, Pager, errorText, inputClass, panelClass, useResource, useTargetUserId } from './control-ui';
 
 type Kind = 'applications' | 'works';
 interface CareerItem { id: string; taskId: string; taskTitle: string; companyName: string; universityId: string; universityName: string; studentId: string; studentName: string; studentEmail: string; state: string; skill: string; deadline: string; createdAt: string; updatedAt: string; messagePreview?: string; submissionPreview?: string; resultUrl?: string; decisionReason?: string; profiled?: boolean; message?: string; submission?: string }
@@ -9,8 +9,10 @@ const applicationStates: Record<string, string> = { pending: 'Ожидает в�
 const workStates: Record<string, string> = { in_progress: 'В работе', submitted: 'На приёмке', revision: 'На доработке', accepted: 'Принята' };
 
 export default function CareerOperationsPanel({ access }: { access: Access }) {
+  const targetUserId = useTargetUserId();
   const [kind, setKind] = useState<Kind>('applications');
   const [query, setQuery] = useState('');
+  useEffect(() => { if (targetUserId) setQuery(targetUserId); }, [targetUserId]);
   const [state, setState] = useState('');
   const [universityId, setUniversityId] = useState('');
   const [page, setPage] = useState(1);
