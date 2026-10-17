@@ -50,7 +50,6 @@ public final class MainActivity extends Activity {
     private LinearLayout errorPanel;
     private TextView errorText;
     private ValueCallback<Uri[]> fileCallback;
-    private boolean resetSession = true;
     private boolean failed;
     private String retryUrl = LOGIN;
 
@@ -90,7 +89,7 @@ public final class MainActivity extends Activity {
         web.setWebViewClient(new SiteClient());
         web.setWebChromeClient(new ChromeClient());
         configureDownloads();
-        // Each new activity opens login. Returning from a file picker/browser keeps the active session.
+        // The website restores a valid session from its origin-scoped local storage.
         web.loadUrl(LOGIN);
     }
 
@@ -124,15 +123,6 @@ public final class MainActivity extends Activity {
         @Override public void onPageFinished(WebView view, String url) {
             progress.setVisibility(View.GONE);
             if (failed) return;
-            if (resetSession && isSite(Uri.parse(url)) && "/login".equals(Uri.parse(url).getPath())) {
-                resetSession = false;
-                // Operates only on our login origin. Never reads credentials or tokens into Java.
-                view.evaluateJavascript("localStorage.removeItem('accessToken');localStorage.removeItem('refreshToken');", ignored -> {
-                    view.clearHistory();
-                    view.reload();
-                });
-                return;
-            }
             view.setVisibility(View.VISIBLE);
             if (isSite(Uri.parse(url)) && "/login".equals(Uri.parse(url).getPath())) view.clearHistory();
         }

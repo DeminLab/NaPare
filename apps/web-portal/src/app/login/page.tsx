@@ -26,6 +26,63 @@ export default function LoginPage() {
   const [maxAvailable, setMaxAvailable] = useState(false);
   useEffect(() => {
     setMaxAvailable(!!(window.WebApp?.initData || window.__naparePendingMaxInitData || window.location.hash.includes('WebAppData=')));
+
+    let active = true;
+    const restoreSession = async () => {
+      let accessToken = window.localStorage.getItem('accessToken');
+      const refreshToken = window.localStorage.getItem('refreshToken');
+      if (!accessToken || !refreshToken) return;
+
+      try {
+        let response = await fetch('/api/v1/users/me', {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+
+        if (response.status === 401) {
+          const refreshed = await fetch('/api/v1/auth/refresh', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ refreshToken }),
+          });
+          const tokens = await refreshed.json().catch(() => null) as { accessToken?: string; refreshToken?: string } | null;
+          if (refreshed.status === 401) {
+            window.localStorage.removeItem('accessToken');
+            window.localStorage.removeItem('refreshToken');
+            return;
+          }
+          if (!refreshed.ok || !tokens?.accessToken || !tokens.refreshToken) return;
+          accessToken = tokens.accessToken;
+          window.localStorage.setItem('accessToken', tokens.accessToken);
+          window.localStorage.setItem('refreshToken', tokens.refreshToken);
+          response = await fetch('/api/v1/users/me', {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          });
+        }
+
+        if (!response.ok) return;
+        const user = await response.json() as { role?: string };
+        const destinationByRole: Record<string, string> = {
+          student: '/student/today',
+          teacher: '/staff/today',
+          curator: '/staff/today',
+          faculty_dean: '/staff/today',
+          department_head: '/staff/today',
+          university_admin: '/deanery/dashboard',
+          superadmin: '/deanery/dashboard',
+          developer: '/developer/api',
+          employer: '/career',
+          career_staff: '/career',
+          career_admin: '/career',
+        };
+        const destination = user.role ? destinationByRole[user.role] : undefined;
+        if (active && destination) window.location.replace(destination);
+      } catch {
+        // Keep saved credentials intact while the API is temporarily unavailable.
+      }
+    };
+
+    void restoreSession();
+    return () => { active = false; };
   }, []);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
