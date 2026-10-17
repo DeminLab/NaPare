@@ -239,6 +239,7 @@ export class ScheduleService {
       seriesId: null,
       occurrenceId: null,
       teacherId: lesson.teacherId || "",
+      sourceTeacherId: lesson.teacherId || null,
       subject: lesson.subject,
       subjectType: lesson.subjectType || "",
       room: lesson.room || "",

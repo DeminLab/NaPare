@@ -1,12 +1,15 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { DataSource, EntityManager } from 'typeorm';
+import { Brackets, DataSource, EntityManager, IsNull } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { isEmail } from 'class-validator';
 import { TenantContext } from '../common/tenant/tenant-context';
 import { AuditLog } from '../common/entities/audit-log.entity';
+import { JsonObject } from '../common/types/json-value.type';
 import { toPaginatedResponse } from '../common/dto/pagination-query.dto';
 import { User } from '../users/entities/user.entity';
 import { University } from '../users/entities/university.entity';
+import { Group } from '../users/entities/group.entity';
+import { CuratorAssignment } from '../curation/entities/curator-assignment.entity';
 import { UserRole } from '../auth/interfaces/user-role';
 import { RaspScraperService, SIBIT_UNIVERSITY } from '../auth/rasp-scraper.service';
 import { PlatformControl, PlatformGrant } from './platform.entity';
@@ -14,6 +17,7 @@ import { PLATFORM_PERMISSIONS, PlatformAccountDto, PlatformCreateAccountDto, Pla
 import { ControlAgentClient } from './control-agent.client';
 
 type AgentJob = { id: string; service: string; action: string; status: string; actorId: string; createdAt: string; log?: string };
+type PlatformAuditContext = { ip?: string; userAgent?: string };
 const safeAccount = ({ id, email, firstName, lastName, role, universityId, groupId, isActive, lastLoginAt }: User) => ({ id, email, firstName, lastName, role, universityId, groupId, isActive, lastLoginAt });
 
 @Injectable()
@@ -53,11 +57,45 @@ export class PlatformService {
   async accounts(query: PlatformQueryDto) {
     await this.require('accounts.read');
     const qb = this.db.getRepository(User).createQueryBuilder('u');
-    if (query.q) qb.andWhere("concat_ws(' ', u.email, u.firstName, u.lastName) ILIKE :q", { q: `%${query.q}%` });
+    if (query.q) qb.andWhere("concat_ws(' ', u.email, u.firstName, u.lastName, u.phone, u.groupId, u.id) ILIKE :q", { q: `%${query.q}%` });
     if (query.universityId) qb.andWhere('u.universityId = :universityId', { universityId: query.universityId });
     const [data, total] = await qb.orderBy('u.createdAt', 'DESC').addOrderBy('u.id', 'ASC').skip((query.page - 1) * query.limit).take(query.limit).getManyAndCount();
     const control = await this.db.getRepository(PlatformControl).findOneBy({ id: 'platform' });
     return toPaginatedResponse(data.map(user => ({ ...safeAccount(user), isOwner: user.id === control?.ownerId })), total, query);
+  }
+  async account(id: string) {
+    await this.require('accounts.read');
+    const user = await this.db.getRepository(User).findOne({
+      where: { id },
+      select: ['id', 'email', 'firstName', 'lastName', 'phone', 'avatarUrl', 'role', 'universityId', 'groupId', 'isActive', 'lastLoginAt', 'createdAt', 'updatedAt', 'maxUserId', 'telegramUserId'],
+    });
+    if (!user) throw new NotFoundException('Аккаунт не найден.');
+    const [university, group, assignments, control, history] = await Promise.all([
+      user.universityId ? this.db.getRepository(University).findOne({ where: { id: user.universityId }, select: ['id', 'name', 'city'] }) : null,
+      user.universityId && user.groupId
+        ? this.db.getRepository(Group).createQueryBuilder('g').select(['g.id', 'g.name', 'g.externalId', 'g.universityId']).where('g.universityId = :universityId AND (g.id::text = :groupId OR g."externalId" = :groupId)', { universityId: user.universityId, groupId: user.groupId }).getOne()
+        : null,
+      this.db.getRepository(CuratorAssignment).createQueryBuilder('a')
+        .leftJoin(Group, 'g', 'g.id = a."groupId"')
+        .select(['a.id', 'a.universityId', 'a.groupId', 'a.createdAt', 'g.name'])
+        .where('a."userId" = :userId AND a."revokedAt" IS NULL', { userId: id })
+        .orderBy('a."createdAt"', 'DESC').getRawMany(),
+      this.db.getRepository(PlatformControl).findOneBy({ id: 'platform' }),
+      this.db.getRepository(AuditLog).find({ where: { entity: 'platform', entityId: id }, order: { createdAt: 'DESC', id: 'DESC' }, take: 10 }),
+    ]);
+    return {
+      ...safeAccount(user),
+      phone: user.phone ?? '',
+      avatarUrl: user.avatarUrl ?? '',
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+      linkedAccounts: { max: Boolean(user.maxUserId), telegram: Boolean(user.telegramUserId) },
+      university: university ? { id: university.id, name: university.name, city: university.city } : null,
+      group: group ? { id: group.id, name: group.name, externalId: group.externalId } : user.groupId ? { id: null, name: user.groupId, externalId: user.groupId } : null,
+      curatorAssignments: assignments.map((assignment: { id: string; universityId: string; groupId: string; createdAt: Date; g_name?: string }) => ({ id: assignment.id, universityId: assignment.universityId, groupId: assignment.groupId, groupName: assignment.g_name ?? assignment.groupId, createdAt: assignment.createdAt })),
+      recentActions: history.map(entry => ({ id: entry.id, action: entry.action, actorId: entry.userId, createdAt: entry.createdAt, oldValues: entry.oldValues, newValues: entry.newValues })),
+      isOwner: user.id === control?.ownerId,
+    };
   }
   private async manageable(id: string, manager: EntityManager = this.db.manager) {
     const access = await this.require('accounts.write');
@@ -67,22 +105,60 @@ export class PlatformService {
     if (!target) throw new NotFoundException('Аккаунт не найден.');
     return { access, target };
   }
-  async updateAccount(id: string, dto: PlatformAccountDto) {
+  async updateAccount(id: string, dto: PlatformAccountDto, auditContext: PlatformAuditContext = {}) {
     return this.db.transaction(async manager => {
       const { access, target } = await this.manageable(id, manager);
       if (dto.role === UserRole.CURATOR && target.role !== UserRole.CURATOR) throw new BadRequestException('Кураторство назначается дополнительно в разделе кураторства.');
       if (!access.owner && dto.role && dto.role !== target.role && ([UserRole.DEVELOPER, UserRole.SUPERADMIN].includes(dto.role) || [UserRole.DEVELOPER, UserRole.SUPERADMIN].includes(target.role))) throw new ForbiddenException('Назначение и смена платформенной роли доступны только владельцу.');
       if ((dto.firstName !== undefined && !dto.firstName.trim()) || (dto.lastName !== undefined && !dto.lastName.trim())) throw new BadRequestException('Имя и фамилия не могут быть пустыми.');
-      if (dto.role && ![UserRole.DEVELOPER, UserRole.SUPERADMIN, UserRole.EMPLOYER, UserRole.CAREER_STAFF, UserRole.CAREER_ADMIN].includes(dto.role) && !target.universityId) throw new BadRequestException('Сначала требуется привязка аккаунта к университету.');
       const current = await manager.findOneByOrFail(User, { id });
-      // Atomic version bump: concurrent role/status updates cannot revive older tokens.
-      await manager.update(User, id, { ...dto, sessionVersion: () => '"sessionVersion" + 1' });
+      const nextRole = dto.role ?? current.role;
+      const nextUniversityId = dto.universityId !== undefined ? dto.universityId : current.universityId;
+      if (![UserRole.DEVELOPER, UserRole.SUPERADMIN, UserRole.EMPLOYER, UserRole.CAREER_STAFF, UserRole.CAREER_ADMIN].includes(nextRole) && !nextUniversityId) throw new BadRequestException('Для этой роли требуется привязка к университету.');
+      if (dto.universityId && !await manager.getRepository(University).existsBy({ id: dto.universityId })) throw new BadRequestException('Университет не найден.');
+      if (dto.email !== undefined) {
+        const email = dto.email.trim().toLowerCase();
+        const duplicate = await manager.getRepository(User).createQueryBuilder('u').where('LOWER(u.email) = :email AND u.id != :id', { email, id }).getExists();
+        if (duplicate) throw new ConflictException('Email уже используется.');
+        dto.email = email;
+      }
+      if (dto.phone !== undefined && dto.phone !== null) dto.phone = dto.phone.trim() || null;
+      if (dto.avatarUrl !== undefined && dto.avatarUrl !== null) dto.avatarUrl = dto.avatarUrl.trim() || null;
+      if (dto.universityId !== undefined && dto.universityId !== current.universityId && dto.groupId === undefined) {
+        const activeAssignments = await manager.getRepository(CuratorAssignment).countBy({ userId: id, revokedAt: IsNull() });
+        if (activeAssignments) throw new BadRequestException('Сначала отзовите активные назначения куратора, затем переносите аккаунт в другой университет.');
+        dto.groupId = null;
+      }
+      const nextGroupId = dto.groupId !== undefined ? dto.groupId : current.groupId;
+      if (nextGroupId) {
+        if (nextRole !== UserRole.STUDENT) throw new BadRequestException('Учебную группу можно назначить только аккаунту студента.');
+        if (!nextUniversityId) throw new BadRequestException('Сначала привяжите аккаунт к университету.');
+        const localGroup = await manager.getRepository(Group).createQueryBuilder('g')
+          .where('g.universityId = :universityId AND (g.id::text = :groupId OR g."externalId" = :groupId)', { universityId: nextUniversityId, groupId: nextGroupId }).getOne();
+        if (!localGroup) {
+          const university = await manager.getRepository(University).findOneBy({ id: nextUniversityId });
+          const isSibit = university?.name === SIBIT_UNIVERSITY.name && university.city === SIBIT_UNIVERSITY.city && university.connectorType === 'rasp-sano';
+          if (!isSibit || !/^\d+$/.test(nextGroupId) || !await this.raspScraper.isValidGroup(nextGroupId)) throw new BadRequestException('Выберите существующую группу этого университета.');
+        }
+      }
+      const { reason: suppliedReason, ...requestedChanges } = dto;
+      const changes = Object.fromEntries(Object.entries(requestedChanges).filter(([key, value]) => value !== undefined && current[key as keyof User] !== value));
+      if (!Object.keys(changes).length) return safeAccount(current);
+      const oldValues: JsonObject = {};
+      const newValues: JsonObject = {};
+      for (const [key, value] of Object.entries(changes)) {
+        oldValues[key] = (current[key as keyof User] ?? null) as JsonObject[string];
+        newValues[key] = value as JsonObject[string];
+      }
+      const accessChanged = ['email', 'role', 'isActive', 'universityId', 'groupId'].some(key => key in changes);
+      // Only changes that affect login or authorization invalidate existing sessions.
+      await manager.update(User, id, { ...changes, ...(accessChanged ? { sessionVersion: () => '"sessionVersion" + 1' } : {}) });
       if (dto.role && dto.role !== current.role) await manager.delete(PlatformGrant, { userId: id });
-      await manager.save(AuditLog, { userId: access.actorId, action: 'platform.account.updated', entity: 'platform', entityId: id, newValues: { role: dto.role ?? target.role, isActive: dto.isActive ?? target.isActive } });
+      await manager.save(AuditLog, { userId: access.actorId, action: 'platform.account.updated', entity: 'platform', entityId: id, oldValues, newValues: { ...newValues, targetUserId: id, universityId: nextUniversityId ?? null, reason: suppliedReason?.trim() || 'Изменение аккаунта через управление платформой', result: 'updated' }, ...(auditContext.ip ? { ip: auditContext.ip } : {}), ...(auditContext.userAgent ? { userAgent: auditContext.userAgent.slice(0, 512) } : {}) });
       return safeAccount(await manager.findOneByOrFail(User, { id }));
     });
   }
-  async createAccount(dto: PlatformCreateAccountDto) {
+  async createAccount(dto: PlatformCreateAccountDto, auditContext: PlatformAuditContext = {}) {
     const access = await this.require('accounts.write');
     if (Buffer.byteLength(dto.password) > 72) throw new BadRequestException('Пароль должен занимать не более 72 байт UTF-8.');
     if (!dto.firstName?.trim() || !dto.lastName?.trim() || !dto.role) throw new BadRequestException('Укажите имя, фамилию и основную роль.');
@@ -103,26 +179,26 @@ export class PlatformService {
       let user: User;
       try { user = await manager.save(User, manager.create(User, { email, firstName: dto.firstName!.trim(), lastName: dto.lastName!.trim(), role: dto.role, universityId: dto.universityId ?? null, groupId: dto.groupId ?? undefined, passwordHash, isActive: dto.isActive ?? true })); }
       catch (error) { if ((error as { code?: string }).code === '23505') throw new ConflictException('Email уже используется.'); throw error; }
-      await manager.save(AuditLog, { userId: access.actorId, action: 'platform.account.created', entity: 'platform', entityId: user.id, newValues: { role: user.role } });
+      await manager.save(AuditLog, { userId: access.actorId, action: 'platform.account.created', entity: 'platform', entityId: user.id, newValues: { role: user.role, result: 'created' }, ...(auditContext.ip ? { ip: auditContext.ip } : {}), ...(auditContext.userAgent ? { userAgent: auditContext.userAgent.slice(0, 512) } : {}) });
       return safeAccount(user);
     });
   }
-  async resetPassword(id: string, password: string) {
+  async resetPassword(id: string, password: string, auditContext: PlatformAuditContext = {}) {
     await this.require('accounts.write');
     if (Buffer.byteLength(password) > 72) throw new BadRequestException('Пароль должен занимать не более 72 байт UTF-8.');
     const passwordHash = await bcrypt.hash(password, 12);
     await this.db.transaction(async manager => {
       const { access } = await this.manageable(id, manager);
       await manager.update(User, id, { passwordHash, sessionVersion: () => '"sessionVersion" + 1' });
-      await manager.save(AuditLog, { userId: access.actorId, action: 'platform.account.password_reset', entity: 'platform', entityId: id });
+      await manager.save(AuditLog, { userId: access.actorId, action: 'platform.account.password_reset', entity: 'platform', entityId: id, newValues: { result: 'password_reset' }, ...(auditContext.ip ? { ip: auditContext.ip } : {}), ...(auditContext.userAgent ? { userAgent: auditContext.userAgent.slice(0, 512) } : {}) });
     });
     return { changed: true };
   }
-  async revokeSessions(id: string) {
+  async revokeSessions(id: string, auditContext: PlatformAuditContext = {}) {
     await this.db.transaction(async manager => {
       const { access } = await this.manageable(id, manager);
       await manager.increment(User, { id }, 'sessionVersion', 1);
-      await manager.save(AuditLog, { userId: access.actorId, action: 'platform.account.sessions_revoked', entity: 'platform', entityId: id });
+      await manager.save(AuditLog, { userId: access.actorId, action: 'platform.account.sessions_revoked', entity: 'platform', entityId: id, newValues: { result: 'sessions_revoked' }, ...(auditContext.ip ? { ip: auditContext.ip } : {}), ...(auditContext.userAgent ? { userAgent: auditContext.userAgent.slice(0, 512) } : {}) });
     });
     return { changed: true };
   }
@@ -144,7 +220,7 @@ export class PlatformService {
       if (!dto.serviceIds.length) throw new BadRequestException('Выберите сервисы для выданных разрешений.');
       permissions.add('services.read');
     }
-    for (const [write, read] of [['accounts.write','accounts.read'], ['universities.write','universities.read'], ['settings.write','settings.read']] as const) if (permissions.has(write)) permissions.add(read);
+    for (const [write, read] of [['accounts.write','accounts.read'], ['universities.write','universities.read'], ['student-data.write','student-data.read'], ['personal-data.write','personal-data.read'], ['career-data.write','career-data.read'], ['discussion-data.write','discussion-data.read'], ['settings.write','settings.read']] as const) if (permissions.has(write)) permissions.add(read);
     if (permissions.has('accounts.write')) permissions.add('universities.read');
     await this.db.transaction(async manager => {
       await manager.query('SELECT pg_advisory_xact_lock(707247126)');
@@ -187,6 +263,14 @@ export class PlatformService {
     const [data, total] = await qb.orderBy('u.name', 'ASC').skip((query.page - 1) * query.limit).take(query.limit).getManyAndCount();
     return toPaginatedResponse(data, total, query);
   }
+  async groups(universityId: string) {
+    await this.require('universities.read');
+    if (!await this.db.getRepository(University).existsBy({ id: universityId })) throw new NotFoundException('Университет не найден.');
+    return this.db.getRepository(Group).createQueryBuilder('g')
+      .select(['g.id', 'g.name', 'g.externalId', 'g.curriculumYear', 'g.universityId'])
+      .where('g.universityId = :universityId', { universityId })
+      .orderBy('g.name', 'ASC').getMany();
+  }
   async saveUniversity(dto: PlatformUniversityDto, id?: string) {
     const access = await this.require('universities.write');
     if (!dto.name.trim() || !dto.city.trim()) throw new BadRequestException('Укажите название и город.');
@@ -198,8 +282,31 @@ export class PlatformService {
     });
   }
   async auditLog(query: PlatformQueryDto) {
-    await this.require('audit.read');
-    const [data, total] = await this.db.getRepository(AuditLog).findAndCount({ where: { entity: 'platform' }, order: { createdAt: 'DESC', id: 'DESC' }, skip: (query.page - 1) * query.limit, take: query.limit });
+    const access = await this.require('audit.read');
+    const qb = this.db.getRepository(AuditLog).createQueryBuilder('audit')
+      .where(new Brackets(scope => {
+        scope.where("(audit.entity = 'platform' AND audit.action NOT LIKE 'platform.account.%')");
+        if (access.owner || access.permissions.includes('accounts.read')) {
+          scope.orWhere("(audit.entity = 'platform' AND audit.action LIKE 'platform.account.%')");
+        }
+        if (access.owner || access.permissions.includes('personal-data.read')) {
+          scope.orWhere("audit.entity = 'personal_data' OR audit.entity IN ('personal_data.notification_preferences', 'personal_data.favorite', 'personal_data.personal_lesson_note', 'personal_data.homework_progress')");
+        }
+        if (access.owner || access.permissions.includes('career-data.read')) {
+          scope.orWhere("audit.entity IN ('personal_data.career_profile', 'personal_data.career_admission', 'personal_data.career_application', 'personal_data.career_work', 'personal_data.career_task')");
+        }
+        if (access.owner || access.permissions.includes('discussion-data.read')) {
+          scope.orWhere("audit.entity = 'personal_data.discussion_message'");
+        }
+      }));
+    if (query.q?.trim()) {
+      const pattern = `%${query.q.trim().replace(/[\\%_]/g, '\\$&')}%`;
+      qb.andWhere("(audit.action ILIKE :q ESCAPE E'\\\\' OR audit.entity ILIKE :q ESCAPE E'\\\\' OR audit.entityId ILIKE :q ESCAPE E'\\\\' OR audit.userId::text ILIKE :q ESCAPE E'\\\\' OR COALESCE(audit.newValues::text, '') ILIKE :q ESCAPE E'\\\\')", { q: pattern });
+    }
+    if (query.universityId) qb.andWhere("(audit.newValues ->> 'universityId' = :universityId OR audit.oldValues ->> 'universityId' = :universityId OR (audit.newValues -> 'universityIds') ? :universityId)", { universityId: query.universityId });
+    const total = await qb.clone().getCount();
+    const data = await qb.orderBy('audit.createdAt', 'DESC').addOrderBy('audit.id', 'DESC')
+      .skip((query.page - 1) * query.limit).take(query.limit).getMany();
     return toPaginatedResponse(data, total, query);
   }
   async services() {

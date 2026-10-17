@@ -41,6 +41,7 @@ import { CreateUniversityUserDto } from "./dto/create-university-user.dto";
 import { UpdateUniversityUserStatusDto } from "./dto/update-university-user-status.dto";
 import { ResetUniversityUserPasswordDto } from "./dto/reset-university-user-password.dto";
 import { ConfigureMoodleConnectorDto } from "./dto/configure-moodle-connector.dto";
+import { LinkSibitTeacherDto } from "./dto/link-sibit-teacher.dto";
 
 @ApiTags("admin")
 @ApiBearerAuth()
@@ -67,6 +68,13 @@ export class AdminController {
       pagination,
       req.user.role,
     );
+  }
+
+  @Get("sibit/teachers")
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @ApiOperation({ summary: "Получить преподавателей и расписание из каталога СИБИТа" })
+  async getSibitTeachers(@Request() req) {
+    return this.adminService.getSibitTeachers(req.user.universityId);
   }
 
   @Patch("users/:id/roles")
@@ -99,6 +107,17 @@ export class AdminController {
       createUserDto,
       req.user.role,
     );
+  }
+
+  @Patch("users/:id/sibit-teacher")
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @ApiOperation({ summary: "Связать учётную запись с преподавателем СИБИТа и синхронизировать его пары" })
+  async linkSibitTeacher(
+    @Request() req,
+    @Param("id") id: string,
+    @Body() dto: LinkSibitTeacherDto,
+  ) {
+    return this.adminService.linkSibitTeacher(req.user.universityId, id, dto.sourceTeacherId ?? null);
   }
 
   @Patch("users/:id/status")

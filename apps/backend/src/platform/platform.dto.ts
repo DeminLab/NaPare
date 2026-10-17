@@ -1,9 +1,9 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { ArrayUnique, IsArray, IsBoolean, IsEmail, IsEnum, IsIn, IsOptional, IsString, IsUUID, MaxLength, MinLength } from 'class-validator';
+import { ArrayUnique, IsArray, IsBoolean, IsEmail, IsEnum, IsIn, IsOptional, IsString, IsUUID, IsUrl, MaxLength, MinLength } from 'class-validator';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import { UserRole } from '../auth/interfaces/user-role';
 
-export const PLATFORM_PERMISSIONS = ['services.read', 'services.restart', 'services.rebuild', 'logs.read', 'accounts.read', 'accounts.write', 'universities.read', 'universities.write', 'settings.read', 'settings.write', 'audit.read'] as const;
+export const PLATFORM_PERMISSIONS = ['services.read', 'services.restart', 'services.rebuild', 'logs.read', 'accounts.read', 'accounts.write', 'universities.read', 'universities.write', 'student-data.read', 'student-data.write', 'personal-data.read', 'personal-data.write', 'career-data.read', 'career-data.write', 'discussion-data.read', 'discussion-data.write', 'settings.read', 'settings.write', 'audit.read'] as const;
 export type PlatformPermission = typeof PLATFORM_PERMISSIONS[number];
 export const SERVICE_IDS = ['backend', 'web-portal', 'web-student', 'web-staff', 'web-admin', 'web-developer', 'nginx', 'postgres', 'redis'] as const;
 export class PlatformQueryDto extends PaginationQueryDto {
@@ -21,10 +21,16 @@ export class PlatformJobDto {
   @ApiProperty() @IsUUID() idempotencyKey: string;
 }
 export class PlatformAccountDto {
+  @ApiPropertyOptional() @IsOptional() @IsEmail() @MaxLength(254) email?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() @MinLength(1) @MaxLength(100) firstName?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() @MinLength(1) @MaxLength(100) lastName?: string;
   @ApiPropertyOptional({ enum: UserRole }) @IsOptional() @IsEnum(UserRole) role?: UserRole;
   @ApiPropertyOptional() @IsOptional() @IsBoolean() isActive?: boolean;
+  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsString() @MaxLength(40) phone?: string | null;
+  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsUrl({ protocols: ['http', 'https'], require_protocol: true }) @MaxLength(1000) avatarUrl?: string | null;
+  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsUUID() universityId?: string | null;
+  @ApiPropertyOptional({ nullable: true, description: 'ID внутренней группы либо внешний ID группы расписания' }) @IsOptional() @IsString() @MaxLength(64) groupId?: string | null;
+  @ApiPropertyOptional({ description: 'Причина изменения; обязательна в интерфейсе и сохраняется в аудите' }) @IsOptional() @IsString() @MinLength(3) @MaxLength(500) reason?: string;
 }
 export class PlatformCreateAccountDto extends PlatformAccountDto {
   @ApiProperty() @IsEmail() email: string;

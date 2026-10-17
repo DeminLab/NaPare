@@ -36,6 +36,18 @@ export class DiscussionMessage {
   @Column({ type: 'uuid', nullable: true })
   parentId: string;
 
+  @Column({ type: 'varchar', default: 'visible' })
+  moderationState: 'visible' | 'hidden';
+
+  @Column({ type: 'text', nullable: true })
+  moderationReason: string | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  moderatedBy: string | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  moderatedAt: Date | null;
+
   @CreateDateColumn()
   createdAt: Date;
 

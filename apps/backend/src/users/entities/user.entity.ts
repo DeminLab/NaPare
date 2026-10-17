@@ -11,6 +11,7 @@ import { UserRole } from "../../auth/interfaces/user-role";
 
 @Entity("users")
 @Index("IDX_users_university_id", ["universityId"])
+@Index("UQ_users_university_source_teacher", ["universityId", "sourceTeacherId"], { unique: true, where: '"sourceTeacherId" IS NOT NULL' })
 @Index("IDX_users_max_user_id", ["maxUserId"], { unique: true })
 @Index("IDX_users_telegram_user_id", ["telegramUserId"], { unique: true })
 export class User {
@@ -48,6 +49,10 @@ export class User {
 
   @Column({ type: "varchar", nullable: true })
   groupId: string;
+
+  /** Stable teacher identifier from the university schedule source. */
+  @Column({ type: "varchar", nullable: true })
+  sourceTeacherId: string | null;
 
   @Column({ type: "varchar", nullable: true })
   maxUserId: string | null;

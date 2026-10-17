@@ -32,6 +32,8 @@
 | `/api/v1/admin/faculties`                   | GET/POST  | Факультеты                                                    |
 | `/api/v1/admin/groups`                      | GET/POST  | Группы                                                        |
 | `/api/v1/admin/users`                       | GET/POST  | Поиск и создание пользователей в своём ВУЗе                   |
+| `/api/v1/admin/sibit/teachers`              | GET       | Преподаватели СИБИТ, их расписание и текущие привязки         |
+| `/api/v1/admin/users/{id}/sibit-teacher`    | PATCH     | Привязка аккаунта к внешнему ID СИБИТ с синхронизацией занятий |
 | `/api/v1/admin/users/{id}/roles`            | PATCH     | Назначение ролей                                              |
 | `/api/v1/admin/users/{id}/status`           | PATCH     | Блокировка или разблокировка управляемого пользователя        |
 | `/api/v1/admin/users/{id}/reset-password`   | POST      | Выдача нового временного пароля                               |

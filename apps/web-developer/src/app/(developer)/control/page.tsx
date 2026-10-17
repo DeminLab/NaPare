@@ -6,9 +6,14 @@ import PermissionsPanel from './PermissionsPanel';
 import SettingsPanel from './SettingsPanel';
 import UniversitiesPanel from './UniversitiesPanel';
 import AuditPanel from './AuditPanel';
+import StudentDataPanel from './StudentDataPanel';
+import PersonalRecordsPanel from './PersonalRecordsPanel';
+import CareerDataPanel from './CareerDataPanel';
+import DiscussionsPanel from './DiscussionsPanel';
+import CareerOperationsPanel from './CareerOperationsPanel';
 import { type Access, Button, Notice, useResource } from './control-ui';
 
-const tabs = [{ id: 'services', label: 'Сервисы', permission: 'services.read' }, { id: 'accounts', label: 'Аккаунты', permission: 'accounts.read' }, { id: 'universities', label: 'Университеты', permission: 'universities.read' }, { id: 'permissions', label: 'Контур доверия', permission: 'owner' }, { id: 'settings', label: 'Настройки', permission: 'settings.read' }, { id: 'audit', label: 'Журнал', permission: 'audit.read' }];
+const tabs = [{ id: 'services', label: 'Сервисы', permission: 'services.read' }, { id: 'accounts', label: 'Аккаунты', permission: 'accounts.read' }, { id: 'student-data', label: 'Данные студентов', permission: 'student-data.read' }, { id: 'personal-records', label: 'Личные записи', permission: 'personal-data.read' }, { id: 'career-data', label: 'Карьерные профили', permission: 'career-data.read' }, { id: 'career-operations', label: 'Практика', permission: 'career-data.read' }, { id: 'discussions', label: 'Обсуждения', permission: 'discussion-data.read' }, { id: 'universities', label: 'Университеты', permission: 'universities.read' }, { id: 'permissions', label: 'Контур доверия', permission: 'owner' }, { id: 'settings', label: 'Настройки', permission: 'settings.read' }, { id: 'audit', label: 'Журнал', permission: 'audit.read' }];
 export default function PlatformControlPage() {
   const context = useResource<Access>('/platform/access', 30000);
   const [tab,setTab] = useState('services');
@@ -23,6 +28,6 @@ export default function PlatformControlPage() {
     {access && !access.ownerConfigured && <Notice error>Владелец ещё не назначен на этом сервере. Требуется первоначальная настройка через серверную команду; автоматической выдачи прав по email нет.</Notice>}
     {access?.ownerConfigured && !available.length && <Notice>Разрешения на управление пока не выданы. Их назначает владелец платформы.</Notice>}
     {!!available.length && <nav aria-label="Разделы управления платформой" className="flex gap-2 overflow-x-auto pb-2">{available.map(item => <Button key={item.id} aria-pressed={active === item.id} className={active === item.id ? '!border-cyan-400 !bg-cyan-400/15 !text-cyan-100 whitespace-nowrap' : 'whitespace-nowrap'} onClick={() => select(item.id)}>{item.label}</Button>)}</nav>}
-    {access && <>{active === 'services' && <ServicesPanel access={access} />}{active === 'accounts' && <AccountsPanel access={access} />}{active === 'universities' && <UniversitiesPanel access={access} />}{active === 'permissions' && access.owner && <PermissionsPanel access={access} />}{active === 'settings' && <SettingsPanel access={access} />}{active === 'audit' && <AuditPanel />}</>}
+    {access && <>{active === 'services' && <ServicesPanel access={access} />}{active === 'accounts' && <AccountsPanel access={access} />}{active === 'student-data' && <StudentDataPanel access={access} />}{active === 'personal-records' && <PersonalRecordsPanel access={access} />}{active === 'career-data' && <CareerDataPanel access={access} />}{active === 'career-operations' && <CareerOperationsPanel access={access} />}{active === 'discussions' && <DiscussionsPanel access={access} />}{active === 'universities' && <UniversitiesPanel access={access} />}{active === 'permissions' && access.owner && <PermissionsPanel access={access} />}{active === 'settings' && <SettingsPanel access={access} />}{active === 'audit' && <AuditPanel access={access} />}</>}
   </div>;
 }

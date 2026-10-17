@@ -30,4 +30,10 @@ export class CreateUniversityUserDto {
   @IsString()
   @MaxLength(36)
   groupId?: string;
+
+  @ApiPropertyOptional({ example: '20', description: 'Внешний числовой ID преподавателя в каталоге расписания СИБИТ' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(36)
+  sourceTeacherId?: string;
 }

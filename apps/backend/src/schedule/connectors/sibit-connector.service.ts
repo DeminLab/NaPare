@@ -16,6 +16,8 @@ const ACADEMIC_YEAR_END_DAY = 31;
 export interface SibitTeacher {
   id: string;
   name: string;
+  lessonCount: number;
+  groups: Array<{ id: string; name: string }>;
 }
 
 export interface SibitSyncSummary {
@@ -133,7 +135,12 @@ export class SibitConnectorService {
       const name = lesson.teacher?.trim();
       if (!name) continue;
       const id = lesson.teacherId || name;
-      if (!teachers.has(id)) teachers.set(id, { id, name });
+      const teacher = teachers.get(id) ?? { id, name, lessonCount: 0, groups: [] };
+      teacher.lessonCount++;
+      if (!teacher.groups.some((group) => group.id === lesson.groupId)) {
+        teacher.groups.push({ id: lesson.groupId, name: lesson.groupName });
+      }
+      teachers.set(id, teacher);
     }
     return [...teachers.values()].sort((a, b) =>
       a.name.localeCompare(b.name, "ru"),

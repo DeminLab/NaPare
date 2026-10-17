@@ -3,6 +3,10 @@ import { CurationModule } from './curation/curation.module';
 import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { PlatformModule } from './platform/platform.module';
+import { PlatformDataModule } from './platform-data/platform-data.module';
+import { PlatformRecordsModule } from './platform-records/platform-records.module';
+import { PlatformCareerModule } from './platform-career/platform-career.module';
+import { PlatformDiscussionsModule } from './platform-discussions/platform-discussions.module';
 import { PlatformMaintenanceInterceptor } from './platform/platform-maintenance.interceptor';
 import { join } from 'node:path';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -79,6 +83,10 @@ import { SearchModule } from './search/search.module';
     }),
     CareerModule,
     PlatformModule,
+    PlatformDataModule,
+    PlatformRecordsModule,
+    PlatformCareerModule,
+    PlatformDiscussionsModule,
     CurationModule,
     AuthModule,
     UsersModule,

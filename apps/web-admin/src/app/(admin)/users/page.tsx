@@ -27,6 +27,7 @@ interface AdminUser {
   role?: string;
   roles?: string[];
   groupId?: string;
+  sourceTeacherId?: string | null;
   facultyId?: string;
   isActive: boolean;
   lastLoginAt?: string;
@@ -47,6 +48,13 @@ interface RaspGroup {
   course: number;
   academicYear: string;
 }
+interface RaspTeacher {
+  id: string;
+  name: string;
+  lessonCount: number;
+  groups: Array<{ id: string; name: string }>;
+  linkedUser: { id: string; name: string } | null;
+}
 interface UniversityContext {
   id: string;
   name: string;
@@ -61,6 +69,7 @@ type NewUserForm = {
   password: string;
   role: string;
   groupId: string;
+  sourceTeacherId: string;
 };
 
 const emptyNewUser: NewUserForm = {
@@ -70,6 +79,7 @@ const emptyNewUser: NewUserForm = {
   password: "",
   role: "student",
   groupId: "",
+  sourceTeacherId: "",
 };
 
 const roleLabels: Record<string, string> = {
@@ -131,6 +141,7 @@ export default function UsersPage() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [raspGroups, setRaspGroups] = useState<RaspGroup[]>([]);
+  const [raspTeachers, setRaspTeachers] = useState<RaspTeacher[]>([]);
   const [university, setUniversity] = useState<UniversityContext | null>(null);
   const [faculties, setFaculties] = useState<Faculty[]>([]);
   const [search, setSearch] = useState("");
@@ -173,7 +184,17 @@ export default function UsersPage() {
         setGroups(groupItems);
         setFaculties(facultyItems);
         setUniversity(universityItem);
-        setRaspGroups(universityItem?.connectorType === "rasp-sano" ? await apiFetch<RaspGroup[]>("/auth/rasp-groups").catch(() => []) : []);
+        if (universityItem?.connectorType === "rasp-sano") {
+          const [sourceGroups, sourceTeachers] = await Promise.all([
+            apiFetch<RaspGroup[]>("/auth/rasp-groups").catch(() => []),
+            apiFetch<RaspTeacher[]>("/admin/sibit/teachers").catch(() => []),
+          ]);
+          setRaspGroups(sourceGroups);
+          setRaspTeachers(sourceTeachers);
+        } else {
+          setRaspGroups([]);
+          setRaspTeachers([]);
+        }
       })
       .catch((err) =>
         setError(
@@ -285,6 +306,7 @@ export default function UsersPage() {
           lastName: newUser.lastName.trim(),
           email: newUser.email.trim(),
           groupId: newUser.groupId || undefined,
+          sourceTeacherId: newUser.sourceTeacherId || undefined,
         }),
       });
       setUsers((items) => [created, ...items]);
@@ -293,10 +315,34 @@ export default function UsersPage() {
       setMessage(
         "Учётная запись создана. Передайте временный пароль пользователю защищённым способом.",
       );
+      if (newUser.sourceTeacherId) {
+        setRaspTeachers(await apiFetch<RaspTeacher[]>("/admin/sibit/teachers").catch(() => []));
+      }
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Не удалось создать пользователя.",
       );
+    } finally {
+      setSaving(false);
+    }
+  };
+  const linkSibitTeacher = async (user: AdminUser, sourceTeacherId: string) => {
+    setSaving(true);
+    setError("");
+    try {
+      const updated = await apiFetch<AdminUser>(`/admin/users/${user.id}/sibit-teacher`, {
+        method: "PATCH",
+        body: JSON.stringify({ sourceTeacherId: sourceTeacherId || null }),
+      });
+      setUsers((items) => items.map((item) => item.id === updated.id ? updated : item));
+      setDetail(updated);
+      setMessage(sourceTeacherId
+        ? "Преподаватель привязан. Расписание синхронизировано, группы определяются по его занятиям."
+        : "Привязка с расписанием СИБИТа снята.");
+      const refreshedTeachers = await apiFetch<RaspTeacher[]>("/admin/sibit/teachers").catch(() => []);
+      setRaspTeachers(refreshedTeachers);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Не удалось привязать расписание преподавателя.");
     } finally {
       setSaving(false);
     }
@@ -400,6 +446,9 @@ export default function UsersPage() {
       filter: "all" as Filter,
     },
   ];
+  const detailSibitTeacher = detail?.sourceTeacherId
+    ? raspTeachers.find((teacher) => teacher.id === detail.sourceTeacherId)
+    : undefined;
 
   return (
     <div className="space-y-6">
@@ -745,9 +794,33 @@ export default function UsersPage() {
               <div className="flex justify-between gap-4 py-3">
                 <dt className="text-sm text-slate-500">Группа</dt>
                 <dd className="text-right text-sm font-medium text-slate-800">
-                  {groupMap.get(detail.groupId || "")?.name || raspGroups.find((item) => item.groupId === detail.groupId)?.name || "—"}
+                  {userRole(detail) === "teacher"
+                    ? detailSibitTeacher?.groups.map((item) => item.name).join(", ") || "Назначается занятиями в расписании"
+                    : groupMap.get(detail.groupId || "")?.name || raspGroups.find((item) => item.groupId === detail.groupId)?.name || "—"}
                 </dd>
               </div>
+              {userRole(detail) === "teacher" && university?.connectorType === "rasp-sano" && (
+                <div className="space-y-2 py-4">
+                  <label htmlFor="detail-sibit-teacher" className="text-sm font-medium text-slate-700">Преподаватель в расписании СИБИТа</label>
+                  <select
+                    id="detail-sibit-teacher"
+                    disabled={saving}
+                    value={detail.sourceTeacherId || ""}
+                    onChange={(event) => void linkSibitTeacher(detail, event.target.value)}
+                    className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-sky-500"
+                  >
+                    <option value="">Не привязан</option>
+                    {raspTeachers.map((teacher) => {
+                      const placeholder = /вакансия|не назначен/i.test(teacher.name);
+                      const linkedElsewhere = teacher.linkedUser && teacher.linkedUser.id !== detail.id;
+                      return <option key={teacher.id} value={teacher.id} disabled={placeholder || Boolean(linkedElsewhere)}>
+                        {teacher.name} · {teacher.lessonCount} пар · {teacher.groups.length} групп{placeholder ? " · не является аккаунтом" : linkedElsewhere ? ` · ${teacher.linkedUser?.name}` : ""}
+                      </option>;
+                    })}
+                  </select>
+                  <p className="text-xs leading-5 text-slate-500">Группы и пары назначаются по числовому коду преподавателя источника.</p>
+                </div>
+              )}
               <div className="flex justify-between gap-4 py-3">
                 <dt className="text-sm text-slate-500">Последний вход</dt>
                 <dd className="text-right text-sm font-medium text-slate-800">
@@ -857,7 +930,7 @@ export default function UsersPage() {
               <select
                 value={newUser.role}
                 onChange={(event) =>
-                  setNewUser((item) => ({ ...item, role: event.target.value, groupId: "" }))
+                  setNewUser((item) => ({ ...item, role: event.target.value, groupId: "", sourceTeacherId: "" }))
                 }
                 className="mt-1.5 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-sky-500"
               >
@@ -868,7 +941,9 @@ export default function UsersPage() {
                 ))}
               </select>
             </label>
-            <label className="block text-sm font-medium text-slate-700">
+            {newUser.role === "teacher" ? (
+              <p className="self-center text-sm leading-5 text-slate-500">Группы преподавателя будут связаны через его занятия в расписании.</p>
+            ) : <label className="block text-sm font-medium text-slate-700">
               Учебная группа
               <select
                 value={newUser.groupId}
@@ -893,8 +968,29 @@ export default function UsersPage() {
                       </option>
                     ))}
               </select>
-            </label>
+            </label>}
           </div>
+          {newUser.role === "teacher" && university?.connectorType === "rasp-sano" && (
+            <label className="block text-sm font-medium text-slate-700">
+              Преподаватель в расписании СИБИТа
+              <select
+                value={newUser.sourceTeacherId}
+                onChange={(event) => {
+                  const sourceTeacherId = event.target.value;
+                  const teacher = raspTeachers.find((item) => item.id === sourceTeacherId);
+                  const [lastName = "", ...firstNames] = (teacher?.name || "").trim().split(/\s+/);
+                  setNewUser((item) => ({ ...item, sourceTeacherId, groupId: "", ...(teacher ? { lastName, firstName: firstNames.join(" ") } : {}) }));
+                }}
+                className="mt-1.5 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-sky-500"
+              >
+                <option value="">Не связывать пока</option>
+                {raspTeachers.filter((teacher) => !teacher.linkedUser && !/вакансия|не назначен/i.test(teacher.name)).map((teacher) => (
+                  <option key={teacher.id} value={teacher.id}>{teacher.name} · {teacher.lessonCount} пар · {teacher.groups.map((item) => item.name).join(", ")}</option>
+                ))}
+              </select>
+              <span className="mt-1 block text-xs font-normal leading-5 text-slate-500">После создания аккаунта расписание привяжется по точному ID преподавателя. Укажите действующую корпоративную почту и временный пароль.</span>
+            </label>
+          )}
           <div className="flex justify-end gap-2 pt-2">
             <Button
               type="button"

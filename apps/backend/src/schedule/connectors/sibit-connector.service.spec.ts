@@ -146,8 +146,18 @@ describe("SibitConnectorService", () => {
     });
 
     await expect(service.getTeachers()).resolves.toEqual([
-      { id: "7", name: "Иванов И.И." },
-      { id: "11", name: "Петров П.П." },
+      {
+        id: "7",
+        name: "Иванов И.И.",
+        lessonCount: 2,
+        groups: [{ id: "12136", name: "ГМУ-25" }],
+      },
+      {
+        id: "11",
+        name: "Петров П.П.",
+        lessonCount: 1,
+        groups: [{ id: "12136", name: "ГМУ-25" }],
+      },
     ]);
   });
 

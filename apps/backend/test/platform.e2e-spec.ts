@@ -59,8 +59,15 @@ suite('Platform owner and explicitly delegated rights: real PostgreSQL/JWT/HTTP'
     const uni=await http().post('/api/v1/platform/universities').auth(tokens.owner,{type:'bearer'}).send({name:'Тестовый вуз',city:'Омск',status:'pending'}).expect(201);
     await http().put('/api/v1/platform/universities/'+uni.body.id).auth(tokens.owner,{type:'bearer'}).send({name:'Тестовый вуз',city:'Омск',status:'active'}).expect(200);
     const account={email:'new-user@platform.example.test',firstName:'Новый',lastName:'Студент',role:'student',universityId:uni.body.id,password:'test-created-account-123'};
-    const created=await http().post('/api/v1/platform/accounts').auth(tokens.owner,{type:'bearer'}).send(account).expect(201);
+    await http().post('/api/v1/platform/accounts').send(account).expect(401);
+    await http().post('/api/v1/platform/accounts').auth(tokens.developer,{type:'bearer'}).send(account).expect(403);
+    const created=await http().post('/api/v1/platform/accounts').auth(tokens.owner,{type:'bearer'}).set('User-Agent','platform-audit-test').send(account).expect(201);
     expect(created.body.passwordHash).toBeUndefined();
+    const createAudit=await f.db.getRepository(AuditLog).findOneByOrFail({action:'platform.account.created',entityId:created.body.id});
+    expect(createAudit.userId).toBe(f.owner.id);
+    expect(createAudit.ip).toBeTruthy();
+    expect(createAudit.userAgent).toBe('platform-audit-test');
+    expect(createAudit.newValues).toMatchObject({role:'student',result:'created'});
     await http().post('/api/v1/auth/login').send({email:account.email,password:account.password}).expect(200);
     await http().post('/api/v1/platform/accounts').auth(tokens.owner,{type:'bearer'}).send(account).expect(409);
     await get('/platform/audit').expect(200).expect(({body})=>expect(JSON.stringify(body)).not.toContain(account.password));

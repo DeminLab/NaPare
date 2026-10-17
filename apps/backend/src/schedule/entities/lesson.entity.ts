@@ -10,6 +10,7 @@ import {
 @Entity('lessons')
 @Index(['universityId', 'groupId', 'dayOfWeek'])
 @Index(['universityId', 'teacherId', 'dayOfWeek'])
+@Index('IDX_lessons_university_source_teacher', ['universityId', 'sourceTeacherId'])
 @Index('IDX_lessons_university_start_date_pair_number', [
   'universityId',
   'startDate',
@@ -47,7 +48,10 @@ export class Lesson {
   occurrenceId: string | null;
 
   @Column({ type: 'uuid', nullable: true })
-  teacherId: string;
+  teacherId: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  sourceTeacherId: string | null;
 
   @Column()
   subject: string;

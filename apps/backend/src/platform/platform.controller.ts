@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Put, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Put, Query, Request, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { PlatformService } from './platform.service';
@@ -14,16 +14,18 @@ export class PlatformController {
   @Get('jobs/:id') job(@Param('id', ParseUUIDPipe) id: string) { return this.platform.job(id); }
   @Post('jobs') @ApiOperation({ summary: 'Поставить рестарт или ребилд одного сервиса в очередь' }) start(@Body() dto: PlatformJobDto) { return this.platform.startJob(dto); }
   @Get('accounts') accounts(@Query() query: PlatformQueryDto) { return this.platform.accounts(query); }
-  @Post('accounts') create(@Body() dto: PlatformCreateAccountDto) { return this.platform.createAccount(dto); }
-  @Patch('accounts/:id') update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: PlatformAccountDto) { return this.platform.updateAccount(id, dto); }
-  @Post('accounts/:id/password') password(@Param('id', ParseUUIDPipe) id: string, @Body() dto: PlatformPasswordDto) { return this.platform.resetPassword(id, dto.password); }
-  @Post('accounts/:id/revoke-sessions') revoke(@Param('id', ParseUUIDPipe) id: string) { return this.platform.revokeSessions(id); }
+  @Get('accounts/:id') @ApiOperation({ summary: 'Подробная карточка аккаунта для управления платформой' }) account(@Param('id', ParseUUIDPipe) id: string) { return this.platform.account(id); }
+  @Post('accounts') create(@Body() dto: PlatformCreateAccountDto, @Request() req: { ip: string; get(name: string): string | undefined }) { return this.platform.createAccount(dto, { ip: req.ip, userAgent: req.get('user-agent') }); }
+  @Patch('accounts/:id') update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: PlatformAccountDto, @Request() req: { ip: string; get(name: string): string | undefined }) { return this.platform.updateAccount(id, dto, { ip: req.ip, userAgent: req.get('user-agent') }); }
+  @Post('accounts/:id/password') password(@Param('id', ParseUUIDPipe) id: string, @Body() dto: PlatformPasswordDto, @Request() req: { ip: string; get(name: string): string | undefined }) { return this.platform.resetPassword(id, dto.password, { ip: req.ip, userAgent: req.get('user-agent') }); }
+  @Post('accounts/:id/revoke-sessions') revoke(@Param('id', ParseUUIDPipe) id: string, @Request() req: { ip: string; get(name: string): string | undefined }) { return this.platform.revokeSessions(id, { ip: req.ip, userAgent: req.get('user-agent') }); }
   @Get('permissions') grants(@Query() query: PlatformQueryDto) { return this.platform.grants(query); }
   @Put('permissions/:id') grant(@Param('id', ParseUUIDPipe) id: string, @Body() dto: PlatformGrantDto) { return this.platform.setGrant(id, dto); }
   @Post('trust/emergency-revoke') @ApiOperation({ summary: 'Только владелец: отозвать весь делегированный техдоступ и сессии' }) emergency(@Body() dto: PlatformEmergencyDto) { return this.platform.emergencyRevoke(dto.password); }
   @Get('settings') settings() { return this.platform.settings(); }
   @Put('settings') updateSettings(@Body() dto: PlatformSettingsDto) { return this.platform.updateSettings(dto); }
   @Get('universities') universities(@Query() query: PlatformQueryDto) { return this.platform.universities(query); }
+  @Get('groups') groups(@Query('universityId', ParseUUIDPipe) universityId: string) { return this.platform.groups(universityId); }
   @Post('universities') createUniversity(@Body() dto: PlatformUniversityDto) { return this.platform.saveUniversity(dto); }
   @Put('universities/:id') updateUniversity(@Param('id', ParseUUIDPipe) id: string, @Body() dto: PlatformUniversityDto) { return this.platform.saveUniversity(dto, id); }
   @Get('audit') audit(@Query() query: PlatformQueryDto) { return this.platform.auditLog(query); }

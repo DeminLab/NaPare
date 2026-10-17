@@ -111,6 +111,27 @@ export class AdminService {
     );
   }
 
+  async getSibitTeachers(universityId: string) {
+    this.tenantContext.assertAccess(universityId);
+    const university = await this.universityRepository.findOne({ where: { id: universityId } });
+    if (!university || university.connectorType !== "rasp-sano") {
+      throw new BadRequestException("Каталог преподавателей СИБИТ недоступен для этого университета");
+    }
+    const teachers = await this.sibitConnectorService.getTeachers();
+    const linkedUsers = await this.userRepository.find({
+      where: { universityId, role: UserRole.TEACHER },
+      select: ["id", "firstName", "lastName", "sourceTeacherId"],
+    });
+    const links = new Map(linkedUsers.filter((user) => user.sourceTeacherId).map((user) => [user.sourceTeacherId!, user]));
+    return teachers.map((teacher) => ({
+      ...teacher,
+      linkedUser: links.has(teacher.id) ? {
+        id: links.get(teacher.id)!.id,
+        name: `${links.get(teacher.id)!.lastName} ${links.get(teacher.id)!.firstName}`,
+      } : null,
+    }));
+  }
+
   async getGroupStudents(
     universityId: string,
     groupId: string,
@@ -194,15 +215,54 @@ export class AdminService {
           );
       }
     }
-    return this.usersService.create({
+    if (data.sourceTeacherId) {
+      if (data.role !== UserRole.TEACHER) throw new BadRequestException("Внешний ID преподавателя можно назначить только учётной записи преподавателя.");
+      const university = await this.getUniversity(universityId);
+      if (university.connectorType !== "rasp-sano" || !(await this.sibitConnectorService.getTeachers()).some((teacher) => teacher.id === data.sourceTeacherId)) {
+        throw new BadRequestException("Преподаватель не найден в каталоге расписания СИБИТа.");
+      }
+      const existingLink = await this.userRepository.findOne({ where: { universityId, sourceTeacherId: data.sourceTeacherId } });
+      if (existingLink) throw new ConflictException("Этот преподаватель СИБИТа уже связан с учётной записью.");
+    }
+    const created = await this.usersService.create({
       email: data.email.trim(),
       passwordHash: await bcrypt.hash(data.password, 12),
       firstName: data.firstName.trim(),
       lastName: data.lastName.trim(),
       role: data.role,
       groupId: data.groupId,
+      sourceTeacherId: data.sourceTeacherId || null,
       universityId,
     });
+    if (data.sourceTeacherId) {
+      await this.syncSchedule(universityId);
+    }
+    return created;
+  }
+
+  async linkSibitTeacher(universityId: string, userId: string, sourceTeacherId: string | null) {
+    this.tenantContext.assertAccess(universityId);
+    const user = await this.userRepository.findOne({ where: { id: userId, universityId } });
+    if (!user || user.role !== UserRole.TEACHER) throw new NotFoundException("Учётная запись преподавателя не найдена.");
+    if (sourceTeacherId) {
+      const university = await this.getUniversity(universityId);
+      if (university.connectorType !== "rasp-sano" || !(await this.sibitConnectorService.getTeachers()).some((teacher) => teacher.id === sourceTeacherId)) {
+        throw new BadRequestException("Преподаватель не найден в каталоге расписания СИБИТа.");
+      }
+      const existingLink = await this.userRepository.findOne({ where: { universityId, sourceTeacherId } });
+      if (existingLink && existingLink.id !== userId) throw new ConflictException("Этот преподаватель СИБИТа уже связан с другой учётной записью.");
+    }
+    user.sourceTeacherId = sourceTeacherId;
+    await this.userRepository.save(user);
+    if (sourceTeacherId) {
+      await this.syncSchedule(universityId);
+    } else {
+      await this.lessonRepository.update(
+        { universityId, source: "sibit", teacherId: userId },
+        { teacherId: null },
+      );
+    }
+    return user;
   }
 
   async updateUniversityUserStatus(
@@ -442,7 +502,8 @@ export class AdminService {
       const source = {
         universityId,
         groupId: group.id,
-        teacherId: resolveTeacherId(sourceLesson.teacher, teachers),
+        teacherId: resolveTeacherId(sourceLesson.teacher, sourceLesson.teacherId, teachers),
+        sourceTeacherId: sourceLesson.teacherId ?? null,
         subject: sourceLesson.subject,
         subjectType: sourceLesson.subjectType ?? undefined,
         room: sourceLesson.room ?? undefined,
@@ -944,6 +1005,7 @@ function sibitLessonChanged(current: Lesson, next: Partial<Lesson>): boolean {
   return (
     current.groupId !== next.groupId ||
     current.teacherId !== next.teacherId ||
+    current.sourceTeacherId !== next.sourceTeacherId ||
     current.subject !== next.subject ||
     current.subjectType !== next.subjectType ||
     current.room !== next.room ||
@@ -985,15 +1047,18 @@ function sibitScheduleEventType(
 }
 
 /**
- * A teacher is linked only if their name has one unambiguous match among
- * existing teacher accounts. If the source uses initials or the name is
- * duplicated, the lesson remains available but is not assigned to a guessed
- * account.
+ * Prefer the exact external source ID. If no account has a source-ID link,
+ * retain the legacy fallback only for one unambiguous name match.
  */
 function resolveTeacherId(
   sourceName: string | undefined,
+  sourceTeacherId: string | undefined,
   teachers: User[],
 ): string | undefined {
+  if (sourceTeacherId) {
+    const linked = teachers.find((teacher) => teacher.sourceTeacherId === sourceTeacherId);
+    if (linked) return linked.id;
+  }
   if (!sourceName) return undefined;
   const source = normalizedKey(sourceName).replace(/[^а-яa-z]/g, "");
   if (!source) return undefined;

@@ -19,7 +19,7 @@
 | Homework           | Подготовка к паре (техническое legacy-имя) | id, pair_space_id, author_id, title, description, deadline, is_recurring, recurring_rule, is_completed                                    |
 | HomeworkSubmission | Legacy-статус сдачи                        | id, homework_id, student_id, status (`not_submitted`/`submitted`), submitted_at, file_url, comment; в актуальном UX не используется       |
 | FileAttachment     | Файл                                       | id, pair_space_id, uploaded_by, file_url, file_name, file_type (enum pdf/doc/docx/ppt/pptx/jpg/png), size                                 |
-| DiscussionMessage  | Сообщение обсуждения                       | id, pair_space_id, user_id, text, parent_id                                                                                               |
+| DiscussionMessage  | Сообщение обсуждения                       | id, pair_space_id, user_id, text, parent_id, moderation_state (`visible`/`hidden`), moderation_reason, moderated_by, moderated_at             |
 | PersonalLessonNote | Личная заметка к занятию                   | id, university_id, pair_space_id, user_id, content; уникальна для пользователя и занятия                                                    |
 | HomeworkProgress  | Личный статус и чек-лист студента           | id, homework_id, student_id, state, subtasks (JSONB, до 20 шагов); уникален для студента и подготовки; не отражает сдачу в Moodle       |
 
@@ -90,6 +90,7 @@ Multipart/FileInterceptor **нет**: `POST .../files` принимает обы
 7. **Закрепление:** `isPinned` объявления; сортировка — pinned first, затем по дате.
 8. **Rate limiting:** the global `ThrottlerGuard` applies to backend requests; this module does not define a separate Pair Space-specific quota such as 10 messages/minute.
 9. **События:** публикации уходят на шину `EventBusService` с типами `announcement.created`, `homework.created`, `homework.updated`, `message.created`.
+10. **Глобальная модерация:** отдельный platform-раздел может исправить, скрыть или восстановить сообщение по отдельному разрешению. Скрытие обратимо, сохраняет оригинальный текст, а обычные Pair Space ответы показывают только сообщения со статусом `visible`.
 
 ---
 

@@ -106,6 +106,7 @@ export class PairSpaceService {
       throw new NotFoundException(`PairSpace with id ${id} not found`);
     }
     await this.assertRoleScopedAccess(pairSpace);
+    pairSpace.messages = (pairSpace.messages ?? []).filter(message => message.moderationState !== 'hidden');
 
     return this.attachMoodleUrl(pairSpace);
   }
@@ -123,6 +124,7 @@ export class PairSpaceService {
       throw new NotFoundException(`PairSpace for lesson ${lessonId} not found`);
     }
     await this.assertRoleScopedAccess(pairSpace);
+    pairSpace.messages = (pairSpace.messages ?? []).filter(message => message.moderationState !== 'hidden');
 
     return this.attachMoodleUrl(pairSpace);
   }
@@ -413,7 +415,7 @@ export class PairSpaceService {
   ): Promise<PaginatedResponse<DiscussionMessage>> {
     await this.assertPairSpaceAccess(pairSpaceId);
     const [data, total] = await this.messageRepository.findAndCount({
-      where: { pairSpaceId },
+      where: { pairSpaceId, moderationState: 'visible' },
       order: { createdAt: "ASC" },
       skip: (pagination.page - 1) * pagination.limit,
       take: pagination.limit,
@@ -739,7 +741,7 @@ export class PairSpaceService {
       where: { id: pairSpace.lessonId },
     });
     return lesson
-      ? { groupId: lesson.groupId, teacherId: lesson.teacherId }
+      ? { groupId: lesson.groupId, teacherId: lesson.teacherId ?? undefined }
       : {};
   }
 }
