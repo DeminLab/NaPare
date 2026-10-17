@@ -94,15 +94,16 @@ export class PlatformCareerOperationsService {
       if (!application) throw new NotFoundException('Отклик не найден.');
       const task = await manager.findOne(CareerTask, { where: { id: application.taskId }, lock: { mode: 'pessimistic_write' } });
       if (!task) throw new NotFoundException('Задача не найдена.');
-      if (!await manager.getRepository(User).existsBy({ id: application.studentId }) || !await manager.getRepository(University).existsBy({ id: task.universityId })) throw new BadRequestException('Отклик не связан с существующим пользователем и университетом задачи.');
+      const applicant = await manager.findOne(User, { where: { id: application.studentId }, select: ['id'] });
+      if (!applicant || !await manager.getRepository(University).existsBy({ id: task.universityId })) throw new BadRequestException('Отклик не связан с существующим пользователем и университетом задачи.');
       if (dto.decision === 'not_selected') {
         assertCareerTransition(application.state, ['pending']);
         if (task.state !== 'open') throw new ConflictException('Отклик можно отклонить после закрытия задачи только через обращение владельцу.');
         const oldValues: JsonObject = { state: application.state };
         application.state = 'not_selected';
         const updated = await manager.save(CareerApplication, application);
-        await manager.save(CareerNotice, manager.create(CareerNotice, { userId: student.id, title: 'Отклик закрыт', body: `${task.title}. ${dto.reason.trim()}`, isRead: false }));
-        await this.auditMutation(manager, access.actorId, 'career_application', id, student.id, task.universityId, oldValues, { state: updated.state, adminReason: dto.reason.trim(), result: 'not_selected' }, context);
+        await manager.save(CareerNotice, manager.create(CareerNotice, { userId: applicant.id, title: 'Отклик закрыт', body: `${task.title}. ${dto.reason.trim()}`, isRead: false }));
+        await this.auditMutation(manager, access.actorId, 'career_application', id, applicant.id, task.universityId, oldValues, { state: updated.state, adminReason: dto.reason.trim(), result: 'not_selected' }, context);
         return { id, state: updated.state };
       }
       const student = await manager.findOne(User, { where: { id: application.studentId, role: UserRole.STUDENT, universityId: task.universityId }, select: ['id', 'universityId', 'isActive'] });
