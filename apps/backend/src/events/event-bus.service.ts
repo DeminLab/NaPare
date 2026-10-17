@@ -10,6 +10,7 @@ import { EventRecord } from './entities/event-record.entity';
 import {
   EventEnvelope,
   EventStreamMessage,
+  NAPARE_EVENT_TYPES,
   PublishEventInput,
 } from './event.types';
 
@@ -108,7 +109,7 @@ export class EventBusService {
 
       void this.listSince(userId, universityId, since, 100).then((events) => {
         for (const event of events) {
-          stream.subscriber({ id: event.id, type: event.type, data: event });
+          stream.subscriber(toSafeStreamMessage(event));
         }
       }).catch((error: unknown) => {
         this.logger.error('Failed to replay events for SSE stream', error);
@@ -126,7 +127,7 @@ export class EventBusService {
     for (const stream of this.streams) {
       if (stream.universityId !== event.university.id) continue;
       if (event.recipients?.length && !event.recipients.includes(stream.userId)) continue;
-      stream.subscriber({ id: event.id, type: event.type, data: event });
+      stream.subscriber(toSafeStreamMessage(event));
     }
   }
 
@@ -143,4 +144,15 @@ export class EventBusService {
       ...(record.recipients?.length ? { recipients: record.recipients } : {}),
     };
   }
+}
+
+function toSafeStreamMessage(event: EventEnvelope): EventStreamMessage {
+  const type = (NAPARE_EVENT_TYPES as readonly string[]).includes(event.type)
+    ? event.type
+    : 'unknown';
+  return {
+    id: event.id.replace(/[\r\n\u0000]/g, ''),
+    type,
+    data: event,
+  };
 }

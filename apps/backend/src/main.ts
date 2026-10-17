@@ -56,8 +56,9 @@ async function bootstrap() {
   // Root routes (bypass /api prefix)
   const httpAdapter = app.getHttpAdapter();
   if (configService.getOrThrow('nodeEnv') === 'production') {
-    // Production requests pass through host Nginx and the Docker Nginx gateway.
-    httpAdapter.getInstance().set('trust proxy', 2);
+    // Docker Nginx normalizes X-Forwarded-For to the real client address after
+    // accepting X-Real-IP only from the configured host-Nginx bridge gateway.
+    httpAdapter.getInstance().set('trust proxy', 1);
   }
   const isProduction = configService.getOrThrow('nodeEnv') === 'production';
   if (!isProduction) {

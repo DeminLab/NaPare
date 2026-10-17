@@ -7,7 +7,6 @@ import { LessonChange } from "./entities/lesson-change.entity";
 import { ScheduleService } from "./schedule.service";
 import { ScheduleController } from "./schedule.controller";
 import { ChangeDetectorService } from "./change-detector.service";
-import { ExcelConnectorService } from "./connectors/excel-connector.service";
 import { SibitConnectorService } from "./connectors/sibit-connector.service";
 import { RaspModule } from "../rasp/rasp.module";
 import { EventsModule } from "../events/events.module";
@@ -33,7 +32,6 @@ import { CurationModule } from "../curation/curation.module";
   providers: [
     ScheduleService,
     ChangeDetectorService,
-    ExcelConnectorService,
     SibitConnectorService,
   ],
   controllers: [ScheduleController],
