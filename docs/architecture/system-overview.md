@@ -48,7 +48,7 @@ The backend uses university context, role guards and resource checks in services
 
 ## Runtime truth
 
-The root `docker-compose.yml` includes `docker-compose.prod.yml`; `docker-compose.dev.yml` runs only PostgreSQL, Redis and MinIO. Production backend enables TypeORM migrations at startup. Check [DEPLOY.md](../../DEPLOY.md) for operator commands. Source/configuration checks do not prove staging or production health.
+The root `docker-compose.yml` includes `docker-compose.prod.yml`; `docker-compose.dev.yml` runs only PostgreSQL, Redis and MinIO. Production backend enables TypeORM migrations at startup. Check [docs/deployment/production.md](../deployment/production.md) for operator commands. Source/configuration checks do not prove staging or production health.
 
 ## Related documents
 
@@ -56,4 +56,4 @@ The root `docker-compose.yml` includes `docker-compose.prod.yml`; `docker-compos
 - [Tech stack](tech-stack.md)
 - [Data model](data-model.md)
 - [Connectors](connectors.md)
-- [Deployment](../../DEPLOY.md)
+- [Deployment](../deployment/production.md)

@@ -14,7 +14,7 @@ Version 1.1.1 removes the bottom native toolbar and its Offline Plan/About butto
 
 ## Read sequence
 
-1. [Android README](../../../apps/android-webview/README.md).
+1. [Android README](../../clients/android-webview.md).
 2. Activity, AndroidManifest.xml, app/build.gradle and settings.gradle.
 3. [Mobile client](../../clients/mobile.md), website login and Android build script.
 

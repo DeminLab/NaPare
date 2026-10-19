@@ -1,5 +1,11 @@
 # Maintaining the AI documentation layer
 
+## Documentation location
+
+Keep first-party project documentation under the repository-root `docs/` directory and organize it by topic there. Keep only the repository/tool entry files `AGENTS.md`, `AI_CONTEXT.md`, `README.md` and `RTK.md` at the root. Do not add project guides under app, deployment, infrastructure or deliverable directories; link to their source/configuration files from `docs/` instead. Application routes named `/docs` and bundled `.agents/skills/**` materials are application or tooling content, not project documentation.
+
+When moving a document, update its local Markdown links, source cards and navigation indexes. Keep non-document artifacts such as app-store metadata, deployment templates, presentations and generated deliverables beside the code or output workflow that uses them.
+
 ## Regenerate source coverage
 
 Source cards are intentionally small and tied to real paths. When a source file is added, moved or deleted, add or update its card in `docs/ai/source-cards/` and refresh the source-card index. Keep descriptions and verification commands current; a valid path alone does not validate the prose.

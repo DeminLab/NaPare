@@ -44,4 +44,4 @@ Production-конфигурация backend включает `migrationsRun: tru
 
 - [Модель данных](../architecture/data-model.md)
 - [Backend architecture](../architecture/backend-architecture.md)
-- [Руководство по деплою](../../DEPLOY.md)
+- [Руководство по деплою](../deployment/production.md)

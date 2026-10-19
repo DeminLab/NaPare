@@ -44,7 +44,7 @@
 | Entity, миграция, связь таблиц | `database/`, документ модуля |
 | Роль, tenant, group или ownership | `security/`, `architecture/roles-and-permissions.md`, документ модуля и проверки доступа |
 | Экран или пользовательский сценарий | `clients/` или `ui/`, документ модуля |
-| Docker, nginx, CI/CD, переменная окружения | `DEPLOY.md`, `ops/`, `01_ONBOARDING.md` или `README.md` |
+| Docker, nginx, CI/CD, переменная окружения | `docs/deployment/production.md`, `ops/`, `01_ONBOARDING.md` или `README.md` |
 | Архитектурный компромисс | Новый ADR в `decisions/` и ссылка из затронутого документа |
 | Текущая поставка или hackathon scope | Спецификация/план инициативы с датой и статусом; не заменять ими карту текущей реализации |
 

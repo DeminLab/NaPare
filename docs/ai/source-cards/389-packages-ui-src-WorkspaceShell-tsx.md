@@ -10,7 +10,7 @@ Shared workspace shell, navigation rendering, responsive sidebar/bottom navigati
 
 ## Read sequence
 
-1. Read [AI context](../../AI_CONTEXT.md) and the workspace navigation map.
+1. Read [AI context](../../../AI_CONTEXT.md) and the workspace navigation map.
 2. Read this component and the `WorkspaceNavItem` contract.
 3. Search every app that supplies `mobileLabel` before changing shared behavior.
 

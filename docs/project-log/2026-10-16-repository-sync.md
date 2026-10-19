@@ -7,7 +7,7 @@
 - [Кураторство](../product/account-curatorship.md): назначения существующим аккаунтам, общий `packages/ui/src/Curation.tsx`, кабинеты трёх ролей и миграция `1700000000020`.
 - [Управление платформой](../product/platform-control.md): владелец, делегирование, экстренный отзыв, аккаунты, университеты, настройки и аудит; миграция `1700000000021`. [Установка host-агента](../deployment/platform-control.md) выполняется отдельно оператором.
 - Упрощение role-страниц: [студент](../product/student-ui-simplification.md) и [сотрудники/администрация](../product/role-ui-simplification.md).
-- [Android](../../apps/android-webview/README.md): WebView и ручной локальный план, версия 1.1.0 (2), сборка Gradle отдельно от pnpm. [RuStore](../deployment/rustore-publication.md) содержит ещё не выполненные внешние шаги.
+- [Android](../clients/android-webview.md): WebView и ручной локальный план, версия 1.1.0 (2), сборка Gradle отдельно от pnpm. [RuStore](../deployment/rustore-publication.md) содержит ещё не выполненные внешние шаги.
 
 ## Документация
 

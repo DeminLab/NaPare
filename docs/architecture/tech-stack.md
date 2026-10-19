@@ -2,7 +2,7 @@
 
 ## Сводная таблица
 
-Android-клиент уже реализован отдельно от целевого Flutter-стека: Java 17, Android WebView, AndroidX WebKit 1.12.1, compile/target SDK 35, minSdk 26. Содержит ручной локальный план. Сборка Gradle и её ограничения описаны в [Android README](../../apps/android-webview/README.md); публикация и runtime на устройстве требуют отдельных проверок.
+Android-клиент уже реализован отдельно от целевого Flutter-стека: Java 17, Android WebView, AndroidX WebKit 1.12.1, compile/target SDK 35, minSdk 26. Содержит ручной локальный план. Сборка Gradle и её ограничения описаны в [Android README](../clients/android-webview.md); публикация и runtime на устройстве требуют отдельных проверок.
 
 > Статус: строки **Mobile** — целевой стек, `apps/mobile` и Flutter/Dart-кода в репозитории нет
 > (см. [mobile-architecture.md](mobile-architecture.md) — спецификация, не реализация).
@@ -29,7 +29,7 @@ Android-клиент уже реализован отдельно от целе�
 | **API Docs** | OpenAPI 3 (Swagger) | — | Генерируется из кода = source of truth, `/api/v1/docs` |
 | **Аналитика** | PostHog | — | Не подключён (ни в backend, ни в клиентах) |
 | **Мониторинг ошибок** | Sentry | 7.x | `@sentry/node` в `apps/backend/src/main.ts` при наличии `SENTRY_DSN` |
-| **CI/CD** | GitHub Actions | — | PR CI и staging workflow на push `main`; production rollout описан отдельно в [DEPLOY.md](../../DEPLOY.md) |
+| **CI/CD** | GitHub Actions | — | PR CI и staging workflow на push `main`; production rollout описан отдельно в [docs/deployment/production.md](../deployment/production.md) |
 | **Контейнеризация** | Docker + Docker Compose | — | Локальная разработка + деплой |
 | **Оркестрация** | Docker Compose | — | Используется текущими deployment файлами; Kubernetes — не настроенный будущий вариант |
 

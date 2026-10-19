@@ -13,7 +13,7 @@ Docker Nginx routing between the public portal, backend API, and role workspaces
 - `docker-compose.prod.yml` defines the frontend upstream services.
 - `apps/web-developer/next.config.js` configures the `/developer` Next.js base path.
 - `docs/clients/max-miniapp.md` documents that `/max/` now proxies to the public portal for shared MAX/site authentication.
-- `DEPLOY.md` documents the public route map.
+- `docs/deployment/production.md` documents the public route map.
 
 ## Change boundary
 

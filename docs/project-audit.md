@@ -11,9 +11,9 @@
 - Backend: NestJS, TypeORM, PostgreSQL; схема меняется миграциями в `apps/backend/src/migrations/`.
 - Активные Next.js приложения: `web-portal`, `web-student`, `web-staff`, `web-admin`, `web-developer`.
 - `apps/web` и отдельный `apps/max-miniapp` сохранены как legacy и исключены из обычных root dev/build команд. MAX вход осуществляется через сайт `web-portal`.
-- Общие пакеты расположены в `packages/`; deployment templates и runtime поддержка — в `infrastructure/`, `deploy/`, Compose и `DEPLOY.md`.
+- Общие пакеты расположены в `packages/`; deployment templates и runtime поддержка — в `infrastructure/`, `deploy/`, Compose и `docs/deployment/production.md`.
 
-Подробная карта: [AI project map](ai/project-map.md), [architecture index](architecture/README.md), [repository deployment runbook](../DEPLOY.md).
+Подробная карта: [AI project map](ai/project-map.md), [architecture index](architecture/README.md), [repository deployment runbook](./deployment/production.md).
 
 ## Реализация и границы
 
@@ -22,11 +22,11 @@
 - Moodle Web Services настраивается через backend и шифрует сохранённый token при заданном `CONNECTOR_ENCRYPTION_KEY`; интеграция не синхронизирует Moodle content.
 - MAX `initData` проверяется backend-ом; успешный локальный аудит не доказывает конфигурацию бота или вход через реальный MAX-клиент.
 - Push delivery, S3 adapter, PostHog, Grafana и Kubernetes не являются действующими интеграциями текущего deployment.
-- Основные актуальные источники — исходный код, TypeORM migrations, `package.json`, Compose, GitHub workflows и `DEPLOY.md`. При расхождении проектных заметок приоритет у них.
+- Основные актуальные источники — исходный код, TypeORM migrations, `package.json`, Compose, GitHub workflows и `docs/deployment/production.md`. При расхождении проектных заметок приоритет у них.
 
 ## Проверка документации
 
-В дереве найдено 596 Markdown/MDX/RST/TXT/YAML файлов: 308 в `docs/`, 263 в `.agents/`, 4 в `deliverables/`, 9 в корне и 12 в прочих директориях. `.agents/` содержит skill reference материалы, которые не являются спецификацией продукта и не переписываются в этом аудите. Аудит проекта охватывает `docs/`, root entry docs, first-party deployment/workflow docs и deliverables. Источники для сверки: manifests, backend entities/migrations/controllers/services, frontend routes, Compose, `.github/workflows/` и `DEPLOY.md`. Исторические решения и спецификации сохраняются с маркировкой статуса; юридические документы остаются незаполненными черновиками.
+В дереве найдено 596 Markdown/MDX/RST/TXT/YAML файлов: 308 в `docs/`, 263 в `.agents/`, 4 в `deliverables/`, 9 в корне и 12 в прочих директориях. `.agents/` содержит skill reference материалы, которые не являются спецификацией продукта и не переписываются в этом аудите. Аудит проекта охватывает `docs/`, root entry docs, first-party deployment/workflow docs и deliverables. Источники для сверки: manifests, backend entities/migrations/controllers/services, frontend routes, Compose, `.github/workflows/` и `docs/deployment/production.md`. Исторические решения и спецификации сохраняются с маркировкой статуса; юридические документы остаются незаполненными черновиками.
 
 Статические проверки ниже будут отмечены только после выполнения. Они не подтверждают runtime, юридическую экспертизу или production deployment.
 
@@ -36,7 +36,7 @@
 - `node scripts/verify-ai-documentation.cjs`: passed (550 Markdown files, 199 source cards).
 - `node scripts/verify-role-workspace-boundaries.cjs`: passed.
 - `pnpm lint`: passed.
-- `git diff --check`: reports pre-existing blank lines at EOF in `deliverables/educational-solutions/CASE-COMPLIANCE.md` and `README.md`; preserved as pre-existing user changes.
+- `git diff --check`: reports pre-existing blank lines at EOF in `docs/deliverables/educational-solutions/CASE-COMPLIANCE.md` and `README.md`; preserved as pre-existing user changes.
 
 ## Обновлять этот снимок
 

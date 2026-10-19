@@ -75,7 +75,7 @@ The templates cover HTTPS and HTTP-to-HTTPS redirects. Obtain/renew certificates
 
 ## Post-deploy checklist
 
-Changes prepared on 2026-10-16 add migrations `1700000000020` (curator assignments) and `1700000000021` (platform control). Review both and take a restorable database backup before updating backend. Owner binding and the optional host agent require the separate [platform control installation](docs/deployment/platform-control.md); a Git push does not install or activate them. Android is built independently: see [Android README](apps/android-webview/README.md) and [RuStore preparation](docs/deployment/rustore-publication.md).
+Changes prepared on 2026-10-16 add migrations `1700000000020` (curator assignments) and `1700000000021` (platform control). Review both and take a restorable database backup before updating backend. Owner binding and the optional host agent require the separate [platform control installation](platform-control.md); a Git push does not install or activate them. Android is built independently: see [Android guide](../clients/android-webview.md) and [RuStore preparation](rustore-publication.md).
 
 - After the GitHub staging workflow deploys an image set, its smoke job runs `scripts/verify-max-deployment.sh` against `STAGING_URL`; production still requires the same check after its manual server deployment.
 - `docker compose ps` shows healthy backend, web apps and Docker Nginx.

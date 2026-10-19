@@ -2,13 +2,13 @@
 
 ## Текущая конфигурация
 
-Исходники deployment configuration — Compose manifests, Nginx configuration/templates и root [DEPLOY.md](../../DEPLOY.md). Это описание относится к конфигурации репозитория; состояние живого сервера надо проверять на самом сервере.
+Исходники deployment configuration — Compose manifests, Nginx configuration/templates и root [docs/deployment/production.md](../deployment/production.md). Это описание относится к конфигурации репозитория; состояние живого сервера надо проверять на самом сервере.
 
 | Область | Источник правды |
 | --- | --- |
 | Local dependencies | [docker-compose.dev.yml](../../docker-compose.dev.yml) |
-| Production services and commands | [docker-compose.prod.yml](../../docker-compose.prod.yml), [docker-compose.yml](../../docker-compose.yml), [DEPLOY.md](../../DEPLOY.md) |
-| Application/system Nginx | [`infrastructure/nginx/nginx.conf`](../../infrastructure/nginx/nginx.conf), [host templates](../../deploy/nginx/README.md) |
+| Production services and commands | [docker-compose.prod.yml](../../docker-compose.prod.yml), [docker-compose.yml](../../docker-compose.yml), [docs/deployment/production.md](../deployment/production.md) |
+| Application/system Nginx | [`infrastructure/nginx/nginx.conf`](../../infrastructure/nginx/nginx.conf), [host templates](../deployment/nginx-templates.md) |
 | CI build and staging rollout | [CI/CD guide](cicd.md), `.github/workflows/` |
 
 The repository does not contain an active Kubernetes or Terraform deployment. Cloud resource names, cluster sizes, S3 buckets, monitoring endpoints and secrets in the former version of this document were examples without checked-in provisioned infrastructure; they are intentionally not repeated as facts.

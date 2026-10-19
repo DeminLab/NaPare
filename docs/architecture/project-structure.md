@@ -33,7 +33,7 @@ The current backend directory is too large for a hand-maintained exhaustive tree
 - Apps and safe-change boundaries: docs/ai/project-map.md and root AGENTS.md
 - Build scripts: root package.json and workspace package.json files
 - Database schema: backend entities and apps/backend/src/migrations
-- Runtime/deployment: Compose files, Nginx configs and root DEPLOY.md
+- Runtime/deployment: Compose files, Nginx configs and root docs/deployment/production.md
 - API: live NestJS Swagger generated from controller/DTO code
 
 Older detailed folder trees formerly embedded in this document included paths such as Prisma, Flutter and Kubernetes that are not present in the current repository. They are removed here to avoid presenting a stale tree as current.

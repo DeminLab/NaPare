@@ -1,6 +1,6 @@
 # Deployment Guide
 
-The current production topology and the operator runbook are maintained in the repository root: [DEPLOY.md](../../DEPLOY.md). It covers the shared-origin role paths, the apex site, Cockpit under `/admin/`, system Nginx templates, DNS and TLS boundaries.
+The current production topology and the operator runbook are maintained in the repository root: [docs/deployment/production.md](../deployment/production.md). It covers the shared-origin role paths, the apex site, Cockpit under `/admin/`, system Nginx templates, DNS and TLS boundaries.
 
 ## Current delivery flow
 

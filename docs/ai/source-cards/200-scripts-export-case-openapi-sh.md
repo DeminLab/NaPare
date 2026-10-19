@@ -10,7 +10,7 @@ Fetches the live NestJS-generated OpenAPI JSON from a deployed HTTPS API into `d
 
 ## Read sequence
 
-1. Read [the API guide](../../api/README.md) and [the case submission README](../../../deliverables/educational-solutions/README.md).
+1. Read [the API guide](../../api/README.md) and [the case submission README](../../deliverables/educational-solutions/README.md).
 2. Check that `PUBLIC_APP_URL` is the intended API host and that its `/api/v1/docs-json` endpoint is deployed.
 
 ## Change boundary

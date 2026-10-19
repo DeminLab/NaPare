@@ -1,6 +1,6 @@
 # Runbooks
 
-This file covers repository-backed Docker Compose checks. It does not describe production host access, DNS/TLS or provider dashboards; use the operator-specific instructions in root [DEPLOY.md](../../DEPLOY.md).
+This file covers repository-backed Docker Compose checks. It does not describe production host access, DNS/TLS or provider dashboards; use the operator-specific instructions in root [docs/deployment/production.md](../deployment/production.md).
 
 ## Check deployment health
 
@@ -18,7 +18,7 @@ The public hostname and reverse proxy depend on server configuration. A successf
 2. Check PostgreSQL with `docker compose logs --tail 100 postgres` and verify the configured database credentials.
 3. Check required production environment variables and `CORS_ORIGIN` on the host without copying secret values into tickets or logs.
 4. Review TypeORM migration startup messages. Production backend applies pending migrations at startup; take a database backup before rollout.
-5. If service-level checks pass but the public site fails, inspect host Nginx, DNS and TLS separately as described in `DEPLOY.md`.
+5. If service-level checks pass but the public site fails, inspect host Nginx, DNS and TLS separately as described in `docs/deployment/production.md`.
 
 ## PostgreSQL capacity or restore
 

@@ -15,7 +15,7 @@
 
 Наличие workflow в репозитории не подтверждает branch protection, число обязательных approvals, restrictions на force push или deployment reviewers. Проверяйте эти настройки в GitHub repository settings.
 
-Production deployment не автоматизирован; используйте [DEPLOY.md](../../DEPLOY.md) и серверный runbook.
+Production deployment не автоматизирован; используйте [docs/deployment/production.md](../deployment/production.md) и серверный runbook.
 
 ## См. также
 

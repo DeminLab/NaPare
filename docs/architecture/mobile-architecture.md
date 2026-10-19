@@ -1,6 +1,6 @@
 # Архитектура Mobile (Flutter)
 
-> **Проектная заметка о Flutter, не реализованный Flutter-клиент.** В репозитории нет `apps/mobile`, `pubspec.yaml` или Flutter-сборки. С 2026-10-15 есть отдельная [Android WebView-оболочка](../../apps/android-webview/README.md) поверх сайта. Архитектура ниже остаётся будущим эскизом; см. [карту проекта](../ai/project-map.md).
+> **Проектная заметка о Flutter, не реализованный Flutter-клиент.** В репозитории нет `apps/mobile`, `pubspec.yaml` или Flutter-сборки. С 2026-10-15 есть отдельная [Android WebView-оболочка](../clients/android-webview.md) поверх сайта. Архитектура ниже остаётся будущим эскизом; см. [карту проекта](../ai/project-map.md).
 
 ## Общая структура
 

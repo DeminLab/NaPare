@@ -6,7 +6,7 @@
 
 ## Scope
 
-Android release candidate and manual native offline organizer. Read [Android README](../../../apps/android-webview/README.md) and [RuStore release procedure](../../deployment/rustore-publication.md). Preserve the website authentication boundary, private device storage, atomic plan writes, stable signing certificate and explicit publication blockers. Native plans do not synchronize with university records or accounts. Never put reviewer passwords or signing keys in Git.
+Android release candidate and manual native offline organizer. Read [Android README](../../clients/android-webview.md) and [RuStore release procedure](../../deployment/rustore-publication.md). Preserve the website authentication boundary, private device storage, atomic plan writes, stable signing certificate and explicit publication blockers. Native plans do not synchronize with university records or accounts. Never put reviewer passwords or signing keys in Git.
 
 ## Verification
 

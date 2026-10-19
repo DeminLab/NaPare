@@ -19,7 +19,7 @@
 | **Android** | WebView + нативный ручной план | Пользователи сайта | Релиз-кандидат 1.1.0; проверка на устройстве и RuStore отдельно |
 | **iOS / Flutter** | Возможное развитие | Студенты, преподаватели | Отдельного клиента нет |
 
-Для MAX используется `web-portal`; отдельный legacy-каталог `apps/max-miniapp` не включён в обычную сборку и не является deployed client. Проверяйте Nginx route в актуальном `DEPLOY.md`. Bot configuration и реальные MAX launches требуют проверки на стороне платформы.
+Для MAX используется `web-portal`; отдельный legacy-каталог `apps/max-miniapp` не включён в обычную сборку и не является deployed client. Проверяйте Nginx route в актуальном `docs/deployment/production.md`. Bot configuration и реальные MAX launches требуют проверки на стороне платформы.
 
 ## Ключевые модули MVP
 

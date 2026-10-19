@@ -36,4 +36,4 @@
 
 - [Role boundaries](../architecture/roles-and-permissions.md)
 - [152-FZ implementation notes](152-fz.md)
-- [Deployment runbook](../../DEPLOY.md)
+- [Deployment runbook](../deployment/production.md)

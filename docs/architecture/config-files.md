@@ -1,6 +1,6 @@
 # Конфигурационные файлы
 
-> **Исторический снимок.** Примеры ниже описывают прежний монолит `apps/web` и ранние compose/env-конфигурации; они не являются инструкцией для текущего production. Сейчас используется `docker-compose.prod.yml`, корневой `.env.example`, `DEPLOY.md` и [MAX guide](../clients/max-miniapp.md). `apps/web` и `apps/max-miniapp` оставлены как legacy source и исключены из стандартных root-команд запуска/сборки.
+> **Исторический снимок.** Примеры ниже описывают прежний монолит `apps/web` и ранние compose/env-конфигурации; они не являются инструкцией для текущего production. Сейчас используется `docker-compose.prod.yml`, корневой `.env.example`, `docs/deployment/production.md` и [MAX guide](../clients/max-miniapp.md). `apps/web` и `apps/max-miniapp` оставлены как legacy source и исключены из стандартных root-команд запуска/сборки.
 
 ## 1. Корень монорепо
 

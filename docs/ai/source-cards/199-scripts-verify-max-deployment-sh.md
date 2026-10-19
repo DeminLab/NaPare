@@ -12,7 +12,7 @@ Uses the portal header and role-section HTML markers instead of a marketing head
 
 ## Read sequence
 
-1. Read [deployment checks](../../../DEPLOY.md) and [the MAX client guide](../../clients/max-miniapp.md).
+1. Read [deployment checks](../../deployment/production.md) and [the MAX client guide](../../clients/max-miniapp.md).
 2. Read the script and inspect the public responses before interpreting a failed check.
 
 ## Change boundary

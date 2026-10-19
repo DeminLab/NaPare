@@ -26,7 +26,7 @@ Retain pnpm-lock.yaml, documentation and example environment templates. Check Gi
 1. Install the supported Node.js and pnpm versions from root package.json/README.
 2. Run pnpm install --frozen-lockfile.
 3. Copy an example environment file only when the chosen local/deployment workflow calls for it, then supply valid local values securely.
-4. Use docs/01_ONBOARDING.md for development or root DEPLOY.md for an authorized server deployment.
+4. Use docs/01_ONBOARDING.md for development or root docs/deployment/production.md for an authorized server deployment.
 5. MAX entry uses web-portal; the retained Vite apps/max-miniapp is not the deployed MAX client.
 
 Never share the filled environment file or credentials alongside the bundle.

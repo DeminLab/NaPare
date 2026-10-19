@@ -17,7 +17,7 @@
     "build:admin": "turbo run build --filter=@napare/web-admin",
     "build:developer": "turbo run build --filter=@napare/web-developer",
     "lint": "eslint \"apps/**/*.{ts,tsx}\" \"packages/**/*.{ts,tsx}\"",
-    "lint:docs": "markdownlint-cli2 README.md \"docs/**/*.md\" \"apps/*/README.md\"",
+    "lint:docs": "markdownlint-cli2 AGENTS.md AI_CONTEXT.md README.md RTK.md \"docs/**/*.md\"",
     "typecheck": "pnpm --filter @napare/backend exec tsc --noEmit && pnpm --filter @napare/web-portal exec tsc --noEmit && pnpm --filter @napare/web-student exec tsc --noEmit && pnpm --filter @napare/web-staff exec tsc --noEmit && pnpm --filter @napare/web-admin exec tsc --noEmit && pnpm --filter @napare/web-developer exec tsc --noEmit",
     "test": "turbo run test",
     "test:unit": "pnpm --filter @napare/backend exec jest --ci --runInBand",
