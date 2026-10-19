@@ -12,6 +12,7 @@ import { getLessonLocation } from '../schedule-location';
 interface Lesson { id: string; date?: string; startDate?: string; endDate?: string; subject: string; subjectType?: string; teacherName?: string; room?: string; building?: string; subgroup?: string; weekType?: 'odd' | 'even' | 'both'; startTime: string; endTime: string; pairNumber?: number; isChanged: boolean; changeDescription?: string; }
 interface DaySchedule { date: string; dayName: string; lessons: Lesson[]; }
 const typeLabels: Record<string, string> = { lecture: 'Лекция', practice: 'Практика', lab: 'Лабораторная', exam: 'Экзамен', consultation: 'Консультация', coursework: 'Курсовая', test: 'Зачёт' };
+const hasPairSpace = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 function isLesson(value: unknown): value is Lesson {
   if (!value || typeof value !== 'object') return false;
   const lesson = value as Partial<Lesson>;
@@ -161,25 +162,37 @@ async function shareWeekSchedule(schedule: DaySchedule[], weekLabel: string, wee
 function LessonCard({ lesson, compact = false, favorite = false, onToggleFavorite }: { lesson: Lesson; compact?: boolean; favorite?: boolean; onToggleFavorite?: (teacher: string) => void }) {
   const cancelled = isCancelled(lesson);
   const teacher = lesson.teacherName?.trim();
+  const hasPairSpaceDetails = hasPairSpace(lesson.id);
+  const lessonContent = (
+    <>
+      <div className="flex items-start justify-between gap-2">
+        <span className="text-sm font-semibold tabular-nums text-slate-700">{time(lesson.startTime)}–{time(lesson.endTime)}</span>
+        {hasPairSpaceDetails && <span className="text-slate-300 transition group-hover:text-indigo-500">↗</span>}
+      </div>
+      <p className="mt-2 break-words text-base font-semibold leading-6 text-slate-900">{lesson.subject}</p>
+      <div className="mt-2 space-y-1 text-sm leading-5 text-slate-600">
+        <p className="break-words">{teacher || 'Преподаватель не указан'}</p>
+        <p className="break-words">{getLessonLocation(lesson.building, lesson.room) || 'Место не указано'}</p>
+      </div>
+      <div className="mt-3 flex flex-wrap gap-1.5">
+        {lesson.subjectType && <LessonTypeBadge subjectType={lesson.subjectType} />}
+        {lesson.subgroup?.trim() && <span className="rounded-md bg-violet-50 px-2 py-1 text-xs font-medium text-violet-700">Подгруппа {lesson.subgroup}</span>}
+        {lesson.weekType && lesson.weekType !== 'both' && <span className="rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700">{lesson.weekType === 'odd' ? 'Нечётная неделя' : 'Чётная неделя'}</span>}
+        {lesson.isChanged && <span className={`rounded-md px-2 py-1 text-xs font-semibold ${cancelled ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700'}`}>{cancelled ? 'Отменено' : 'Изменено'}</span>}
+      </div>
+    </>
+  );
+  const lessonContentClass = `group block ${compact ? 'p-2.5' : 'p-4'}`;
+  const cardClass = `overflow-hidden rounded-xl border bg-white ${hasPairSpaceDetails ? 'transition hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-md' : ''} ${cancelled ? 'border-rose-200 opacity-70' : lesson.isChanged ? 'border-amber-200' : 'border-slate-200'}`;
   return (
-    <div className={`overflow-hidden rounded-xl border bg-white transition hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-md ${cancelled ? 'border-rose-200 opacity-70' : lesson.isChanged ? 'border-amber-200' : 'border-slate-200'}`}>
-      <Link href={`/pair-space/${lesson.id}`} className={`group block ${compact ? 'p-2.5' : 'p-4'}`}>
-        <div className="flex items-start justify-between gap-2">
-          <span className="text-sm font-semibold tabular-nums text-slate-700">{time(lesson.startTime)}–{time(lesson.endTime)}</span>
-          <span className="text-slate-300 transition group-hover:text-indigo-500">↗</span>
+    <div className={cardClass}>
+      {hasPairSpaceDetails ? (
+        <Link href={`/pair-space/${lesson.id}`} className={lessonContentClass}>{lessonContent}</Link>
+      ) : (
+        <div title="Занятие из внешнего расписания; пространство пары пока недоступно" className={`${lessonContentClass} cursor-default`}>
+          {lessonContent}
         </div>
-        <p className="mt-2 break-words text-base font-semibold leading-6 text-slate-900">{lesson.subject}</p>
-        <div className="mt-2 space-y-1 text-sm leading-5 text-slate-600">
-          <p className="break-words">{teacher || 'Преподаватель не указан'}</p>
-          <p className="break-words">{getLessonLocation(lesson.building, lesson.room) || 'Место не указано'}</p>
-        </div>
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          {lesson.subjectType && <LessonTypeBadge subjectType={lesson.subjectType} />}
-          {lesson.subgroup?.trim() && <span className="rounded-md bg-violet-50 px-2 py-1 text-xs font-medium text-violet-700">Подгруппа {lesson.subgroup}</span>}
-          {lesson.weekType && lesson.weekType !== 'both' && <span className="rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700">{lesson.weekType === 'odd' ? 'Нечётная неделя' : 'Чётная неделя'}</span>}
-          {lesson.isChanged && <span className={`rounded-md px-2 py-1 text-xs font-semibold ${cancelled ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700'}`}>{cancelled ? 'Отменено' : 'Изменено'}</span>}
-        </div>
-      </Link>
+      )}
       {!cancelled && (
         <button
           type="button"

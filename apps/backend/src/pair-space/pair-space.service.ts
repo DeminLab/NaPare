@@ -116,6 +116,12 @@ export class PairSpaceService {
     @Optional() private readonly curation?: CurationService,
   ) {}
 
+  private assertPersistedLessonId(lessonId: string): void {
+    if (!UUID_PATTERN.test(lessonId)) {
+      throw new NotFoundException(`Lesson ${lessonId} not found`);
+    }
+  }
+
   async findById(id: string): Promise<PairSpaceResponse> {
     const pairSpace = await this.pairSpaceRepository.findOne({
       where: { id },
@@ -136,6 +142,7 @@ export class PairSpaceService {
     lessonId: string,
     universityId?: string,
   ): Promise<PairSpaceResponse> {
+    this.assertPersistedLessonId(lessonId);
     const pairSpace = await this.pairSpaceRepository.findOne({
       where: universityId ? { lessonId, universityId } : { lessonId },
       relations: ["announcements", "homeworks", "files", "messages"],
@@ -153,6 +160,7 @@ export class PairSpaceService {
 
   async getSubjectTimeline(lessonId: string, universityId: string) {
     this.tenantContext.assertAccess(universityId);
+    this.assertPersistedLessonId(lessonId);
     if (!this.lessonRepository) {
       throw new NotFoundException(`Lesson ${lessonId} not found`);
     }
@@ -217,6 +225,7 @@ export class PairSpaceService {
     lessonId: string,
     universityId?: string,
   ): Promise<PairSpaceResponse> {
+    this.assertPersistedLessonId(lessonId);
     try {
       return await this.findByLesson(lessonId, universityId);
     } catch (error) {
