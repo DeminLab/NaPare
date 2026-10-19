@@ -6,7 +6,7 @@
 
 ## Scope
 
-NestJS module composition. Registers PlatformModule and the global maintenance interceptor; enabled read-only mode blocks mutating campus API requests while preserving auth and platform control. Read [platform control](../../product/platform-control.md).
+NestJS module composition. Registers platform data modules, including attachment moderation, and the global maintenance interceptor; enabled read-only mode blocks mutating campus API requests while preserving auth and platform control. Read [platform control](../../product/platform-control.md).
 
 ## Read sequence
 

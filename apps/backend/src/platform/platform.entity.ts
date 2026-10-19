@@ -16,6 +16,8 @@ export class PlatformGrant {
   @PrimaryColumn('uuid') userId: string;
   @Column('text', { array: true, default: '{}' }) permissions: string[];
   @Column('text', { array: true, default: '{}' }) serviceIds: string[];
+  /** NULL keeps legacy global grants; [] denies university data; IDs limit access to those universities. */
+  @Column('uuid', { array: true, nullable: true }) universityIds: string[] | null;
   @Column('uuid') grantedBy: string;
   @CreateDateColumn() createdAt: Date;
   @UpdateDateColumn() updatedAt: Date;

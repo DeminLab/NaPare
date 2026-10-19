@@ -62,18 +62,19 @@ function readLocalSession(token: string): SessionRecord {
 }
 
 function StatusBadge({ status }: { status: SessionStatus }) {
-  const active = status === "Active";
+  const tone =
+    status === "Active"
+      ? "border-emerald-300/30 bg-emerald-300/10 text-emerald-200"
+      : status === "Expired"
+        ? "border-amber-300/30 bg-amber-300/10 text-amber-200"
+        : "border-slate-300/30 bg-slate-300/10 text-slate-200";
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium ${
-        active
-          ? "border-emerald-400/20 bg-emerald-400/10 text-emerald-300"
-          : "border-amber-400/20 bg-amber-400/10 text-amber-300"
-      }`}
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${tone}`}
     >
       <span className="h-1.5 w-1.5 rounded-full bg-current" />
-      {active ? "Срок не истёк" : status === "Expired" ? "Срок истёк" : "Не удалось прочитать"}
+      {status === "Active" ? "Срок не истёк" : status === "Expired" ? "Срок истёк" : "Не удалось прочитать"}
     </span>
   );
 }
@@ -89,10 +90,18 @@ export default function SessionPage() {
     return () => window.clearInterval(timer);
   }, []);
 
+  const sessionStatus = session?.status;
+  const sessionStatusTone =
+    sessionStatus === "Active"
+      ? "text-emerald-200"
+      : sessionStatus === "Expired"
+        ? "text-amber-200"
+        : "text-slate-200";
+
   return (
     <div className="min-h-full bg-[#0b0e14] px-4 py-6 text-white sm:px-6 lg:px-8 lg:py-8">
       <div className="mx-auto max-w-5xl space-y-7">
-        <div className="flex items-center gap-2 text-xs text-white/40">
+        <div className="flex items-center gap-2 text-xs text-white/65">
           Разработчик <span>/</span>{" "}
           <span className="text-white/80">Сессия</span>
         </div>
@@ -101,7 +110,7 @@ export default function SessionPage() {
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
             Текущая сессия
           </h1>
-          <p className="mt-1 max-w-2xl text-sm text-white/45">
+          <p className="mt-1 max-w-2xl text-sm text-white/70">
             Здесь показаны локальные сроки токена в этом браузере. Его наличие не подтверждает доступ на сервере. Глобальный выход действует на все устройства.
           </p>
         </div>
@@ -111,27 +120,27 @@ export default function SessionPage() {
           aria-label="Статус сессии"
         >
           <Card className="border-white/10 bg-white/[0.04]">
-            <p className="text-xs text-white/40">Сессия на устройстве</p>
+            <p className="text-sm text-white/70">Сессия на устройстве</p>
             <p className="mt-2 text-2xl font-bold text-white">
               {session ? "1" : "0"}
             </p>
-            <span className="mt-1 block text-xs text-white/35">
+            <span className="mt-1 block text-sm text-white/65">
               {session ? "локальный токен найден" : "токен не найден"}
             </span>
           </Card>
           <Card className="border-white/10 bg-white/[0.04]">
-            <p className="text-xs text-white/40">Статус</p>
-            <p className="mt-2 text-2xl font-bold text-emerald-300">
-              {session?.status === "Expired" ? "Истекла" : session?.status === "Unknown" ? "Неизвестно" : session ? "Срок не истёк" : "Нет токена"}
+            <p className="text-sm text-white/70">Статус</p>
+            <p className={`mt-2 text-2xl font-bold ${sessionStatusTone}`}>
+              {session?.status === "Expired" ? "Истекла" : session?.status === "Unknown" ? "Не удалось прочитать" : session ? "Срок не истёк" : "Нет токена"}
             </p>
-            <span className="mt-1 block text-xs text-white/35">
+            <span className="mt-1 block text-sm text-white/65">
               проверяется по данным JWT
             </span>
           </Card>
           <Card className="border-white/10 bg-white/[0.04]">
-            <p className="text-xs text-white/40">Отзыв токенов</p>
+            <p className="text-sm text-white/70">Отзыв токенов</p>
             <p className="mt-2 text-2xl font-bold text-emerald-300">Включён</p>
-            <span className="mt-1 block text-xs text-white/35">
+            <span className="mt-1 block text-sm text-white/65">
               для всех устройств аккаунта
             </span>
           </Card>
@@ -141,7 +150,7 @@ export default function SessionPage() {
           <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 sm:p-6">
             <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
               <div>
-                <p className="text-xs uppercase tracking-wider text-white/35">
+                <p className="text-xs uppercase tracking-wider text-white/65">
                   Это устройство
                 </p>
                 <h2 className="mt-1 text-lg font-semibold">{session.device}</h2>
@@ -151,17 +160,17 @@ export default function SessionPage() {
 
             <dl className="mt-6 grid gap-4 border-y border-white/10 py-5 text-sm sm:grid-cols-2">
               <div>
-                <dt className="text-xs text-white/35">Создана</dt>
+              <dt className="text-sm text-white/65">Создана</dt>
                 <dd className="mt-1 text-white/75">{session.created}</dd>
               </div>
               <div>
-                <dt className="text-xs text-white/35">Истекает</dt>
+              <dt className="text-sm text-white/65">Истекает</dt>
                 <dd className="mt-1 text-white/75">{session.expiresAt}</dd>
               </div>
             </dl>
 
             <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="max-w-xl text-sm leading-6 text-white/45">
+              <p className="max-w-xl text-sm leading-6 text-white/70">
                 Сервер отзовёт access- и refresh-токены на всех устройствах,
                 затем текущий браузер вернётся на страницу входа.
               </p>
@@ -175,7 +184,7 @@ export default function SessionPage() {
             <h2 className="text-lg font-semibold">
               Активная локальная сессия не найдена
             </h2>
-            <p className="mt-2 text-sm text-white/45">
+            <p className="mt-2 text-sm text-white/70">
               Войдите в кабинет разработчика, чтобы увидеть данные текущего
               токена.
             </p>

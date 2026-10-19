@@ -194,6 +194,43 @@ describe("ScheduleService", () => {
         "rasp-local-day-12136",
       ]);
     });
+
+    it("paginates SIBIT lessons without repeating records on later pages", async () => {
+      mockRaspScraper.getSchedule.mockResolvedValue(
+        Array.from({ length: 101 }, (_, index) => ({
+          lessonId: `source-${index + 1}`,
+          groupId: "12136",
+          groupName: "ГМУ-25",
+          date: "2026-09-28",
+          startTime: "09:00",
+          endTime: "10:30",
+          pairNumber: index + 1,
+          subject: `Занятие ${index + 1}`,
+        })),
+      );
+
+      const firstPage = await service.findForStudentDateRange(
+        "uni-1",
+        "12136",
+        "2026-09-28",
+        "2026-09-28",
+        { page: 1, limit: 100 } as any,
+      );
+      const secondPage = await service.findForStudentDateRange(
+        "uni-1",
+        "12136",
+        "2026-09-28",
+        "2026-09-28",
+        { page: 2, limit: 100 } as any,
+      );
+
+      expect(firstPage.data).toHaveLength(100);
+      expect(secondPage.data.map((lesson) => lesson.id)).toEqual([
+        "rasp-source-101-12136",
+      ]);
+      expect(firstPage.meta).toEqual({ page: 1, limit: 100, total: 101, totalPages: 2 });
+      expect(secondPage.meta).toEqual({ page: 2, limit: 100, total: 101, totalPages: 2 });
+    });
   });
 
 

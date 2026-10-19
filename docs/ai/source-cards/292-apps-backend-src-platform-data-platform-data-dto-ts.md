@@ -6,11 +6,11 @@
 
 ## Scope
 
-Validated filters and mutation payloads for global student-data operations.
+Validated search filters and correction payloads for absences, attendance, and absence-confirmation decisions, including decision status, comment, and confirmed time.
 
 ## Change boundary
 
-Keep filters bounded, fields allowlisted, and mutation reasons mandatory.
+Keep filters bounded, correction fields allowlisted, and mutation reasons mandatory. Search audit records query presence rather than the raw free-text value.
 
 ## Verification
 

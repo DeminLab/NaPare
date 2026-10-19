@@ -22,7 +22,7 @@ export class PlatformDiscussionsService {
   async messages(query: PlatformDiscussionQueryDto, context: RequestAuditContext = {}) {
     const access = await this.platform.require('discussion-data.read');
     const qb = this.summaryQuery();
-    this.applyFilters(qb, query);
+    this.applyFilters(qb, query, access);
     const total = await qb.clone().getCount();
     const data = await qb.orderBy('message.createdAt', 'DESC').addOrderBy('message.id', 'DESC')
       .skip((query.page - 1) * query.limit).take(query.limit).getRawMany<DiscussionSummary>();
@@ -38,6 +38,7 @@ export class PlatformDiscussionsService {
     const access = await this.platform.require('discussion-data.read');
     const detail = await this.summaryQuery(true).where('message.id = :id', { id }).getRawOne<DiscussionDetail>();
     if (!detail) throw new NotFoundException('Сообщение обсуждения не найдено.');
+    this.platform.assertUniversityScope(access, detail.universityId);
     await this.auditRead('platform.discussion_message.viewed', detail.id, access.actorId, {
       targetUserId: detail.authorId, universityId: detail.universityId, pairSpaceId: detail.pairSpaceId, result: 'viewed',
     }, context);
@@ -53,6 +54,7 @@ export class PlatformDiscussionsService {
       const message = await manager.findOne(DiscussionMessage, { where: { id }, lock: { mode: 'pessimistic_write' } });
       if (!message) throw new NotFoundException('Сообщение обсуждения не найдено.');
       const resource = await this.assertMessageContext(manager, message);
+      this.platform.assertUniversityScope(access, resource.universityId);
       if (message.text === text) throw new ConflictException('Новый текст совпадает с текущим.');
       const oldValues: JsonObject = { text: message.text, moderationState: message.moderationState };
       message.text = text;
@@ -70,6 +72,7 @@ export class PlatformDiscussionsService {
       const message = await manager.findOne(DiscussionMessage, { where: { id }, lock: { mode: 'pessimistic_write' } });
       if (!message) throw new NotFoundException('Сообщение обсуждения не найдено.');
       const resource = await this.assertMessageContext(manager, message);
+      this.platform.assertUniversityScope(access, resource.universityId);
       if (message.moderationState === dto.state && message.moderationReason === dto.reason.trim()) throw new ConflictException('Сообщение уже имеет это состояние и причину.');
       const oldValues: JsonObject = { moderationState: message.moderationState, moderationReason: message.moderationReason, moderatedBy: message.moderatedBy, moderatedAt: message.moderatedAt?.toISOString() ?? null };
       message.moderationState = dto.state;
@@ -103,8 +106,17 @@ export class PlatformDiscussionsService {
     return qb;
   }
 
-  private applyFilters(qb: SelectQueryBuilder<DiscussionMessage>, query: PlatformDiscussionQueryDto): void {
-    if (query.universityId) qb.andWhere('pairSpace.universityId = :universityId', { universityId: query.universityId });
+  private applyFilters(qb: SelectQueryBuilder<DiscussionMessage>, query: PlatformDiscussionQueryDto, access: Awaited<ReturnType<PlatformService['access']>>): void {
+    if (query.universityId) {
+      if (access.owner || access.universityIds === null || access.universityIds.length > 0) {
+        this.platform.assertUniversityScope(access, query.universityId);
+      }
+      qb.andWhere('pairSpace.universityId = :universityId', { universityId: query.universityId });
+    }
+    if (!access.owner && access.universityIds !== null) {
+      if (!access.universityIds.length) qb.andWhere('1 = 0');
+      else qb.andWhere('pairSpace.universityId IN (:...allowedUniversityIds)', { allowedUniversityIds: access.universityIds });
+    }
     if (query.authorId) qb.andWhere('message.userId = :authorId', { authorId: query.authorId });
     if (query.state) qb.andWhere('message.moderationState = :state', { state: query.state });
     if (query.q?.trim()) {

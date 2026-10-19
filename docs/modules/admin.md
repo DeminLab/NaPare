@@ -29,7 +29,8 @@
 | Endpoint                                    | Метод     | Описание                                                      |
 | ------------------------------------------- | --------- | ------------------------------------------------------------- |
 | `/api/v1/admin/university`                  | GET/PATCH | Управление вузом                                              |
-| `/api/v1/admin/faculties`                   | GET/POST  | Факультеты                                                    |
+| `/api/v1/admin/faculties`                   | GET/POST  | Факультеты; POST/PATCH принимает `deanUserId` активного `faculty_dean` этого ВУЗа, `null` снимает назначение |
+| `/api/v1/admin/faculties/{id}`              | PATCH     | Обновить название/код или назначение декана; dean ID проверяется по роли, активности и университету |
 | `/api/v1/admin/groups`                      | GET/POST  | Группы                                                        |
 | `/api/v1/admin/users`                       | GET/POST  | Поиск и создание пользователей в своём ВУЗе                   |
 | `/api/v1/admin/sibit/teachers`              | GET       | Преподаватели СИБИТ, их расписание и текущие привязки         |

@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useWorkspaceQuery } from "@napare/ui/workspace-shell";
-import { apiFetch, apiFetchList } from "@/lib/api";
+import { apiFetch, type PaginatedResponse } from "@/lib/api";
 import {
   Badge,
   Button,
@@ -65,11 +65,39 @@ function dateLabel(value?: string): string {
   });
 }
 
-function isUpcoming(value?: string): boolean {
-  return Boolean(
-    value && new Date(value).getTime() >= new Date().setHours(0, 0, 0, 0),
-  );
+type DeadlineState = "overdue" | "today" | "soon" | "later" | "none";
+
+function dateKey(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
+
+function deadlineState(value?: string, now = new Date()): DeadlineState {
+  if (!value) return "none";
+  const deadlineDate = value.slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(deadlineDate)) return "none";
+  const today = dateKey(now);
+  if (deadlineDate < today) return "overdue";
+  if (deadlineDate === today) return "today";
+  const soonLimit = new Date(now);
+  soonLimit.setDate(soonLimit.getDate() + 7);
+  return deadlineDate <= dateKey(soonLimit) ? "soon" : "later";
+}
+
+const deadlineLabels: Record<DeadlineState, string> = {
+  overdue: "Просрочено",
+  today: "Сегодня",
+  soon: "Скоро",
+  later: "Впереди",
+  none: "Без срока",
+};
+
+const deadlineVariants = {
+  overdue: "red",
+  today: "amber",
+  soon: "indigo",
+  later: "green",
+  none: "slate",
+} as const;
 
 function PreparationList({
   items,
@@ -85,7 +113,7 @@ function PreparationList({
           key={item.preparation.id}
           type="button"
           onClick={() => onOpen(item)}
-          className="group flex w-full flex-wrap items-start gap-3 px-1 py-4 text-left transition-colors hover:bg-[var(--color-surface-secondary)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-brand-soft)]"
+          className="group flex w-full flex-wrap items-start gap-3 px-1 py-4 text-left transition-colors hover:bg-[var(--color-surface-secondary)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus-ring)]"
         >
           <span
             className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-[var(--color-brand)]"
@@ -96,7 +124,11 @@ function PreparationList({
               <span className="font-semibold text-[var(--color-text)]">
                 {item.preparation.title}
               </span>
-              <Badge variant="indigo">Подготовка</Badge>
+              <Badge
+                variant={deadlineVariants[deadlineState(item.preparation.deadline)]}
+              >
+                {deadlineLabels[deadlineState(item.preparation.deadline)]}
+              </Badge>
             </span>
             <span className="mt-1 block text-xs text-[var(--color-text-secondary)]">
               {item.lesson?.subject || "Предмет не указан"}
@@ -134,9 +166,12 @@ export default function AssignmentsPage() {
   const [detailError, setDetailError] = useState('');
   const [partial, setPartial] = useState(0);
   const [range, setRange] = useState('');
+  const loadSequence = useRef(0);
+  const detailSequence = useRef(0);
   useWorkspaceQuery({ q: query, sort }, params => { setQuery((params.get('q') || '').slice(0,100)); setSort(params.get('sort') === 'subject' ? 'subject' : 'date'); });
 
-  const load = () => {
+  const load = async () => {
+    const requestId = ++loadSequence.current;
     setLoading(true);
     setError("");
     setPartial(0);
@@ -144,24 +179,47 @@ export default function AssignmentsPage() {
     const start = new Date(); start.setDate(start.getDate()-7);
     const end = new Date(); end.setDate(end.getDate()+14);
     setRange(`${start.toLocaleDateString('ru-RU')}–${end.toLocaleDateString('ru-RU')}`);
-    apiFetchList<Lesson>(`/schedule/range?startDate=${localDate(start)}&endDate=${localDate(end)}&limit=100`)
-      .then(async lessons => {
-        const spaces: PairSpaceSummary[] = []; let cursor = 0; let failures = 0;
-        await Promise.all(Array.from({length:Math.min(4,lessons.length)},async()=>{
-          while(cursor < lessons.length) {
+    try {
+      const query = `startDate=${localDate(start)}&endDate=${localDate(end)}&limit=100`;
+      const firstPage = await apiFetch<PaginatedResponse<Lesson>>(`/schedule/range?${query}&page=1`);
+      const pageCount = Math.max(1, firstPage.meta?.totalPages || 1);
+      const remainingPages: Lesson[] = [];
+      for (let page = 2; page <= pageCount; page += 1) {
+        const response = await apiFetch<PaginatedResponse<Lesson>>(`/schedule/range?${query}&page=${page}`);
+        remainingPages.push(...response.data);
+      }
+      const lessons = [...firstPage.data, ...remainingPages];
+      if (requestId !== loadSequence.current) return;
+      const spaces: PairSpaceSummary[] = [];
+      let cursor = 0;
+      let failures = 0;
+      await Promise.all(Array.from({ length: Math.min(4, lessons.length) }, async () => {
+          while (cursor < lessons.length) {
             const lesson = lessons[cursor++];
-            try { const space=await apiFetch<PairSpaceSummary>(`/pair-spaces/${lesson.id}`); spaces.push({...space,lessonId:lesson.id}); }
-            catch { failures += 1; }
+            try {
+              const space = await apiFetch<PairSpaceSummary>(`/pair-spaces/${lesson.id}`);
+              spaces.push({ ...space, lessonId: lesson.id });
+            } catch {
+              failures += 1;
+            }
           }
         }));
-        setDay({lessons,pairSpaces:spaces}); setPartial(failures);
-      })
-      .catch((reason: unknown) => setError(reason instanceof Error ? reason.message : 'Не удалось загрузить подготовку к парам.'))
-      .finally(() => setLoading(false));
+      if (requestId === loadSequence.current) {
+        setDay({lessons,pairSpaces:spaces});
+        setPartial(failures);
+      }
+    } catch (reason: unknown) {
+      if (requestId === loadSequence.current) {
+        setError(reason instanceof Error ? reason.message : 'Не удалось загрузить подготовку к парам.');
+      }
+    } finally {
+      if (requestId === loadSequence.current) setLoading(false);
+    }
   };
 
   useEffect(() => {
     load();
+    return () => { loadSequence.current += 1; detailSequence.current += 1; };
   }, []);
 
   const preparations = useMemo<PreparationWithLesson[]>(() => {
@@ -199,15 +257,24 @@ export default function AssignmentsPage() {
   }, [preparations, query, sort]);
 
   const openDetail = (item: PreparationWithLesson) => {
+    const requestId = ++detailSequence.current;
     setSelected(item);
     setDetail(null);
     setDetailError("");
+    setDetailLoading(Boolean(item.lesson));
     if (!item.lesson) return;
-    setDetailLoading(true);
     apiFetch<PairSpace>(`/pair-spaces/${item.lesson.id}`)
-      .then(setDetail)
-      .catch(reason => setDetailError(reason instanceof Error ? reason.message : "Не удалось загрузить материалы пары."))
-      .finally(() => setDetailLoading(false));
+      .then(result => { if (requestId === detailSequence.current) setDetail(result); })
+      .catch(reason => { if (requestId === detailSequence.current) setDetailError(reason instanceof Error ? reason.message : "Не удалось загрузить материалы пары."); })
+      .finally(() => { if (requestId === detailSequence.current) setDetailLoading(false); });
+  };
+
+  const closeDetail = () => {
+    detailSequence.current += 1;
+    setSelected(null);
+    setDetail(null);
+    setDetailError("");
+    setDetailLoading(false);
   };
 
   if (loading) {
@@ -236,10 +303,9 @@ export default function AssignmentsPage() {
     );
   }
 
-  const upcoming = preparations.filter((item) =>
-    isUpcoming(item.preparation.deadline),
-  ).length;
-  const withoutDate = preparations.filter(
+  const overdue = visible.filter(item => deadlineState(item.preparation.deadline) === "overdue").length;
+  const dueToday = visible.filter(item => deadlineState(item.preparation.deadline) === "today").length;
+  const withoutDate = visible.filter(
     (item) => !item.preparation.deadline,
   ).length;
 
@@ -254,9 +320,14 @@ export default function AssignmentsPage() {
         <Link href="/pair-space" className="role-link role-link-primary">Добавить подготовку</Link>
       </header>
 
-      <p className="text-xs text-[var(--color-text-secondary)]">Период · {range} · до 100 занятий</p>
-      {partial > 0 && <p role="status" className="rounded-xl bg-amber-50 p-3 text-sm text-amber-800">Не загрузились пространства {partial} занятий. Показаны доступные темы; повторите загрузку для полного списка. <button type="button" onClick={load} className="font-semibold underline">Повторить</button></p>}
-<p className="text-sm text-slate-500">{visible.length} материалов · {upcoming} с будущим сроком</p>
+      <p className="text-xs text-[var(--color-text-secondary)]">Период · {range} · занятий: {day?.lessons.length ?? 0}</p>
+      {partial > 0 && (
+        <p role="status" className="rounded-xl bg-amber-50 p-3 text-sm text-amber-800">
+          Не загрузились пространства {partial} занятий. Показаны доступные темы; повторите загрузку для полного списка. {" "}
+          <button type="button" onClick={load} className="font-semibold underline">Повторить</button>
+        </p>
+      )}
+      <p className="text-sm text-slate-500" aria-live="polite">{visible.length} материалов · сегодня: {dueToday} · просрочено: {overdue} · без срока: {withoutDate}</p>
 
       <Card padding="sm">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -285,15 +356,25 @@ export default function AssignmentsPage() {
         {!visible.length ? (
           <EmptyState
             title={
-              query ? "Подготовка не найдена" : "В этом периоде подготовки нет"
+              partial > 0
+                ? "Не удалось подтвердить результат"
+                : query
+                  ? "Подготовка не найдена"
+                  : "В этом периоде подготовки нет"
             }
             description={
-              query
-                ? "Измените поисковый запрос или сбросьте фильтр."
-                : "Откройте пространство нужной пары и опубликуйте, что группе нужно подготовить."
+              partial > 0
+                ? "Часть пространств занятий не загрузилась, поэтому список может быть неполным. Повторите загрузку, чтобы проверить результат."
+                : query
+                  ? "Измените поисковый запрос или сбросьте фильтр."
+                  : "Откройте пространство нужной пары и опубликуйте, что группе нужно подготовить."
             }
             action={
-              query ? (
+              partial > 0 ? (
+                <Button variant="secondary" onClick={load}>
+                  Повторить загрузку
+                </Button>
+              ) : query ? (
                 <Button variant="secondary" onClick={() => setQuery("")}>
                   Сбросить поиск
                 </Button>
@@ -309,7 +390,7 @@ export default function AssignmentsPage() {
 
       <Sheet
         open={Boolean(selected)}
-        onClose={() => setSelected(null)}
+        onClose={closeDetail}
         title={selected?.preparation.title}
         side="right"
       >

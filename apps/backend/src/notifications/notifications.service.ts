@@ -162,8 +162,10 @@ export class NotificationsService {
     return this.preferenceRepository.save(preferences);
   }
 
-  async findInbox(userId: string, status?: InboxItemStatus, limit = 50): Promise<InboxItem[]> {
+  async findInbox(userId: string, status?: InboxItemStatus, limit = 50, offset = 0): Promise<InboxItem[]> {
     const currentUser = this.tenantContext.getUser();
+    const safeLimit = Number.isFinite(limit) ? Math.min(Math.max(Math.floor(limit), 1), 100) : 50;
+    const safeOffset = Number.isFinite(offset) ? Math.max(Math.floor(offset), 0) : 0;
     return this.inboxRepository.find({
       where: {
         userId,
@@ -172,8 +174,9 @@ export class NotificationsService {
           ? { universityId: requireUniversityId(currentUser) }
           : {}),
       },
-      order: { createdAt: 'DESC' },
-      take: Math.min(Math.max(limit, 1), 100),
+      order: { createdAt: 'DESC', id: 'DESC' },
+      skip: safeOffset,
+      take: safeLimit,
     });
   }
 

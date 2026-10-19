@@ -2,7 +2,9 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { apiFetchList } from '@/lib/api';
+import { apiFetch } from '@/lib/api';
+import type { PaginatedResponse } from '@/lib/api';
+import { useWorkspaceQuery } from '@napare/ui/workspace-shell';
 import { Badge, Button, Card, EmptyState, PageHeader, RequestState, Skeleton } from '@/components/ui';
 
 interface Lesson { id: string; subject: string; startTime: string; endTime: string; startDate?: string; date?: string; groupName?: string; room?: string; isChanged?: boolean; }
@@ -17,11 +19,23 @@ export default function PairSpaceIndex() {
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  useWorkspaceQuery({ q: query }, params => setQuery((params.get('q') || '').slice(0, 80)));
   const load = useCallback(async () => {
     const start = new Date(); start.setDate(start.getDate() - 7);
     const end = new Date(); end.setDate(end.getDate() + 14);
     setLoading(true); setError('');
-    try { setLessons(await apiFetchList<Lesson>(`/schedule/range?startDate=${dateKey(start)}&endDate=${dateKey(end)}&limit=100`)); }
+    try {
+      const params = new URLSearchParams({ startDate: dateKey(start), endDate: dateKey(end), page: '1', limit: '100' });
+      const firstPage = await apiFetch<PaginatedResponse<Lesson>>(`/schedule/range?${params}`);
+      const data = [...firstPage.data];
+      for (let page = 2; page <= firstPage.meta.totalPages; page += 1) {
+        const nextParams = new URLSearchParams(params);
+        nextParams.set('page', String(page));
+        const result = await apiFetch<PaginatedResponse<Lesson>>(`/schedule/range?${nextParams}`);
+        data.push(...result.data);
+      }
+      setLessons([...new Map(data.map(lesson => [lesson.id, lesson])).values()]);
+    }
     catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось загрузить занятия.'); }
     finally { setLoading(false); }
   }, []);
@@ -32,7 +46,7 @@ export default function PairSpaceIndex() {
   const recent = visible.filter(lesson => lessonDate(lesson) < today).reverse();
   return <div className="mx-auto max-w-5xl space-y-6">
     <PageHeader  title="Занятия и материалы" description="Выберите конкретную пару, чтобы опубликовать объявление, подготовку или ссылку на материал." actions={<Link href="/week" className="inline-flex min-h-11 items-center rounded-xl border px-4 text-sm font-semibold text-[var(--color-brand)]">Всё расписание →</Link>} />
-    <label className="block"><span className="mb-2 block text-sm font-medium">Найти занятие</span><input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Предмет или группа…" className="min-h-11 w-full rounded-xl border bg-[var(--color-surface)] px-4 text-sm focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-brand-soft)]" /></label>
+    <label className="block"><span className="mb-2 block text-sm font-medium">Найти занятие</span><input type="search" value={query} maxLength={80} onChange={event => setQuery(event.target.value)} placeholder="Предмет или группа…" className="min-h-11 w-full rounded-xl border bg-[var(--color-surface)] px-4 text-sm focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus-ring)]" /></label>
     {loading ? <div className="space-y-3" aria-busy="true"><Skeleton className="h-28" /><Skeleton className="h-28" /></div> : error ? <RequestState title="Занятия недоступны" description={error} onRetry={() => void load()} /> : !visible.length ? <EmptyState title={query ? 'Совпадений нет' : 'Занятий в ближайшем расписании нет'} description={query ? 'Измените запрос или сбросьте поиск.' : 'Выберите другой период в расписании.'} action={query ? <Button variant="secondary" onClick={() => setQuery('')}>Сбросить поиск</Button> : undefined} /> : [{ title: 'Сегодня и ближайшие две недели', items: upcoming }, { title: 'Недавние занятия', items: recent }].filter(section => section.items.length).map(section => <section key={section.title} className="space-y-3"><h2 className="text-lg font-semibold">{section.title}</h2>{section.items.map(lesson => <Card key={lesson.id} padding="sm"><div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><time dateTime={lessonDate(lesson)?lessonDate(lesson)+'T'+lessonTime(lesson):undefined} className="text-sm font-medium text-[var(--color-text-secondary)]">{lessonLabel(lesson)}</time>{lesson.isChanged && <Badge variant="warning">Изменено</Badge>}</div><h3 className="mt-2 break-words text-base font-semibold">{lesson.subject}</h3><p className="mt-1 text-sm text-[var(--color-text-secondary)]">{lesson.groupName || 'Группа не указана'} · {lesson.room ? `ауд. ${lesson.room}` : 'Аудитория не указана'}</p></div><div className="flex flex-wrap gap-2"><Link href={`/attendance?lesson=${lesson.id}`} className="inline-flex min-h-11 items-center rounded-lg border px-3 text-sm font-semibold text-[var(--color-brand)]">Посещаемость</Link><Link href={`/pair-space/${lesson.id}`} className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl bg-[var(--color-brand)] px-4 text-sm font-semibold text-white hover:bg-[var(--color-brand-strong)]">Открыть занятие</Link></div></div></Card>)}</section>)}
   </div>;
 }

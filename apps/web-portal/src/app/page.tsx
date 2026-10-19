@@ -83,6 +83,8 @@ export default function HomePage() {
           <a href="#problem">Зачем</a>
           <a href="#features">Возможности</a>
           <a href="#roles">Роли</a>
+          <a href="#career">Практика</a>
+          <a href="#launch">Университету</a>
           <a href="#how">Как начать</a>
           <a href="#faq">Вопросы</a>
         </nav>

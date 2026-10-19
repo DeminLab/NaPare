@@ -259,7 +259,7 @@ export default function MonthSchedulePage() {
       <div className="flex flex-col gap-2 pb-3 sm:flex-row sm:items-center">
         <label className="relative flex-1 sm:max-w-xs">
           <span className="sr-only">Поиск по предмету, преподавателю или аудитории</span>
-          <input type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder="Предмет, преподаватель, аудитория" className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm outline-none focus:border-indigo-400 focus:bg-white focus:ring-4 focus:ring-indigo-100" />
+          <input type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder="Предмет, преподаватель, аудитория" className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm outline-none focus:border-indigo-400 focus:bg-white focus-visible:ring-4 focus-visible:ring-[var(--color-focus-ring)]" />
         </label>
         <label>
           <span className="sr-only">Фильтр по типу занятия</span>

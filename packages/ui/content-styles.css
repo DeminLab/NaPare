@@ -6,12 +6,13 @@
 .lesson-type-badge__dot { width: 7px; height: 7px; flex: 0 0 7px; border-radius: 50%; background: currentColor; }
 .curation-entry { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; min-height: 44px; margin-bottom: 20px; padding: 8px 12px; border-left: 3px solid var(--color-brand); border-radius: 0 8px 8px 0; background: var(--color-brand-soft); color: var(--color-brand); font-size: 13px; font-weight: 600; }
 .curation-workspace { min-width: 0; color: var(--color-text); }
-.curation-button { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; max-width: 100%; gap: 8px; padding: 9px 12px; border: 1px solid var(--color-border-strong); border-radius: 8px; background: var(--color-surface); color: var(--color-text); font-size: 13px; font-weight: 600; line-height: 1.5; overflow-wrap: anywhere; cursor: pointer; }
+.role-content .curation-workspace > div:first-child { padding-bottom: 12px; border-bottom: 1px solid var(--color-border); }
+.curation-button { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; max-width: 100%; gap: 8px; padding: 9px 12px; border: 1px solid var(--color-control-border); border-radius: 8px; background: var(--color-surface); color: var(--color-text); font-size: 13px; font-weight: 600; line-height: 1.5; overflow-wrap: anywhere; cursor: pointer; }
 .curation-button:hover { background: var(--color-surface-secondary); }
 .curation-button--primary { border-color: var(--color-brand); background: var(--color-brand); color: var(--color-on-brand); }
 .curation-button--primary:hover { background: var(--color-brand-strong); }
 .curation-button:disabled { cursor: default; opacity: .5; }
-.curation-input { display: block; width: 100%; min-width: 0; min-height: 44px; padding: 10px 12px; border: 1px solid var(--color-border-strong); border-radius: 8px; background: var(--color-surface); color: var(--color-text); font-size: 14px; line-height: 1.5; }
+.curation-input { display: block; width: 100%; min-width: 0; min-height: 44px; padding: 10px 12px; border: 1px solid var(--color-control-border); border-radius: 8px; background: var(--color-surface); color: var(--color-text); font-size: 14px; line-height: 1.5; }
 .curation-input:focus-visible, .curation-button:focus-visible, .curation-entry:focus-visible { outline: 2px solid var(--color-brand); outline-offset: 3px; }
 .curation-groups .curation-button { justify-content: flex-start; text-align: left; }
 .curation-modes { display: inline-flex; max-width: 100%; gap: 4px; padding: 4px; border-radius: 10px; background: var(--color-surface-secondary); }
@@ -20,6 +21,8 @@
 .curation-tabs { display: flex; gap: 0; overflow-x: auto; border-bottom: 1px solid var(--color-border); }
 .curation-tabs .curation-button { flex-shrink: 0; padding-inline: 8px; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: transparent; color: var(--color-text-secondary); }
 .curation-tabs .curation-button[aria-pressed="true"] { border-bottom-color: var(--color-brand); color: var(--color-brand); }
+.curation-tabs .curation-tab-count { display: inline-grid; min-width: 22px; height: 22px; margin-left: 6px; place-items: center; border-radius: 9999px; background: var(--color-surface-secondary); color: var(--color-text-secondary); font-size: 12px; font-variant-numeric: tabular-nums; }
+.curation-tabs .curation-button[aria-pressed="true"] .curation-tab-count { background: var(--color-brand-soft); color: var(--color-brand); }
 @media (min-width: 768px) {
   .curation-layout > section:first-child { padding-right: 20px; border-right: 1px solid var(--color-border); }
 }
@@ -32,6 +35,7 @@
   font-size: 14px; line-height: 1.55;
 }
 :is(.student-content, .role-content) :is(button, summary) { min-height: 44px; }
+:is(.student-content, .role-content) button.border { border-color: var(--color-control-border); }
 :is(.student-content, .role-content) :where(.border, .border-t, .border-b, .divide-y > :not([hidden]) ~ :not([hidden])) { border-color: var(--color-border); }
 :is(.student-content.student-content, .role-content.role-content) .ds-card {
   border-radius: 12px; box-shadow: none;
@@ -47,7 +51,7 @@
   margin-bottom: 6px; font-size: 12px; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--color-text-secondary);
 }
 :is(.student-content, .role-content) .ds-input {
-  min-height: 44px; border-radius: 8px; border-color: var(--color-border-strong); background: var(--color-surface);
+  min-height: 44px; border-radius: 8px; border-color: var(--color-control-border); background: var(--color-surface);
 }
 :is(.student-content, .role-content) table thead {
   background: var(--color-surface-secondary); color: var(--color-text-secondary); font-size: 12px;

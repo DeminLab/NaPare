@@ -65,7 +65,11 @@ export default function DeveloperOverviewPage() {
     health ? ["ok", "healthy"].includes(health.status.toLowerCase()) : null,
   );
   const database = status(health?.database ? health.database === "ok" : null);
-  const auth = status(user ? true : null);
+  const accountCheck = user
+    ? { label: "Данные получены", variant: "success" as const }
+    : failed.includes("аккаунт")
+      ? { label: "Не удалось проверить", variant: "danger" as const }
+      : { label: "Неизвестно", variant: "default" as const };
   const metrics = [
     { label: "Статус API", value: backend.label },
     { label: "События потока", value: failed.includes('события') ? 'Нет данных' : events.length },
@@ -236,12 +240,12 @@ export default function DeveloperOverviewPage() {
                   <Badge variant={database.variant}>{database.label}</Badge>
                 </div>
                 <div className="flex items-center justify-between py-3 text-sm text-white/65">
-                  <span>Аутентификация</span>
-                  <Badge variant={auth.variant}>{auth.label}</Badge>
+                  <span>Проверка аккаунта</span>
+                  <Badge variant={accountCheck.variant}>{accountCheck.label}</Badge>
                 </div>
                 <div className="flex items-center justify-between py-3 text-sm text-white/65">
                   <span>Вебхуки</span>
-                  <Badge variant="default">Неизвестно</Badge>
+                  <Badge variant="default">Нет телеметрии</Badge>
                 </div>
               </div>
             </Card>

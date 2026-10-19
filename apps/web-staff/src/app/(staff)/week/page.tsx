@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useWorkspaceQuery } from '@napare/ui/workspace-shell';
 import { LessonTypeBadge, lessonTypeKey } from '@napare/ui';
 import { apiFetchList } from '@/lib/api';
@@ -35,9 +35,22 @@ export default function WeekPage() {
   const [view,setView]=useState('week');
   const queryReady=useWorkspaceQuery({date:selectedDate,group:groupFilter,subject:subjectFilter,type:typeFilter,view},query=>{const date=dateFromParam(query.get('date'))||new Date(); setWeekStart(getWeekStart(date)); setSelectedDate(dateKey(date)); setGroupFilter(query.get('group')||'all'); setSubjectFilter(query.get('subject')||'all'); setTypeFilter(query.get('type')||'all'); setView(['day','agenda','table'].includes(query.get('view')||'')?query.get('view')!:'week');});
   const [now, setNow] = useState(() => new Date());
+  const requestSequence = useRef(0);
 
-  const loadWeek = () => { const end = new Date(weekStart); end.setDate(end.getDate() + 6); setLoading(true); setError(''); apiFetchList<Lesson>(`/schedule/range?startDate=${dateKey(weekStart)}&endDate=${dateKey(end)}&limit=100`).then(setLessons).catch((err) => setError(err instanceof Error ? err.message : 'Не удалось загрузить расписание.')).finally(() => setLoading(false)); };
-  useEffect(() => { if(queryReady) loadWeek(); }, [weekStart,queryReady]);
+  const loadWeek = () => {
+    const requestId = ++requestSequence.current;
+    const end = new Date(weekStart); end.setDate(end.getDate() + 6);
+    setLoading(true); setError('');
+    apiFetchList<Lesson>(`/schedule/range?startDate=${dateKey(weekStart)}&endDate=${dateKey(end)}&limit=100`)
+      .then((result) => { if (requestId === requestSequence.current) setLessons(result); })
+      .catch((err) => { if (requestId === requestSequence.current) setError(err instanceof Error ? err.message : 'Не удалось загрузить расписание.'); })
+      .finally(() => { if (requestId === requestSequence.current) setLoading(false); });
+  };
+  useEffect(() => {
+    if (!queryReady) return;
+    loadWeek();
+    return () => { requestSequence.current += 1; };
+  }, [weekStart, queryReady]);
   useEffect(() => { const timer = window.setInterval(() => setNow(new Date()), 60_000); return () => window.clearInterval(timer); }, []);
 
   const groups = [...new Map(lessons.filter(lesson=>lesson.groupName).map(lesson=>[lesson.groupId || lesson.groupName!,{id:lesson.groupId || lesson.groupName!,name:lesson.groupName!}])).values()].sort((a,b)=>a.name.localeCompare(b.name,'ru-RU'));
@@ -51,6 +64,7 @@ export default function WeekPage() {
 
   const shiftWeek = (amount: number) => { const next = new Date(weekStart); next.setDate(next.getDate() + amount * 7); setWeekStart(next); setSelectedDate(dateKey(next)); };
   const goToday = () => { const today = new Date(); setWeekStart(getWeekStart(today)); setSelectedDate(dateKey(today)); };
+  const selectDate = (value: string) => { const date = dateFromParam(value); if (!date) return; const nextWeekStart = getWeekStart(date); setSelectedDate(value); setWeekStart(current => dateKey(current) === dateKey(nextWeekStart) ? current : nextWeekStart); };
   const filtersActive = groupFilter !== 'all' || subjectFilter !== 'all' || typeFilter !== 'all';
   const resetFilters = () => { setGroupFilter('all'); setSubjectFilter('all'); setTypeFilter('all'); };
   const lessonCard = (lesson: Lesson, compact=false) => {
@@ -74,8 +88,8 @@ export default function WeekPage() {
   </section>;
 
   return <div className="mx-auto max-w-[var(--layout-content-max)] space-y-4">
-    <header className="flex flex-wrap items-start justify-between gap-3"><div><h1 className="text-2xl font-bold tracking-tight text-[var(--color-text)]">Расписание</h1><p className="mt-1 text-sm text-[var(--color-text-secondary)]">{formatRange(weekStart, weekEnd)}{!loading && !error && ` · занятий: ${filtered.length}`}</p></div><div className="flex items-center gap-1"><Button variant="secondary" size="sm" onClick={() => shiftWeek(-1)} aria-label="Предыдущая неделя">←</Button><Button variant="secondary" size="sm" onClick={goToday}>Сегодня</Button><Button variant="secondary" size="sm" onClick={() => shiftWeek(1)} aria-label="Следующая неделя">→</Button></div></header>
-    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-border)] pb-3"><div className="flex max-w-full gap-1 overflow-x-auto" aria-label="Вид расписания">{[{id:'week',label:'Неделя'},{id:'day',label:'День'},{id:'table',label:'Таблица'},{id:'agenda',label:'Список'}].map(item=><button key={item.id} type="button" aria-pressed={view===item.id} onClick={()=>setView(item.id)} className={`min-h-11 shrink-0 rounded-lg px-3 text-sm font-semibold ${view===item.id?'bg-[var(--color-brand)] text-white':'text-[var(--color-text-secondary)] hover:bg-[var(--color-surface)]'}`}>{item.label}</button>)}</div>{currentLesson && <Badge variant="sky" dot>Сейчас: {currentLesson.subject}</Badge>}{filtersActive && <Button variant="ghost" size="sm" onClick={resetFilters}>Сбросить фильтры</Button>}</div>
+    <header className="flex flex-wrap items-end justify-between gap-3"><div><h1 className="text-2xl font-bold tracking-tight text-[var(--color-text)]">Расписание</h1><p className="mt-1 text-sm text-[var(--color-text-secondary)]">{formatRange(weekStart, weekEnd)}{!loading && !error && ` · занятий: ${filtered.length}`}</p></div><div className="flex flex-wrap items-center gap-2"><label className="flex min-h-11 items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-sm text-[var(--color-text-secondary)]"><span>Дата</span><input type="date" aria-label="Перейти к дате" value={selectedDate} onChange={event => selectDate(event.target.value)} className="min-h-11 min-w-0 bg-transparent text-[var(--color-text)]" /></label><div className="flex items-center gap-1"><Button variant="secondary" size="sm" onClick={() => shiftWeek(-1)} aria-label="Предыдущая неделя">←</Button><Button variant="secondary" size="sm" onClick={goToday}>Сегодня</Button><Button variant="secondary" size="sm" onClick={() => shiftWeek(1)} aria-label="Следующая неделя">→</Button></div></div></header>
+    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-border)] pb-3"><div role="group" className="flex max-w-full gap-1 overflow-x-auto" aria-label="Вид расписания">{[{id:'week',label:'Неделя'},{id:'day',label:'День'},{id:'table',label:'Таблица'},{id:'agenda',label:'Список'}].map(item=><button key={item.id} type="button" aria-pressed={view===item.id} onClick={()=>setView(item.id)} className={`min-h-11 shrink-0 rounded-lg px-3 text-sm font-semibold ${view===item.id?'bg-[var(--color-brand)] text-white':'text-[var(--color-text-secondary)] hover:bg-[var(--color-surface)]'}`}>{item.label}</button>)}</div>{currentLesson && <Badge variant="sky" dot>Сейчас: {currentLesson.subject}</Badge>}{filtersActive && <Button variant="ghost" size="sm" onClick={resetFilters}>Сбросить фильтры</Button>}</div>
     <details className="rounded-xl border bg-white p-3" open={filtersActive}><summary className="min-h-11 cursor-pointer py-2 text-sm font-semibold">Фильтры</summary><section aria-label="Фильтры расписания"><div className="grid gap-3 rounded-xl border bg-[var(--color-surface)] p-4 sm:grid-cols-3">{[{label:'Группа',value:groupFilter,set:setGroupFilter,options:groups.map(group=>({value:group.id,label:group.name}))},{label:'Предмет',value:subjectFilter,set:setSubjectFilter,options:subjects.map(subject=>({value:subject,label:subject}))},{label:'Тип занятия',value:typeFilter,set:setTypeFilter,options:Object.entries(typeLabels).map(([value,label])=>({value,label}))}].map(filter=><label key={filter.label} className="text-xs font-semibold text-[var(--color-text-secondary)]">{filter.label}<select value={filter.value} onChange={event=>filter.set(event.target.value)} className="mt-1.5 min-h-11 w-full rounded-lg border bg-[var(--color-surface)] px-3 text-sm text-[var(--color-text)]"><option value="all">Все</option>{filter.options.map(option=><option key={option.value} value={option.value}>{option.label}</option>)}</select></label>)}</div></section></details>
     {loading ? <div className="grid gap-4 md:grid-cols-2" aria-busy="true" aria-label="Загрузка расписания">{[1,2,3,4].map(index=><Skeleton key={index} className="h-44"/>)}</div> : error ? <RequestState title="Не удалось загрузить расписание" description={error} onRetry={loadWeek}/> : !filtered.length ? <EmptyState title={filtersActive ? 'Занятий по этим фильтрам нет' : 'На этой неделе занятий нет'} description={filtersActive ? 'Сбросьте фильтры или выберите другую неделю.' : 'Выберите соседнюю неделю или вернитесь к текущей.'}/> : view === 'week' ? <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">{schedule.map(dayCard)}</div> : view === 'agenda' ? <div className="space-y-3">{schedule.map(dayCard)}</div> : <>
       {view === 'table' && <><p className="text-sm text-[var(--color-text-secondary)]">Прокрутите таблицу вправо, чтобы увидеть остальные дни.</p><div className="overflow-x-auto rounded-xl border bg-[var(--color-surface)]" tabIndex={0} role="region" aria-label="Неделя по времени. Таблица прокручивается горизонтально">
@@ -86,7 +100,7 @@ export default function WeekPage() {
         </table>
       </div></>}
       {view === 'day' && <div className="space-y-3">
-        <div className="grid grid-cols-7 gap-1 rounded-xl border bg-[var(--color-surface)] p-2" aria-label="Выбор дня">{schedule.map(day=><button key={day.date} type="button" aria-pressed={day.date===selectedDate} onClick={()=>setSelectedDate(day.date)} className={`min-h-16 min-w-0 rounded-lg px-1 py-2 text-center ${day.date===selectedDate?'bg-[var(--color-brand)] text-white':'text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-secondary)]'}`}><span className="block text-xs">{day.dayName}</span><span className="mt-1 block text-lg font-bold">{Number(day.date.slice(-2))}</span><span className="mt-1 block text-[10px]">{day.lessons.length ? `${day.lessons.length} зан.` : '—'}</span></button>)}</div>
+        <div role="group" aria-label="Выбор дня недели" className="grid grid-cols-4 gap-2 rounded-xl border bg-[var(--color-surface)] p-2 sm:grid-cols-7 sm:gap-1">{schedule.map(day=><button key={day.date} type="button" aria-pressed={day.date===selectedDate} onClick={()=>setSelectedDate(day.date)} className={`min-h-16 min-w-0 rounded-lg px-1 py-2 text-center ${day.date===selectedDate?'bg-[var(--color-brand)] text-white':'text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-secondary)]'}`}><span className="block text-xs">{day.dayName}</span><span className="mt-1 block text-lg font-bold">{Number(day.date.slice(-2))}</span><span className="mt-1 block text-[10px]">{day.lessons.length ? `${day.lessons.length} зан.` : '—'}</span></button>)}</div>
         {selectedDay && dayCard(selectedDay)}
       </div>}
     </>}

@@ -32,6 +32,7 @@ const groups: WorkspaceNavGroup[] = [
       {
         href: "/week",
         label: "Расписание",
+        mobileLabel: "Неделя",
         icon: "calendar",
         keywords: ["неделя", "пары"],
       },
@@ -41,8 +42,8 @@ const groups: WorkspaceNavGroup[] = [
         icon: "clipboard",
         keywords: ["подготовка", "тема", "материалы"],
       },
-      { href: "/groups", label: "Группы", icon: "users" },
-      { href: "/attendance", label: "Посещаемость", icon: "check" },
+      { href: "/groups", label: "Группы", mobileLabel: "Группы", icon: "users" },
+      { href: "/attendance", label: "Посещаемость", mobileLabel: "Посещ.", icon: "check" },
       { href: "/absences", label: "Обращения", icon: "clipboard" },
       { href: "/pair-space", label: "Занятия и материалы", icon: "book", keywords: ["пространства пар"] },
     ],
@@ -50,7 +51,7 @@ const groups: WorkspaceNavGroup[] = [
   {
     label: "Коммуникация",
     items: [
-      { href: "/inbox", activePaths: ["/notifications"], mobileLabel: "Внимание", label: "Центр внимания", icon: "bell", keywords: ["входящие", "уведомления", "заявки"] },
+      { href: "/inbox", activePaths: ["/notifications"], mobileLabel: "Важное", label: "Центр внимания", icon: "bell", keywords: ["входящие", "уведомления", "заявки"] },
     ],
   },
   {
@@ -68,6 +69,94 @@ const AppLink = ({ href, children, ...props }: NavigationLinkProps) => (
 const searchWorkspace = async (query: string, signal: AbortSignal) => searchCommands(await apiFetch<WorkspaceSearchResponse>("/search?q=" + encodeURIComponent(query), { signal }));
 
 const roleLabels: Record<string, string> = { teacher: "Преподаватель", curator: "Куратор", faculty_dean: "Декан", department_head: "Заведующий кафедрой" };
+const staffHistoryIndexKey = "__napareStaffHistoryIndex";
+
+const readStaffHistoryIndex = (state: unknown) => {
+  if (!state || typeof state !== "object") return undefined;
+  const index = (state as Record<string, unknown>)[staffHistoryIndexKey];
+  return Number.isSafeInteger(index) && Number(index) >= 0 ? Number(index) : undefined;
+};
+
+const withStaffHistoryIndex = (state: unknown, index: number) => {
+  if (!state || typeof state !== "object" || Array.isArray(state)) return undefined;
+  const prototype = Object.getPrototypeOf(state);
+  if (prototype !== Object.prototype && prototype !== null) return undefined;
+  return { ...(state as Record<string, unknown>), [staffHistoryIndexKey]: index };
+};
+
+const installStaffHistoryTracker = () => {
+  let currentIndex = readStaffHistoryIndex(window.history.state) ?? 0;
+  let pendingRestoreIndex: number | null = null;
+  let trackingReliable = true;
+  const nativePushState = window.history.pushState.bind(window.history);
+  const nativeReplaceState = window.history.replaceState.bind(window.history);
+
+  const pushState: History["pushState"] = (data, unused, url) => {
+    const indexedState = withStaffHistoryIndex(data, currentIndex + 1);
+    if (!indexedState) {
+      trackingReliable = false;
+      return nativePushState(data, unused, url);
+    }
+    const nextIndex = currentIndex + 1;
+    const result = nativePushState(indexedState, unused, url);
+    currentIndex = nextIndex;
+    return result;
+  };
+  const replaceState: History["replaceState"] = (data, unused, url) => {
+    const nextIndex = readStaffHistoryIndex(data) ?? currentIndex;
+    const indexedState = withStaffHistoryIndex(data, nextIndex);
+    if (!indexedState) {
+      trackingReliable = false;
+      return nativeReplaceState(data, unused, url);
+    }
+    const result = nativeReplaceState(indexedState, unused, url);
+    currentIndex = nextIndex;
+    return result;
+  };
+
+  window.history.replaceState(window.history.state, "");
+  window.history.pushState = pushState;
+  window.history.replaceState = replaceState;
+
+  const handlePopState = (event: PopStateEvent) => {
+    const targetIndex = readStaffHistoryIndex(event.state);
+    if (targetIndex === undefined) {
+      trackingReliable = false;
+      return;
+    }
+
+    if (pendingRestoreIndex !== null) {
+      if (targetIndex === pendingRestoreIndex) {
+        currentIndex = targetIndex;
+        pendingRestoreIndex = null;
+      }
+      return;
+    }
+
+    if (!trackingReliable || targetIndex === currentIndex) return;
+    const request = new CustomEvent("napare:staff-history-request", {
+      cancelable: true,
+      detail: { fromIndex: currentIndex, toIndex: targetIndex },
+    });
+    window.dispatchEvent(request);
+    if (!request.defaultPrevented) {
+      currentIndex = targetIndex;
+      return;
+    }
+
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    pendingRestoreIndex = currentIndex;
+    window.history.go(currentIndex - targetIndex);
+  };
+
+  window.addEventListener("popstate", handlePopState, true);
+  return () => {
+    window.removeEventListener("popstate", handlePopState, true);
+    if (window.history.pushState === pushState) window.history.pushState = nativePushState;
+    if (window.history.replaceState === replaceState) window.history.replaceState = nativeReplaceState;
+  };
+};
 
 export default function StaffLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -75,6 +164,17 @@ export default function StaffLayout({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<Awaited<ReturnType<typeof getUser>> | null>(null);
   const [unread, setUnread] = useState(0);
   const curation = useCurationContext(apiFetch, Boolean(user));
+  useEffect(() => {
+    let active = true;
+    let uninstall: (() => void) | undefined;
+    queueMicrotask(() => {
+      if (active) uninstall = installStaffHistoryTracker();
+    });
+    return () => {
+      active = false;
+      uninstall?.();
+    };
+  }, []);
   useEffect(() => {
     if (!isLoggedIn()) {
       router.push("/login");
@@ -125,10 +225,10 @@ export default function StaffLayout({ children }: { children: ReactNode }) {
       </div>
     );
   const fullName = user.firstName + " " + user.lastName;
-  const curationItems: WorkspaceNavGroup['items'] = curation?.canCurate || curation?.canManage ? [{ href: '/curation', label: 'Кураторство', icon: 'users', keywords: ['куратор', 'назначения'] }] : [];
+  const curationItems: WorkspaceNavGroup['items'] = curation?.canCurate || curation?.canManage ? [{ href: '/curation', label: 'Кураторство', mobileLabel: 'Куратор', icon: 'users', keywords: ['куратор', 'назначения'] }] : [];
   const resolvedGroups = groups.map((group) => ({
     ...group,
-    items: [...group.items, ...(group.label === 'Работа' ? curationItems : [])].filter(item => item.href !== "/absences" || ["curator", "faculty_dean", "department_head", "university_admin", "superadmin"].includes(user.role)).map((item) =>
+    items: [...group.items, ...(group.label === 'Работа' ? curationItems : [])].filter(item => item.href !== "/absences" || ["curator", "faculty_dean", "department_head", "university_admin", "superadmin"].includes(user.role) || (user.role === "teacher" && curation?.canCurate)).map((item) =>
       item.href === "/inbox" ? { ...item, badge: unread } : item,
     ),
   }));

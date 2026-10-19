@@ -123,7 +123,7 @@ export default function PairSpaceIndex() {
           <label className="relative block w-full lg:max-w-sm">
             <span className="sr-only">Поиск подготовки</span>
             <Icon name="search" size={17} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Найти тему или предмет" className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-3 text-sm outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100" />
+            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Найти тему или предмет" className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-3 text-sm outline-none focus:border-indigo-400 focus-visible:ring-4 focus-visible:ring-[var(--color-focus-ring)]" />
           </label>
           <p className="text-sm text-slate-500" role="status">Показано {visible.length} из {preparations.length}</p>
         </div>

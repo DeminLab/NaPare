@@ -21,3 +21,5 @@ Preserve academic tenant isolation. Employer accounts cannot read university rec
 ```powershell
 pnpm --filter @napare/web-portal exec tsc --noEmit
 ```
+
+The anonymous page consumes `/career/accounts/portfolio/:studentId/cases?offset&limit`, appends only consented published cases and shows an accurate total. Each page has sequence protection, loading status, and a retry that keeps already loaded cases. The server returns the same not-found response for missing/inactive students and portfolios with no visible accepted cases; the UI does not expose academic evidence or private review reasons.

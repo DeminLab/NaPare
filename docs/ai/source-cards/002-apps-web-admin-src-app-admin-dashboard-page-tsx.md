@@ -6,7 +6,7 @@
 
 ## Scope
 
-Operational attention queue and daily schedule. Secondary structure metrics are collapsible; partial request failure is distinct from zero.
+Operational attention queue and daily schedule. Secondary structure metrics are collapsible. Partial request failures preserve and display the last successful values with a shared freshness warning; a section that has never loaded remains unavailable rather than appearing empty.
 
 With no pending signals, a short success line replaces the empty attention card. The next lesson and daily schedule rows show the shared lesson-type badge; zero schedule changes are omitted while unavailable counts remain explicit.
 

@@ -35,10 +35,10 @@ export class AbsenceConfirmation {
   status: string;
 
   @Column({ nullable: true })
-  comment: string;
+  comment: string | null;
 
   @Column({ type: 'timestamp', nullable: true })
-  confirmedAt: Date;
+  confirmedAt: Date | null;
 
   @CreateDateColumn()
   createdAt: Date;

@@ -10,8 +10,8 @@ export class CreateFacultyDto {
   @IsString()
   code: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ nullable: true })
   @IsOptional()
   @IsUUID()
-  deanUserId?: string;
+  deanUserId?: string | null;
 }

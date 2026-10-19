@@ -8,7 +8,7 @@ import { University } from "../users/entities/university.entity";
 import { Faculty } from "../users/entities/faculty.entity";
 import { Group } from "../users/entities/group.entity";
 import { User } from "../users/entities/user.entity";
-import { ForbiddenException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException } from "@nestjs/common";
 import { UserRole } from "../auth/interfaces/user-role";
 import { TenantContext } from "../common/tenant/tenant-context";
 import { AuditLog } from "../common/entities/audit-log.entity";
@@ -65,10 +65,28 @@ describe("AdminService", () => {
     delete: jest.fn(),
   });
   let mockUniversityRepository: ReturnType<typeof mockRepo>;
+  let mockUserRepository: ReturnType<typeof mockRepo>;
+  let mockAuditQueryBuilder: {
+    innerJoin: jest.Mock;
+    where: jest.Mock;
+    orderBy: jest.Mock;
+    skip: jest.Mock;
+    take: jest.Mock;
+    getManyAndCount: jest.Mock;
+  };
 
   beforeEach(async () => {
     mockUniversityRepository = mockRepo({ findOne: { id: "uni-1", name: "Test Uni" } });
+    mockUserRepository = mockRepo();
     mockRaspScraperService.isValidGroup.mockReset().mockResolvedValue(false);
+    mockAuditQueryBuilder = {
+      innerJoin: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      skip: jest.fn().mockReturnThis(),
+      take: jest.fn().mockReturnThis(),
+      getManyAndCount: jest.fn().mockResolvedValue([[], 0]),
+    };
     module = await Test.createTestingModule({
       providers: [
         AdminService,
@@ -84,9 +102,10 @@ describe("AdminService", () => {
           useValue: {
             ...mockRepo(),
             findAndCount: jest.fn().mockResolvedValue([[], 0]),
+            createQueryBuilder: jest.fn().mockReturnValue(mockAuditQueryBuilder),
           },
         },
-        { provide: getRepositoryToken(User), useValue: mockRepo() },
+        { provide: getRepositoryToken(User), useValue: mockUserRepository },
         { provide: getRepositoryToken(Lesson), useValue: mockRepo() },
         {
           provide: TenantContext,
@@ -106,6 +125,90 @@ describe("AdminService", () => {
 
   it("should be defined", () => {
     expect(service).toBeDefined();
+  });
+
+  describe("faculty dean assignment", () => {
+    it("assigns only an active faculty dean from the same university", async () => {
+      const facultyRepository = module.get(getRepositoryToken(Faculty));
+      mockUserRepository.findOne.mockResolvedValue({ id: "dean-1" });
+
+      await service.createFaculty("uni-1", {
+        name: "Информатика",
+        code: "ИНФ",
+        deanUserId: "dean-1",
+      });
+
+      expect(mockUserRepository.findOne).toHaveBeenCalledWith({
+        where: { id: "dean-1", universityId: "uni-1", role: UserRole.FACULTY_DEAN, isActive: true },
+        select: { id: true },
+      });
+      expect(facultyRepository.save).toHaveBeenCalledWith(expect.objectContaining({
+        name: "Информатика",
+        deanUserId: "dean-1",
+        universityId: "uni-1",
+      }));
+    });
+
+    it("rejects dean accounts outside the university or with an inactive/wrong role", async () => {
+      const facultyRepository = module.get(getRepositoryToken(Faculty));
+      mockUserRepository.findOne.mockResolvedValue(null);
+
+      await expect(service.createFaculty("uni-1", {
+        name: "Информатика",
+        code: "ИНФ",
+        deanUserId: "other-university-user",
+      })).rejects.toThrow(BadRequestException);
+
+      expect(facultyRepository.save).not.toHaveBeenCalled();
+    });
+
+    it("allows clearing an existing dean without requiring a replacement", async () => {
+      const facultyRepository = module.get(getRepositoryToken(Faculty));
+      const existing = { id: "faculty-1", universityId: "uni-1", deanUserId: "dean-1" };
+      facultyRepository.findOne.mockResolvedValue(existing);
+
+      await expect(service.updateFaculty("faculty-1", { deanUserId: null }))
+        .resolves.toMatchObject({ deanUserId: null });
+
+      expect(mockUserRepository.findOne).not.toHaveBeenCalled();
+      expect(facultyRepository.save).toHaveBeenCalledWith(existing);
+    });
+  });
+
+  describe("getAuditLog", () => {
+    it("filters audit events by university without limiting the account set", async () => {
+      const event = {
+        id: "event-101",
+        userId: "user-101",
+        action: "profile.updated",
+        entity: "profile",
+        entityId: "profile-101",
+        oldValues: {},
+        newValues: {},
+        ip: "127.0.0.1",
+        userAgent: "test-agent",
+        createdAt: new Date("2026-10-18T00:00:00.000Z"),
+      } as AuditLog;
+      mockAuditQueryBuilder.getManyAndCount.mockResolvedValue([[event], 51]);
+      mockUsersService.findByUniversityId.mockClear();
+
+      const result = await service.getAuditLog("uni-1", { page: 2, limit: 25 });
+
+      expect(mockAuditQueryBuilder.innerJoin).toHaveBeenCalledWith(
+        User,
+        "auditUser",
+        "auditUser.id = auditLog.userId",
+      );
+      expect(mockAuditQueryBuilder.where).toHaveBeenCalledWith(
+        "auditUser.universityId = :universityId",
+        { universityId: "uni-1" },
+      );
+      expect(mockAuditQueryBuilder.skip).toHaveBeenCalledWith(25);
+      expect(mockAuditQueryBuilder.take).toHaveBeenCalledWith(25);
+      expect(mockUsersService.findByUniversityId).not.toHaveBeenCalled();
+      expect(result.data).toEqual([{ ...event, source: "user action" }]);
+      expect(result.meta.total).toBe(51);
+    });
   });
 
   describe("updateUserRole", () => {
@@ -547,6 +650,7 @@ describe("AdminService", () => {
           universityId: "uni-1",
           groupId: "group-1",
           teacherId: undefined,
+          sourceTeacherId: null,
           subject: "Тестовый предмет",
           subjectType: undefined,
           room: undefined,

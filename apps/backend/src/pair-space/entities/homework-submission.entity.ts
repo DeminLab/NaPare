@@ -37,13 +37,13 @@ export class HomeworkSubmission {
   status: string;
 
   @Column({ type: 'timestamp', nullable: true })
-  submittedAt: Date;
+  submittedAt: Date | null;
 
-  @Column({ nullable: true })
-  fileUrl: string;
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  fileUrl: string | null;
 
-  @Column({ nullable: true })
-  comment: string;
+  @Column({ type: 'text', nullable: true })
+  comment: string | null;
 
   @CreateDateColumn()
   createdAt: Date;

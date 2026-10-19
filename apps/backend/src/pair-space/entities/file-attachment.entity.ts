@@ -41,6 +41,15 @@ export class FileAttachment {
   @Column({ type: 'int' })
   size: number;
 
+  @Column({ type: 'timestamp', nullable: true })
+  revokedAt: Date | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  revokedBy: string | null;
+
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  revokeReason: string | null;
+
   @CreateDateColumn()
   createdAt: Date;
 }

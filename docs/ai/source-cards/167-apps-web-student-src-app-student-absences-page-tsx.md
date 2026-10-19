@@ -6,7 +6,7 @@
 
 ## Scope
 
-Student absence requests and factual attendance are separated views with URL filters. Request totals do not claim attendance percentages. The current student contract has no teacher-mark history; the attendance view explains this and links to QR and schedule.
+Student absence requests and factual attendance are separated views with URL filters. Request totals do not claim attendance percentages. The current student contract has no teacher-mark history; the attendance view explains this and links to QR and schedule. The route loads all pages from the existing student-scoped history endpoint. A date filter matches any calendar date inside a multi-day absence interval. Desktop and mobile history rows show the full localized period, collapse same-day periods to one date, and fall back to start date or legacy `date` when `endDate` is missing. The affected-lesson summary shows an unknown value when the API does not supply enough data, including a database-default zero count with no lesson IDs, and stacks into one column on narrow screens.
 
 ## Read sequence
 

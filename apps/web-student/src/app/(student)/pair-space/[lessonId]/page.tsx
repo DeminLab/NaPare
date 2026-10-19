@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { lessonTabFromSearch } from '@napare/ui/workspace-shell';
-import { apiFetch, apiFetchList } from '@/lib/api';
+import { ApiError, apiFetch, apiFetchList } from '@/lib/api';
 import { Card, Badge, Avatar, Skeleton, Icon, RequestState } from '@/components/ui';
 import { EmptyState, Button } from '@napare/ui';
 import { getLessonLocation } from '../../schedule-location';
@@ -207,6 +207,7 @@ export default function PairSpacePage() {
   const [notesReady, setNotesReady] = useState(false);
   const [notesSync, setNotesSync] = useState('');
   const [error, setError] = useState('');
+  const [loadErrorStatus, setLoadErrorStatus] = useState<number | null>(null);
   const [messageSaving, setMessageSaving] = useState(false);
   const [nextLesson, setNextLesson] = useState<Lesson | null>(null);
   const [lessonChanges, setLessonChanges] = useState<LessonChange[]>([]);
@@ -237,6 +238,7 @@ export default function PairSpacePage() {
     const cacheKey = pairSpaceCacheKey(lessonId);
     let cached: PairSpaceSnapshot | null = null;
     setError('');
+    setLoadErrorStatus(null);
     setLoadWarning('');
     if (cacheKey) {
       try {
@@ -291,6 +293,7 @@ export default function PairSpacePage() {
         setOfflineSavedAt(cached.savedAt);
         setLoadWarning(err instanceof Error ? err.message : 'Показана сохранённая копия: не удалось обновить пространство пары.');
       } else {
+        setLoadErrorStatus(err instanceof ApiError ? err.status : null);
         setError(err instanceof Error ? err.message : 'Не удалось загрузить пространство пары.');
       }
     }).finally(() => { if (active) setLoading(false); });
@@ -415,7 +418,15 @@ export default function PairSpacePage() {
   }
 
   if (error && !pairSpace) {
-    return <div className="mx-auto max-w-3xl"><RequestState title="Не удалось открыть занятие" description={error} onRetry={() => window.location.reload()} /></div>;
+    const isNotFound = loadErrorStatus === 404;
+    const isForbidden = loadErrorStatus === 403;
+    const title = isNotFound ? 'Занятие не найдено' : isForbidden ? 'Нет доступа к занятию' : 'Не удалось открыть занятие';
+    const description = isNotFound
+      ? 'Возможно, занятие удалено или ссылка устарела. Откройте нужную пару из расписания.'
+      : isForbidden
+        ? 'Это занятие не входит в расписание вашей группы. Выберите пару из своего расписания.'
+        : error;
+    return <div className="mx-auto max-w-3xl"><RequestState kind={isForbidden ? 'forbidden' : 'error'} title={title} description={description} onRetry={!isNotFound && !isForbidden ? () => window.location.reload() : undefined} action={<Link href="/week" className="inline-flex min-h-11 items-center rounded-xl border border-[var(--color-border)] px-4 text-sm font-semibold text-[var(--color-brand)] hover:bg-[var(--color-surface-secondary)]">Вернуться к расписанию</Link>} /></div>;
   }
 
   const tabs = [
@@ -429,7 +440,7 @@ export default function PairSpacePage() {
     <div className="mx-auto max-w-[1400px] space-y-6">
       {/* Header */}
       <div>
-        <button onClick={() => router.push('/week?date=' + (lesson?.startDate || lesson?.date || lesson?.startTime || '').slice(0, 10))} className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-indigo-600">
+        <button onClick={() => router.push('/week?date=' + (lesson?.startDate || lesson?.date || lesson?.startTime || '').slice(0, 10))} className="mb-2 flex min-h-11 items-center gap-2 text-sm font-medium text-slate-500 hover:text-indigo-600">
           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
@@ -519,7 +530,7 @@ export default function PairSpacePage() {
                       <h2 className="mt-1 text-base font-semibold text-slate-900">{entry.lesson.subject}</h2>
                       <p className="mt-1 text-sm text-slate-500">{typeLabels[entry.lesson.subjectType] || entry.lesson.subjectType} · {entry.lesson.teacherName || 'Преподаватель не указан'} · {getLessonLocation(entry.lesson.building, entry.lesson.room) || 'Аудитория не указана'}</p>
                     </div>
-                    <Link href={`/pair-space/${entry.lesson.id}`} className="inline-flex min-h-10 shrink-0 items-center rounded-xl border border-slate-200 px-3 text-sm font-semibold text-indigo-600 hover:bg-indigo-50">Открыть пару</Link>
+                    <Link href={`/pair-space/${entry.lesson.id}`} className="inline-flex min-h-11 shrink-0 items-center rounded-xl border border-slate-200 px-3 text-sm font-semibold text-indigo-600 hover:bg-indigo-50">Открыть пару</Link>
                   </div>
                   {entry.pairSpace && <div className="mt-4 grid gap-3 border-t border-slate-100 pt-4 md:grid-cols-3">
                     <div><h3 className="text-xs font-semibold text-slate-500">Подготовка</h3>{entry.pairSpace.homeworks.length ? <ul className="mt-2 space-y-1.5">{entry.pairSpace.homeworks.slice(0, 3).map(homework => <li key={homework.id} className="text-sm text-slate-700">{homework.title}{homework.deadline && <span className="block text-xs text-slate-400">Срок: {new Date(homework.deadline).toLocaleDateString('ru-RU')}</span>}</li>)}</ul> : <p className="mt-1 text-sm text-slate-400">Нет заданий</p>}</div>
@@ -539,7 +550,7 @@ export default function PairSpacePage() {
       {activeTab === 'notes' && (
         <Card>
           <div className="flex items-center gap-3"><Icon name="FileText" className="h-5 w-5 text-indigo-500" /><div><h2 id="lesson-notes-heading" className="font-semibold text-slate-900">Личные заметки</h2><p id="lesson-notes-status" className="text-sm text-slate-500" role="status">{notesSync || 'Заметки видны только вам и синхронизируются с аккаунтом.'}</p></div></div>
-          <textarea aria-labelledby="lesson-notes-heading" aria-describedby="lesson-notes-status" value={notes} onChange={e => saveNotes(e.target.value)} disabled={!notesReady} placeholder={notesReady ? 'Запишите важные мысли по занятию...' : 'Загружаем заметку…'} className="mt-5 min-h-48 w-full resize-y rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-indigo-400 focus:bg-white focus:ring-4 focus:ring-indigo-100 disabled:cursor-wait disabled:opacity-60" />
+          <textarea aria-labelledby="lesson-notes-heading" aria-describedby="lesson-notes-status" value={notes} onChange={e => saveNotes(e.target.value)} disabled={!notesReady} placeholder={notesReady ? 'Запишите важные мысли по занятию...' : 'Загружаем заметку…'} className="mt-5 min-h-48 w-full resize-y rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-indigo-400 focus:bg-white focus-visible:ring-4 focus-visible:ring-[var(--color-focus-ring)] disabled:cursor-wait disabled:opacity-60" />
         </Card>
       )}
 
@@ -592,7 +603,7 @@ export default function PairSpacePage() {
             ))
           )}
 
-          <form onSubmit={event => { event.preventDefault(); void handleSendMessage(); }} className="rounded-2xl border border-slate-200 bg-white p-4"><label htmlFor="discussion-message" className="text-sm font-semibold text-slate-900">Сообщение участникам пары</label><textarea id="discussion-message" value={newMessage} onChange={event => setNewMessage(event.target.value)} disabled={messageSaving} rows={3} placeholder="Напишите вопрос или дополнение к занятию…" className="mt-3 w-full resize-y rounded-xl border border-slate-200 p-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"/><div className="mt-3 flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-slate-500">Сообщение увидят участники этого пространства пары.</p><Button type="submit" loading={messageSaving} disabled={messageSaving || !newMessage.trim()}>Отправить сообщение</Button></div></form>
+          <form onSubmit={event => { event.preventDefault(); void handleSendMessage(); }} className="rounded-2xl border border-slate-200 bg-white p-4"><label htmlFor="discussion-message" className="text-sm font-semibold text-slate-900">Сообщение участникам пары</label><textarea id="discussion-message" value={newMessage} onChange={event => setNewMessage(event.target.value)} disabled={messageSaving} rows={3} placeholder="Напишите вопрос или дополнение к занятию…" className="mt-3 w-full resize-y rounded-xl border border-slate-200 p-3 text-sm outline-none focus:border-indigo-500 focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"/><div className="mt-3 flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-slate-500">Сообщение увидят участники этого пространства пары.</p><Button type="submit" loading={messageSaving} disabled={messageSaving || !newMessage.trim()}>Отправить сообщение</Button></div></form>
         </div>
       )}
     </div>

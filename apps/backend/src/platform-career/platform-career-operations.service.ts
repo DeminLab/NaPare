@@ -12,9 +12,9 @@ import { User } from '../users/entities/user.entity';
 import { PlatformCareerApplicationDecisionDto, PlatformCareerOperationPatchDto, PlatformCareerOperationQueryDto, PlatformCareerWorkDecisionDto } from './platform-career-operations.dto';
 
 type RequestAuditContext = { ip?: string; userAgent?: string };
-type ApplicationSummary = { id: string; taskId: string; taskTitle: string; companyName: string; universityId: string; universityName: string; studentId: string; studentName: string; studentEmail: string; messagePreview: string; state: string; profiled: boolean; skill: string; deadline: string; createdAt: Date; updatedAt: Date };
+type ApplicationSummary = { id: string; taskId: string; taskTitle: string; companyName: string; universityId: string; universityName: string; studentId: string; studentName: string; studentEmail: string; studentUniversityId?: string | null; messagePreview: string; state: string; profiled: boolean; skill: string; deadline: string; createdAt: Date; updatedAt: Date };
 type ApplicationDetail = ApplicationSummary & { message: string };
-type WorkSummary = { id: string; taskId: string; taskTitle: string; companyName: string; universityId: string; universityName: string; studentId: string; studentName: string; studentEmail: string; state: string; submissionPreview: string; resultUrl: string; decisionReason: string; skill: string; deadline: string; createdAt: Date; updatedAt: Date };
+type WorkSummary = { id: string; taskId: string; taskTitle: string; companyName: string; universityId: string; universityName: string; studentId: string; studentName: string; studentEmail: string; studentUniversityId?: string | null; state: string; submissionPreview: string; resultUrl: string; decisionReason: string; skill: string; deadline: string; createdAt: Date; updatedAt: Date };
 type WorkDetail = WorkSummary & { submission: string };
 
 @Injectable()
@@ -24,7 +24,7 @@ export class PlatformCareerOperationsService {
   async applications(query: PlatformCareerOperationQueryDto, context: RequestAuditContext = {}) {
     const access = await this.platform.require('career-data.read');
     const qb = this.applicationQuery();
-    this.applyFilters(qb, query);
+    this.applyFilters(qb, query, access);
     const total = await qb.clone().getCount();
     const rows = await qb.orderBy('application.createdAt', 'DESC').addOrderBy('application.id', 'DESC').skip((query.page - 1) * query.limit).take(query.limit).getRawMany<ApplicationSummary>();
     await this.auditRead('platform.career_application.search', 'personal_data.career_application', 'search', access.actorId, {
@@ -39,14 +39,17 @@ export class PlatformCareerOperationsService {
     const access = await this.platform.require('career-data.read');
     const row = await this.applicationQuery(true).where('application.id = :id', { id }).getRawOne<ApplicationDetail>();
     if (!row) throw new NotFoundException('Отклик не найден.');
+    this.platform.assertUniversityScope(access, row.universityId);
+    if (row.studentUniversityId !== row.universityId) throw new BadRequestException('Отклик связан с пользователем другого университета.');
+    const { studentUniversityId: _studentUniversityId, ...visibleRow } = row;
     await this.auditRead('platform.career_application.viewed', 'personal_data.career_application', id, access.actorId, { targetUserId: row.studentId, universityId: row.universityId, taskId: row.taskId, result: 'viewed' }, context);
-    return row;
+    return visibleRow;
   }
 
   async works(query: PlatformCareerOperationQueryDto, context: RequestAuditContext = {}) {
     const access = await this.platform.require('career-data.read');
     const qb = this.workQuery();
-    this.applyFilters(qb, query);
+    this.applyFilters(qb, query, access);
     const total = await qb.clone().getCount();
     const rows = await qb.orderBy('work.updatedAt', 'DESC').addOrderBy('work.id', 'DESC').skip((query.page - 1) * query.limit).take(query.limit).getRawMany<WorkSummary>();
     await this.auditRead('platform.career_work.search', 'personal_data.career_work', 'search', access.actorId, {
@@ -61,8 +64,11 @@ export class PlatformCareerOperationsService {
     const access = await this.platform.require('career-data.read');
     const row = await this.workQuery(true).where('work.id = :id', { id }).getRawOne<WorkDetail>();
     if (!row) throw new NotFoundException('Работа не найдена.');
+    this.platform.assertUniversityScope(access, row.universityId);
+    if (row.studentUniversityId !== row.universityId) throw new BadRequestException('Работа связана с пользователем другого университета.');
+    const { studentUniversityId: _studentUniversityId, ...visibleRow } = row;
     await this.auditRead('platform.career_work.viewed', 'personal_data.career_work', id, access.actorId, { targetUserId: row.studentId, universityId: row.universityId, taskId: row.taskId, result: 'viewed' }, context);
-    return row;
+    return visibleRow;
   }
 
   async patchApplication(id: string, dto: PlatformCareerOperationPatchDto, context: RequestAuditContext = {}) {
@@ -75,8 +81,9 @@ export class PlatformCareerOperationsService {
       const row = await manager.findOne(CareerApplication, { where: { id }, lock: { mode: 'pessimistic_write' } });
       if (!row) throw new NotFoundException('Отклик не найден.');
       const task = await manager.findOne(CareerTask, { where: { id: row.taskId }, lock: { mode: 'pessimistic_read' } });
-      const student = await manager.findOne(User, { where: { id: row.studentId }, select: ['id'] });
-      if (!task || !student || !await manager.getRepository(University).existsBy({ id: task.universityId })) throw new BadRequestException('Отклик не связан с существующим пользователем и университетом задачи.');
+      const student = await manager.findOne(User, { where: { id: row.studentId }, select: ['id', 'universityId'] });
+      if (!task || !student || student.universityId !== task.universityId || !await manager.getRepository(University).existsBy({ id: task.universityId })) throw new BadRequestException('Отклик не связан с пользователем и университетом задачи.');
+      this.platform.assertUniversityScope(access, task.universityId);
       if (row.message === message) throw new ConflictException('Новый текст совпадает с текущим.');
       const oldValues: JsonObject = { message: row.message, state: row.state };
       row.message = message;
@@ -94,8 +101,9 @@ export class PlatformCareerOperationsService {
       if (!application) throw new NotFoundException('Отклик не найден.');
       const task = await manager.findOne(CareerTask, { where: { id: application.taskId }, lock: { mode: 'pessimistic_write' } });
       if (!task) throw new NotFoundException('Задача не найдена.');
-      const applicant = await manager.findOne(User, { where: { id: application.studentId }, select: ['id'] });
-      if (!applicant || !await manager.getRepository(University).existsBy({ id: task.universityId })) throw new BadRequestException('Отклик не связан с существующим пользователем и университетом задачи.');
+      const applicant = await manager.findOne(User, { where: { id: application.studentId }, select: ['id', 'universityId'] });
+      if (!applicant || applicant.universityId !== task.universityId || !await manager.getRepository(University).existsBy({ id: task.universityId })) throw new BadRequestException('Отклик не связан с пользователем и университетом задачи.');
+      this.platform.assertUniversityScope(access, task.universityId);
       if (dto.decision === 'not_selected') {
         assertCareerTransition(application.state, ['pending']);
         if (task.state !== 'open') throw new ConflictException('Отклик можно отклонить после закрытия задачи только через обращение владельцу.');
@@ -118,6 +126,10 @@ export class PlatformCareerOperationsService {
       if (task.profiled && !await manager.getRepository(CareerAdmission).existsBy({ studentId: student.id, universityId: task.universityId, skill: task.skill, state: 'approved' })) throw new ConflictException('У студента нет действующего допуска к направлению задачи.');
       if (await manager.getRepository(CareerWork).existsBy({ taskId: task.id })) throw new ConflictException('Для задачи уже создана работа.');
       const applications = await manager.getRepository(CareerApplication).find({ where: { taskId: task.id, state: 'pending' }, lock: { mode: 'pessimistic_write' } });
+      const candidateUsers = applications.length
+        ? await manager.getRepository(User).find({ where: { id: In(applications.map(candidate => candidate.studentId)) }, select: ['id', 'universityId'] })
+        : [];
+      if (candidateUsers.length !== applications.length || candidateUsers.some(candidate => candidate.universityId !== task.universityId)) throw new BadRequestException('Отклики задачи содержат пользователей другого университета.');
       const oldStates = applications.map(candidate => ({ id: candidate.id, studentId: candidate.studentId, state: candidate.state }));
       application.state = 'selected';
       task.state = 'assigned';
@@ -146,8 +158,9 @@ export class PlatformCareerOperationsService {
       const work = await manager.findOne(CareerWork, { where: { id }, lock: { mode: 'pessimistic_write' } });
       if (!work) throw new NotFoundException('Работа не найдена.');
       const task = await manager.findOne(CareerTask, { where: { id: work.taskId }, lock: { mode: 'pessimistic_read' } });
-      const student = await manager.findOne(User, { where: { id: work.studentId }, select: ['id'] });
-      if (!task || !student || !await manager.getRepository(University).existsBy({ id: task.universityId })) throw new BadRequestException('Работа не связана с существующим пользователем и университетом задачи.');
+      const student = await manager.findOne(User, { where: { id: work.studentId }, select: ['id', 'universityId'] });
+      if (!task || !student || student.universityId !== task.universityId || !await manager.getRepository(University).existsBy({ id: task.universityId })) throw new BadRequestException('Работа не связана с пользователем и университетом задачи.');
+      this.platform.assertUniversityScope(access, task.universityId);
       const changes = { ...(dto.submission !== undefined ? { submission: dto.submission.trim() } : {}), ...(dto.resultUrl !== undefined ? { resultUrl: dto.resultUrl.trim() } : {}) };
       if (changes.submission !== undefined && !changes.submission) throw new BadRequestException('Результат не может быть пустым.');
       if (!Object.entries(changes).some(([key, value]) => (work as unknown as Record<string, unknown>)[key] !== value)) throw new ConflictException('Новые значения совпадают с текущими.');
@@ -166,8 +179,9 @@ export class PlatformCareerOperationsService {
       const work = await manager.findOne(CareerWork, { where: { id }, lock: { mode: 'pessimistic_write' } });
       if (!work) throw new NotFoundException('Работа не найдена.');
       const task = await manager.findOne(CareerTask, { where: { id: work.taskId }, lock: { mode: 'pessimistic_write' } });
-      const student = await manager.findOne(User, { where: { id: work.studentId }, select: ['id'] });
-      if (!task || !student || !await manager.getRepository(University).existsBy({ id: task.universityId })) throw new BadRequestException('Работа не связана с пользователем и действующим университетом задачи.');
+      const student = await manager.findOne(User, { where: { id: work.studentId }, select: ['id', 'universityId'] });
+      if (!task || !student || student.universityId !== task.universityId || !await manager.getRepository(University).existsBy({ id: task.universityId })) throw new BadRequestException('Работа не связана с пользователем и действующим университетом задачи.');
+      this.platform.assertUniversityScope(access, task.universityId);
       assertCareerTransition(work.state, ['submitted']);
       const oldValues: JsonObject = { state: work.state, decisionReason: work.decisionReason };
       work.state = dto.decision;
@@ -194,7 +208,7 @@ export class PlatformCareerOperationsService {
       .addSelect('student.email', 'studentEmail').addSelect('LEFT(application.message, 180)', 'messagePreview')
       .addSelect('application.state', 'state').addSelect('task.profiled', 'profiled').addSelect('task.skill', 'skill')
       .addSelect('task.deadline', 'deadline').addSelect('application.createdAt', 'createdAt').addSelect('application.updatedAt', 'updatedAt');
-    if (includeMessage) qb.addSelect('application.message', 'message');
+    if (includeMessage) qb.addSelect('application.message', 'message').addSelect('student.universityId', 'studentUniversityId');
     return qb;
   }
 
@@ -210,12 +224,19 @@ export class PlatformCareerOperationsService {
       .addSelect('student.email', 'studentEmail').addSelect('work.state', 'state').addSelect('LEFT(work.submission, 180)', 'submissionPreview')
       .addSelect('work.resultUrl', 'resultUrl').addSelect('work.decisionReason', 'decisionReason')
       .addSelect('task.skill', 'skill').addSelect('task.deadline', 'deadline').addSelect('work.createdAt', 'createdAt').addSelect('work.updatedAt', 'updatedAt');
-    if (includeSubmission) qb.addSelect('work.submission', 'submission');
+    if (includeSubmission) qb.addSelect('work.submission', 'submission').addSelect('student.universityId', 'studentUniversityId');
     return qb;
   }
 
-  private applyFilters(qb: SelectQueryBuilder<CareerApplication | CareerWork>, query: PlatformCareerOperationQueryDto): void {
-    if (query.universityId) qb.andWhere('task.universityId = :universityId', { universityId: query.universityId });
+  private applyFilters(qb: SelectQueryBuilder<CareerApplication | CareerWork>, query: PlatformCareerOperationQueryDto, access: Awaited<ReturnType<PlatformService['access']>>): void {
+    if (query.universityId) {
+      this.platform.assertUniversityScope(access, query.universityId);
+      qb.andWhere('task.universityId = :universityId', { universityId: query.universityId });
+    }
+    if (!access.owner && access.universityIds !== null) {
+      if (!access.universityIds.length) qb.andWhere('1 = 0');
+      else qb.andWhere('task.universityId IN (:...careerAllowedUniversityIds)', { careerAllowedUniversityIds: access.universityIds }).andWhere('student.universityId = task.universityId');
+    }
     if (query.state) qb.andWhere(`${qb.alias}.state = :state`, { state: query.state });
     if (query.q?.trim()) {
       const pattern = `%${query.q.trim().replace(/[\\%_]/g, '\\$&')}%`;

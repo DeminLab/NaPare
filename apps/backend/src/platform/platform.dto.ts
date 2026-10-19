@@ -1,9 +1,9 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { ArrayUnique, IsArray, IsBoolean, IsEmail, IsEnum, IsIn, IsOptional, IsString, IsUUID, IsUrl, MaxLength, MinLength } from 'class-validator';
+import { ArrayUnique, IsArray, IsBoolean, IsEmail, IsEnum, IsIn, IsInt, IsOptional, IsString, IsUUID, IsUrl, Max, MaxLength, Min, MinLength } from 'class-validator';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import { UserRole } from '../auth/interfaces/user-role';
 
-export const PLATFORM_PERMISSIONS = ['services.read', 'services.restart', 'services.rebuild', 'logs.read', 'accounts.read', 'accounts.write', 'universities.read', 'universities.write', 'student-data.read', 'student-data.write', 'personal-data.read', 'personal-data.write', 'career-data.read', 'career-data.write', 'discussion-data.read', 'discussion-data.write', 'settings.read', 'settings.write', 'audit.read'] as const;
+export const PLATFORM_PERMISSIONS = ['services.read', 'services.restart', 'services.rebuild', 'logs.read', 'accounts.read', 'accounts.write', 'identity-links.read', 'identity-links.write', 'universities.read', 'universities.write', 'student-data.read', 'student-data.write', 'attendance-qr.read', 'attendance-qr.revoke', 'personal-data.read', 'personal-data.write', 'homework-data.read', 'homework-data.write', 'notification-data.read', 'notification-data.write', 'curation-data.read', 'curation-data.write', 'academic-data.read', 'academic-data.write', 'career-data.read', 'career-data.write', 'discussion-data.read', 'discussion-data.write', 'pairspace-content.read', 'pairspace-content.write', 'events-data.read', 'attachments-data.read', 'attachments-data.write', 'settings.read', 'settings.write', 'audit.read'] as const;
 export type PlatformPermission = typeof PLATFORM_PERMISSIONS[number];
 export const SERVICE_IDS = ['backend', 'web-portal', 'web-student', 'web-staff', 'web-admin', 'web-developer', 'nginx', 'postgres', 'redis'] as const;
 export class PlatformQueryDto extends PaginationQueryDto {
@@ -13,6 +13,7 @@ export class PlatformQueryDto extends PaginationQueryDto {
 export class PlatformGrantDto {
   @ApiProperty({ enum: PLATFORM_PERMISSIONS, isArray: true }) @IsArray() @ArrayUnique() @IsIn(PLATFORM_PERMISSIONS, { each: true }) permissions: PlatformPermission[];
   @ApiProperty({ enum: SERVICE_IDS, isArray: true }) @IsArray() @ArrayUnique() @IsIn(SERVICE_IDS, { each: true }) serviceIds: string[];
+  @ApiPropertyOptional({ type: [String], nullable: true, description: 'NULL — глобальная область; пустой список — без вузов; иначе список доступных вузов' }) @IsOptional() @IsArray() @ArrayUnique() @IsUUID(undefined, { each: true }) universityIds?: string[] | null;
 }
 export class PlatformJobDto {
   @ApiProperty({ enum: SERVICE_IDS }) @IsIn(SERVICE_IDS) service: string;
@@ -41,6 +42,9 @@ export class PlatformCreateAccountDto extends PlatformAccountDto {
 export class PlatformPasswordDto {
   @ApiProperty() @IsString() @MinLength(12) @MaxLength(72) password: string;
 }
+export class PlatformIdentityLinkDto {
+  @ApiProperty({ description: 'Причина отзыва внешней привязки' }) @IsString() @MinLength(3) @MaxLength(500) reason: string;
+}
 export class PlatformEmergencyDto {
   @ApiProperty() @IsString() @IsIn(['ОТОЗВАТЬ ТЕХДОСТУП']) confirm: string;
   @ApiProperty() @IsString() @MinLength(1) @MaxLength(72) password: string;
@@ -55,4 +59,17 @@ export class PlatformUniversityDto {
   @ApiProperty() @IsString() @MinLength(1) @MaxLength(200) name: string;
   @ApiProperty() @IsString() @MinLength(1) @MaxLength(100) city: string;
   @ApiProperty({ enum: ['active','inactive','pending'] }) @IsIn(['active','inactive','pending']) status: string;
+}
+export class PlatformFacultyDto {
+  @ApiProperty() @IsString() @MinLength(1) @MaxLength(200) name: string;
+  @ApiProperty() @IsString() @MinLength(1) @MaxLength(40) code: string;
+  @ApiProperty({ description: 'Причина изменения для журнала действий' }) @IsString() @MinLength(3) @MaxLength(500) reason: string;
+}
+export class PlatformGroupDto {
+  @ApiPropertyOptional() @IsOptional() @IsUUID() universityId?: string;
+  @ApiProperty() @IsUUID() facultyId: string;
+  @ApiProperty() @IsString() @MinLength(1) @MaxLength(120) name: string;
+  @ApiProperty() @IsInt() @Min(1) @Max(12) curriculumYear: number;
+  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsString() @MaxLength(200) specialization?: string | null;
+  @ApiProperty({ description: 'Причина изменения для журнала действий' }) @IsString() @MinLength(3) @MaxLength(500) reason: string;
 }

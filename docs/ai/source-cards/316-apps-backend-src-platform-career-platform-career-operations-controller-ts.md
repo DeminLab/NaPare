@@ -6,7 +6,7 @@
 
 ## Scope
 
-Global career application and work search, detail, correction, candidate selection, and review routes.
+Career application and work search, detail, correction, candidate selection, and review routes. Service-level university grant scope limits the accessible records.
 
 ## Change boundary
 

@@ -8,7 +8,7 @@
 
 POST trust/emergency-revoke is an owner-only server-authorized endpoint with password and exact phrase validation. No normal delegated permission includes this operation.
 
-Owner-bound platform control and explicitly delegated capabilities. Read [implementation](../../product/platform-control.md) and [installation](../../deployment/platform-control.md) before changes. Preserve immutable owner identity, server-side permission checks and private signed agent transport.
+Owner-bound platform control and explicitly delegated capabilities, including university scoped faculty and group routes under `universities.read/write`. Read [implementation](../../product/platform-control.md) and [installation](../../deployment/platform-control.md) before changes. Preserve immutable owner identity, server-side permission checks and private signed agent transport.
 
 ## Verification
 

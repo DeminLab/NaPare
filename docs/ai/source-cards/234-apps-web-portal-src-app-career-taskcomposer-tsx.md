@@ -16,6 +16,8 @@ Read AI_CONTEXT.md, project map, the canonical source and its direct imports.
 
 Keep API and role permissions; do not invent data or automatic decisions.
 
+The composer checks exact company/university partnership eligibility through the parent callback. The selection-change handler invalidates outstanding checks synchronously; the backend task-create guard remains authoritative. Its university selector pages and searches `/career/universities?workspace=employer`, keeps the selected university ID when options change, and displays the selected name in the draft preview.
+
 ## Verification
 
 ```powershell

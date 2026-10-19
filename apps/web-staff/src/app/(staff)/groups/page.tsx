@@ -161,7 +161,7 @@ export default function GroupsPage() {
           aria-label="Фильтр по факультету"
           value={faculty}
           onChange={(event) => setFaculty(event.target.value)}
-          className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+          className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:border-sky-500 focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
         >
           <option value="all">Все факультеты</option>
           {faculties.map((item) => (
@@ -271,27 +271,31 @@ export default function GroupsPage() {
               Закрыть
             </button>
           </div>
-          <div className="mt-5 flex gap-1 overflow-x-auto border-b border-slate-200">
-            {tabs.map((tab) =>
-              tab.href ? (
-                <Link
-                  key={tab.id}
-                  href={tab.href}
-                  className="shrink-0 border-b-2 border-transparent px-3 py-3 text-sm font-medium text-slate-500 hover:border-slate-300 hover:text-slate-900"
-                >
-                  {tab.label}
-                </Link>
-              ) : (
+          <div className="mt-5 space-y-3">
+            <div role="group" aria-label="Содержимое группы" className="flex gap-1 border-b border-slate-200">
+              {tabs.filter((tab) => !tab.href).map((tab) => (
                 <button
                   key={tab.id}
                   type="button"
+                  aria-pressed={detailTab === tab.id}
                   onClick={() => setDetailTab(tab.id)}
-                  className={`shrink-0 border-b-2 px-3 py-3 text-sm font-medium ${detailTab === tab.id ? "border-sky-600 text-sky-700" : "border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-900"}`}
+                  className={`min-h-11 border-b-2 px-3 py-3 text-sm font-medium ${detailTab === tab.id ? "border-sky-600 text-sky-700" : "border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-900"}`}
                 >
                   {tab.label}
                 </button>
-              ),
-            )}
+              ))}
+            </div>
+            <nav aria-label="Другие разделы группы" className="flex flex-wrap gap-2">
+              {tabs.filter((tab) => tab.href).map((tab) => (
+                <Link
+                  key={tab.id}
+                  href={tab.href!}
+                  className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 hover:border-sky-300 hover:text-sky-700"
+                >
+                  {tab.label}<span aria-hidden="true">→</span>
+                </Link>
+              ))}
+            </nav>
           </div>
           {detailLoading ? (
             <div className="mt-5">

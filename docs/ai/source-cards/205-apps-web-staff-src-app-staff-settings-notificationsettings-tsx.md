@@ -6,7 +6,7 @@
 
 ## Scope
 
-Server-backed notification preferences grouped into schedule, preparation/conversation and system. Telegram controls are removed and legacy telegramEnabled is normalized to false; save bar is sticky only while dirty.
+Server-backed notification preferences grouped into schedule, preparation/conversation and system. Telegram delivery is disabled globally and has no control here; its existing preference value is preserved when other settings are saved. Loading is announced as a busy status, and the save bar is sticky only while dirty.
 
 ## Read sequence
 

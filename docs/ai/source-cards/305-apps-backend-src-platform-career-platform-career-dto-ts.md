@@ -6,7 +6,7 @@
 
 ## Scope
 
-Validates career search filters, profile/admission corrections and decision reasons for platform administration.
+Validates career search filters, profile/admission corrections, company edits, partnership decisions, task draft corrections, membership management, test editing, portfolio moderation, review corrections, notice edits and availability corrections for platform administration.
 
 ## Change boundary
 

@@ -14,7 +14,7 @@ const events = [
   { key: 'systemAlerts', label: 'Системные события' },
 ] as const;
 type Preferences = Record<typeof events[number]['key'], boolean> & { telegramEnabled: boolean };
-const normalize = (value: Partial<Preferences>): Preferences => Object.fromEntries([...events.map(event => [event.key, value[event.key] !== false]), ['telegramEnabled', false]]) as Preferences;
+const normalize = (value: Partial<Preferences>): Preferences => Object.fromEntries([...events.map(event => [event.key, value[event.key] !== false]), ['telegramEnabled', value.telegramEnabled === true]]) as Preferences;
 
 export function NotificationSettings() {
   const [preferences, setPreferences] = useState<Preferences | null>(null);
@@ -44,7 +44,7 @@ export function NotificationSettings() {
     } catch { setError('Не удалось сохранить настройки. Ваш выбор остался на экране — попробуйте ещё раз.'); }
     finally { setSaving(false); }
   };
-  if (loading) return <Skeleton className="h-72" />;
+  if (loading) return <div role="status" aria-busy="true" aria-label="Загрузка настроек уведомлений"><Skeleton className="h-72" /></div>;
   if (!preferences) return <RequestState title="Настройки недоступны" description={error} onRetry={load} />;
   const changed = JSON.stringify(preferences) !== JSON.stringify(saved);
   return <Card><h2 className="text-lg font-semibold text-slate-900">Какие события вам нужны</h2>

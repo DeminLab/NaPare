@@ -1,4 +1,5 @@
 const API_BASE = "/api/v1";
+const LOGIN_PATH = "/deanery/login";
 
 export function getToken(): string | null {
   if (typeof window === "undefined") return null;
@@ -73,7 +74,7 @@ export async function apiFetch<T>(
       });
     } else {
       clearTokens();
-      window.location.href = "/login";
+      window.location.href = LOGIN_PATH;
       throw new Error("Сессия истекла");
     }
   }
@@ -106,18 +107,73 @@ export async function apiFetchList<T>(
   return (await apiFetch<PaginatedResponse<T>>(path, init)).data;
 }
 
+function withPagination(path: string, page: number, limit: number): string {
+  const [pathname, search = ""] = path.split("?", 2);
+  const params = new URLSearchParams(search);
+  params.set("page", String(page));
+  params.set("limit", String(limit));
+  return `${pathname}?${params.toString()}`;
+}
+
+/** Read every server page while retaining the existing client-side filter behavior. */
+export async function apiFetchAllPages<T>(
+  path: string,
+  init: RequestInit = {},
+): Promise<T[]> {
+  const limit = 100;
+  const firstPage = await apiFetch<PaginatedResponse<T>>(
+    withPagination(path, 1, limit),
+    init,
+  );
+  if (firstPage.meta.totalPages <= 1) return firstPage.data;
+
+  const pages: T[] = [...firstPage.data];
+  const batchSize = 4;
+  for (let start = 2; start <= firstPage.meta.totalPages; start += batchSize) {
+    const pageNumbers = Array.from(
+      { length: Math.min(batchSize, firstPage.meta.totalPages - start + 1) },
+      (_, index) => start + index,
+    );
+    const results = await Promise.all(
+      pageNumbers.map((page) =>
+        apiFetch<PaginatedResponse<T>>(withPagination(path, page, limit), init),
+      ),
+    );
+    results.forEach((result) => pages.push(...result.data));
+  }
+
+  return pages;
+}
+
 export async function login(
   email: string,
   password: string,
 ): Promise<{ accessToken: string; refreshToken: string }> {
-  const res = await fetch(`${API_BASE}/auth/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+  } catch {
+    throw new Error("Не удалось связаться со службой входа. Проверьте подключение и повторите попытку.");
+  }
 
   if (!res.ok) {
-    throw new Error("Неверные учетные данные");
+    if (res.status === 400) throw new Error("Проверьте формат электронной почты и заполнение обязательных полей.");
+    if (res.status === 401) throw new Error("Неверная электронная почта или пароль.");
+    if (res.status === 403) throw new Error("Эта учётная запись не имеет доступа к кабинету университета.");
+    if (res.status === 429) throw new Error("Слишком много попыток входа. Подождите и попробуйте ещё раз.");
+    if (res.status === 404) throw new Error("Служба входа недоступна по этому адресу. Повторите попытку позже.");
+    if (res.status >= 500) throw new Error("Служба входа временно недоступна. Попробуйте позже.");
+    const body = await res.json().catch(() => null);
+    const message = Array.isArray(body?.message)
+      ? body.message.join(" ")
+      : typeof body?.message === "string"
+        ? body.message
+        : "Не удалось войти. Проверьте данные и повторите попытку.";
+    throw new Error(message);
   }
 
   const data = await res.json();
@@ -138,7 +194,7 @@ export async function logout(): Promise<void> {
     // Local token removal is still necessary if the network is unavailable.
   }
   clearTokens();
-  window.location.href = "/login";
+  window.location.href = LOGIN_PATH;
 }
 
 export interface Me {

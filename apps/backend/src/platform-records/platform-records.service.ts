@@ -43,8 +43,8 @@ const PREFERENCE_FIELDS = [
 export class PlatformRecordsService {
   constructor(private readonly db: DataSource, private readonly platform: PlatformService) {}
 
-  async users(query: PlatformPersonalRecordsQueryDto) {
-    await this.platform.require('personal-data.read');
+  async users(query: PlatformPersonalRecordsQueryDto, context: RequestAuditContext = {}) {
+    const access = await this.platform.require('personal-data.read');
     const qb = this.db.getRepository(User).createQueryBuilder('u')
       .leftJoin(University, 'university', 'university.id = u.universityId')
       .select('u.id', 'id')
@@ -56,12 +56,34 @@ export class PlatformRecordsService {
       .addSelect('university.name', 'universityName')
       .addSelect('u.groupId', 'groupId')
       .addSelect('u.isActive', 'isActive');
-    if (query.universityId) qb.andWhere('u.universityId = :universityId', { universityId: query.universityId });
+    if (query.universityId) {
+      this.platform.assertUniversityScope(access, query.universityId);
+      qb.andWhere('u.universityId = :universityId', { universityId: query.universityId });
+    }
+    if (!access.owner && access.universityIds !== null) {
+      if (!access.universityIds.length) qb.andWhere('1 = 0');
+      else qb.andWhere('u.universityId IN (:...allowedUniversityIds)', { allowedUniversityIds: access.universityIds });
+    }
     if (query.role) qb.andWhere('u.role = :role', { role: query.role });
     if (query.q?.trim()) this.applySearch(qb, query.q.trim());
     const total = await qb.clone().getCount();
     const data = await qb.orderBy('u.createdAt', 'DESC').addOrderBy('u.id', 'ASC')
       .skip((query.page - 1) * query.limit).take(query.limit).getRawMany();
+    await this.db.getRepository(AuditLog).save({
+      userId: access.actorId,
+      action: 'platform.personal_data.users_searched',
+      entity: 'personal_data_user_search',
+      entityId: 'search',
+      newValues: {
+        universityId: query.universityId ?? null,
+        filters: { queryPresent: Boolean(query.q?.trim()), role: query.role ?? null, page: query.page, limit: query.limit },
+        total,
+        resultCount: data.length,
+        targetUserIds: data.map(row => row.id),
+      },
+      ip: context.ip,
+      userAgent: context.userAgent?.slice(0, 512),
+    });
     return toPaginatedResponse(data, total, query);
   }
 
@@ -74,6 +96,7 @@ export class PlatformRecordsService {
         select: ['id', 'email', 'firstName', 'lastName', 'role', 'universityId', 'groupId', 'isActive', 'createdAt', 'updatedAt'],
       });
       if (!user) throw new NotFoundException('Пользователь не найден.');
+      this.platform.assertUniversityScope(access, user.universityId);
 
       const [university, group, preferences, favorites, lessonNotes, homeworkProgress] = await Promise.all([
         user.universityId ? manager.findOne(University, { where: { id: user.universityId }, select: ['id', 'name', 'city'] }) : null,
@@ -83,19 +106,25 @@ export class PlatformRecordsService {
           : null,
         manager.getRepository(NotificationPreference).createQueryBuilder('preference')
           .innerJoin(University, 'university', 'university.id = preference.universityId')
-          .where('preference.userId = :userId', { userId }).orderBy('preference.updatedAt', 'DESC').addOrderBy('preference.id', 'ASC').getMany(),
+          .where('preference.userId = :userId', { userId })
+          .andWhere(access.owner || access.universityIds === null ? '1 = 1' : access.universityIds.length ? 'preference.universityId IN (:...allowedUniversityIds)' : '1 = 0', { allowedUniversityIds: access.universityIds ?? [] })
+          .orderBy('preference.updatedAt', 'DESC').addOrderBy('preference.id', 'ASC').getMany(),
         manager.getRepository(Favorite).createQueryBuilder('favorite')
           .innerJoin(University, 'university', 'university.id = favorite.universityId')
-          .where('favorite.userId = :userId', { userId }).orderBy('favorite.kind', 'ASC').addOrderBy('favorite.label', 'ASC').addOrderBy('favorite.id', 'ASC').getMany(),
+          .where('favorite.userId = :userId', { userId })
+          .andWhere(access.owner || access.universityIds === null ? '1 = 1' : access.universityIds.length ? 'favorite.universityId IN (:...allowedUniversityIds)' : '1 = 0', { allowedUniversityIds: access.universityIds ?? [] })
+          .orderBy('favorite.kind', 'ASC').addOrderBy('favorite.label', 'ASC').addOrderBy('favorite.id', 'ASC').getMany(),
         manager.getRepository(PersonalLessonNote).createQueryBuilder('note')
           .innerJoin(PairSpace, 'pairSpace', 'pairSpace.id = note.pairSpaceId AND pairSpace.universityId = note.universityId')
+          .innerJoin(University, 'university', 'university.id = note.universityId')
           .innerJoin(Lesson, 'lesson', 'lesson.id = pairSpace.lessonId AND lesson.universityId = pairSpace.universityId')
           .where('note.userId = :userId', { userId })
-          .select('note.id', 'id').addSelect('note.universityId', 'universityId').addSelect('note.pairSpaceId', 'pairSpaceId')
+          .andWhere(access.owner || access.universityIds === null ? '1 = 1' : access.universityIds.length ? 'note.universityId IN (:...allowedUniversityIds)' : '1 = 0', { allowedUniversityIds: access.universityIds ?? [] })
+          .select('note.id', 'id').addSelect('note.universityId', 'universityId').addSelect('university.name', 'universityName').addSelect('note.pairSpaceId', 'pairSpaceId')
           .addSelect('note.content', 'content').addSelect('note.createdAt', 'createdAt').addSelect('note.updatedAt', 'updatedAt')
           .addSelect('lesson.id', 'lessonId').addSelect('lesson.subject', 'lessonSubject').addSelect('lesson.startDate', 'lessonDate').addSelect('lesson.pairNumber', 'lessonPairNumber')
           .orderBy('note.updatedAt', 'DESC').addOrderBy('note.id', 'ASC').getRawMany<{
-            id: string; universityId: string; pairSpaceId: string; content: string; createdAt: Date; updatedAt: Date;
+            id: string; universityId: string; universityName: string; pairSpaceId: string; content: string; createdAt: Date; updatedAt: Date;
             lessonId: string; lessonSubject: string; lessonDate: Date; lessonPairNumber: number;
           }>(),
         manager.getRepository(HomeworkProgress).createQueryBuilder('progress')
@@ -103,6 +132,7 @@ export class PlatformRecordsService {
           .innerJoin(PairSpace, 'pairSpace', 'pairSpace.id = homework.pairSpaceId')
           .innerJoin(Lesson, 'lesson', 'lesson.id = pairSpace.lessonId AND lesson.universityId = pairSpace.universityId')
           .where('progress.studentId = :userId AND pairSpace.universityId = :universityId', { userId, universityId: user.universityId ?? '' })
+          .andWhere(access.owner || access.universityIds === null ? '1 = 1' : access.universityIds.length ? 'pairSpace.universityId IN (:...allowedUniversityIds)' : '1 = 0', { allowedUniversityIds: access.universityIds ?? [] })
           .select('progress.id', 'id').addSelect('progress.homeworkId', 'homeworkId').addSelect('progress.state', 'state')
           .addSelect('progress.subtasks', 'subtasks').addSelect('progress.createdAt', 'createdAt').addSelect('progress.updatedAt', 'updatedAt')
           .addSelect('homework.title', 'homeworkTitle').addSelect('homework.deadline', 'homeworkDeadline')
@@ -134,9 +164,15 @@ export class PlatformRecordsService {
           targetUserId: userId,
           universityId: user.universityId,
           sections,
-          ip: context.ip ?? null,
-          userAgent: context.userAgent?.slice(0, 512) ?? null,
+          recordCounts: {
+            notificationPreferences: preferences.length,
+            favorites: favorites.length,
+            lessonNotes: normalizedNotes.length,
+            homeworkProgress: validProgress.length,
+          },
         },
+        ip: context.ip,
+        userAgent: context.userAgent?.slice(0, 512),
       }));
 
       return {
@@ -166,7 +202,7 @@ export class PlatformRecordsService {
     });
   }
 
-  async putPreferences(userId: string, dto: PlatformNotificationPreferencesDto) {
+  async putPreferences(userId: string, dto: PlatformNotificationPreferencesDto, context: RequestAuditContext = {}) {
     const access = await this.platform.require('personal-data.write');
     this.assertReason(dto.reason);
     const patch = this.pick(dto, PREFERENCE_FIELDS);
@@ -183,12 +219,12 @@ export class PlatformRecordsService {
       Object.assign(record, patch);
       this.assertQuietHours(record);
       record = await repository.save(record);
-      await this.audit(manager, access.actorId, 'notification_preferences', record.id, oldValues, { ...this.snapshot(record, Object.keys(patch)), reason: dto.reason.trim(), result: oldValues ? 'updated' : 'created' }, record.universityId);
+      await this.audit(manager, access.actorId, 'notification_preferences', record.id, oldValues, { ...this.snapshot(record, Object.keys(patch)), reason: dto.reason.trim(), result: oldValues ? 'updated' : 'created', targetUserId: userId }, record.universityId, context);
       return this.preferenceResponse(record);
     });
   }
 
-  async patchPreferences(userId: string, id: string, dto: PlatformNotificationPreferencesPatchDto) {
+  async patchPreferences(userId: string, id: string, dto: PlatformNotificationPreferencesPatchDto, context: RequestAuditContext = {}) {
     const access = await this.platform.require('personal-data.write');
     this.assertReason(dto.reason);
     const patch = this.pick(dto, PREFERENCE_FIELDS);
@@ -204,12 +240,12 @@ export class PlatformRecordsService {
       Object.assign(record, patch);
       this.assertQuietHours(record);
       const updated = await manager.save(NotificationPreference, record);
-      await this.audit(manager, access.actorId, 'notification_preferences', id, oldValues, { ...this.snapshot(updated, Object.keys(patch)), reason: dto.reason.trim(), result: 'updated' }, updated.universityId);
+      await this.audit(manager, access.actorId, 'notification_preferences', id, oldValues, { ...this.snapshot(updated, Object.keys(patch)), reason: dto.reason.trim(), result: 'updated', targetUserId: userId }, updated.universityId, context);
       return this.preferenceResponse(updated);
     });
   }
 
-  async deletePreferences(userId: string, id: string, dto: PlatformPersonalRecordDeleteDto) {
+  async deletePreferences(userId: string, id: string, dto: PlatformPersonalRecordDeleteDto, context: RequestAuditContext = {}) {
     const access = await this.platform.require('personal-data.write');
     this.assertReason(dto.reason);
     return this.db.transaction(async manager => {
@@ -219,12 +255,12 @@ export class PlatformRecordsService {
       await this.assertStoredUniversity(manager, record.universityId);
       const oldValues = this.snapshot(record, [...PREFERENCE_FIELDS]);
       await manager.remove(NotificationPreference, record);
-      await this.audit(manager, access.actorId, 'notification_preferences', id, oldValues, { reason: dto.reason.trim(), result: 'deleted' }, record.universityId);
+      await this.audit(manager, access.actorId, 'notification_preferences', id, oldValues, { reason: dto.reason.trim(), result: 'deleted', targetUserId: userId }, record.universityId, context);
       return { deleted: true, id };
     });
   }
 
-  async putFavorite(userId: string, dto: PlatformFavoriteDto) {
+  async putFavorite(userId: string, dto: PlatformFavoriteDto, context: RequestAuditContext = {}) {
     const access = await this.platform.require('personal-data.write');
     this.assertReason(dto.reason);
     const values = this.normalizeFavorite(dto.kind, dto.externalId, dto.label);
@@ -237,12 +273,12 @@ export class PlatformRecordsService {
       if (!record) record = repository.create({ userId, universityId, kind: dto.kind, ...values });
       else Object.assign(record, values);
       record = await repository.save(record);
-      await this.audit(manager, access.actorId, 'favorite', record.id, oldValues, { ...this.snapshot(record, ['kind', 'externalId', 'label']), reason: dto.reason.trim(), result: oldValues ? 'updated' : 'created' }, record.universityId);
+      await this.audit(manager, access.actorId, 'favorite', record.id, oldValues, { ...this.snapshot(record, ['kind', 'externalId', 'label']), reason: dto.reason.trim(), result: oldValues ? 'updated' : 'created', targetUserId: userId }, record.universityId, context);
       return record;
     });
   }
 
-  async patchFavorite(userId: string, id: string, dto: PlatformFavoritePatchDto) {
+  async patchFavorite(userId: string, id: string, dto: PlatformFavoritePatchDto, context: RequestAuditContext = {}) {
     const access = await this.platform.require('personal-data.write');
     this.assertReason(dto.reason);
     const supplied = this.pick(dto, ['kind', 'externalId', 'label'] as const);
@@ -262,12 +298,12 @@ export class PlatformRecordsService {
       const oldValues = this.snapshot(record, Object.keys(supplied));
       Object.assign(record, { kind, ...normalized });
       const updated = await manager.save(Favorite, record);
-      await this.audit(manager, access.actorId, 'favorite', id, oldValues, { ...this.snapshot(updated, Object.keys(supplied)), reason: dto.reason.trim(), result: 'updated' }, updated.universityId);
+      await this.audit(manager, access.actorId, 'favorite', id, oldValues, { ...this.snapshot(updated, Object.keys(supplied)), reason: dto.reason.trim(), result: 'updated', targetUserId: userId }, updated.universityId, context);
       return updated;
     });
   }
 
-  async deleteFavorite(userId: string, id: string, dto: PlatformPersonalRecordDeleteDto) {
+  async deleteFavorite(userId: string, id: string, dto: PlatformPersonalRecordDeleteDto, context: RequestAuditContext = {}) {
     const access = await this.platform.require('personal-data.write');
     this.assertReason(dto.reason);
     return this.db.transaction(async manager => {
@@ -278,12 +314,12 @@ export class PlatformRecordsService {
       await this.assertStoredUniversity(manager, universityId);
       const oldValues = this.snapshot(record, ['universityId', 'kind', 'externalId', 'label']);
       await manager.remove(Favorite, record);
-      await this.audit(manager, access.actorId, 'favorite', id, oldValues, { reason: dto.reason.trim(), result: 'deleted' }, record.universityId);
+      await this.audit(manager, access.actorId, 'favorite', id, oldValues, { reason: dto.reason.trim(), result: 'deleted', targetUserId: userId }, record.universityId, context);
       return { deleted: true, id };
     });
   }
 
-  async putLessonNote(userId: string, pairSpaceId: string, dto: PlatformPersonalLessonNoteDto) {
+  async putLessonNote(userId: string, pairSpaceId: string, dto: PlatformPersonalLessonNoteDto, context: RequestAuditContext = {}) {
     const access = await this.platform.require('personal-data.write');
     this.assertReason(dto.reason);
     return this.db.transaction(async manager => {
@@ -295,12 +331,12 @@ export class PlatformRecordsService {
       if (!record) record = repository.create({ userId, universityId: pairSpace.universityId, pairSpaceId, content: dto.content });
       else record.content = dto.content;
       record = await repository.save(record);
-      await this.audit(manager, access.actorId, 'personal_lesson_note', record.id, oldValues, { content: record.content, reason: dto.reason.trim(), result: oldValues ? 'updated' : 'created' }, record.universityId);
+      await this.audit(manager, access.actorId, 'personal_lesson_note', record.id, oldValues, { content: record.content, reason: dto.reason.trim(), result: oldValues ? 'updated' : 'created', targetUserId: userId }, record.universityId, context);
       return { ...record, lesson: await this.lessonSummary(manager, pairSpace) };
     });
   }
 
-  async patchLessonNote(userId: string, id: string, dto: PlatformPersonalLessonNotePatchDto) {
+  async patchLessonNote(userId: string, id: string, dto: PlatformPersonalLessonNotePatchDto, context: RequestAuditContext = {}) {
     const access = await this.platform.require('personal-data.write');
     this.assertReason(dto.reason);
     return this.db.transaction(async manager => {
@@ -311,12 +347,12 @@ export class PlatformRecordsService {
       const oldValues = this.snapshot(record, ['content']);
       record.content = dto.content;
       const updated = await manager.save(PersonalLessonNote, record);
-      await this.audit(manager, access.actorId, 'personal_lesson_note', id, oldValues, { content: updated.content, reason: dto.reason.trim(), result: 'updated' }, updated.universityId);
+      await this.audit(manager, access.actorId, 'personal_lesson_note', id, oldValues, { content: updated.content, reason: dto.reason.trim(), result: 'updated', targetUserId: userId }, updated.universityId, context);
       return { ...updated, lesson: await this.lessonSummary(manager, pairSpace) };
     });
   }
 
-  async deleteLessonNote(userId: string, id: string, dto: PlatformPersonalRecordDeleteDto) {
+  async deleteLessonNote(userId: string, id: string, dto: PlatformPersonalRecordDeleteDto, context: RequestAuditContext = {}) {
     const access = await this.platform.require('personal-data.write');
     this.assertReason(dto.reason);
     return this.db.transaction(async manager => {
@@ -326,12 +362,12 @@ export class PlatformRecordsService {
       await this.assertStoredPairSpace(manager, record.pairSpaceId, record.universityId);
       const oldValues = this.snapshot(record, ['universityId', 'pairSpaceId', 'content']);
       await manager.remove(PersonalLessonNote, record);
-      await this.audit(manager, access.actorId, 'personal_lesson_note', id, oldValues, { reason: dto.reason.trim(), result: 'deleted' }, record.universityId);
+      await this.audit(manager, access.actorId, 'personal_lesson_note', id, oldValues, { reason: dto.reason.trim(), result: 'deleted', targetUserId: userId }, record.universityId, context);
       return { deleted: true, id };
     });
   }
 
-  async putHomeworkProgress(userId: string, homeworkId: string, dto: PlatformHomeworkProgressDto) {
+  async putHomeworkProgress(userId: string, homeworkId: string, dto: PlatformHomeworkProgressDto, context: RequestAuditContext = {}) {
     const access = await this.platform.require('personal-data.write');
     this.assertReason(dto.reason);
     this.assertUniqueSubtasks(dto.subtasks);
@@ -344,12 +380,12 @@ export class PlatformRecordsService {
       if (!record) record = repository.create({ studentId: userId, homeworkId, state: dto.state, subtasks: dto.subtasks });
       else Object.assign(record, { state: dto.state, subtasks: dto.subtasks });
       record = await repository.save(record);
-      await this.audit(manager, access.actorId, 'homework_progress', record.id, oldValues, { state: record.state, subtasks: record.subtasks as unknown as JsonValue, reason: dto.reason.trim(), result: oldValues ? 'updated' : 'created' }, user.universityId ?? undefined);
+      await this.audit(manager, access.actorId, 'homework_progress', record.id, oldValues, { state: record.state, subtasks: record.subtasks as unknown as JsonValue, reason: dto.reason.trim(), result: oldValues ? 'updated' : 'created', targetUserId: userId }, user.universityId ?? undefined, context);
       return { ...record, homework: this.homeworkSummary(homework), pairSpace: this.pairSpaceSummary(homework.pairSpace) };
     });
   }
 
-  async patchHomeworkProgress(userId: string, id: string, dto: PlatformHomeworkProgressPatchDto) {
+  async patchHomeworkProgress(userId: string, id: string, dto: PlatformHomeworkProgressPatchDto, context: RequestAuditContext = {}) {
     const access = await this.platform.require('personal-data.write');
     this.assertReason(dto.reason);
     const patch = this.pick(dto, ['state', 'subtasks'] as const);
@@ -364,12 +400,12 @@ export class PlatformRecordsService {
       const oldValues = this.snapshot(record, Object.keys(patch));
       Object.assign(record, patch);
       const updated = await manager.save(HomeworkProgress, record);
-      await this.audit(manager, access.actorId, 'homework_progress', id, oldValues, { ...this.snapshot(updated, Object.keys(patch)), reason: dto.reason.trim(), result: 'updated' }, user.universityId ?? undefined);
+      await this.audit(manager, access.actorId, 'homework_progress', id, oldValues, { ...this.snapshot(updated, Object.keys(patch)), reason: dto.reason.trim(), result: 'updated', targetUserId: userId }, user.universityId ?? undefined, context);
       return { ...updated, homework: this.homeworkSummary(homework), pairSpace: this.pairSpaceSummary(homework.pairSpace) };
     });
   }
 
-  async deleteHomeworkProgress(userId: string, id: string, dto: PlatformPersonalRecordDeleteDto) {
+  async deleteHomeworkProgress(userId: string, id: string, dto: PlatformPersonalRecordDeleteDto, context: RequestAuditContext = {}) {
     const access = await this.platform.require('personal-data.write');
     this.assertReason(dto.reason);
     return this.db.transaction(async manager => {
@@ -379,7 +415,7 @@ export class PlatformRecordsService {
       await this.assertStoredHomework(manager, record.homeworkId);
       const oldValues = this.snapshot(record, ['homeworkId', 'state', 'subtasks']);
       await manager.remove(HomeworkProgress, record);
-      await this.audit(manager, access.actorId, 'homework_progress', id, oldValues, { reason: dto.reason.trim(), result: 'deleted' }, user.universityId ?? undefined);
+      await this.audit(manager, access.actorId, 'homework_progress', id, oldValues, { reason: dto.reason.trim(), result: 'deleted', targetUserId: userId }, user.universityId ?? undefined, context);
       return { deleted: true, id };
     });
   }
@@ -387,6 +423,8 @@ export class PlatformRecordsService {
   private async lockUser(manager: EntityManager, userId: string): Promise<User> {
     const user = await manager.findOne(User, { where: { id: userId }, lock: { mode: 'pessimistic_write' } });
     if (!user) throw new NotFoundException('Пользователь не найден.');
+    const access = await this.platform.access();
+    this.platform.assertUniversityScope(access, user.universityId);
     return user;
   }
 
@@ -396,6 +434,8 @@ export class PlatformRecordsService {
   }
 
   private async assertStoredUniversity(manager: EntityManager, universityId: string): Promise<void> {
+    const access = await this.platform.access();
+    this.platform.assertUniversityScope(access, universityId);
     if (!await manager.getRepository(University).existsBy({ id: universityId })) throw new BadRequestException('Университет сохранённой записи больше не существует.');
   }
 
@@ -409,6 +449,8 @@ export class PlatformRecordsService {
     const pairSpace = await manager.findOne(PairSpace, { where: { id: pairSpaceId }, lock: { mode: 'pessimistic_read' } });
     if (!pairSpace) throw new NotFoundException('Пространство пары не найдено.');
     await this.assertUserUniversity(manager, user, pairSpace.universityId);
+    const access = await this.platform.access();
+    this.platform.assertUniversityScope(access, pairSpace.universityId);
     if (expectedUniversityId && expectedUniversityId !== pairSpace.universityId) throw new BadRequestException('Университет заметки не совпадает с университетом пространства пары.');
     const lesson = await manager.findOne(Lesson, { where: { id: pairSpace.lessonId, universityId: pairSpace.universityId }, select: ['id', 'groupId', 'teacherId', 'subject', 'startDate', 'pairNumber'] });
     if (!lesson) throw new BadRequestException('Пространство пары не связано с занятием этого университета.');
@@ -534,7 +576,7 @@ export class PlatformRecordsService {
     return String(value);
   }
 
-  private async audit(manager: EntityManager, actorId: string, entity: string, entityId: string, oldValues: JsonObject | null, newValues: JsonObject, universityId?: string): Promise<void> {
+  private async audit(manager: EntityManager, actorId: string, entity: string, entityId: string, oldValues: JsonObject | null, newValues: JsonObject, universityId?: string, context: RequestAuditContext = {}): Promise<void> {
     const result = newValues.result;
     await manager.save(AuditLog, manager.create(AuditLog, {
       userId: actorId,
@@ -542,7 +584,9 @@ export class PlatformRecordsService {
       entity: `personal_data.${entity}`,
       entityId,
       oldValues: oldValues ?? undefined,
-        newValues: universityId ? { ...newValues, universityId } : newValues,
+      newValues: universityId ? { ...newValues, universityId } : newValues,
+      ip: context.ip,
+      userAgent: context.userAgent?.slice(0, 512),
     }));
   }
 }

@@ -8,7 +8,7 @@
 
 Role counters are compact filters. The blocked counter activates `status=blocked`, while other counters reset status to all. Desktop row role selectors have per-user accessible names.
 
-User directory with mobile cards, URL filters, bulk confirmation and partial results. Details use the shared Sheet. Individual role changes require confirmation and update both directory/detail state only after success; API failures preserve the previous role.
+User directory with mobile cards, URL filters, bulk confirmation and partial results. Details use the shared Sheet. Individual role changes require confirmation and update both directory/detail state only after success; API failures preserve the previous role. A role update invalidates the user's active sessions, so both individual and bulk confirmations explain that the user will need to sign in again. Bulk success feedback is shown only when at least one update succeeds; failed users remain selected.
 
 ## Read sequence
 

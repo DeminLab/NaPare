@@ -72,9 +72,15 @@ export class NotificationsController {
     @Request() req,
     @Query('status') status?: InboxItemStatus,
     @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
   ) {
     const safeStatus = status && INBOX_ITEM_STATUSES.includes(status) ? status : undefined;
-    return this.notificationsService.findInbox(req.user.id, safeStatus, limit ? Number(limit) : undefined);
+    return this.notificationsService.findInbox(
+      req.user.id,
+      safeStatus,
+      limit ? Number(limit) : undefined,
+      offset ? Number(offset) : undefined,
+    );
   }
 
   @Patch('inbox/:id/complete')

@@ -6,7 +6,7 @@
 
 ## Scope
 
-Owner-bound platform control and explicitly delegated capabilities. Read [implementation](../../product/platform-control.md) and [installation](../../deployment/platform-control.md) before changes. Preserve immutable owner identity, server-side permission checks and private signed agent transport.
+Owner-bound platform control and explicitly delegated capabilities. University settings include reasoned faculty and group editing scoped to one university. External group IDs are read-only; curator assignment remains separate. Read [implementation](../../product/platform-control.md) and [installation](../../deployment/platform-control.md) before changes. Preserve immutable owner identity, server-side permission checks and private signed agent transport.
 
 ## Verification
 

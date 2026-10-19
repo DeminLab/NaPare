@@ -7,6 +7,14 @@ import { PlatformDataModule } from './platform-data/platform-data.module';
 import { PlatformRecordsModule } from './platform-records/platform-records.module';
 import { PlatformCareerModule } from './platform-career/platform-career.module';
 import { PlatformDiscussionsModule } from './platform-discussions/platform-discussions.module';
+import { PlatformHomeworkModule } from './platform-homework/platform-homework.module';
+import { PlatformNotificationsModule } from './platform-notifications/platform-notifications.module';
+import { PlatformCurationModule } from './platform-curation/platform-curation.module';
+import { PlatformAttendanceQrModule } from './platform-attendance-qr/platform-attendance-qr.module';
+import { PlatformPairSpaceModule } from './platform-pair-space/platform-pair-space.module';
+import { PlatformAcademicModule } from './platform-academic/platform-academic.module';
+import { PlatformEventsModule } from './platform-events/platform-events.module';
+import { PlatformAttachmentsModule } from './platform-attachments/platform-attachments.module';
 import { PlatformMaintenanceInterceptor } from './platform/platform-maintenance.interceptor';
 import { join } from 'node:path';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -87,6 +95,14 @@ import { SearchModule } from './search/search.module';
     PlatformRecordsModule,
     PlatformCareerModule,
     PlatformDiscussionsModule,
+    PlatformHomeworkModule,
+    PlatformNotificationsModule,
+    PlatformCurationModule,
+    PlatformAttendanceQrModule,
+    PlatformPairSpaceModule,
+    PlatformAcademicModule,
+    PlatformEventsModule,
+    PlatformAttachmentsModule,
     CurationModule,
     AuthModule,
     UsersModule,

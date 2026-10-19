@@ -1,4 +1,12 @@
 const API_BASE = '/api/v1';
+const LOGIN_PATH = '/student/login';
+
+export class ApiError extends Error {
+  constructor(message: string, public readonly status: number) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
 
 export function getToken(): string | null {
   if (typeof window === 'undefined') return null;
@@ -81,14 +89,14 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
       });
       if (retryResponse.status === 401) {
         clearTokens();
-        if (typeof window !== 'undefined') window.location.href = '/login';
+        if (typeof window !== 'undefined') window.location.href = LOGIN_PATH;
         throw new Error('Сессия истекла');
       }
       if (!retryResponse.ok) throw await toApiError(retryResponse);
       return readApiResponse<T>(retryResponse);
     }
     clearTokens();
-    if (typeof window !== 'undefined') window.location.href = '/login';
+    if (typeof window !== 'undefined') window.location.href = LOGIN_PATH;
     throw new Error('Сессия истекла');
   }
 
@@ -99,7 +107,7 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
       : response.status === 404
         ? 'Запрошенные данные не найдены или больше недоступны.'
         : `Не удалось выполнить запрос (${response.status}).`;
-    throw new Error(data?.message || fallback);
+    throw new ApiError(data?.message || fallback, response.status);
   }
 
   return readApiResponse<T>(response);
@@ -114,9 +122,9 @@ export async function apiFetchList<T>(path: string, init: RequestInit = {}): Pro
   return (await apiFetch<PaginatedResponse<T>>(path, init)).data;
 }
 
-async function toApiError(response: Response): Promise<Error> {
+async function toApiError(response: Response): Promise<ApiError> {
   const data = await response.json().catch(() => null);
-  return new Error(data?.message || `Не удалось выполнить запрос (${response.status}).`);
+  return new ApiError(data?.message || `Не удалось выполнить запрос (${response.status}).`, response.status);
 }
 
 let refreshPromise: Promise<boolean> | null = null;
@@ -215,7 +223,7 @@ export async function getRaspGroups(year?: string): Promise<RaspGroup[]> {
 
 export function logout(): void {
   clearTokens();
-  if (typeof window !== 'undefined') window.location.href = '/login';
+  if (typeof window !== 'undefined') window.location.href = LOGIN_PATH;
 }
 
 export async function getNotifications(): Promise<any[]> {

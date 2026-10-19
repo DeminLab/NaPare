@@ -6,7 +6,7 @@
 
 ## Scope
 
-Shared account connections page has responsive semantic CSS, MAX instructions, initial status checking and login states, temporary link creation and existing authenticated APIs. Actual messenger delivery requires configured integrations.
+Shared account connections page has responsive semantic CSS, MAX instructions, initial and focus status checks, login states, and temporary link creation through existing authenticated APIs. Status requests use sequence invalidation so delayed results cannot overwrite a successful link mutation; starting a link also invalidates pending status responses. A successful link immediately marks its status known and linked. Actual messenger delivery requires configured integrations.
 
 ## Read sequence
 

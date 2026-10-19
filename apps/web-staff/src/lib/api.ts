@@ -1,4 +1,5 @@
 const API_BASE = "/api/v1";
+const LOGIN_PATH = "/staff/login";
 
 export function getToken(): string | null {
   if (typeof window === "undefined") return null;
@@ -72,7 +73,7 @@ export async function apiFetch<T>(
       return (content.trim() ? JSON.parse(content) : undefined) as T;
     }
     clearTokens();
-    if (typeof window !== "undefined") window.location.href = "/login";
+    if (typeof window !== "undefined") window.location.href = LOGIN_PATH;
     throw new Error("Сессия истекла");
   }
 
@@ -166,7 +167,7 @@ export async function logout(): Promise<void> {
     // Local token removal is still necessary if the network is unavailable.
   }
   clearTokens();
-  if (typeof window !== "undefined") window.location.href = "/login";
+  if (typeof window !== "undefined") window.location.href = LOGIN_PATH;
 }
 
 export async function getNotifications(): Promise<any[]> {

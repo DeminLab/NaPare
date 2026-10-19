@@ -48,7 +48,7 @@ export class Group {
   curriculumYear: number;
 
   @Column({ nullable: true })
-  specialization: string;
+  specialization: string | null;
 
   @Column({ type: "uuid", nullable: true })
   curatorId: string | null;

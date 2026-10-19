@@ -38,6 +38,11 @@ export function StaffSpotlight() {
   }, []);
 
   const navigate = useCallback((result: SearchResult) => {
+    const navigationRequest = new CustomEvent('napare:staff-navigation-request', {
+      cancelable: true,
+      detail: { href: result.href },
+    });
+    if (!window.dispatchEvent(navigationRequest)) return;
     close();
     router.push(result.href);
   }, [close, router]);

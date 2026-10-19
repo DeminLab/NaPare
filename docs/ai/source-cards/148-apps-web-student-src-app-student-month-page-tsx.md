@@ -8,7 +8,7 @@
 
 Student month schedule preserves selected date, type and query in the URL and carries that context back to week view. Fetching waits for query restoration. Day markers use lesson-type colors and the selected-day list shows accessible text badges.
 
-The October 16 follow-up keeps month navigation on one row at 320px. Search/type filters and ICS export expand separately; active filters remain indicated and can be reset. Redundant introductory copy is removed.
+The October 16 follow-up keeps month navigation on one row at 320px. Search/type filters and ICS export expand separately; active filters remain indicated and can be reset. Redundant introductory copy is removed. The calendar has one roving Tab stop, arrow-key date movement and Home/End week movement; the live announcement is limited to the selected date and lesson count.
 
 ## Read sequence
 

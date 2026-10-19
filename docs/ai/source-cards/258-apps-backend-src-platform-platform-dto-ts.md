@@ -6,7 +6,9 @@
 
 ## Scope
 
-Owner-bound platform control and explicitly delegated capabilities. Read [implementation](../../product/platform-control.md) and [installation](../../deployment/platform-control.md) before changes. Preserve immutable owner identity, server-side permission checks and private signed agent transport.
+Owner-bound platform control and explicitly delegated capabilities, including reason-bearing faculty/group edits and bounded organization fields. Read [implementation](../../product/platform-control.md) and [installation](../../deployment/platform-control.md) before changes. Preserve immutable owner identity, server-side permission checks and private signed agent transport.
+
+`PlatformGrantDto.universityIds` is optional for backward compatibility. Omitted values preserve an existing grant scope; explicit `null` means global, and an array (including empty) is an explicit scope.
 
 ## Verification
 

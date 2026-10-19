@@ -42,6 +42,24 @@ import {
 export class PairSpaceController {
   constructor(private readonly pairSpaceService: PairSpaceService) {}
 
+  @Get("groups/:groupId")
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @ApiOperation({ summary: "Получить существующие пространства пары группы без создания новых" })
+  @ApiOkResponse({ type: PaginatedResponseDto, description: "Пространства группы получены" })
+  @ApiResponse({ status: 403, description: "Forbidden" })
+  @ApiResponse({ status: 404, description: "Group not found in this university" })
+  async listExistingForGroup(
+    @Param("groupId") groupId: string,
+    @Request() req,
+    @Query() pagination: PaginationQueryDto,
+  ) {
+    return this.pairSpaceService.listExistingForGroup(
+      groupId,
+      req.user.universityId,
+      pagination,
+    );
+  }
+
   @Get(":lessonId")
   @ApiOperation({ summary: "Получить PairSpace по уроку" })
   @ApiResponse({ status: 200, description: "PairSpace найден" })

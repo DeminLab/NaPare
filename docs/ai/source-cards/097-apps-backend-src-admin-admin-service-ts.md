@@ -6,7 +6,7 @@
 
 ## Scope
 
-NestJS backend module, HTTP boundary, authorization or data-service behavior.
+NestJS backend module, HTTP boundary, authorization or data-service behavior. Admin audit history joins audit events to users and scopes them by `universityId` before applying pagination; do not build the event set from a capped first page of university users. Faculty dean assignment accepts only an active `faculty_dean` account from the same university; `null` clears the assignment.
 
 ## Read sequence
 
@@ -22,4 +22,5 @@ Trace consumers and tests before changing data or authorization behavior.
 
 ```powershell
 pnpm --filter @napare/backend exec tsc --noEmit
+pnpm --filter @napare/backend exec jest --runInBand src/admin/admin.service.spec.ts
 ```

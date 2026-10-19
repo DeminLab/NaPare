@@ -60,8 +60,28 @@ export interface PairSpacePreparationSummary {
   subtasks: HomeworkProgressSubtask[];
 }
 
+export interface PairSpaceGroupSummary {
+  id: string;
+  lessonId: string;
+  subject: string;
+  date: Date;
+  pairNumber: number;
+  teacherName: string | null;
+  group: string | null;
+  room: string | null;
+  isActive: boolean;
+  syncStatus: string;
+}
+
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const SUBJECT_TIMELINE_LIMIT = 20;
+
+function visibleAttachments(files: FileAttachment[] | undefined): FileAttachment[] {
+  return (files ?? []).filter((file) => !file.revokedAt).map((file) => {
+    const { revokedAt: _revokedAt, revokedBy: _revokedBy, revokeReason: _revokeReason, ...visible } = file;
+    return visible as FileAttachment;
+  });
+}
 
 @Injectable()
 export class PairSpaceService {
@@ -106,6 +126,7 @@ export class PairSpaceService {
       throw new NotFoundException(`PairSpace with id ${id} not found`);
     }
     await this.assertRoleScopedAccess(pairSpace);
+    pairSpace.files = visibleAttachments(pairSpace.files);
     pairSpace.messages = (pairSpace.messages ?? []).filter(message => message.moderationState !== 'hidden');
 
     return this.attachMoodleUrl(pairSpace);
@@ -124,6 +145,7 @@ export class PairSpaceService {
       throw new NotFoundException(`PairSpace for lesson ${lessonId} not found`);
     }
     await this.assertRoleScopedAccess(pairSpace);
+    pairSpace.files = visibleAttachments(pairSpace.files);
     pairSpace.messages = (pairSpace.messages ?? []).filter(message => message.moderationState !== 'hidden');
 
     return this.attachMoodleUrl(pairSpace);
@@ -173,6 +195,7 @@ export class PairSpaceService {
           order: { date: "DESC" },
         })
       : [];
+    for (const space of spaces) space.files = visibleAttachments(space.files);
     const spacesByLesson = new Map(spaces.map((space) => [space.lessonId, space]));
 
     return toPaginatedResponse(
@@ -361,6 +384,54 @@ export class PairSpaceService {
       });
   }
 
+  async listExistingForGroup(
+    groupId: string,
+    universityId: string,
+    pagination: PaginationQueryDto,
+  ): Promise<PaginatedResponse<PairSpaceGroupSummary>> {
+    this.tenantContext.assertAccess(universityId);
+    if (!this.groupRepository || !this.lessonRepository) {
+      throw new ForbiddenException("Group PairSpace listing is unavailable");
+    }
+
+    const group = await this.groupRepository.findOne({
+      where: { id: groupId, universityId },
+      select: { id: true },
+    });
+    if (!group) throw new NotFoundException("Group not found in this university");
+
+    const lessons = await this.lessonRepository.find({
+      where: { groupId, universityId },
+      select: { id: true },
+    });
+    const lessonIds = lessons.map(({ id }) => id);
+    if (!lessonIds.length) return toPaginatedResponse([], 0, pagination);
+
+    const [spaces, total] = await this.pairSpaceRepository.findAndCount({
+      where: { universityId, lessonId: In(lessonIds) },
+      order: { date: "DESC", pairNumber: "DESC", id: "DESC" },
+      skip: (pagination.page - 1) * pagination.limit,
+      take: pagination.limit,
+    });
+
+    return toPaginatedResponse(
+      spaces.map(({ id, lessonId, subject, date, pairNumber, teacherName, group, room, isActive, syncStatus }) => ({
+        id,
+        lessonId,
+        subject,
+        date,
+        pairNumber,
+        teacherName: teacherName ?? null,
+        group: group ?? null,
+        room: room ?? null,
+        isActive,
+        syncStatus,
+      })),
+      total,
+      pagination,
+    );
+  }
+
   async updateHomeworkProgress(
     homeworkId: string,
     studentId: string,
@@ -406,7 +477,8 @@ export class PairSpaceService {
       size: fileData.size,
     });
 
-    return this.fileAttachmentRepository.save(file);
+    const saved = await this.fileAttachmentRepository.save(file);
+    return visibleAttachments([saved])[0];
   }
 
   async getMessages(

@@ -6,7 +6,7 @@
 
 ## Scope
 
-Authenticated Pair Space endpoints for lesson content and the role-scoped subject timeline. The timeline contract is `GET /pair-spaces/:lessonId/timeline`.
+Authenticated Pair Space endpoints for lesson content and the role-scoped subject timeline. The timeline contract is `GET /pair-spaces/:lessonId/timeline`. `GET /pair-spaces/groups/:groupId` is restricted to university administrators and lists only persisted summary rows; it must remain read-only and tenant-scoped.
 
 ## Read sequence
 

@@ -61,13 +61,13 @@ export class Notification {
   body: string;
 
   @Column({ nullable: true })
-  deepLink: string;
+  deepLink: string | null;
 
   @Column({ default: false })
   isRead: boolean;
 
   @Column({ type: 'timestamp', nullable: true })
-  readAt: Date;
+  readAt: Date | null;
 
   @Column({ type: 'jsonb', nullable: true })
   data: JsonObject;

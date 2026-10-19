@@ -31,6 +31,7 @@
 
 | Endpoint                                       | Метод | Описание                                                                                                      |
 | ---------------------------------------------- | ----- | ------------------------------------------------------------------------------------------------------------- |
+| `/api/v1/pair-spaces/groups/{groupId}`          | GET   | Только уже существующие пространства группы, summary-поля и пагинация; university admin/superadmin; чтение не создаёт PairSpace |
 | `/api/v1/pair-spaces/{lessonId}`               | GET   | Пространство пары; если его ещё нет, безопасно создаётся из доступного пользователю занятия                   |
 | `/api/v1/pair-spaces/{lessonId}/timeline`      | GET   | Первая страница (20 записей) недавних занятий того же предмета в tenant- и role-scoped контексте с подготовкой, объявлениями и файлами |
 | `/api/v1/pair-spaces/{lessonId}/announcements` | POST  | Создать объявление                                                                                            |
@@ -44,6 +45,8 @@
 | `/api/v1/pair-spaces/{lessonId}/personal-note` | PUT   | Создать/обновить личную заметку; пустое содержимое удаляет заметку                                             |
 
 Multipart/FileInterceptor **нет**: `POST .../files` принимает обычный JSON по `CreateFileDto` (`apps/backend/src/pair-space/dto/create-file.dto.ts`) — клиент загружает файл самостоятельно и присылает `fileUrl`, `fileName`, `fileType`, `size`.
+
+Групповой список проверяет принадлежность группы и её занятий к `universityId` текущего JWT, возвращает только существующие записи и не вызывает create-on-read `GET /pair-spaces/{lessonId}`. Ответ ограничен сводочными полями без содержимого объявлений, файлов и обсуждений.
 
 Полный OpenAPI: [api/README.md](../api/README.md).
 

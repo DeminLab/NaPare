@@ -6,11 +6,11 @@
 
 ## Scope
 
-Developer UI for searching and correcting attendance and absence records.
+Developer UI for searching and correcting attendance and absence records, plus reviewing and correcting absence-confirmation decisions.
 
 ## Change boundary
 
-Use explicit reasons and show only actions allowed by the current access profile. The backend remains authoritative.
+Use explicit reasons and show only actions allowed by the current `student-data.read/write` access profile. Preserve the associated curator on decision corrections; the backend remains authoritative.
 
 ## Verification
 

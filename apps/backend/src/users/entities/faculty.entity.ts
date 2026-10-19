@@ -33,7 +33,7 @@ export class Faculty {
   code: string;
 
   @Column({ type: 'uuid', nullable: true })
-  deanUserId: string;
+  deanUserId: string | null;
 
   @OneToMany(() => Group, (group) => group.faculty)
   groups: Group[];

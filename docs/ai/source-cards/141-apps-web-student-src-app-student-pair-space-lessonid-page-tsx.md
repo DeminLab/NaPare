@@ -8,7 +8,7 @@
 
 Lesson overview previews the nearest preparation topics with personal progress and exact topic anchors. Pinned announcements come first. Discussion has an explicitly labelled multiline composer; sending is deliberate and concurrent submits are blocked.
 
-The October 16 follow-up removes repeated breadcrumbs and the discussion CTA. Four section buttons fit without horizontal scrolling (two columns on phones); secondary notes/history actions expand under More. Preparation titles use full mobile width; personal notes have a heading-associated accessible label. API and autosave behavior are preserved.
+The October 16 follow-up removes repeated breadcrumbs and the discussion CTA. Four section buttons fit without horizontal scrolling (two columns on phones); secondary notes/history actions expand under More. Preparation titles use full mobile width; personal notes have a heading-associated accessible label. The October 20 follow-up maps API 403/404 to separate localized recovery states and keeps the schedule navigation/recovery targets at least 44px tall. API and autosave behavior are preserved.
 
 ## Read sequence
 

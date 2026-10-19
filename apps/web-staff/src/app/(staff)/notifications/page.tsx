@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useWorkspaceQuery } from "@napare/ui/workspace-shell";
 import { AttentionNavigation } from "../AttentionNavigation";
-import { useEffect, useMemo, useState } from "react";
-import { apiFetchList, markAllRead, markNotificationRead } from "@/lib/api";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { apiFetch, markAllRead, markNotificationRead, type PaginatedResponse } from "@/lib/api";
 import {
   Badge,
   Button,
@@ -77,31 +77,65 @@ function actionFor(notification: Notification) {
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [filter, setFilter] = useState<Filter>("all");
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [unreadCountLoading, setUnreadCountLoading] = useState(true);
+  const [unreadCountError, setUnreadCountError] = useState(false);
   const [error, setError] = useState("");
   const [actionError, setActionError] = useState('');
   const [busy, setBusy] = useState('');
-  useWorkspaceQuery({filter},params=>setFilter(filters.some(item=>item.id===params.get('filter'))?params.get('filter') as Filter:'all'));
-
-  const load = () => {
-    setLoading(true);
-    setError("");
-    apiFetchList<Notification>("/notifications")
-      .then(setNotifications)
-      .catch((err) =>
-        setError(
-          err instanceof Error
-            ? err.message
-            : "Не удалось загрузить уведомления.",
-        ),
-      )
-      .finally(() => setLoading(false));
+  const requestSequence = useRef(0);
+  const changeFilter = (value: Filter) => {
+    setFilter(value);
+    setPage(1);
   };
+  useWorkspaceQuery({filter},params=>changeFilter(filters.some(item=>item.id===params.get('filter'))?params.get('filter') as Filter:'all'));
+
+  const load = useCallback(() => {
+    const requestId = ++requestSequence.current;
+    setLoading(true);
+    setUnreadCountLoading(true);
+    setUnreadCountError(false);
+    setError("");
+    apiFetch<PaginatedResponse<Notification>>(`/notifications?page=${page}&limit=50`)
+      .then((response) => {
+        if (requestId !== requestSequence.current) return;
+        setNotifications(response.data);
+        setTotal(response.meta?.total ?? response.data.length);
+        setPages(Math.max(1, response.meta?.totalPages ?? 1));
+        setUnreadCount(response.data.filter((item) => !item.isRead).length);
+        void apiFetch<number>("/notifications/unread-count")
+          .then((count) => {
+            if (requestId !== requestSequence.current) return;
+            setUnreadCount(count);
+            setUnreadCountError(false);
+          })
+          .catch(() => {
+            if (requestId === requestSequence.current) setUnreadCountError(true);
+          })
+          .finally(() => {
+            if (requestId === requestSequence.current) setUnreadCountLoading(false);
+          });
+      })
+      .catch((err) =>
+        {
+          if (requestId !== requestSequence.current) return;
+          setError(err instanceof Error ? err.message : "Не удалось загрузить уведомления.");
+          setUnreadCountError(true);
+          setUnreadCountLoading(false);
+        },
+      )
+      .finally(() => { if (requestId === requestSequence.current) setLoading(false); });
+  }, [page]);
   useEffect(() => {
     load();
-  }, []);
-  const unread = notifications.filter((item) => !item.isRead).length;
+    return () => { requestSequence.current += 1; };
+  }, [load]);
+  const unread = unreadCount;
   const visible = useMemo(()=>notifications.filter(item=>filter==='all'||(filter==='important'?item.category==='important'||['high','urgent'].includes(item.priority||''):item.category===filter)).sort((a,b)=>(b.priority==='urgent'?2:b.priority==='high'?1:0)-(a.priority==='urgent'?2:a.priority==='high'?1:0)||Number(a.isRead)-Number(b.isRead)||b.createdAt.localeCompare(a.createdAt)),[filter,notifications]);
   const markRead = async (id: string) => {
     if(busy) return; setBusy(id); setActionError("");
@@ -112,6 +146,7 @@ export default function NotificationsPage() {
           item.id === id ? { ...item, isRead: true } : item,
         ),
       );
+      setUnreadCount((count) => Math.max(0, count - 1));
     } catch {
       setActionError("Не удалось отметить событие прочитанным. Повторите действие.");
     } finally {setBusy("");}
@@ -123,6 +158,8 @@ export default function NotificationsPage() {
       setNotifications((items) =>
         items.map((item) => ({ ...item, isRead: true })),
       );
+      setUnreadCount(0);
+      setUnreadCountError(false);
     } catch {
       setActionError("Не удалось отметить уведомления прочитанными.");
     } finally {setBusy("");}
@@ -136,11 +173,23 @@ export default function NotificationsPage() {
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
             Уведомления
           </h1>
-          <p className="mt-1 text-sm text-slate-500">
-            {loading ? "Загружаем события…" : unread ? `${unread} непрочитанных` : "Все уведомления прочитаны"}
+          <p
+            role="status"
+            aria-live="polite"
+            className={`mt-1 text-sm ${unreadCountError ? "text-amber-700" : "text-slate-500"}`}
+          >
+            {loading
+              ? "Загружаем события…"
+              : unreadCountLoading
+                ? "Обновляем счётчик непрочитанных…"
+                : unreadCountError
+                  ? `Общий счётчик недоступен. На этой странице: ${unread}.`
+                  : unread
+                    ? `${unread} непрочитанных`
+                    : "Все уведомления прочитаны"}
           </p>
         </div>
-        {unread > 0 && (
+        {(unread > 0 || unreadCountError) && (
           <Button variant="ghost" size="sm" onClick={markEverythingRead} disabled={Boolean(busy)} loading={busy === "all"}>
             Отметить все прочитанными
           </Button>
@@ -157,7 +206,7 @@ export default function NotificationsPage() {
             key={item.id}
             type="button"
             aria-pressed={filter === item.id}
-            onClick={() => setFilter(item.id)}
+            onClick={() => changeFilter(item.id)}
             className={`shrink-0 border-b-2 px-3 py-3 text-sm font-medium transition-colors ${filter === item.id ? "border-sky-600 text-sky-700" : "border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-900"}`}
           >
             {item.label}
@@ -181,11 +230,13 @@ export default function NotificationsPage() {
         />
       ) : !visible.length ? (
         <EmptyState
-          title="Нет уведомлений"
+          title={notifications.length ? "На этой странице нет уведомлений в выбранном разделе" : "Нет уведомлений"}
           description={
-            filter === "all"
-              ? "Здесь появятся события учебного процесса."
-              : "В этом разделе пока нет событий."
+            notifications.length
+              ? "Перейдите на другую страницу списка или выберите другой раздел."
+              : filter === "all"
+                ? "Здесь появятся события учебного процесса."
+                : "В этом разделе пока нет событий."
           }
         />
       ) : (
@@ -240,7 +291,7 @@ export default function NotificationsPage() {
                     {action && (
                       <Link
                         href={action.href}
-                        className="inline-flex min-h-9 items-center rounded-lg px-2.5 py-2 text-xs font-semibold text-sky-700 hover:bg-sky-50"
+                        className="inline-flex min-h-11 items-center rounded-lg px-3 py-2 text-sm font-semibold text-sky-700 hover:bg-sky-50"
                       >
                         {action.label} →
                       </Link>
@@ -252,6 +303,21 @@ export default function NotificationsPage() {
             })}
           </div>
         </div>
+      )}
+      {!loading && !error && pages > 1 && (
+        <nav aria-label="Страницы уведомлений" className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-slate-500">
+            {total.toLocaleString("ru-RU")} событий · страница {page} из {pages}
+          </p>
+          <div className="flex items-center gap-2">
+            <Button variant="secondary" disabled={page <= 1 || Boolean(busy)} onClick={() => setPage(value => Math.max(1, value - 1))}>
+              Назад
+            </Button>
+            <Button variant="secondary" disabled={page >= pages || Boolean(busy)} onClick={() => setPage(value => Math.min(pages, value + 1))}>
+              Дальше
+            </Button>
+          </div>
+        </nav>
       )}
     </div>
   );

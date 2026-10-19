@@ -15,9 +15,10 @@ export default function Home() {
             <span className="flex h-2 w-2 rounded-full bg-sky-500" />
             Панель преподавателя
           </div>
-          <h1 className="text-4xl font-extrabold tracking-tight text-slate-950 sm:text-6xl">
+          <h1 className="text-3xl font-extrabold tracking-tight text-slate-950 sm:text-6xl">
             Расписание
-            <br />
+            <br className="hidden sm:block" />
+            {' '}
             <span className="text-sky-600">для преподавателей</span>
           </h1>
           <p className="mx-auto mt-6 max-w-xl text-lg text-slate-600">

@@ -3,7 +3,8 @@
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useWorkspaceQuery } from "@napare/ui/workspace-shell";
-import { apiFetch, apiFetchList } from "@/lib/api";
+import { apiFetch, apiFetchAllPages } from "@/lib/api";
+import { ListPagination } from "@/components/ListPagination";
 import {
   Avatar,
   Badge,
@@ -149,6 +150,8 @@ export default function UsersPage() {
   const [faculty, setFaculty] = useState("all");
   const [group, setGroup] = useState("all");
   const [status, setStatus] = useState("all");
+  const [page, setPage] = useState(1);
+  const pageSize = 50;
   useWorkspaceQuery({ q: search, role, faculty, group, status }, query => {
     setSearch((query.get('q') || '').slice(0, 100));
     const requestedRole = query.get('role') || 'all';
@@ -174,9 +177,9 @@ export default function UsersPage() {
     setLoading(true);
     setError("");
     Promise.all([
-      apiFetchList<AdminUser>("/admin/users"),
-      apiFetchList<Group>("/admin/groups").catch(() => []),
-      apiFetchList<Faculty>("/admin/faculties").catch(() => []),
+      apiFetchAllPages<AdminUser>("/admin/users"),
+      apiFetchAllPages<Group>("/admin/groups").catch(() => []),
+      apiFetchAllPages<Faculty>("/admin/faculties").catch(() => []),
       apiFetch<UniversityContext>("/admin/university").catch(() => null),
     ])
       .then(async ([userItems, groupItems, facultyItems, universityItem]) => {
@@ -235,6 +238,8 @@ export default function UsersPage() {
   const allVisibleSelected =
     filtered.length > 0 &&
     filtered.every((user) => selectedIds.includes(user.id));
+  const visible = filtered.slice((page - 1) * pageSize, page * pageSize);
+  useEffect(() => { setPage(1); }, [search, role, faculty, group, status]);
   const toggleAll = () =>
     setSelectedIds(
       allVisibleSelected
@@ -248,6 +253,7 @@ export default function UsersPage() {
   const changeRole = async (id: string, nextRole: string) => {
     setSaving(true);
     setError("");
+    setMessage("");
     try {
       await apiFetch(`/admin/users/${id}/roles`, {
         method: "PATCH",
@@ -274,6 +280,7 @@ export default function UsersPage() {
   const bulkChangeRole = async () => {
     setSaving(true);
     setError("");
+    setMessage("");
     try {
       const results = await Promise.allSettled(selectedIds.map(id => apiFetch(`/admin/users/${id}/roles`, { method: 'PATCH', body: JSON.stringify({ role: bulkRole }) })));
       const succeeded = new Set(selectedIds.filter((_, index) => results[index].status === 'fulfilled'));
@@ -281,7 +288,7 @@ export default function UsersPage() {
       setUsers(items => items.map(user => succeeded.has(user.id) ? { ...user, role: bulkRole, roles: [bulkRole] } : user));
       setSelectedIds(failed);
       setBulkConfirmOpen(false);
-      setMessage(`Роль обновлена для ${succeeded.size} пользователей.`);
+      if (succeeded.size > 0) setMessage(`Пользователей с обновлённой ролью: ${succeeded.size}.`);
       if (failed.length) setError(`Не удалось изменить роль для ${failed.length} пользователей. Они остаются выбранными; повторите действие после проверки доступа.`);
     } catch (err) {
       setError(
@@ -615,7 +622,7 @@ export default function UsersPage() {
             <span>Последний вход</span>
           </div>
           <div className="divide-y divide-slate-100">
-            {filtered.map((user) => {
+            {visible.map((user) => {
               const currentRole = userRole(user);
               const groupItem = groupMap.get(user.groupId || "");
               const raspGroupItem = raspGroups.find((item) => item.groupId === user.groupId);
@@ -738,8 +745,9 @@ export default function UsersPage() {
           </div>
         </div>
       )}
-      <ConfirmDialog open={Boolean(pendingRole)} onClose={()=>setPendingRole(null)} title="Изменить роль пользователя?" description={`Новая роль: ${roleLabels[pendingRole?.role || ''] || pendingRole?.role || ''}. Доступ пользователя изменится после успешного сохранения.`} confirmLabel="Изменить роль" loading={saving} onConfirm={()=>{if(pendingRole) void changeRole(pendingRole.id,pendingRole.role);}}/>
-      <ConfirmDialog open={bulkConfirmOpen} onClose={() => setBulkConfirmOpen(false)} title="Изменить роли выбранных пользователей?" description={`Новая роль: ${roleLabels[bulkRole] || bulkRole}. Пользователей: ${selectedIds.length}. Изменение затрагивает их доступ к разделам университета.`} confirmLabel="Применить роль" loading={saving} onConfirm={() => void bulkChangeRole()} />
+      {!loading && !error && filtered.length > 0 && <ListPagination page={page} pageSize={pageSize} total={filtered.length} onChange={setPage} />}
+      <ConfirmDialog open={Boolean(pendingRole)} onClose={()=>setPendingRole(null)} title="Изменить роль пользователя?" description={`Новая роль: ${roleLabels[pendingRole?.role || ''] || pendingRole?.role || ''}. Доступ пользователя изменится после успешного сохранения. Активные сессии завершатся, пользователю потребуется войти снова.`} confirmLabel="Изменить роль" loading={saving} onConfirm={()=>{if(pendingRole) void changeRole(pendingRole.id,pendingRole.role);}}/>
+      <ConfirmDialog open={bulkConfirmOpen} onClose={() => setBulkConfirmOpen(false)} title="Изменить роли выбранных пользователей?" description={`Новая роль: ${roleLabels[bulkRole] || bulkRole}. Пользователей: ${selectedIds.length}. Изменение затрагивает их доступ к разделам университета; активные сессии завершатся, пользователям потребуется войти снова.`} confirmLabel="Применить роль" loading={saving} onConfirm={() => void bulkChangeRole()} />
       {detail && (
         <Sheet open={!pendingRole && !resetTarget} onClose={()=>setDetail(null)} title={`${detail.firstName} ${detail.lastName}`}>{error&&<p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}
             <div className="flex items-start justify-between gap-4">

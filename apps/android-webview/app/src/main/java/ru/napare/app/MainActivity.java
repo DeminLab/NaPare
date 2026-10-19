@@ -47,10 +47,12 @@ public final class MainActivity extends Activity {
     private byte[] pendingCalendar;
     private WebView web;
     private ProgressBar progress;
+    private LinearLayout loadingPanel;
     private LinearLayout errorPanel;
     private TextView errorText;
     private ValueCallback<Uri[]> fileCallback;
     private boolean failed;
+    private boolean hasLoadedContent;
     private String retryUrl = LOGIN;
 
     @Override public void onCreate(Bundle state) {
@@ -61,6 +63,7 @@ public final class MainActivity extends Activity {
         web.setVisibility(View.INVISIBLE);
         web.setSaveEnabled(false);
         root.addView(web, new FrameLayout.LayoutParams(-1, -1));
+        createLoadingPanel(root);
         progress = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
         root.addView(progress, new FrameLayout.LayoutParams(-1, dp(3), Gravity.TOP));
         createErrorPanel(root);
@@ -118,11 +121,14 @@ public final class MainActivity extends Activity {
             failed = false;
             errorPanel.setVisibility(View.GONE);
             progress.setVisibility(View.VISIBLE);
+            loadingPanel.setVisibility(hasLoadedContent ? View.GONE : View.VISIBLE);
             if (isSite(Uri.parse(url))) retryUrl = url;
         }
         @Override public void onPageFinished(WebView view, String url) {
             progress.setVisibility(View.GONE);
             if (failed) return;
+            hasLoadedContent = true;
+            loadingPanel.setVisibility(View.GONE);
             view.setVisibility(View.VISIBLE);
             if (isSite(Uri.parse(url)) && "/login".equals(Uri.parse(url).getPath())) view.clearHistory();
         }
@@ -238,9 +244,30 @@ public final class MainActivity extends Activity {
         errorPanel.addView(retry);
         root.addView(errorPanel, new FrameLayout.LayoutParams(-1, -1));
     }
+    private void createLoadingPanel(FrameLayout root) {
+        loadingPanel = new LinearLayout(this);
+        loadingPanel.setOrientation(LinearLayout.VERTICAL);
+        loadingPanel.setGravity(Gravity.CENTER);
+        loadingPanel.setPadding(dp(24), dp(24), dp(24), dp(24));
+        loadingPanel.setBackgroundColor(Color.WHITE);
+        ProgressBar spinner = new ProgressBar(this);
+        spinner.setIndeterminate(true);
+        loadingPanel.addView(spinner, new LinearLayout.LayoutParams(dp(40), dp(40)));
+        TextView status = new TextView(this);
+        status.setText("Открываем НаПаре…");
+        status.setTextSize(16);
+        status.setTextColor(Color.rgb(23, 36, 58));
+        status.setGravity(Gravity.CENTER);
+        status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
+        LinearLayout.LayoutParams statusParams = new LinearLayout.LayoutParams(-2, -2);
+        statusParams.topMargin = dp(16);
+        loadingPanel.addView(status, statusParams);
+        root.addView(loadingPanel, new FrameLayout.LayoutParams(-1, -1));
+    }
     private void showError(String message) {
         failed = true;
         progress.setVisibility(View.GONE);
+        loadingPanel.setVisibility(View.GONE);
         web.setVisibility(View.INVISIBLE);
         errorText.setText(message);
         errorPanel.setVisibility(View.VISIBLE);

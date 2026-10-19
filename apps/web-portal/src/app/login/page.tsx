@@ -2,11 +2,12 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import { MaxLaunchAuth } from '../../components/MaxLaunchAuth';
 
 type Workspace = 'student' | 'staff' | 'admin' | 'developer' | 'career';
 type LoginResponse = { accessToken: string; refreshToken: string; workspace: Workspace };
+type SessionRestoreState = 'idle' | 'checking' | 'expired' | 'incomplete' | 'unavailable' | 'unsupported' | 'manual';
 
 const destinations: Record<Workspace, string> = {
   career: '/career',
@@ -24,43 +25,78 @@ export default function LoginPage() {
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
   const [maxAvailable, setMaxAvailable] = useState(false);
+  const [studentRegistrationInfo, setStudentRegistrationInfo] = useState(false);
+  const [sessionRestoreState, setSessionRestoreState] = useState<SessionRestoreState>('idle');
+  const restoreControllerRef = useRef<AbortController | null>(null);
+  const manualLoginStartedRef = useRef(false);
   useEffect(() => {
     setMaxAvailable(!!(window.WebApp?.initData || window.__naparePendingMaxInitData || window.location.hash.includes('WebAppData=')));
+    setStudentRegistrationInfo(new URLSearchParams(window.location.search).get('reason') === 'student-registration-disabled');
 
     let active = true;
+    const controller = new AbortController();
+    restoreControllerRef.current = controller;
+    const canRestore = () => active && !manualLoginStartedRef.current && !controller.signal.aborted;
     const restoreSession = async () => {
       let accessToken = window.localStorage.getItem('accessToken');
       const refreshToken = window.localStorage.getItem('refreshToken');
-      if (!accessToken || !refreshToken) return;
+      if (!accessToken && !refreshToken) return;
+      if (!accessToken || !refreshToken) {
+        setSessionRestoreState('incomplete');
+        return;
+      }
+
+      setSessionRestoreState('checking');
 
       try {
         let response = await fetch('/api/v1/users/me', {
           headers: { Authorization: `Bearer ${accessToken}` },
+          signal: controller.signal,
         });
+        if (!canRestore()) return;
 
         if (response.status === 401) {
           const refreshed = await fetch('/api/v1/auth/refresh', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ refreshToken }),
+            signal: controller.signal,
           });
           const tokens = await refreshed.json().catch(() => null) as { accessToken?: string; refreshToken?: string } | null;
+          if (!canRestore()) return;
           if (refreshed.status === 401) {
             window.localStorage.removeItem('accessToken');
             window.localStorage.removeItem('refreshToken');
+            setSessionRestoreState('expired');
             return;
           }
-          if (!refreshed.ok || !tokens?.accessToken || !tokens.refreshToken) return;
+          if (!refreshed.ok || !tokens?.accessToken || !tokens.refreshToken) {
+            setSessionRestoreState('unavailable');
+            return;
+          }
           accessToken = tokens.accessToken;
+          if (!canRestore()) return;
           window.localStorage.setItem('accessToken', tokens.accessToken);
           window.localStorage.setItem('refreshToken', tokens.refreshToken);
           response = await fetch('/api/v1/users/me', {
             headers: { Authorization: `Bearer ${accessToken}` },
+            signal: controller.signal,
           });
+          if (!canRestore()) return;
         }
 
-        if (!response.ok) return;
+        if (response.status === 401) {
+          window.localStorage.removeItem('accessToken');
+          window.localStorage.removeItem('refreshToken');
+          setSessionRestoreState('expired');
+          return;
+        }
+        if (!response.ok) {
+          setSessionRestoreState('unavailable');
+          return;
+        }
         const user = await response.json() as { role?: string };
+        if (!canRestore()) return;
         const destinationByRole: Record<string, string> = {
           student: '/student/today',
           teacher: '/staff/today',
@@ -75,18 +111,30 @@ export default function LoginPage() {
           career_admin: '/career',
         };
         const destination = user.role ? destinationByRole[user.role] : undefined;
-        if (active && destination) window.location.replace(destination);
-      } catch {
-        // Keep saved credentials intact while the API is temporarily unavailable.
+        if (!destination) {
+          setSessionRestoreState('unsupported');
+          return;
+        }
+        setSessionRestoreState('idle');
+        window.location.replace(destination);
+      } catch (reason) {
+        if (canRestore() && !(reason instanceof DOMException && reason.name === 'AbortError')) {
+          setSessionRestoreState('unavailable');
+        }
       }
     };
 
     void restoreSession();
-    return () => { active = false; };
+    return () => {
+      active = false;
+      controller.abort();
+      if (restoreControllerRef.current === controller) restoreControllerRef.current = null;
+    };
   }, []);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    stopSessionRestoreForManualLogin();
     setError('');
     const normalizedEmail = email.trim().toLowerCase();
     const emailInput = event.currentTarget.elements.namedItem('email') as HTMLInputElement;
@@ -128,6 +176,12 @@ export default function LoginPage() {
     }
   }
 
+  function stopSessionRestoreForManualLogin() {
+    manualLoginStartedRef.current = true;
+    restoreControllerRef.current?.abort();
+    setSessionRestoreState('manual');
+  }
+
   return (
     <main className="login-layout login-focused">
       <section className="login-panel">
@@ -135,6 +189,22 @@ export default function LoginPage() {
           <MaxLaunchAuth captureOnly />
           <Link href="/" className="brand login-brand"><Image src="/brand/np-mark.png" alt="" width={34} height={34} priority unoptimized />НаПаре</Link>
           <h1>С возвращением</h1>
+
+          {studentRegistrationInfo && (
+            <p className="login-session-status" role="status" aria-live="polite">
+              Студенческие аккаунты создаёт вуз. Обратитесь в учебный отдел или к администратору, чтобы получить доступ.
+            </p>
+          )}
+
+          {sessionRestoreState !== 'idle' && sessionRestoreState !== 'manual' && (
+            <p className="login-session-status" role="status" aria-live="polite">
+              {sessionRestoreState === 'checking' && 'Проверяем сохранённый вход. Вы можете войти вручную, не дожидаясь проверки.'}
+              {sessionRestoreState === 'expired' && 'Сохранённый вход завершился. Войдите снова по email и паролю.'}
+              {sessionRestoreState === 'incomplete' && 'Не удалось восстановить сохранённый вход. Войдите снова по email и паролю.'}
+              {sessionRestoreState === 'unavailable' && 'Не удалось проверить сохранённый вход из-за временной ошибки. Он сохранён; вы можете войти вручную.'}
+              {sessionRestoreState === 'unsupported' && 'Для этой роли пока не настроен кабинет. Обратитесь к администратору.'}
+            </p>
+          )}
 
           <form onSubmit={submit} className="login-form" noValidate aria-busy={loading}>
             {error && <p className="error" role="alert">{error}</p>}
@@ -152,7 +222,9 @@ export default function LoginPage() {
             </div>
             <button type="submit" disabled={loading}>{loading ? 'Входим…' : 'Войти'}</button>
           </form>
-          <details className="login-alt-method" open={maxAvailable}>
+          <details className="login-alt-method" open={maxAvailable} onClickCapture={(event) => {
+            if (event.target instanceof Element && event.target.closest('button')) stopSessionRestoreForManualLogin();
+          }}>
             <summary>Войти через MAX</summary>
             <p className="support">Доступно внутри MAX после подключения аккаунта НаПаре. Первый вход — по email и паролю.</p>
             <MaxLaunchAuth />

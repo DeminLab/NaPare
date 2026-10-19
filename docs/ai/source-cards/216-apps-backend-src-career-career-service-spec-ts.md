@@ -16,6 +16,8 @@ Read AI_CONTEXT.md, docs/modules/career.md, this canonical source and its direct
 
 Preserve academic tenant isolation. Employer accounts cannot read university records. Only verified students with an exact approved skill may apply to profiled tasks; publication needs both parties' consent. Never expose correct test answers or infer a payment.
 
+Career test list coverage verifies rolling-day attempt counts are scoped to the signed-in student, included only in paginated student responses, and omitted from career-center results; answer keys remain private.
+
 ## Verification
 
 ```powershell

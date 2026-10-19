@@ -641,6 +641,7 @@ export class AdminService {
     data: CreateFacultyDto,
   ): Promise<Faculty> {
     this.tenantContext.assertAccess(universityId);
+    if (data.deanUserId) await this.assertFacultyDean(universityId, data.deanUserId);
     const faculty = this.facultyRepository.create({
       ...data,
       universityId,
@@ -656,8 +657,24 @@ export class AdminService {
     }
     this.tenantContext.assertAccess(faculty.universityId);
 
+    if (data.deanUserId !== undefined && data.deanUserId !== null) {
+      await this.assertFacultyDean(faculty.universityId, data.deanUserId);
+    }
+
     Object.assign(faculty, data);
     return this.facultyRepository.save(faculty) as Promise<Faculty>;
+  }
+
+  private async assertFacultyDean(universityId: string, deanUserId: string): Promise<void> {
+    const dean = await this.userRepository.findOne({
+      where: { id: deanUserId, universityId, role: UserRole.FACULTY_DEAN, isActive: true },
+      select: { id: true },
+    });
+    if (!dean) {
+      throw new BadRequestException(
+        "Выбранный декан должен быть активным пользователем с ролью «Декан» в этом университете.",
+      );
+    }
   }
 
   async getGroups(
@@ -789,19 +806,14 @@ export class AdminService {
     pagination: PaginationQueryDto,
   ): Promise<PaginatedResponse<AuditLog & { source: string }>> {
     this.tenantContext.assertAccess(universityId);
-    const universityUsers = await this.usersService.findByUniversityId(
-      universityId,
-      { page: 1, limit: 100 },
-      Object.values(UserRole),
-    );
-    const userIds = universityUsers.data.map((user) => user.id);
-    if (!userIds.length) return toPaginatedResponse([], 0, pagination);
-    const [data, total] = await this.auditLogRepository.findAndCount({
-      where: { userId: In(userIds) },
-      order: { createdAt: "DESC" },
-      skip: (pagination.page - 1) * pagination.limit,
-      take: pagination.limit,
-    });
+    const [data, total] = await this.auditLogRepository
+      .createQueryBuilder("auditLog")
+      .innerJoin(User, "auditUser", "auditUser.id = auditLog.userId")
+      .where("auditUser.universityId = :universityId", { universityId })
+      .orderBy("auditLog.createdAt", "DESC")
+      .skip((pagination.page - 1) * pagination.limit)
+      .take(pagination.limit)
+      .getManyAndCount();
     return toPaginatedResponse(
       data.map((item) => ({
         ...item,

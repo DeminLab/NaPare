@@ -6,7 +6,7 @@
 
 ## Scope
 
-Owner-bound platform control and explicitly delegated capabilities. Read [implementation](../../product/platform-control.md) and [installation](../../deployment/platform-control.md) before changes. Preserve immutable owner identity, server-side permission checks and private signed agent transport.
+Owner-bound platform control and explicitly delegated capabilities, including guarded MAX/Telegram link revocation and safe Telegram challenge counts. Read [implementation](../../product/platform-control.md) and [installation](../../deployment/platform-control.md) before changes. Preserve immutable owner identity, server-side permission checks and private signed agent transport.
 
 ## Verification
 

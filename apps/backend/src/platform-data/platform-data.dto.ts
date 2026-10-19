@@ -49,6 +49,13 @@ export class PlatformAttendanceQueryDto extends PlatformQueryDto {
   endDate?: string;
 }
 
+export class PlatformAbsenceConfirmationQueryDto extends PlatformQueryDto {
+  @ApiPropertyOptional({ enum: ['pending', 'confirmed', 'rejected'] })
+  @IsOptional()
+  @IsIn(['pending', 'confirmed', 'rejected'])
+  status?: 'pending' | 'confirmed' | 'rejected';
+}
+
 export class PlatformCorrectionReasonDto {
   @ApiProperty({ minLength: 3, maxLength: 500, description: 'Причина административного исправления.' })
   @IsString()
@@ -101,4 +108,22 @@ export class PlatformAttendanceCorrectionDto extends PlatformCorrectionReasonDto
   @IsString()
   @MaxLength(2000)
   comment?: string | null;
+}
+
+export class PlatformAbsenceConfirmationCorrectionDto extends PlatformCorrectionReasonDto {
+  @ApiPropertyOptional({ enum: ['pending', 'confirmed', 'rejected'] })
+  @IsOptional()
+  @IsIn(['pending', 'confirmed', 'rejected'])
+  status?: 'pending' | 'confirmed' | 'rejected';
+
+  @ApiPropertyOptional({ nullable: true, maxLength: 2000 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  comment?: string | null;
+
+  @ApiPropertyOptional({ format: 'date-time', nullable: true })
+  @IsOptional()
+  @IsDateString()
+  confirmedAt?: string | null;
 }

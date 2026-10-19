@@ -58,6 +58,15 @@ export class AcademicEvent {
   @Column({ type: 'varchar', default: 'unknown' })
   syncStatus: string;
 
+  @Column({ type: 'timestamp', nullable: true })
+  hiddenAt: Date | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  hiddenBy: string | null;
+
+  @Column({ type: 'varchar', nullable: true, length: 500 })
+  hideReason: string | null;
+
   @CreateDateColumn()
   createdAt: Date;
 }

@@ -1,4 +1,5 @@
 const API_BASE = "/api/v1";
+const LOGIN_PATH = "/developer/login";
 
 /* ── Token helpers ─────────────────────────────────────────── */
 
@@ -79,7 +80,7 @@ export async function apiFetch<T>(
       response = await fetch(`${API_BASE}${path}`, { ...init, headers });
     } catch {
       clearTokens();
-      window.location.href = "/login";
+      window.location.href = LOGIN_PATH;
       throw new Error("Сессия истекла");
     }
   }
@@ -135,7 +136,7 @@ export async function logout(): Promise<void> {
   }
 
   clearTokens();
-  window.location.href = "/login";
+  window.location.href = LOGIN_PATH;
 }
 
 /* ── Typed helpers ────────────────────────────────────────── */

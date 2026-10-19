@@ -6,7 +6,7 @@
 
 ## Scope
 
-Staff profile displays the actual role and available groups from attendance-groups. Technical UUIDs are not presented as university names. Account connections use a root-level link to the shared portal.
+Staff profile displays the actual role and available groups from attendance-groups. Technical UUIDs are not presented as university names. Account connections use a root-level link to the shared portal. Profile, group and activity loading states are announced through the shared `LoadingState` primitive.
 
 ## Read sequence
 

@@ -8,6 +8,8 @@
 
 Administration workspace UI and its data flow.
 
+Connector summaries cover active, inactive, error, configured and syncing states. Mutating actions share one in-flight lock; Moodle URLs are HTTPS-only in the UI, and the saved Web Services token must never be rendered or retained after saving.
+
 ## Read sequence
 
 1. Start with [AI context](../../../AI_CONTEXT.md) and the relevant role or backend map.

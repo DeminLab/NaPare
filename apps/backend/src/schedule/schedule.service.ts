@@ -172,7 +172,7 @@ export class ScheduleService {
       const lessons = sourceLessons
         .filter((lesson) => lesson.date >= startDateKey && lesson.date <= endDateKey)
         .map((lesson) => this.mapRaspLesson(lesson, universityId));
-      return toPaginatedResponse(lessons, lessons.length, pagination);
+      return this.paginateLessons(lessons, pagination);
     }
     const resolvedGroupId = groupId;
     if (!resolvedGroupId) {
@@ -207,7 +207,7 @@ export class ScheduleService {
       const lessons = sourceLessons
         .filter((lesson) => lesson.date === date)
         .map((lesson) => this.mapRaspLesson(lesson, universityId));
-      return toPaginatedResponse(lessons, lessons.length, pagination);
+      return this.paginateLessons(lessons, pagination);
     }
     const resolvedGroupId = groupId;
     if (!resolvedGroupId) {
@@ -226,6 +226,18 @@ export class ScheduleService {
     }).formatToParts(new Date(value));
     const values = Object.fromEntries(parts.map(({ type, value: part }) => [type, part]));
     return `${values.year}-${values.month}-${values.day}`;
+  }
+
+  private paginateLessons(
+    lessons: Lesson[],
+    pagination: PaginationQueryDto,
+  ): PaginatedResponse<Lesson> {
+    const start = (pagination.page - 1) * pagination.limit;
+    return toPaginatedResponse(
+      lessons.slice(start, start + pagination.limit),
+      lessons.length,
+      pagination,
+    );
   }
 
   private mapRaspLesson(lesson: RaspLesson, universityId: string): Lesson {

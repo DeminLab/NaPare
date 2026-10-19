@@ -15,6 +15,7 @@ const nextConfig = {
       {
         source: '/api/:path*',
         destination: `${backendUrl}/api/:path*`,
+        basePath: false,
       },
     ];
   },

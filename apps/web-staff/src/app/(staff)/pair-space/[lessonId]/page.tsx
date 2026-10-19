@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { lessonTabFromSearch } from "@napare/ui/workspace-shell";
 import { apiFetch } from "@/lib/api";
@@ -98,6 +98,7 @@ export default function PairSpacePage() {
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [formError, setFormError] = useState("");
   const [success, setSuccess] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [modal, setModal] = useState<
@@ -114,7 +115,11 @@ export default function PairSpacePage() {
     size: "0",
   });
   const [newMessage, setNewMessage] = useState("");
+  const loadSequence = useRef(0);
+  const actionSequence = useRef(0);
+  const actionPending = useRef(false);
   const load = () => {
+    const requestId = ++loadSequence.current;
     setLoading(true);
     setError("");
     Promise.all([
@@ -122,41 +127,63 @@ export default function PairSpacePage() {
       apiFetch<Lesson>(`/schedule/lessons/${lessonId}`),
     ])
       .then(([space, currentLesson]) => {
-        setPairSpace(space);
-        setLesson(currentLesson);
+        if (requestId === loadSequence.current) {
+          setPairSpace(space);
+          setLesson(currentLesson);
+        }
       })
-      .catch((err) =>
-        setError(
-          err instanceof Error
-            ? err.message
-            : "Не удалось открыть пространство пары.",
-        ),
-      )
-      .finally(() => setLoading(false));
+      .catch((err) => {
+        if (requestId === loadSequence.current) {
+          setError(
+            err instanceof Error
+              ? err.message
+              : "Не удалось открыть пространство пары.",
+          );
+        }
+      })
+      .finally(() => {
+        if (requestId === loadSequence.current) setLoading(false);
+      });
   };
   useEffect(() => {
+    actionPending.current = false;
+    setSubmitting(false);
+    setModal(null);
+    setSuccess("");
     load();
+    return () => {
+      loadSequence.current += 1;
+      actionSequence.current += 1;
+    };
   }, [lessonId]);
   const run = async <T,>(
     action: () => Promise<T>,
     message: string,
     update: (value: T) => void,
   ) => {
-    if(submitting) return;
+    if (actionPending.current) return;
+    actionPending.current = true;
+    const requestId = ++actionSequence.current;
     setSuccess("");
     setSubmitting(true);
     setError("");
     try {
       const value = await action();
+      if (requestId !== actionSequence.current) return;
       update(value);
       setModal(null);
       setSuccess(message);
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Не удалось выполнить действие.",
-      );
+      if (requestId === actionSequence.current) {
+        setError(
+          err instanceof Error ? err.message : "Не удалось выполнить действие.",
+        );
+      }
     } finally {
-      setSubmitting(false);
+      if (requestId === actionSequence.current) {
+        actionPending.current = false;
+        setSubmitting(false);
+      }
     }
   };
   const sendMessage = () => {
@@ -216,7 +243,9 @@ export default function PairSpacePage() {
     { id: "discussion", label: "Обсуждение", count: pairSpace.messages.length },
   ];
   const action = (kind: "announcement" | "homework" | "file") => {
+    setError("");
     setSuccess("");
+    setFormError("");
     setModal(kind);
   };
   return (
@@ -286,7 +315,19 @@ export default function PairSpacePage() {
           </div>
         </div>
       </Card>
-      <TabBar tabs={tabs} activeTab={activeTab} onChange={selectTab} />
+      <TabBar
+        tabs={tabs}
+        activeTab={activeTab}
+        onChange={selectTab}
+        idPrefix="staff-pair-space"
+        ariaLabel="Разделы занятия"
+      />
+      <div
+        id="staff-pair-space-panel"
+        role="tabpanel"
+        aria-labelledby={`staff-pair-space-tab-${encodeURIComponent(activeTab)}`}
+        tabIndex={0}
+      >
       {error && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}
       {success && (
         <p role="status" className="text-sm font-medium text-emerald-700">
@@ -388,19 +429,20 @@ export default function PairSpacePage() {
           <form onSubmit={event=>{event.preventDefault();sendMessage();}} className="rounded-xl border bg-white p-4"><label htmlFor="staff-discussion" className="text-sm font-semibold">Сообщение группе</label><textarea id="staff-discussion" rows={3} disabled={submitting} value={newMessage} onChange={event=>setNewMessage(event.target.value)} placeholder="Вопрос или пояснение к занятию…" className="mt-3 w-full rounded-xl border p-3 text-sm"/><div className="mt-3 flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-slate-500">Сообщение увидят участники пары.</p><Button type="submit" loading={submitting} disabled={submitting || !newMessage.trim()}>Отправить сообщение</Button></div></form>
         </div>
       )}
+      </div>
       <Modal
         open={modal === "announcement"}
         onClose={() => setModal(null)}
         title="Новое объявление"
       >
-        <div className="space-y-4">{error && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+        <div className="space-y-4">{error && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}{formError && <p role="alert" className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900">{formError}</p>}
           <textarea
             value={announcementText}
-            onChange={(event) => setAnnouncementText(event.target.value)}
+            onChange={(event) => { setAnnouncementText(event.target.value); setFormError(""); }}
             rows={4}
             aria-label="Текст объявления"
             placeholder="Что важно сообщить группе?"
-            className="block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+            className="block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-sky-500 focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
           />
           <div className="flex gap-2">
             <Button
@@ -414,7 +456,10 @@ export default function PairSpacePage() {
               fullWidth
               loading={submitting}
               onClick={() => {
-                if (!announcementText.trim()) return;
+                if (!announcementText.trim()) {
+                  setFormError("Добавьте текст объявления.");
+                  return;
+                }
                 void run(
                   () =>
                     apiFetch<Announcement>(
@@ -445,11 +490,11 @@ export default function PairSpacePage() {
         onClose={() => setModal(null)}
         title="Подготовка к занятию"
       >
-        <div className="space-y-4">{error && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+        <div className="space-y-4">{error && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}{formError && <p role="alert" className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900">{formError}</p>}
           <Input
             label="Что подготовить"
             value={homeworkTitle}
-            onChange={(event) => setHomeworkTitle(event.target.value)}
+            onChange={(event) => { setHomeworkTitle(event.target.value); setFormError(""); }}
             placeholder="Например, сообщение о применении нейросетей"
           />
           <textarea
@@ -457,7 +502,7 @@ export default function PairSpacePage() {
             onChange={(event) => setHomeworkDescription(event.target.value)}
             rows={3}
             placeholder="Контекст: тема лекции, формат и что принести"
-            className="block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+            className="block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-sky-500 focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
           />
           <Input
             label="К какой дате"
@@ -477,7 +522,10 @@ export default function PairSpacePage() {
               fullWidth
               loading={submitting}
               onClick={() => {
-                if (!homeworkTitle.trim()) return;
+                if (!homeworkTitle.trim()) {
+                  setFormError("Укажите, что нужно подготовить.");
+                  return;
+                }
                 void run(
                   () =>
                     apiFetch<Homework>(`/pair-spaces/${lessonId}/homeworks`, {
@@ -515,38 +563,60 @@ export default function PairSpacePage() {
         onClose={() => setModal(null)}
         title="Добавить ссылку на материал"
       >
-        <div className="space-y-4">{error && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+        <div className="space-y-4">{error && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}{formError && <p role="alert" className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900">{formError}</p>}
           <Input
             label="Название файла"
             value={file.fileName}
-            onChange={(event) =>
-              setFile({ ...file, fileName: event.target.value })
-            }
+            onChange={(event) => {
+              setFile({ ...file, fileName: event.target.value });
+              setFormError("");
+            }}
             placeholder="lecture-03.pdf"
           />
           <Input
             label="URL файла"
+            type="url"
             value={file.fileUrl}
-            onChange={(event) =>
-              setFile({ ...file, fileUrl: event.target.value })
-            }
+            onChange={(event) => {
+              setFile({ ...file, fileUrl: event.target.value });
+              setFormError("");
+            }}
             placeholder="https://..."
           />
           <div className="grid grid-cols-2 gap-3">
-            <Input
-              label="Тип"
-              value={file.fileType}
-              onChange={(event) =>
-                setFile({ ...file, fileType: event.target.value })
-              }
-            />
+            <label className="block text-sm font-medium text-slate-700">
+              Тип материала
+              <select
+                aria-label="Тип материала"
+                value={file.fileType}
+                onChange={(event) => {
+                  setFile({ ...file, fileType: event.target.value });
+                  setFormError("");
+                }}
+                className="mt-1 block min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-sky-500 focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
+              >
+                {[
+                  ["pdf", "PDF"],
+                  ["doc", "DOC"],
+                  ["docx", "DOCX"],
+                  ["ppt", "PPT"],
+                  ["pptx", "PPTX"],
+                  ["jpg", "JPG"],
+                  ["png", "PNG"],
+                ].map(([value, label]) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
+            </label>
             <Input
               label="Размер, байт"
               type="number"
+              min={0}
               value={file.size}
-              onChange={(event) =>
-                setFile({ ...file, size: event.target.value })
-              }
+              onChange={(event) => {
+                setFile({ ...file, size: event.target.value });
+                setFormError("");
+              }}
             />
           </div>
           <div className="flex gap-2">
@@ -561,7 +631,25 @@ export default function PairSpacePage() {
               fullWidth
               loading={submitting}
               onClick={() => {
-                if (!file.fileName.trim() || !file.fileUrl.trim()) return;
+                if (!file.fileName.trim()) {
+                  setFormError("Укажите название материала.");
+                  return;
+                }
+                let parsedUrl: URL;
+                try {
+                  parsedUrl = new URL(file.fileUrl.trim());
+                } catch {
+                  setFormError("Введите корректную ссылку на файл.");
+                  return;
+                }
+                if (parsedUrl.protocol !== "https:") {
+                  setFormError("Ссылка должна начинаться с https://.");
+                  return;
+                }
+                if (!Number.isFinite(Number(file.size)) || Number(file.size) < 0) {
+                  setFormError("Размер должен быть неотрицательным числом.");
+                  return;
+                }
                 void run(
                   () =>
                     apiFetch<FileItem>(`/pair-spaces/${lessonId}/files`, {

@@ -18,6 +18,8 @@ NestJS backend module, HTTP boundary, authorization or data-service behavior.
 
 Trace consumers and tests before changing data or authorization behavior.
 
+The `getAuditLog` regression test verifies a tenant-scoped audit query, pagination offset/limit, and an event belonging to a user outside the formerly capped account page.
+
 ## Verification
 
 ```powershell

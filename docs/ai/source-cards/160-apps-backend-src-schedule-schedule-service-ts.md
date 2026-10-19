@@ -6,7 +6,7 @@
 
 ## Scope
 
-Tenant- and role-scoped schedule queries and manual lesson updates. Date-only end dates include the entire last UTC day; explicit ISO instants retain their exact bounds. External student date filtering accepts an IANA timezone. Lesson changes publish accurately classified notifications.
+Tenant- and role-scoped schedule queries and manual lesson updates. Date-only end dates include the entire last UTC day; explicit ISO instants retain their exact bounds. External student date filtering accepts an IANA timezone and slices the filtered SIBIT lesson array to the requested page before generating response metadata. Lesson changes publish accurately classified notifications.
 
 ## Read sequence
 

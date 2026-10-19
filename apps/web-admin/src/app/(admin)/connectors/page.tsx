@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { apiFetch, apiFetchList } from "@/lib/api";
 import {
   Badge,
@@ -52,11 +52,20 @@ function statusInfo(status: string) {
   if (status === "error") return { label: "Ошибка", variant: "red" as const };
   return { label: "Отключён", variant: "slate" as const };
 }
+function isSecureMoodleUrl(value: string) {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && Boolean(url.hostname);
+  } catch {
+    return false;
+  }
+}
 
 export default function ConnectorsPage() {
   const [connectors, setConnectors] = useState<Connector[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState("");
+  const busyRef = useRef(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [moodle, setMoodle] = useState({ baseUrl: "", token: "" });
@@ -90,16 +99,28 @@ export default function ConnectorsPage() {
       active: connectors.filter((item) => item.status === "active").length,
       inactive: connectors.filter((item) => item.status === "inactive").length,
       errors: connectors.filter((item) => item.status === "error").length,
+      configured: connectors.filter((item) => item.status === "configured").length,
+      syncing: connectors.filter((item) => item.status === "syncing").length,
     }),
     [connectors],
   );
+  const startAction = (id: string) => {
+    if (busyRef.current) return false;
+    busyRef.current = true;
+    setBusyId(id);
+    setError("");
+    setMessage("");
+    return true;
+  };
+  const finishAction = () => {
+    busyRef.current = false;
+    setBusyId("");
+  };
   const persistStatus = async (
     connector: Connector,
     status: "active" | "inactive",
   ) => {
-    setBusyId(connector.id);
-    setError("");
-    setMessage("");
+    if (!startAction(connector.id)) return;
     try {
       const saved = await apiFetch<Connector>(
         `/admin/connectors/${connector.id}`,
@@ -122,13 +143,11 @@ export default function ConnectorsPage() {
           : "Не удалось изменить состояние коннектора.",
       );
     } finally {
-      setBusyId("");
+      finishAction();
     }
   };
   const sync = async (connector: Connector) => {
-    setBusyId(connector.id);
-    setError("");
-    setMessage("");
+    if (!startAction(connector.id)) return;
     try {
       const result = await apiFetch<SyncResult>("/admin/schedule/sync", {
         method: "POST",
@@ -150,13 +169,11 @@ export default function ConnectorsPage() {
           : "Не удалось запустить синхронизацию.",
       );
     } finally {
-      setBusyId("");
+      finishAction();
     }
   };
   const configureMoodle = async () => {
-    setBusyId("moodle-configure");
-    setError("");
-    setMessage("");
+    if (!startAction("moodle-configure")) return;
     try {
       const saved = await apiFetch<{ baseUrl: string }>(
         "/admin/connectors/moodle/configure",
@@ -189,13 +206,11 @@ export default function ConnectorsPage() {
           : "Не удалось сохранить параметры Moodle.",
       );
     } finally {
-      setBusyId("");
+      finishAction();
     }
   };
   const testMoodle = async () => {
-    setBusyId("moodle-test");
-    setError("");
-    setMessage("");
+    if (!startAction("moodle-test")) return;
     try {
       const result = await apiFetch<MoodleTestResult>(
         "/admin/connectors/moodle/test",
@@ -213,13 +228,27 @@ export default function ConnectorsPage() {
       setError(
         err instanceof Error ? err.message : "Не удалось проверить Moodle.",
       );
+      try {
+        const items = await apiFetchList<Connector>("/admin/connectors");
+        const latest = items.find((item) => item.id === "moodle");
+        if (latest) {
+          setConnectors((current) =>
+            current.map((item) =>
+              item.id === "moodle" ? { ...item, ...latest } : item,
+            ),
+          );
+        }
+      } catch {
+        // Keep the last known status and the original connection error visible.
+      }
     } finally {
-      setBusyId("");
+      finishAction();
     }
   };
   if (loading)
     return (
-      <div className="space-y-4">
+      <div className="space-y-4" aria-busy="true" aria-label="Загрузка источников данных">
+        <p role="status" aria-live="polite" className="sr-only">Загружаем источники данных…</p>
         <Skeleton className="h-24" />
         <Skeleton className="h-32" />
         <Skeleton className="h-44" />
@@ -269,6 +298,22 @@ export default function ConnectorsPage() {
           </p>
           <p className="mt-2 text-2xl font-bold text-red-700">
             {counts.errors}
+          </p>
+        </Card>
+        <Card padding="sm">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Ожидают проверки
+          </p>
+          <p className="mt-2 text-2xl font-bold text-slate-950">
+            {counts.configured}
+          </p>
+        </Card>
+        <Card padding="sm">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Синхронизируются
+          </p>
+          <p className="mt-2 text-2xl font-bold text-slate-950">
+            {counts.syncing}
           </p>
         </Card>
       </div>}
@@ -335,6 +380,7 @@ export default function ConnectorsPage() {
                       <Button
                         size="sm"
                         loading={busyId === connector.id}
+                        disabled={Boolean(busyId)}
                         onClick={() => persistStatus(connector, "active")}
                       >
                         Включить
@@ -346,6 +392,7 @@ export default function ConnectorsPage() {
                             size="sm"
                             variant="secondary"
                             loading={busyId === connector.id}
+                            disabled={Boolean(busyId)}
                             onClick={() => sync(connector)}
                           >
                             Синхронизировать расписание
@@ -354,7 +401,7 @@ export default function ConnectorsPage() {
                         <Button
                           size="sm"
                           variant="ghost"
-                          disabled={busyId === connector.id}
+                          disabled={Boolean(busyId)}
                           onClick={() => persistStatus(connector, "inactive")}
                         >
                           Отключить
@@ -374,11 +421,24 @@ export default function ConnectorsPage() {
                         файлы, попытки и оценки остаются в Moodle.
                       </p>
                     </div>
+                    {connector.status === "error" && (
+                      <p className="rounded-[var(--radius-md)] border border-[var(--color-danger)] bg-[var(--color-danger-soft)] px-3 py-2 text-sm text-[var(--color-danger)]">
+                        Последняя проверка не пройдена. Проверьте URL и токен.
+                        После изменения параметров сохраните их и повторите
+                        проверку подключения.
+                      </p>
+                    )}
                     <div className="grid gap-3 md:grid-cols-2">
                       <label className="text-sm font-medium text-slate-700">
                         URL Moodle
                         <input
+                          type="url"
+                          name="moodle-base-url"
+                          autoComplete="url"
+                          required
+                          aria-describedby="moodle-url-hint"
                           value={moodle.baseUrl}
+                          disabled={Boolean(busyId)}
                           onChange={(event) =>
                             setMoodle((current) => ({
                               ...current,
@@ -386,13 +446,17 @@ export default function ConnectorsPage() {
                             }))
                           }
                           placeholder="https://moodle.university.ru/"
-                          className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none ring-sky-500 focus:ring-2"
+                          className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
                         />
+                        <span id="moodle-url-hint" className="mt-1 block text-xs font-normal text-slate-500">Укажите полный адрес Moodle с защищённым протоколом https://.</span>
+                        {moodle.baseUrl && !isSecureMoodleUrl(moodle.baseUrl) && <span className="mt-1 block text-xs font-normal text-red-700">Проверьте адрес: требуется полный HTTPS URL.</span>}
                       </label>
                       <label className="text-sm font-medium text-slate-700">
                         Web Services token
                         <input
+                          name="moodle-token"
                           value={moodle.token}
+                          disabled={Boolean(busyId)}
                           onChange={(event) =>
                             setMoodle((current) => ({
                               ...current,
@@ -406,7 +470,7 @@ export default function ConnectorsPage() {
                               ? "Токен сохранён — введите новый только для замены"
                               : "Токен Moodle"
                           }
-                          className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none ring-sky-500 focus:ring-2"
+                          className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
                         />
                       </label>
                     </div>
@@ -414,7 +478,7 @@ export default function ConnectorsPage() {
                       <Button
                         size="sm"
                         loading={busyId === "moodle-configure"}
-                        disabled={!moodle.baseUrl || !moodle.token}
+                        disabled={Boolean(busyId) || !isSecureMoodleUrl(moodle.baseUrl) || !moodle.token}
                         onClick={configureMoodle}
                       >
                         Сохранить защищённо
@@ -423,7 +487,7 @@ export default function ConnectorsPage() {
                         size="sm"
                         variant="secondary"
                         loading={busyId === "moodle-test"}
-                        disabled={!connector.tokenConfigured}
+                        disabled={Boolean(busyId) || !connector.tokenConfigured}
                         onClick={testMoodle}
                       >
                         Проверить подключение
@@ -436,22 +500,16 @@ export default function ConnectorsPage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="mt-4 grid gap-3 border-t border-slate-100 pt-4 text-sm sm:grid-cols-2">
-                    <div>
-
-
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-400">
-                        История изменений
-                      </p>
-                      <Link
-                        href="/audit-log"
-                        className="mt-1 inline-block font-semibold text-sky-700"
-                      >
-                        Открыть журнал →
-                      </Link>
-                    </div>
+                  <div className="mt-4 border-t border-slate-100 pt-4 text-sm">
+                    <p className="text-xs text-slate-400">
+                      История изменений
+                    </p>
+                    <Link
+                      href="/audit-log"
+                      className="mt-1 inline-block font-semibold text-sky-700"
+                    >
+                      Открыть журнал →
+                    </Link>
                   </div>
                 )}
               </Card>

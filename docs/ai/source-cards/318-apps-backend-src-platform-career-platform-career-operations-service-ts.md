@@ -6,7 +6,7 @@
 
 ## Scope
 
-Searches and audits career applications and work results; corrects submissions; selects candidates through existing career invariants; and accepts or returns submitted work.
+Searches and audits career applications and work results; corrects submissions; selects candidates through existing career invariants; and accepts or returns submitted work. Collection searches validate a requested university against delegated grant scope and constrain unfiltered queries to the allowed universities; detail reads and every mutation check the task's canonical university before returning or changing linked records.
 
 ## Change boundary
 

@@ -16,18 +16,21 @@ import { Lesson } from "../schedule/entities/lesson.entity";
 import { Group } from "../users/entities/group.entity";
 import { University } from "../users/entities/university.entity";
 import { PersonalLessonNote } from "./entities/personal-lesson-note.entity";
+import { PaginationQueryDto } from "../common/dto/pagination-query.dto";
 
 describe("PairSpaceService", () => {
   let service: PairSpaceService;
   let pairSpaceRepository: ReturnType<typeof mockRepo>;
   let personalNoteRepository: ReturnType<typeof mockRepo>;
   let lessonRepository: ReturnType<typeof mockRepo>;
+  let groupRepository: ReturnType<typeof mockRepo>;
   let homeworkRepository: ReturnType<typeof mockRepo>;
   let eventBus: { publish: jest.Mock };
   let tenantContext: { assertAccess: jest.Mock; getUser: jest.Mock };
 
   const mockRepo = (name: string) => ({
     find: jest.fn().mockResolvedValue([]),
+    findAndCount: jest.fn().mockResolvedValue([[], 0]),
     findOne: jest.fn().mockResolvedValue(null),
     upsert: jest.fn().mockResolvedValue(undefined),
     delete: jest.fn().mockResolvedValue(undefined),
@@ -39,6 +42,7 @@ describe("PairSpaceService", () => {
     pairSpaceRepository = mockRepo("PairSpace");
     personalNoteRepository = mockRepo("PersonalLessonNote");
     lessonRepository = mockRepo("Lesson");
+    groupRepository = mockRepo("Group");
     homeworkRepository = mockRepo("Homework");
     eventBus = { publish: jest.fn().mockResolvedValue(undefined) };
     tenantContext = { assertAccess: jest.fn(), getUser: jest.fn() };
@@ -46,6 +50,7 @@ describe("PairSpaceService", () => {
       providers: [
         PairSpaceService,
         { provide: getRepositoryToken(Lesson), useValue: lessonRepository },
+        { provide: getRepositoryToken(Group), useValue: groupRepository },
         { provide: EventBusService, useValue: eventBus },
         {
           provide: getRepositoryToken(PairSpace),
@@ -204,6 +209,80 @@ describe("PairSpaceService", () => {
       await expect(service.listPreparationsForLessons([], "university-1"))
         .resolves.toEqual([]);
       expect(pairSpaceRepository.find).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("listExistingForGroup", () => {
+    const groupId = "group-1";
+    const universityId = "university-1";
+
+    beforeEach(() => {
+      tenantContext.assertAccess.mockImplementation(() => undefined);
+      groupRepository.findOne.mockResolvedValue({ id: groupId });
+      lessonRepository.find.mockResolvedValue([{ id: "lesson-1" }, { id: "lesson-2" }]);
+    });
+
+    it("returns only existing tenant-scoped spaces with stable pagination and summary fields", async () => {
+      const space = {
+        id: "space-1",
+        lessonId: "lesson-2",
+        universityId,
+        subject: "Базы данных",
+        date: new Date("2026-10-12T00:00:00.000Z"),
+        pairNumber: 2,
+        teacherName: "Иван Петров",
+        group: "ИС-21",
+        room: "301",
+        isActive: true,
+        syncStatus: "synced",
+        files: [{ fileUrl: "https://example.test/private", revokedAt: null }],
+      };
+      pairSpaceRepository.findAndCount.mockResolvedValue([[space], 26]);
+      const pagination = Object.assign(new PaginationQueryDto(), { page: 2, limit: 25 });
+
+      const result = await service.listExistingForGroup(groupId, universityId, pagination);
+
+      expect(tenantContext.assertAccess).toHaveBeenCalledWith(universityId);
+      expect(groupRepository.findOne).toHaveBeenCalledWith({ where: { id: groupId, universityId }, select: { id: true } });
+      expect(lessonRepository.find).toHaveBeenCalledWith({ where: { groupId, universityId }, select: { id: true } });
+      const query = pairSpaceRepository.findAndCount.mock.calls[0][0];
+      expect(query.where.universityId).toBe(universityId);
+      expect(query.where.lessonId).toMatchObject({ _type: "in", _value: ["lesson-1", "lesson-2"] });
+      expect(query).toMatchObject({ skip: 25, take: 25, order: { date: "DESC", pairNumber: "DESC", id: "DESC" } });
+      expect(result.meta).toEqual({ page: 2, limit: 25, total: 26, totalPages: 2 });
+      expect(result.data).toEqual([{
+        id: "space-1",
+        lessonId: "lesson-2",
+        subject: "Базы данных",
+        date: space.date,
+        pairNumber: 2,
+        teacherName: "Иван Петров",
+        group: "ИС-21",
+        room: "301",
+        isActive: true,
+        syncStatus: "synced",
+      }]);
+      expect(pairSpaceRepository.save).not.toHaveBeenCalled();
+    });
+
+    it("returns an empty page without querying spaces when a group has no lessons", async () => {
+      lessonRepository.find.mockResolvedValue([]);
+      const result = await service.listExistingForGroup(groupId, universityId, new PaginationQueryDto());
+
+      expect(result.data).toEqual([]);
+      expect(result.meta.total).toBe(0);
+      expect(pairSpaceRepository.findAndCount).not.toHaveBeenCalled();
+      expect(pairSpaceRepository.save).not.toHaveBeenCalled();
+    });
+
+    it("does not return data for a group outside the current university", async () => {
+      groupRepository.findOne.mockResolvedValue(null);
+
+      await expect(service.listExistingForGroup(groupId, universityId, new PaginationQueryDto()))
+        .rejects.toThrow(NotFoundException);
+
+      expect(lessonRepository.find).not.toHaveBeenCalled();
+      expect(pairSpaceRepository.findAndCount).not.toHaveBeenCalled();
     });
   });
 

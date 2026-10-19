@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useWorkspaceQuery } from "@napare/ui/workspace-shell";
 import { useEffect, useMemo, useState } from "react";
-import { apiFetch, apiFetchList } from "@/lib/api";
+import { apiFetch, apiFetchAllPages } from "@/lib/api";
+import { ListPagination } from "@/components/ListPagination";
 import {
   Badge,
   Button,
@@ -50,6 +51,8 @@ const time = (value?: string) =>
 
 export default function UniversityNotificationsPage() {
   const [items, setItems] = useState<Notification[]>([]);
+  const [page, setPage] = useState(1);
+  const pageSize = 25;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [category, setCategory] = useState<Category>("all");
@@ -60,7 +63,7 @@ export default function UniversityNotificationsPage() {
   const load = () => {
     setLoading(true);
     setError("");
-    apiFetchList<Notification>("/notifications")
+    apiFetchAllPages<Notification>("/notifications")
       .then(setItems)
       .catch((err) =>
         setError(
@@ -78,6 +81,13 @@ export default function UniversityNotificationsPage() {
     const priority = (item: Notification) => item.priority === 'urgent' ? 2 : item.priority === 'high' ? 1 : 0;
     return priority(b) - priority(a) || (b.createdAt || '').localeCompare(a.createdAt || '');
   }), [items, category, view]);
+  const pageCount = Math.max(1, Math.ceil(visible.length / pageSize));
+  const currentPage = Math.min(page, pageCount);
+  const pageItems = visible.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  useEffect(() => { setPage(1); }, [category, view]);
+  useEffect(() => {
+    setPage((current) => Math.min(current, Math.max(1, Math.ceil(visible.length / pageSize))));
+  }, [visible.length]);
   const unread = items.filter((item) => !item.isRead).length;
   const markRead = async (id: string) => {
     const item = items.find((current) => current.id === id);
@@ -183,7 +193,7 @@ export default function UniversityNotificationsPage() {
       ) : (
         <Card padding="sm">
           <div className="divide-y divide-slate-100">
-            {visible.map((item) => (
+            {pageItems.map((item) => (
               <article
                 key={item.id}
                 className={`flex gap-3 py-4 first:pt-1 ${!item.isRead ? "rounded-lg bg-sky-50/50 px-2" : ""}`}
@@ -233,6 +243,7 @@ export default function UniversityNotificationsPage() {
           </div>
         </Card>
       )}
+      {!loading && !error && visible.length > 0 && <ListPagination page={currentPage} pageSize={pageSize} total={visible.length} onChange={setPage} />}
     </div>
   );
 }

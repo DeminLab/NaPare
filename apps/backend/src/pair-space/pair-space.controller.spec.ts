@@ -4,6 +4,7 @@ import { Reflector } from "@nestjs/core";
 import { RolesGuard } from "../common/guards/roles.guard";
 import { UserRole } from "../auth/interfaces/user-role";
 import { PairSpaceController } from "./pair-space.controller";
+import { PaginationQueryDto } from "../common/dto/pagination-query.dto";
 
 describe("PairSpaceController content write authorization", () => {
   const rolesGuard = new RolesGuard(new Reflector());
@@ -53,6 +54,25 @@ describe("PairSpaceController content write authorization", () => {
     expect(pairSpaceService.getOrCreateByLesson).toHaveBeenCalledWith(
       "lesson-1",
       "university-1",
+    );
+  });
+
+  it("allows university administrators to list existing group spaces without calling create-on-read", async () => {
+    const result = { data: [], meta: { page: 1, limit: 50, total: 0, totalPages: 0 } };
+    const pairSpaceService = { listExistingForGroup: jest.fn().mockResolvedValue(result) };
+    const subject = new PairSpaceController(pairSpaceService as any);
+    const handler = subject.listExistingForGroup;
+
+    expect(() => rolesGuard.canActivate(contextFor(handler, UserRole.STUDENT))).toThrow(ForbiddenException);
+    expect(rolesGuard.canActivate(contextFor(handler, UserRole.UNIVERSITY_ADMIN))).toBe(true);
+
+    await expect(subject.listExistingForGroup("group-1", {
+      user: { universityId: "university-1" },
+    }, new PaginationQueryDto())).resolves.toEqual(result);
+    expect(pairSpaceService.listExistingForGroup).toHaveBeenCalledWith(
+      "group-1",
+      "university-1",
+      expect.any(PaginationQueryDto),
     );
   });
 });

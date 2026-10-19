@@ -6,11 +6,11 @@
 
 ## Scope
 
-Dependency registration for the platform student-data API.
+Dependency registration for the platform student-data API, including absence-confirmation decisions.
 
 ## Change boundary
 
-Register only the repositories and services required by its domain operations.
+Register only the repositories and services required by absence, attendance, decision, and audit operations.
 
 ## Verification
 

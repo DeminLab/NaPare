@@ -19,6 +19,8 @@ export class CareerMembership {
   @Column({type: 'uuid', nullable: true}) companyId: string | null;
   @Column({type: 'uuid', nullable: true}) universityId: string | null;
   @Column({type: 'varchar'}) role: string;
+  @Column({type: 'timestamptz', nullable: true}) revokedAt: Date | null;
+  @Column({type: 'uuid', nullable: true}) revokedBy: string | null;
   @CreateDateColumn() createdAt: Date;
   @UpdateDateColumn() updatedAt: Date;
 }

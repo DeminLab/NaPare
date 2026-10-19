@@ -6,7 +6,7 @@
 
 ## Scope
 
-Account notifications grouped by date, with explicit unread filtering and mark-read actions. Loading, failed fetch/action and an empty history remain distinct; failed reads are not presented as a successful empty response.
+Account notifications grouped by date, paginated through the account API, with a global unread count, explicit unread filtering, safe internal event links and mark-read actions. Only destinations belonging to an existing developer route are rendered. Loading, failed fetch/action and an empty history remain distinct; failed reads are not presented as a successful empty response.
 
 ## Read sequence
 

@@ -311,11 +311,12 @@ export class AcademicService {
     return space;
   }
 
-  async findAcademicEvents(universityId: string, queryDto: AcademicEventQueryDto): Promise<PaginatedResponse<AcademicEvent>> {
+  async findAcademicEvents(universityId: string, queryDto: AcademicEventQueryDto): Promise<PaginatedResponse<Omit<AcademicEvent, 'hiddenAt' | 'hiddenBy' | 'hideReason'>>> {
     const user = this.requireUser();
     this.tenantContext.assertAccess(universityId);
     const query = this.eventRepository.createQueryBuilder('event')
-      .where('event.universityId = :universityId', { universityId });
+      .where('event.universityId = :universityId', { universityId })
+      .andWhere('event.hiddenAt IS NULL');
     if (queryDto.type) query.andWhere('event.type = :type', { type: queryDto.type });
     if (queryDto.courseId) query.andWhere('event.courseId = :courseId', { courseId: queryDto.courseId });
     if (queryDto.groupId) query.andWhere('event.groupId = :groupId', { groupId: queryDto.groupId });
@@ -327,15 +328,16 @@ export class AcademicService {
       .skip((queryDto.page - 1) * queryDto.limit)
       .take(queryDto.limit);
     const [data, total] = await query.getManyAndCount();
-    return toPaginatedResponse(data, total, queryDto);
+    const publicEvents = data.map(({ hiddenAt: _hiddenAt, hiddenBy: _hiddenBy, hideReason: _hideReason, ...event }) => event);
+    return toPaginatedResponse(publicEvents, total, queryDto);
   }
 
-  async createAcademicEvent(universityId: string, dto: CreateAcademicEventDto): Promise<AcademicEvent> {
+  async createAcademicEvent(universityId: string, dto: CreateAcademicEventDto): Promise<Omit<AcademicEvent, 'hiddenAt' | 'hiddenBy' | 'hideReason'>> {
     const actor = this.requireUser();
     this.tenantContext.assertAccess(universityId);
     if (dto.courseId) await this.assertCourseManageable(await this.getCourse(dto.courseId));
     if (dto.groupId) await this.assertGroup(universityId, dto.groupId);
-    return this.recordAcademicEvent({
+    const event = await this.recordAcademicEvent({
       universityId,
       type: dto.type,
       courseId: dto.courseId ?? null,
@@ -348,6 +350,8 @@ export class AcademicService {
       endsAt: dto.endsAt ? new Date(dto.endsAt) : null,
       payload: {},
     });
+    const { hiddenAt: _hiddenAt, hiddenBy: _hiddenBy, hideReason: _hideReason, ...publicEvent } = event;
+    return publicEvent;
   }
 
   async listScheduleChanges(occurrenceId: string, pagination: PaginationQueryDto): Promise<PaginatedResponse<ScheduleChange>> {

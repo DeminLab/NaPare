@@ -85,6 +85,34 @@ describe("NotificationsService", () => {
     });
   });
 
+  describe("findInbox", () => {
+    it("uses deterministic ordering and clamps pagination while preserving tenant scope", async () => {
+      mockTenantContext.getUser.mockReturnValue({
+        id: "user-1",
+        role: "teacher",
+        universityId: "uni-1",
+      });
+
+      await service.findInbox("user-1", "open", 200.8, -4);
+
+      expect(mockInboxRepo.find).toHaveBeenCalledWith({
+        where: { userId: "user-1", status: "open", universityId: "uni-1" },
+        order: { createdAt: "DESC", id: "DESC" },
+        skip: 0,
+        take: 100,
+      });
+    });
+
+    it("defaults an invalid offset to the first page", async () => {
+      await service.findInbox("user-1", undefined, 50, Number.NaN);
+
+      expect(mockInboxRepo.find).toHaveBeenCalledWith(expect.objectContaining({
+        skip: 0,
+        take: 50,
+      }));
+    });
+  });
+
   describe("markAsRead", () => {
     it("should update notification as read", async () => {
       mockNotificationRepo.findOne.mockResolvedValue({

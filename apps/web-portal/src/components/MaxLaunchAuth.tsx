@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 
-type Workspace = 'student' | 'staff' | 'admin' | 'developer';
+type Workspace = 'student' | 'staff' | 'admin' | 'developer' | 'career';
 type MaxAuthResponse = {
   accessToken: string;
   refreshToken: string;
@@ -17,6 +17,7 @@ declare global {
 }
 
 const destinations: Record<Workspace, string> = {
+  career: '/career',
   student: '/student/today',
   staff: '/staff/today',
   admin: '/deanery/dashboard',
@@ -28,6 +29,7 @@ const MAX_RELAUNCH_MESSAGE = 'Данные MAX устарели или неде�
 function workspaceForRole(role: string): Workspace | null {
   if (role === 'student') return 'student';
   if (role === 'developer') return 'developer';
+  if (['employer', 'career_staff', 'career_admin'].includes(role)) return 'career';
   if (['teacher', 'curator', 'faculty_dean', 'department_head'].includes(role)) return 'staff';
   if (['university_admin', 'superadmin'].includes(role)) return 'admin';
   return null;
@@ -51,7 +53,13 @@ function getLaunchData(): string {
   return launchData;
 }
 
-export function MaxLaunchAuth({ captureOnly = false }: { captureOnly?: boolean }) {
+export function MaxLaunchAuth({
+  captureOnly = false,
+  onCapture,
+}: {
+  captureOnly?: boolean;
+  onCapture?: (data: string) => void;
+}) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [retryAvailable, setRetryAvailable] = useState(false);
@@ -65,13 +73,14 @@ export function MaxLaunchAuth({ captureOnly = false }: { captureOnly?: boolean }
         const data = getLaunchData();
         if (data) {
           window.__naparePendingMaxInitData = data;
+          onCapture?.(data);
           return;
         }
         await new Promise(resolve => window.setTimeout(resolve, 100));
       }
     })();
     return () => { active = false; };
-  }, [captureOnly]);
+  }, [captureOnly, onCapture]);
 
   async function signInWithMax(data?: string) {
     setBusy(true);

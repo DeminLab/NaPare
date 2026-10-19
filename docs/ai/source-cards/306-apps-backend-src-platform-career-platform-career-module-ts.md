@@ -6,7 +6,7 @@
 
 ## Scope
 
-Registers career profile/admission moderation and career application/workflow routes with the repositories used by both services.
+Registers career profile/admission moderation, company and partnership catalog access, and career application/workflow routes with the repositories used by both services.
 
 ## Change boundary
 

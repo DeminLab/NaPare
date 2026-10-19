@@ -36,6 +36,7 @@ const groups: WorkspaceNavGroup[] = [
       {
         href: "/notifications",
         label: "Уведомления",
+        mobileLabel: "Увед.",
         icon: "pulse",
         keywords: ["events"],
       },
@@ -47,6 +48,7 @@ const groups: WorkspaceNavGroup[] = [
       {
         href: "/docs",
         label: "Документация",
+        mobileLabel: "Док.",
         icon: "book",
         keywords: ["docs", "документация"],
       },
