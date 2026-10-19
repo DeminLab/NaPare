@@ -34,7 +34,7 @@ export class AbsenceConfirmation {
   })
   status: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'text', nullable: true })
   comment: string | null;
 
   @Column({ type: 'timestamp', nullable: true })

@@ -60,7 +60,7 @@ export class Notification {
   @Column({ type: 'text' })
   body: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', length: 500, nullable: true })
   deepLink: string | null;
 
   @Column({ default: false })
