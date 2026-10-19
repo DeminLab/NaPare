@@ -47,7 +47,7 @@ export class Group {
   @Column({ type: "int" })
   curriculumYear: number;
 
-  @Column({ nullable: true })
+  @Column({ type: "varchar", nullable: true })
   specialization: string | null;
 
   @Column({ type: "uuid", nullable: true })
