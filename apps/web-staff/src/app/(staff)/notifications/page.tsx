@@ -207,7 +207,7 @@ export default function NotificationsPage() {
             type="button"
             aria-pressed={filter === item.id}
             onClick={() => changeFilter(item.id)}
-            className={`shrink-0 border-b-2 px-3 py-3 text-sm font-medium transition-colors ${filter === item.id ? "border-sky-600 text-sky-700" : "border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-900"}`}
+            className={`shrink-0 border-b-2 px-3 py-3 text-sm font-medium transition-colors ${filter === item.id ? "border-indigo-600 text-indigo-700" : "border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-900"}`}
           >
             {item.label}
           </button>
@@ -253,7 +253,7 @@ export default function NotificationsPage() {
               return (
                 <div
                   key={notification.id}
-                  className={`grid gap-3 px-4 py-4 xl:grid-cols-[150px_minmax(0,1fr)_100px_210px] md:items-center md:gap-4 md:px-5 ${!notification.isRead ? "bg-sky-50/40" : ""}`}
+                  className={`grid gap-3 px-4 py-4 xl:grid-cols-[150px_minmax(0,1fr)_100px_210px] md:items-center md:gap-4 md:px-5 ${!notification.isRead ? "bg-indigo-50/40" : ""}`}
                 >
                   <div>
                     <span className="text-xs font-semibold uppercase tracking-wide text-slate-400 md:hidden">
@@ -266,7 +266,7 @@ export default function NotificationsPage() {
                   <div className="min-w-0">
                     <div className="flex items-start gap-2">
                       <span
-                        className="mt-1 h-2 w-2 shrink-0 rounded-full bg-sky-500"
+                        className="mt-1 h-2 w-2 shrink-0 rounded-full bg-indigo-500"
                         aria-hidden="true"
                       />
                       <div>
@@ -291,7 +291,7 @@ export default function NotificationsPage() {
                     {action && (
                       <Link
                         href={action.href}
-                        className="inline-flex min-h-11 items-center rounded-lg px-3 py-2 text-sm font-semibold text-sky-700 hover:bg-sky-50"
+                        className="inline-flex min-h-11 items-center rounded-lg px-3 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-50"
                       >
                         {action.label} →
                       </Link>

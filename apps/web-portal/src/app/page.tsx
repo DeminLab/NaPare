@@ -358,6 +358,12 @@ export default function HomePage() {
           <Link href="/connections" className="text-link">
             Подключить MAX
           </Link>
+          <Link href="/team" className="text-link">
+            Команда
+          </Link>
+          <Link href="/privacy" className="text-link">
+            Политика конфиденциальности
+          </Link>
         </div>
         <p className="footer-copy">
           © 2026 НаПаре · Учебные аккаунты выдаёт университет. Работодатели регистрируются самостоятельно.

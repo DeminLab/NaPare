@@ -23,3 +23,70 @@
 .button:not(:disabled):hover,.tab:hover{background:#edf3ee;border-color:#aab9ae}.button:not(:disabled):active,.tab:active{transform:translateY(1px)}.active:hover{background:#1d4936;border-color:#1d4936}
 
 .portfolioHeading h1,.portfolioHeading .tag,.portfolioCase h2,.portfolioCase .tag,.portfolioCase .muted{overflow-wrap:anywhere}
+
+/* Career workspaces use the same cabinet palette and controls while keeping
+   the career center's denser task and review workflows intact. */
+.page { background: #f7f8fc; color: #111b34; font-family: var(--font-sans, Inter, Arial, sans-serif); }
+.wrap { max-width: 1440px; }
+.brand { color: #111b34; }
+.back, .hero p, .muted { color: #71809e; }
+.eyebrow { color: #5146e8; }
+.tabs { border-color: #e3e8f2; }
+.button, .active, .tab {
+  min-height: 42px;
+  border-color: #e1e6f1;
+  border-radius: 10px;
+  color: #53617f;
+  transition: background 140ms ease, border-color 140ms ease, color 140ms ease, transform 140ms ease;
+}
+.active, .primary { border-color: #5146e8; background: #5146e8; color: #fff; }
+.tab[aria-selected="true"], .tab[aria-current="page"] { background: #efedff; color: #5146e8; }
+.grid { gap: 16px; }
+.card, .dialog {
+  border-color: #e3e8f2;
+  border-radius: 16px;
+  background: #fff;
+  color: #111b34;
+  box-shadow: 0 8px 24px rgb(17 27 52 / .045);
+}
+.card p { color: #657493; }
+.tag { border-radius: 7px; background: #efedff; color: #5146e8; }
+.field input, .field select, .field textarea {
+  min-height: 44px;
+  border-color: #d6deed;
+  border-radius: 10px;
+  color: #111b34;
+}
+.field textarea { min-height: 108px; }
+.field input:focus, .field select:focus, .field textarea:focus { border-color: #5146e8; outline-color: #5146e8; }
+.empty { border-color: #dce2ef; border-radius: 14px; background: #f8f9fd; }
+.error { border-radius: 10px; }
+.success { border-radius: 10px; background: #eaf8f1; color: #168252; }
+.planningDays > div, .fit, .planningSummary { border-radius: 12px; background: #f4f5fb; }
+.planningDetails, .taskDetails { border-color: #e8ecf4; }
+.taskCard { border-left: 3px solid #5146e8; }
+.taskTerms { color: #657493; }
+.taskTerms strong { color: #111b34; }
+.warningTag { border-radius: 7px; }
+.composerSteps { color: #71809e; }
+.composerSteps span { border-color: #d6deed; }
+.composerSteps [aria-current="step"] { color: #5146e8; }
+.composerSteps [aria-current="step"] span { border-color: #5146e8; background: #5146e8; }
+.createSummary { border-radius: 10px; background: #5146e8; }
+.preview { border-color: #e3e8f2; border-radius: 12px; }
+.passwordToggle { border-color: #e1e6f1; border-radius: 9px; background: #f4f5fb; color: #53617f; }
+.queueItem, .queueSelected { border-color: #e3e8f2; border-radius: 10px; color: #111b34; }
+.queueSelected { border-color: #5146e8; background: #f2f0ff; }
+.resultLink { color: #5146e8; }
+.portfolioHeading { border-color: #e3e8f2; }
+.reviewQuote { border-color: #e3e8f2; }
+.button:not(:disabled):hover, .tab:hover { border-color: #c6c1ff; background: #f4f2ff; color: #5146e8; }
+.active:not(:disabled):hover, .primary:not(:disabled):hover { border-color: #4338ca; background: #4338ca; color: #fff; }
+.button:not(:disabled):active, .tab:active { transform: translateY(1px); }
+.page :focus-visible { outline-color: #5146e8; }
+
+@media (max-width: 720px) {
+  .page { padding: 20px 16px; }
+  .card { padding: 18px; }
+  .tabs { scrollbar-width: thin; }
+}

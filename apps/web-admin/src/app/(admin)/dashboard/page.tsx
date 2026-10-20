@@ -122,6 +122,20 @@ export default function DashboardPage() {
     <PageHeader title="Обзор ВУЗа" description={currentDate} actions={<><Badge variant={backend === 'online' ? 'green' : backend === 'offline' ? 'red' : 'slate'} dot>{backend === 'online' ? 'Система работает' : backend === 'offline' ? 'Нет связи с системой' : 'Проверяем систему'}</Badge><Button variant="secondary" loading={refreshing} onClick={() => load(false)}>Обновить данные</Button></>} />
     {lastUpdated && <p className="-mt-4 text-xs text-[var(--color-text-secondary)]">Последняя проверка данных: {formatDateTime(lastUpdated.toISOString())}</p>}
 
+    <section aria-label="Ключевые показатели ВУЗа" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+      {[
+        { label: 'Пользователи', value: stats?.totalUsers ?? (hasLoaded('пользователи') ? users.length : null), href: '/users', detail: 'Учетные записи' },
+        { label: 'Факультеты', value: hasLoaded('факультеты') ? facultiesTotal : null, href: '/structure', detail: 'В структуре' },
+        { label: 'Группы', value: hasLoaded('группы') ? groupsTotal : null, href: '/structure', detail: 'Учебные группы' },
+        { label: 'Требуют решения', value: hasLoaded('обращения об отсутствии') ? pendingAbsences : null, href: '/absences', detail: 'Обращения студентов' },
+        { label: 'Источник данных', value: syncLabel, href: '/connectors', detail: sync?.lastSync ? `Обновлён ${formatDateTime(sync.lastSync)}` : 'Состояние расписания' },
+      ].map((metric) => <Link key={metric.label} href={metric.href} className="group rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus-ring)] sm:p-5">
+        <p className="text-sm font-medium text-[var(--color-text-secondary)]">{metric.label}</p>
+        <p className="mt-3 truncate text-2xl font-bold tracking-tight text-[var(--color-text)]">{typeof metric.value === 'number' ? displayNumber(metric.value) : metric.value ?? 'Нет данных'}</p>
+        <p className="mt-1 text-xs text-[var(--color-text-secondary)]">{metric.detail}<span aria-hidden="true" className="ml-2 text-[var(--color-brand)]">→</span></p>
+      </Link>)}
+    </section>
+
     {partial.length > 0 && <div role="status" className="rounded-[var(--radius-md)] border border-[var(--color-warning)] bg-[var(--color-warning-soft)] px-4 py-3 text-sm text-[var(--color-warning)]">Не удалось получить свежие данные: {partial.join(', ')}. Для этих разделов могут отображаться последние успешно загруженные значения.</div>}
 
     <section aria-labelledby="priority-title" className={openProblems || incompleteProblems ? "grid gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(18rem,.65fr)]" : "space-y-4"}>

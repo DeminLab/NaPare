@@ -100,14 +100,14 @@ export default function DeveloperOverviewPage() {
             </Button>
           }
         />
-        {failed.length > 0 && <p role="status" className="rounded-xl border border-amber-400/30 bg-amber-400/10 p-4 text-sm text-amber-200">Не удалось проверить: {failed.join(', ')}. Повторите загрузку; отсутствие данных не означает отсутствие событий.</p>}
-        {checkedAt && <p className="text-xs text-white/60">Последняя проверка · {checkedAt}</p>}
+        {failed.length > 0 && <p role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">Не удалось проверить: {failed.join(', ')}. Повторите загрузку; отсутствие данных не означает отсутствие событий.</p>}
+        {checkedAt && <p className="text-xs text-[var(--color-text-secondary)]">Последняя проверка · {checkedAt}</p>}
         {loading ? (
           <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
             {metrics.map((metric) => (
               <Card
                 key={metric.label}
-                className="border-white/10 bg-white/[0.04]"
+                className="border-[var(--color-border)] bg-white"
               >
                 <Skeleton className="h-3 w-24" />
                 <Skeleton className="mt-4 h-7 w-20" />
@@ -119,12 +119,12 @@ export default function DeveloperOverviewPage() {
             {metrics.map((metric) => (
               <Card
                 key={metric.label}
-                className="border-white/10 bg-white/[0.04]"
+                className="border-[var(--color-border)] bg-white"
               >
-                <p className="text-xs uppercase tracking-wider text-white/60">
+                <p className="text-xs uppercase tracking-wider text-[var(--color-text-secondary)]">
                   {metric.label}
                 </p>
-                <p className="mt-3 text-2xl font-bold text-white">
+                <p className="mt-3 text-2xl font-bold text-[var(--color-text)]">
                   {metric.value}
                 </p>
               </Card>
@@ -133,13 +133,13 @@ export default function DeveloperOverviewPage() {
         )}
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_300px]">
           <div className="space-y-6">
-            <Card id="events" className="scroll-mt-24 border-white/10 bg-white/[0.04]">
+            <Card id="events" className="scroll-mt-24 border-[var(--color-border)] bg-white">
               <div className="mb-4 flex items-center justify-between">
                 <div>
-                  <h2 className="text-sm font-bold uppercase tracking-wider text-white/70">
+                  <h2 className="text-sm font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">
                     Поток доменных событий
                   </h2>
-                  <p className="mt-1 text-xs text-white/60">
+                  <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
                     Фактически записанные события вашего ВУЗа
                   </p>
                 </div>
@@ -148,7 +148,7 @@ export default function DeveloperOverviewPage() {
                 </Badge>
               </div>
               {events.length ? (
-                <div className="divide-y divide-white/10">
+                <div className="divide-y divide-[var(--color-border)]">
                   {events
                     .slice(-8)
                     .reverse()
@@ -158,10 +158,10 @@ export default function DeveloperOverviewPage() {
                         className="flex items-center justify-between gap-3 py-3"
                       >
                         <div className="min-w-0">
-                          <p className="break-all font-mono text-xs text-cyan-200">
+                          <p className="break-all font-mono text-xs text-cyan-800">
                             {event.type}
                           </p>
-                          <p className="mt-1 text-xs text-white/60">
+                          <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
                             {new Date(event.timestamp).toLocaleString("ru-RU")}
                           </p>
                         </div>
@@ -179,38 +179,38 @@ export default function DeveloperOverviewPage() {
                     ))}
                 </div>
               ) : (
-                <p className="py-3 text-sm text-white/60">
+                <p className="py-3 text-sm text-[var(--color-text-secondary)]">
                   {loading ? "Загружаем события…" : failed.includes("события") ? "Поток событий не загрузился. Повторите проверку." : "Новых событий нет"}
                 </p>
               )}
             </Card>
-            <Card className="border-white/10 bg-white/[0.04]">
-              <h2 className="text-sm font-bold uppercase tracking-wider text-white/70">
+            <Card className="border-[var(--color-border)] bg-white">
+              <h2 className="text-sm font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">
                 Последняя активность
               </h2>
               {activity.length ? (
-                <div className="mt-3 divide-y divide-white/10">
+                <div className="mt-3 divide-y divide-[var(--color-border)]">
                   {activity.slice(0, 6).map((item, index) => (
                     <div key={item.id || index} className="py-3">
-                      <p className="text-sm text-white/75">
+                      <p className="text-sm text-[var(--color-text)]">
                         {item.title || "Системное событие"}
                       </p>
-                      <p className="mt-1 text-xs text-white/60">
+                      <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
                         {item.body || "Событие уведомления"}
                       </p>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="mt-4 text-sm text-white/60">
+                <p className="mt-4 text-sm text-[var(--color-text-secondary)]">
                   {loading ? "Загружаем уведомления…" : failed.includes("уведомления") ? "Уведомления не загрузились. Повторите проверку." : "Активности пока нет."}
                 </p>
               )}
             </Card>
           </div>
           <aside className="space-y-6">
-            <Card className="border-white/10 bg-white/[0.04]">
-              <h2 className="text-sm font-bold uppercase tracking-wider text-white/70">
+            <Card className="border-[var(--color-border)] bg-white">
+              <h2 className="text-sm font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">
                 Быстрые действия
               </h2>
               <div className="mt-3 grid gap-2">
@@ -218,32 +218,32 @@ export default function DeveloperOverviewPage() {
                   <Link
                     key={item.href}
                     href={item.href}
-                    className="rounded-lg border border-white/10 px-3 py-2.5 text-sm text-white/70 hover:bg-white/10 hover:text-white"
+                    className="rounded-lg border border-[var(--color-border)] px-3 py-2.5 text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-brand-soft)] hover:text-[var(--color-text)]"
                   >
                     {item.label}
-                    <span className="float-right text-white/60">→</span>
+                    <span className="float-right text-[var(--color-text-secondary)]">→</span>
                   </Link>
                 ))}
               </div>
             </Card>
-            <Card className="border-white/10 bg-white/[0.04]">
-              <h2 className="text-sm font-bold uppercase tracking-wider text-white/70">
+            <Card className="border-[var(--color-border)] bg-white">
+              <h2 className="text-sm font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">
                 Состояние системы
               </h2>
-              <div className="mt-3 divide-y divide-white/10">
-                <div className="flex items-center justify-between py-3 text-sm text-white/65">
+              <div className="mt-3 divide-y divide-[var(--color-border)]">
+                <div className="flex items-center justify-between py-3 text-sm text-[var(--color-text-secondary)]">
                   <span>Бэкенд</span>
                   <Badge variant={backend.variant}>{backend.label}</Badge>
                 </div>
-                <div className="flex items-center justify-between py-3 text-sm text-white/65">
+                <div className="flex items-center justify-between py-3 text-sm text-[var(--color-text-secondary)]">
                   <span>База данных</span>
                   <Badge variant={database.variant}>{database.label}</Badge>
                 </div>
-                <div className="flex items-center justify-between py-3 text-sm text-white/65">
+                <div className="flex items-center justify-between py-3 text-sm text-[var(--color-text-secondary)]">
                   <span>Проверка аккаунта</span>
                   <Badge variant={accountCheck.variant}>{accountCheck.label}</Badge>
                 </div>
-                <div className="flex items-center justify-between py-3 text-sm text-white/65">
+                <div className="flex items-center justify-between py-3 text-sm text-[var(--color-text-secondary)]">
                   <span>Вебхуки</span>
                   <Badge variant="default">Нет телеметрии</Badge>
                 </div>

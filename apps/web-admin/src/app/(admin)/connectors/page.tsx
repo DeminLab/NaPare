@@ -263,59 +263,27 @@ export default function ConnectorsPage() {
       />
     );
   return (
-    <div className="mx-auto max-w-[1200px] space-y-6">
-
-      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+    <div className="mx-auto max-w-[var(--layout-content-max)] space-y-6">
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <p className="text-sm font-medium text-sky-700">Кабинет ВУЗа</p>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
+          <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--color-brand)]">Кабинет ВУЗа · расписание и данные</p>
+          <h1 className="mt-2 text-2xl font-bold tracking-tight text-[var(--color-text)] sm:text-3xl">
             Источники данных
           </h1>
-
+          <p className="mt-2 max-w-2xl text-sm text-[var(--color-text-secondary)]">Состояние интеграций, синхронизация расписания и подключение учебных систем.</p>
         </div>
-
       </div>
       {connectors.length > 0 && <div className="metric-strip">
-        <Card padding="sm">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Работают
-          </p>
-          <p className="mt-2 text-2xl font-bold text-slate-950">
-            {counts.active}
-          </p>
-        </Card>
-        <Card padding="sm">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Отключены
-          </p>
-          <p className="mt-2 text-2xl font-bold text-slate-950">
-            {counts.inactive}
-          </p>
-        </Card>
-        <Card padding="sm">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Ошибки
-          </p>
-          <p className="mt-2 text-2xl font-bold text-red-700">
-            {counts.errors}
-          </p>
-        </Card>
-        <Card padding="sm">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Ожидают проверки
-          </p>
-          <p className="mt-2 text-2xl font-bold text-slate-950">
-            {counts.configured}
-          </p>
-        </Card>
-        <Card padding="sm">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Синхронизируются
-          </p>
-          <p className="mt-2 text-2xl font-bold text-slate-950">
-            {counts.syncing}
-          </p>
-        </Card>
+        {[
+          { label: "Работают", value: counts.active, tone: "text-emerald-600", icon: "plug" as const },
+          { label: "Отключены", value: counts.inactive, tone: "text-slate-500", icon: "plug" as const },
+          { label: "Ошибки", value: counts.errors, tone: "text-red-600", icon: "bell" as const },
+          { label: "Ожидают проверки", value: counts.configured, tone: "text-amber-600", icon: "info" as const },
+          { label: "Синхронизация", value: counts.syncing, tone: "text-[var(--color-brand)]", icon: "refresh" as const },
+        ].map((item) => <Card key={item.label} padding="sm" className="flex min-w-0 items-center gap-3">
+          <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-50 ${item.tone}`}><Icon name={item.icon} size={20} /></span>
+          <div className="min-w-0"><p className="text-2xl font-bold leading-none text-[var(--color-text)]">{item.value}</p><p className="mt-2 truncate text-xs font-medium text-[var(--color-text-secondary)]">{item.label}</p></div>
+        </Card>)}
       </div>}
       {error && (
         <p
@@ -346,16 +314,16 @@ export default function ConnectorsPage() {
               <Card
                 key={connector.id}
                 padding="sm"
-                className={connector.status === "error" ? "border-red-200" : ""}
+                className={`overflow-hidden border transition-shadow hover:shadow-md ${connector.status === "error" ? "border-red-200" : "border-[var(--color-border)]"}`}
               >
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                   <div className="flex min-w-0 items-start gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[var(--color-brand-soft)] text-[var(--color-brand)]">
                       <Icon name="plug" size={19} />
                     </div>
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <h2 className="font-bold text-slate-950">
+                        <h2 className="text-base font-bold text-[var(--color-text)]">
                           {connector.name}
                         </h2>
                         <Badge variant="slate">
@@ -365,7 +333,7 @@ export default function ConnectorsPage() {
                           {info.label}
                         </Badge>
                       </div>
-                      <p className="mt-1 text-sm text-slate-500">
+                      <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
                         Последнее изменение:{" "}
                         {connector.updatedAt
                           ? new Date(connector.updatedAt).toLocaleString(
@@ -411,7 +379,7 @@ export default function ConnectorsPage() {
                   </div>
                 </div>
                 {isMoodle ? (
-                  <div className="mt-4 space-y-4 border-t border-slate-100 pt-4">
+                  <div className="mt-5 space-y-4 border-t border-[var(--color-border)] pt-5">
                     <div className="rounded-xl bg-sky-50 p-3 text-sm text-sky-950">
                       <p className="font-semibold">
                         Подключение Moodle
@@ -428,7 +396,7 @@ export default function ConnectorsPage() {
                         проверку подключения.
                       </p>
                     )}
-                    <div className="grid gap-3 md:grid-cols-2">
+                    <div className="grid gap-4 md:grid-cols-2">
                       <label className="text-sm font-medium text-slate-700">
                         URL Moodle
                         <input
@@ -446,7 +414,7 @@ export default function ConnectorsPage() {
                             }))
                           }
                           placeholder="https://moodle.university.ru/"
-                          className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
+                          className="mt-1 min-h-11 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
                         />
                         <span id="moodle-url-hint" className="mt-1 block text-xs font-normal text-slate-500">Укажите полный адрес Moodle с защищённым протоколом https://.</span>
                         {moodle.baseUrl && !isSecureMoodleUrl(moodle.baseUrl) && <span className="mt-1 block text-xs font-normal text-red-700">Проверьте адрес: требуется полный HTTPS URL.</span>}
@@ -470,7 +438,7 @@ export default function ConnectorsPage() {
                               ? "Токен сохранён — введите новый только для замены"
                               : "Токен Moodle"
                           }
-                          className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
+                          className="mt-1 min-h-11 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
                         />
                       </label>
                     </div>

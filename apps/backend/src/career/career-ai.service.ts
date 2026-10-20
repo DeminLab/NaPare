@@ -30,13 +30,14 @@ export class CareerAiService {
   constructor(private readonly config: ConfigService, private readonly db: DataSource, private readonly career: CareerService) {}
 
   private settings() {
+    const approved = this.config.get<string>('CAREER_AI_COMPLIANCE_APPROVED')?.trim().toLowerCase() === 'true';
     const base = this.config.get<string>('CAREER_AI_BASE_URL')?.trim() || '';
     const model = this.config.get<string>('CAREER_AI_MODEL')?.trim() || '';
     const key = this.config.get<string>('CAREER_AI_API_KEY')?.trim() || '';
     const label = this.config.get<string>('CAREER_AI_PROVIDER_LABEL')?.trim() || '';
     let url: URL | null = null;
     try { url = new URL(base.endsWith('/') ? base : base + '/'); } catch { /* Disabled until configured. */ }
-    const configured = Boolean(url && url.protocol === 'https:' && !url.username && !url.password && !url.search && !url.hash && model && key && label && label.length <= 80);
+    const configured = Boolean(approved && url && url.protocol === 'https:' && !url.username && !url.password && !url.search && !url.hash && model && key && label && label.length <= 80);
     return { configured, url, model, key, label };
   }
 

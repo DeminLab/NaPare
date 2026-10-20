@@ -161,7 +161,7 @@ export default function GroupsPage() {
           aria-label="Фильтр по факультету"
           value={faculty}
           onChange={(event) => setFaculty(event.target.value)}
-          className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:border-sky-500 focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
+          className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:border-indigo-500 focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
         >
           <option value="all">Все факультеты</option>
           {faculties.map((item) => (
@@ -205,11 +205,11 @@ export default function GroupsPage() {
               >
                 <Card
                   hover
-                  className={`h-full transition-shadow ${selected?.id === group.id ? "border-sky-300 ring-2 ring-sky-100" : ""}`}
+                  className={`h-full transition-shadow ${selected?.id === group.id ? "border-indigo-300 ring-2 ring-indigo-100" : ""}`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <h2 className="text-lg font-bold text-slate-900"><button type="button" onClick={() => openGroup(group)} className="min-h-11 text-left hover:text-sky-700">{group.name}</button></h2>
+                      <h2 className="text-lg font-bold text-slate-900"><button type="button" onClick={() => openGroup(group)} className="min-h-11 text-left hover:text-indigo-700">{group.name}</button></h2>
                       <p className="mt-1 text-sm text-slate-500">
                         {group.studentCount === undefined ? "Откройте список студентов" : `${group.studentCount} студентов`}
                       </p>
@@ -227,7 +227,7 @@ export default function GroupsPage() {
                     <Link
                       href={`/attendance?group=${group.id}`}
                       onClick={(event) => event.stopPropagation()}
-                      className="rounded-lg px-2 py-1 text-xs font-semibold text-sky-700 hover:bg-sky-50"
+                      className="rounded-lg px-2 py-1 text-xs font-semibold text-indigo-700 hover:bg-indigo-50"
                     >
                       Посещаемость
                     </Link>
@@ -238,7 +238,7 @@ export default function GroupsPage() {
                     >
                       Расписание
                     </Link>
-                    <button type="button" onClick={() => openGroup(group)} className="ml-auto min-h-11 rounded-lg px-2 py-1 text-xs font-semibold text-sky-700 hover:bg-sky-50">
+                    <button type="button" onClick={() => openGroup(group)} className="ml-auto min-h-11 rounded-lg px-2 py-1 text-xs font-semibold text-indigo-700 hover:bg-indigo-50">
                       Открыть →
                     </button>
                   </div>
@@ -279,7 +279,7 @@ export default function GroupsPage() {
                   type="button"
                   aria-pressed={detailTab === tab.id}
                   onClick={() => setDetailTab(tab.id)}
-                  className={`min-h-11 border-b-2 px-3 py-3 text-sm font-medium ${detailTab === tab.id ? "border-sky-600 text-sky-700" : "border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-900"}`}
+                  className={`min-h-11 border-b-2 px-3 py-3 text-sm font-medium ${detailTab === tab.id ? "border-indigo-600 text-indigo-700" : "border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-900"}`}
                 >
                   {tab.label}
                 </button>
@@ -290,7 +290,7 @@ export default function GroupsPage() {
                 <Link
                   key={tab.id}
                   href={tab.href!}
-                  className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 hover:border-sky-300 hover:text-sky-700"
+                  className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 hover:border-indigo-300 hover:text-indigo-700"
                 >
                   {tab.label}<span aria-hidden="true">→</span>
                 </Link>
@@ -328,7 +328,7 @@ export default function GroupsPage() {
                       </div>
                       <Link
                         href={`${attendanceLink}&student=${student.id}`}
-                        className="text-xs font-semibold text-sky-700 hover:text-sky-800"
+                        className="text-xs font-semibold text-indigo-700 hover:text-indigo-800"
                       >
                         Посещаемость
                       </Link>

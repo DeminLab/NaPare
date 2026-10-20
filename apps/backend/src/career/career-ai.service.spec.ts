@@ -7,7 +7,7 @@ import { UserRole } from '../auth/interfaces/user-role';
 const actor={id:'owner',role:UserRole.EMPLOYER,universityId:null,email:'owner@test'};
 const draft={title:'Подготовить каталог',description:'Описать товары по предоставленным материалам.',criteria:'Все товары имеют проверенное описание.',questions:['Сколько товаров?']};
 function setup(configured=true,counts=[0,0]) {
-  const settings:Record<string,string>=configured?{CAREER_AI_BASE_URL:'https://provider.example/v1',CAREER_AI_API_KEY:'private-test-key',CAREER_AI_MODEL:'selected-model',CAREER_AI_PROVIDER_LABEL:'Тестовый провайдер'}:{};
+  const settings:Record<string,string>=configured?{CAREER_AI_COMPLIANCE_APPROVED:'true',CAREER_AI_BASE_URL:'https://provider.example/v1',CAREER_AI_API_KEY:'private-test-key',CAREER_AI_MODEL:'selected-model',CAREER_AI_PROVIDER_LABEL:'Тестовый провайдер'}:{};
   const repository={countBy:jest.fn().mockImplementation(async()=>counts.shift()??0),save:jest.fn().mockResolvedValue({id:'request'}),update:jest.fn().mockResolvedValue({affected:1})};
   const query=jest.fn().mockResolvedValue([]);
   const db={transaction:jest.fn(async callback=>callback({query,getRepository:()=>repository})),getRepository:()=>repository};
@@ -19,6 +19,7 @@ function setup(configured=true,counts=[0,0]) {
 describe('Career AI boundaries and contract',()=>{
   afterEach(()=>jest.restoreAllMocks());
   it('returns disabled status without a provider and never calls upstream',async()=>{const {service,db}=setup(false);const send=jest.spyOn(global,'fetch');expect(service.status()).toEqual({configured:false,providerLabel:null,userDailyLimit:20});await expect(service.task(actor,{companyId:'company',brief:'Описание задачи',consent:true})).rejects.toThrow(ServiceUnavailableException);expect(send).not.toHaveBeenCalled();expect(db.transaction).not.toHaveBeenCalled();});
+  it('keeps a configured external provider disabled until the operator approves it',async()=>{const {service,db,settings}=setup();delete settings.CAREER_AI_COMPLIANCE_APPROVED;const send=jest.spyOn(global,'fetch');expect(service.status()).toEqual({configured:false,providerLabel:null,userDailyLimit:20});await expect(service.task(actor,{companyId:'company',brief:'Описание задачи',consent:true})).rejects.toThrow(ServiceUnavailableException);expect(send).not.toHaveBeenCalled();expect(db.transaction).not.toHaveBeenCalled();});
   it('checks company access before transmitting text',async()=>{const {service,career}=setup();career.assertCompanyAccess.mockRejectedValue(new ForbiddenException());const send=jest.spyOn(global,'fetch');await expect(service.task(actor,{companyId:'foreign',brief:'private',consent:true})).rejects.toThrow(ForbiddenException);expect(send).not.toHaveBeenCalled();});
   it('requires explicit consent even for an owner',async()=>{const {service}=setup();const send=jest.spyOn(global,'fetch');await expect(service.task(actor,{companyId:'company',brief:'private',consent:false})).rejects.toThrow(ForbiddenException);expect(send).not.toHaveBeenCalled();});
   it('status does not expose credentials, model or URL',()=>{const {service}=setup();const status=JSON.stringify(service.status());expect(status).not.toContain('private-test-key');expect(status).not.toContain('provider.example');expect(status).not.toContain('selected-model');});

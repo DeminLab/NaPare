@@ -235,6 +235,7 @@ export default function LoginPage() {
           </details>
           <a href="/career/register" className="login-career-link">Регистрация работодателя</a>
         </div>
+        <Link href="/privacy" className="login-career-link">Политика конфиденциальности</Link>
       </section>
     </main>
   );

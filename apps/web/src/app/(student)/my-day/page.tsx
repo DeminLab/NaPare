@@ -43,52 +43,57 @@ export default function MyDayPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-gray-500">Загрузка...</div>
+      <div className="min-h-screen flex items-center justify-center bg-[#F7F8FC]">
+        <div role="status" className="rounded-2xl border border-slate-200 bg-white px-6 py-4 text-sm font-medium text-slate-500 shadow-sm">Загрузка расписания…</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">Мой день</h1>
+    <div className="min-h-screen bg-[#F7F8FC] px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-5xl">
+        <p className="mb-2 text-xs font-bold uppercase tracking-[0.12em] text-indigo-600">Личный кабинет студента</p>
+        <h1 className="mb-2 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">Мой день</h1>
+        <p className="mb-7 text-sm text-slate-500">Расписание на сегодня</p>
 
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold text-gray-700 mb-4">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+          <h2 className="mb-4 text-lg font-semibold text-slate-900 sm:text-xl">
             Расписание на сегодня
           </h2>
 
           {lessons.length === 0 ? (
-            <p className="text-gray-500">Нет занятий на сегодня</p>
+            <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-5 py-8 text-center">
+              <p className="font-semibold text-slate-700">Нет занятий на сегодня</p>
+              <p className="mt-1 text-sm text-slate-500">Расписание на этот день пока пустое.</p>
+            </div>
           ) : (
             <div className="space-y-4">
               {lessons.map((lesson) => (
                 <div
                   key={lesson.id}
-                  className={`p-4 rounded-lg border ${
+                  className={`rounded-xl border p-4 sm:p-5 ${
                     lesson.isChanged
-                      ? 'border-yellow-300 bg-yellow-50'
-                      : 'border-gray-200'
+                      ? 'border-amber-200 bg-amber-50/70'
+                      : 'border-slate-200 bg-white'
                   }`}
                 >
                   <div className="flex justify-between items-start">
                     <div>
-                      <h3 className="font-medium text-gray-900">
+                      <h3 className="font-semibold text-slate-900">
                         {lesson.subject}
                       </h3>
-                      <p className="text-sm text-gray-500">
+                      <p className="mt-1 text-sm font-semibold tabular-nums text-slate-700">
                         {lesson.startTime} - {lesson.endTime}
                       </p>
-                      <p className="text-sm text-gray-500">
+                      <p className="mt-1 text-sm text-slate-500">
                         Аудитория: {lesson.room}
                       </p>
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm text-slate-500">
                         Преподаватель: {lesson.teacherName}
                       </p>
                     </div>
                     {lesson.isChanged && (
-                      <span className="px-2 py-1 text-xs font-medium text-yellow-700 bg-yellow-100 rounded">
+                      <span className="mt-3 inline-flex rounded-lg bg-amber-100 px-2.5 py-1.5 text-xs font-semibold text-amber-800 sm:mt-0">
                         Изменение: {lesson.changeDescription}
                       </span>
                     )}

@@ -8,14 +8,14 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 :root {
-  --color-background: #f8fafc;
+  --color-background: #f7f8fc;
   --color-surface: #ffffff;
   --color-surface-secondary: #f1f3f5;
-  --color-text: #111827;
+  --color-text: #111b34;
   --color-text-secondary: #667085;
   --color-border: #e4e7ec;
-  --color-brand: #2563eb;
-  --color-brand-soft: #eff6ff;
+  --color-brand: #5146e8;
+  --color-brand-soft: #efedff;
   --color-success: #15803d;
   --color-warning: #b45309;
   --color-danger: #b42318;
@@ -36,10 +36,10 @@
   --motion-sidebar: 220ms;
   --motion-notification: 250ms;
   --motion-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
-  --primary: #4f46e5;
+  --primary: #5146e8;
   --primary-dark: #4338ca;
-  --accent: #6366f1;
-  --color-ink: #17203a;
+  --accent: #6b61f1;
+  --color-ink: #111b34;
   --color-rail: #f3f6fc;
   --color-brand-strong: #2563eb;
 }
@@ -101,9 +101,9 @@ body {
 }
 
 :root {
-  --color-brand: #4f46e5;
+  --color-brand: #5146e8;
   --color-brand-strong: #4338ca;
-  --color-brand-soft: #eef2ff;
+  --color-brand-soft: #efedff;
 }
 
 html, body { min-width: 0; }
@@ -112,6 +112,24 @@ button, input, select, textarea { max-width: 100%; }
 nav[aria-label="Мобильная навигация"] { padding-bottom: max(0.375rem, env(safe-area-inset-bottom)); }
 @media (max-width: 639px) {
   .grid.min-h-\[320px\] { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Authentication pages stay outside the cabinet shell but share its light surfaces and indigo identity. */
+.student-auth-login { background: #f7f8fc; }
+.student-auth-login > section:first-child { background: linear-gradient(145deg, #efedff 0%, #f8f9ff 58%, #f7f8fc 100%); color: #111b34; }
+.student-auth-login > section:first-child :is(.text-indigo-50, .text-indigo-100, .text-indigo-200) { color: #33415f; }
+.student-auth-login > section:first-child .text-indigo-600 { color: #5146e8; }
+.student-auth-login .backdrop-blur-sm { border-color: #e4e8f2; background: #fff; box-shadow: 0 12px 30px rgb(24 38 74 / .07); color: #111b34; }
+.student-auth-login .backdrop-blur-sm .bg-slate-950\/35 { background: #f4f5fb; }
+.student-auth-login .backdrop-blur-sm :is(.border-white\/15, .border-white\/10) { border-color: #e4e8f2; }
+.student-auth-login .backdrop-blur-sm :is(.bg-white\/10, .bg-white\/5, .bg-white\/15) { background-color: #f8f9fc; }
+.student-auth-login .backdrop-blur-sm :is(.text-indigo-100\/70, .text-white\/80, .text-white\/55) { color: #71809e; }
+.student-auth-login .backdrop-blur-sm .text-white { color: #111b34; }
+.student-auth-login > section:last-child > div:last-child { border: 1px solid #e4e8f2; border-radius: 20px; background: #fff; padding: clamp(20px, 3vw, 32px); box-shadow: 0 8px 24px rgb(24 38 74 / .04); }
+.student-auth-register > div > section { border-color: #e4e8f2; border-radius: 20px; box-shadow: 0 8px 24px rgb(24 38 74 / .04); }
+@media (max-width: 1023px) {
+  .student-auth-login > section:last-child { background: #f7f8fc; }
+  .student-auth-login > section:last-child > div:last-child { max-width: 30rem; }
 }
 
 /* Student appearance preferences apply across the student workspace. */
@@ -189,7 +207,7 @@ html[data-student-compact="true"] main .gap-4 { gap: 0.75rem !important; }
 html[data-student-compact="true"] main .space-y-6 > :not([hidden]) ~ :not([hidden]) { margin-top: 1rem !important; }
 
 html[data-student-accent="blue"] { --student-accent-50: #eff6ff; --student-accent-100: #dbeafe; --student-accent-200: #bfdbfe; --student-accent-400: #60a5fa; --student-accent-500: #3b82f6; --student-accent-600: #2563eb; --student-accent-700: #1d4ed8; --color-brand: #2563eb; --color-brand-strong: #1d4ed8; --color-brand-soft: #eff6ff; }
-html[data-student-accent="indigo"] { --student-accent-50: #eef2ff; --student-accent-100: #e0e7ff; --student-accent-200: #c7d2fe; --student-accent-400: #818cf8; --student-accent-500: #6366f1; --student-accent-600: #4f46e5; --student-accent-700: #4338ca; --color-brand: #4f46e5; --color-brand-strong: #4338ca; --color-brand-soft: #eef2ff; }
+html[data-student-accent="indigo"] { --student-accent-50: #efedff; --student-accent-100: #e3e0ff; --student-accent-200: #d3ceff; --student-accent-400: #887ef7; --student-accent-500: #6b61f1; --student-accent-600: #5146e8; --student-accent-700: #4338ca; --color-brand: #5146e8; --color-brand-strong: #4338ca; --color-brand-soft: #efedff; }
 html[data-student-accent="violet"] { --student-accent-50: #f5f3ff; --student-accent-100: #ede9fe; --student-accent-200: #ddd6fe; --student-accent-400: #a78bfa; --student-accent-500: #8b5cf6; --student-accent-600: #7c3aed; --student-accent-700: #6d28d9; --color-brand: #7c3aed; --color-brand-strong: #6d28d9; --color-brand-soft: #f5f3ff; }
 html[data-student-accent="emerald"] { --student-accent-50: #ecfdf5; --student-accent-100: #d1fae5; --student-accent-200: #a7f3d0; --student-accent-400: #34d399; --student-accent-500: #10b981; --student-accent-600: #047857; --student-accent-700: #065f46; --color-brand: #047857; --color-brand-strong: #065f46; --color-brand-soft: #ecfdf5; }
 html[data-student-accent] { --color-focus-ring: var(--student-accent-600); }
@@ -418,4 +436,156 @@ html[data-student-palette="dark"] .today-stat.tone-rose { background: #3a1d28; c
 }
 @media (prefers-reduced-motion: reduce) {
   .today-dashboard *, .today-dashboard *::before, .today-dashboard *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
+}
+
+/* Student cabinet refresh: a quiet shell, consistent page rhythm and reusable surfaces. */
+.student-workspace-shell { --color-background: #f7f8fc; --color-text: #111b34; }
+.student-workspace-shell > aside:not([class*="lg:w-[76px]"]) { width: 15.25rem; border-color: #e4e8f2; }
+.student-workspace-shell > aside > div:first-child { height: 4.75rem; padding-inline: 1.25rem; }
+.student-workspace-shell > aside > div:first-child a > span:first-child { width: 2.25rem; height: 2.25rem; border-radius: 11px; background: linear-gradient(145deg, #746bff, #5146e8); box-shadow: 0 5px 14px rgb(81 70 232 / .2); }
+.student-workspace-shell > aside nav { padding: 1.1rem .75rem; }
+.student-workspace-shell > aside nav section > p { margin: .45rem 0 .45rem; color: #9aa5ba; font-size: 10px; letter-spacing: .09em; text-transform: uppercase; }
+.student-workspace-shell > aside nav a { min-height: 2.5rem; border-radius: 11px; }
+.student-workspace-shell > aside nav a[aria-current="page"] { background: var(--color-brand-soft); color: var(--color-brand); font-weight: 650; }
+.student-workspace-shell > aside nav a:not([aria-current="page"]):hover { color: #111b34; }
+.student-workspace-shell > aside > div:last-child { padding: .8rem; }
+.student-workspace-shell > aside > div:last-child p:first-child { color: #111b34; }
+.student-workspace-shell > header { height: 4.75rem; padding-inline: clamp(1rem, 2.2vw, 2rem); border-color: #e4e8f2; }
+.student-workspace-shell > header > div:first-of-type > p:first-child { display: inline; color: #8290aa; font-size: 12px; }
+.student-workspace-shell > header > div:first-of-type > p:last-child { display: inline; margin-left: 1.5rem; font-size: 12px; font-weight: 650; }
+.student-workspace-shell > header > div:first-of-type > p:first-child::after { display: inline-block; margin-left: .85rem; color: #9aa5ba; content: '›'; font-size: 18px; vertical-align: -1px; }
+.student-workspace-shell > header > button[aria-label="Поиск по кабинету"] { min-height: 2.6rem; border-radius: 12px; background: #f9faff; }
+.student-workspace-shell > header > button[aria-label="Поиск по кабинету"] kbd { border: 1px solid #e4e8f2; border-radius: 6px; padding: 3px 6px; background: white; }
+.student-workspace-shell > main { max-width: 1600px; padding: clamp(1.25rem, 2.7vw, 2.5rem); }
+.student-workspace-shell > nav[aria-label="Основные разделы"] { border-color: #e4e8f2; background: rgb(255 255 255 / .96); }
+.student-content { --color-background: #f7f8fc; --color-text: #111b34; --color-text-secondary: #71809e; --color-border: #e4e8f2; --color-border-strong: #cfd6e5; --color-control-border: #d8dfed; }
+.student-content > div { max-width: 1400px; }
+.student-content h1:not(.ds-page-title) { color: var(--color-text); font-size: clamp(1.8rem, 2.4vw, 2.1rem); line-height: 1.18; font-weight: 740; letter-spacing: -.04em; }
+.student-content h1:not(.ds-page-title)::before { display: block; margin: 0 0 7px; color: #766df3; content: 'ЛИЧНЫЙ КАБИНЕТ СТУДЕНТА'; font-size: 10px; line-height: 1.5; font-weight: 750; letter-spacing: .1em; }
+.student-content :is(.ds-card, .student-panel, .absence-compose, .absence-filters) { border-color: #e4e8f2; border-radius: 17px; background-color: #fff; box-shadow: 0 8px 24px rgb(24 38 74 / .035); }
+.student-content :is(input:not([type="checkbox"]), select, textarea) { border-color: #d8dfed; border-radius: 11px; background-color: #fff; color: var(--color-text); }
+.student-content :is(input:not([type="checkbox"]), select, textarea):focus { border-color: #766df3; }
+.student-content :is(button, a, summary, select, input):focus-visible { outline-color: #766df3; }
+.student-content .lesson-type-badge { border-radius: 7px; font-size: 11px; font-weight: 650; }
+.student-content .today-next-card { border-color: #dddcff; border-radius: 20px; background: linear-gradient(112deg, #fbfbff 0%, #f4f3ff 58%, #e9e7ff 100%); }
+.student-content .today-hero-art { width: 33%; }
+.student-content .today-hero-art::before { top: -63px; right: 2px; width: 245px; height: 245px; border: 0; border-radius: 50%; background: rgb(81 70 232 / .08); box-shadow: inset 0 0 0 28px rgb(255 255 255 / .26); transform: none; }
+.student-content .today-hero-art span, .student-content .today-hero-art i { display: none; }
+.student-content .today-next-content { padding: 23px 26px; }
+.student-content .today-next-label { color: #766df3; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+.student-content .today-next-title h2 { font-size: clamp(22px, 2vw, 28px); }
+.student-content .today-open-lesson { right: 26px; bottom: 22px; border-radius: 11px; background: var(--color-brand); }
+.student-content .today-panel, .student-content .today-lesson-list { border-color: #e4e8f2; border-radius: 17px; box-shadow: 0 8px 24px rgb(24 38 74 / .035); }
+.student-content .today-panel { padding: 19px; }
+.student-content .today-panel-heading h2, .student-content .today-quick-actions h2 { color: #111b34; }
+.student-content .today-action-tile { min-height: 76px; flex-direction: row; align-items: center; justify-content: flex-start; border: 1px solid #eeeff7; border-radius: 12px; background: #fff; color: #53617e; }
+.student-content .today-action-tile > span { padding-right: 12px; color: inherit; }
+.student-content .today-action-tile > svg:first-child { box-sizing: content-box; padding: 9px; border-radius: 10px; background: var(--color-brand-soft); color: var(--color-brand); }
+.student-content .today-action-tile > svg:last-child { top: 50%; right: 9px; transform: translateY(-50%); }
+.student-content .today-lesson-row { grid-template-columns: 64px 4px minmax(78px, auto) minmax(140px, 1fr) minmax(140px, .75fr) 18px; min-height: 78px; gap: 13px; }
+.student-content .today-row-divider { width: 3px; background: #d5dcf0; }
+.student-content .today-row-subject { color: #283653; }
+.student-content .today-row-type { justify-content: flex-start; }
+.student-content .today-calendar-day.is-today { background: var(--color-brand); }
+.student-content .today-stat { border: 1px solid #edf0f7; background: #fafbff !important; }
+.student-content .today-stat strong { color: #111b34; }
+.student-content .schedule-views { background: #f0f2f9; }
+.student-content .schedule-tools { border-color: #e4e8f2; border-radius: 17px; box-shadow: 0 7px 22px rgb(24 38 74 / .025); }
+.student-content .schedule-views [aria-pressed="true"] { color: #29235e; }
+.student-page-heading { margin-bottom: 22px; }
+.student-page-heading .student-page-kicker { margin: 0 0 7px; color: #766df3; font-size: 10px; font-weight: 750; letter-spacing: .1em; text-transform: uppercase; }
+.student-page-heading h1 { margin: 0; }
+.student-page-heading h1::before { display: none !important; }
+.student-page-heading > p:last-child { margin-top: 7px; color: #71809e; font-size: 14px; line-height: 1.55; }
+.student-content .group-browser { align-items: start; }
+.student-content .group-catalog, .student-content .group-browser section > header { border-color: #e4e8f2; border-radius: 17px; box-shadow: 0 8px 24px rgb(24 38 74 / .035); }
+.student-content .group-catalog-row { min-height: 56px; border-bottom: 1px solid #edf0f6; }
+.student-content .absence-compose { padding: 20px 24px; }
+.student-content .absence-compose summary { color: var(--color-text); }
+.student-content .absence-history { overflow: hidden; }
+.student-content .absence-filters { padding: 14px 18px; }
+.student-content .absence-history [class*="uppercase"] { background: #f6f8fd; letter-spacing: .08em; }
+.student-content .absence-history .ds-badge { white-space: nowrap; }
+.student-content article.group { border-radius: 16px; border-color: #e4e8f2; }
+.student-content article.group:hover { border-color: #d6d9f8; }
+.student-content .ds-card:has(h1) { border-color: #e4e5fb; background: linear-gradient(105deg, #fff 65%, #f4f3ff); }
+.student-preparation-page > header > p:last-child { max-width: 46rem; color: #71809e; font-size: 14px; line-height: 1.6; }
+.student-content .student-preparation-page > div[role="group"] { scrollbar-width: thin; }
+.student-content .student-preparation-page details > summary { color: #273451; }
+.student-content .student-preparation-page .ds-empty { min-height: 154px; border-radius: 15px; background: linear-gradient(110deg, #fff, #f7f6ff); }
+.student-content .student-preparation-page .ds-empty__icon { background: #efedff; color: #5146e8; }
+.student-content .student-preparation-page .ds-empty__action a { border-radius: 10px; background: #5146e8; }
+.student-content [role="group"][aria-label="Разделы профиля"] button[aria-pressed="true"] { border-bottom-color: var(--color-brand); color: var(--color-brand); }
+.student-content [role="group"][aria-label="Разделы профиля"] { gap: 8px; }
+.student-content aside nav button[aria-pressed="true"] { background: var(--color-brand-soft); color: var(--color-brand); }
+.student-content > div[class*="max-w-[1180px]"] aside > div,
+.student-content > div[class*="max-w-[1180px]"] > div > div > .ds-card { border-radius: 17px; }
+.student-content .preparation-empty { background: linear-gradient(115deg, #fff, #f5f4ff); }
+.student-content :is(.today-heading, .schedule-page > header, .notifications-page > header, .absence-page > header) { margin-bottom: 22px; }
+.student-content h1.profile-name::before { display: none; }
+
+/* The shared curator workspace intentionally stays role-neutral; finish it with the student cabinet tokens here. */
+.student-content .curation-workspace { color: var(--color-text); }
+.student-content .curation-workspace > div:first-child h1 { margin: 0; }
+.student-content .curation-workspace .curation-modes { display: inline-flex; max-width: 100%; gap: 4px; overflow-x: auto; padding: 4px; border: 1px solid var(--color-border); border-radius: 14px; background: #f0f2f9; }
+.student-content .curation-workspace .curation-button { display: inline-flex; min-height: 42px; align-items: center; justify-content: center; gap: 8px; border: 1px solid var(--color-border); border-radius: 11px; background: #fff; padding: 0 14px; color: #53617e; font-size: 13px; font-weight: 600; line-height: 1.35; transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease, box-shadow 150ms ease; }
+.student-content .curation-workspace .curation-button:hover:not(:disabled) { border-color: #c8c6fa; background: #f8f7ff; color: var(--color-brand); }
+.student-content .curation-workspace .curation-button:focus-visible { outline: 3px solid color-mix(in srgb, var(--color-brand) 28%, transparent); outline-offset: 2px; }
+.student-content .curation-workspace .curation-button:disabled { cursor: not-allowed; opacity: .55; }
+.student-content .curation-workspace .curation-button--primary { border-color: var(--color-brand); background: var(--color-brand); color: var(--color-on-brand); box-shadow: 0 5px 12px color-mix(in srgb, var(--color-brand) 16%, transparent); }
+.student-content .curation-workspace .curation-button--primary:hover:not(:disabled) { border-color: var(--color-brand-strong); background: var(--color-brand-strong); color: var(--color-on-brand); }
+.student-content .curation-workspace .curation-input { display: block; width: 100%; min-height: 44px; border: 1px solid var(--color-control-border); border-radius: 11px; background: #fff; padding: 9px 12px; color: var(--color-text); font-size: 14px; outline: none; }
+.student-content .curation-workspace .curation-input:focus { border-color: var(--color-brand); box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-brand) 16%, transparent); }
+.student-content .curation-workspace .curation-tabs { display: flex; max-width: 100%; gap: 4px; overflow-x: auto; border: 1px solid var(--color-border); border-radius: 13px; background: #f7f8fc; padding: 4px; scrollbar-width: thin; }
+.student-content .curation-workspace .curation-tabs > button { flex: 0 0 auto; }
+.student-content .curation-workspace .curation-tab-count { display: inline-grid; min-width: 22px; height: 22px; place-items: center; border-radius: 999px; background: var(--color-brand-soft); padding: 0 5px; font-size: 11px; }
+.student-content .curation-workspace .curation-layout > section { min-width: 0; }
+.student-content .curation-workspace .curation-layout > section[aria-label="Выбор группы"] { position: sticky; top: 6rem; max-height: calc(100vh - 7rem); overflow-y: auto; border: 1px solid var(--color-border); border-radius: 16px; background: #fff; padding: 12px; }
+.student-content .curation-workspace .curation-groups > button[aria-pressed="true"] { border-color: #d3ceff; background: var(--color-brand-soft); color: var(--color-brand); }
+.student-content .curation-workspace .curation-layout > section[aria-label^="Группа"] > section,
+.student-content .curation-workspace .curation-layout > section[aria-label="Содержимое группы"] > section,
+.student-content .curation-workspace .curation-layout > section > div.divide-y { border-color: var(--color-border); border-radius: 16px; background: #fff; }
+.student-content .curation-workspace .curation-layout :is(ul.divide-y, .divide-y) > :not([hidden]) ~ :not([hidden]) { border-color: #edf0f6; }
+@media (max-width: 900px) {
+  .student-content .curation-workspace .curation-layout { grid-template-columns: minmax(0, 1fr); }
+  .student-content .curation-workspace .curation-layout > section[aria-label="Выбор группы"] { position: static; max-height: none; }
+  .student-content .curation-workspace .curation-groups { display: flex; flex-direction: row; overflow-x: auto; }
+  .student-content .curation-workspace .curation-groups > button { flex: 0 0 auto; }
+}
+@media (max-width: 639px) {
+  .student-content .curation-workspace .curation-button { padding-inline: 11px; }
+  .student-content .curation-workspace .curation-modes { display: flex; width: 100%; }
+  .student-content .curation-workspace .curation-modes > button { flex: 1 0 auto; }
+  .student-content .curation-workspace .curation-groups { display: none; }
+  .student-content .curation-workspace .curation-layout > section[aria-label="Выбор группы"] { padding: 10px; }
+}
+
+html[data-student-palette="dark"] .student-workspace-shell,
+html[data-student-palette="dark"] .student-content { --color-background: #0b1120; --color-text: #f1f5f9; --color-text-secondary: #c2ccdb; --color-border: #334155; }
+html[data-student-palette="dark"] .student-workspace-shell > aside nav a[aria-current="page"] { background: #242a60; color: #c7d2fe; }
+html[data-student-palette="dark"] .student-content :is(.ds-card, .student-panel, .absence-compose, .absence-filters, .today-panel, .today-lesson-list) { background-color: #111827; border-color: #334155; }
+html[data-student-palette="dark"] .student-content .today-next-card { background: linear-gradient(112deg, #17182a, #23223d); }
+html[data-student-palette="dark"] .student-content .today-action-tile { background: #111827; border-color: #334155; color: #d1d9e6; }
+html[data-student-palette="dark"] .student-content .student-preparation-page .ds-empty { background: #111827; }
+html[data-student-palette="dark"] .student-content .ds-card:has(h1) { border-color: #334155; background: linear-gradient(105deg, #111827, #181d33); }
+html[data-student-palette="dark"] .student-content .curation-workspace :is(.curation-button, .curation-input, .curation-tabs, .curation-layout > section[aria-label="Выбор группы"], .curation-layout > section[aria-label^="Группа"] > section, .curation-layout > section[aria-label="Содержимое группы"] > section, .curation-layout > section > div.divide-y) { background-color: #111827; border-color: #334155; color: #e2e8f0; }
+html[data-student-palette="dark"] .student-content .curation-workspace .curation-button--primary { background: var(--color-brand); color: var(--color-on-brand); }
+html[data-student-palette="dark"] .student-content .curation-workspace .curation-button:hover:not(:disabled) { background: #1e293b; color: var(--color-brand); }
+html[data-student-palette="dark"] .student-content .curation-workspace .curation-tabs { background: #0f172a; }
+html[data-student-palette="dark"] .student-content .curation-workspace .curation-groups > button[aria-pressed="true"] { background: #242a60; color: #c7d2fe; }
+
+@media (max-width: 1023px) {
+  .student-workspace-shell > header { height: 4.25rem; }
+  .student-workspace-shell > header > div:first-of-type > p:first-child { display: none; }
+  .student-workspace-shell > header > div:first-of-type > p:last-child { display: block; margin-left: 0; }
+  .student-workspace-shell > main { padding: 1.25rem 1rem calc(5rem + env(safe-area-inset-bottom)); }
+  .student-content .today-lesson-row { grid-template-columns: 54px 3px minmax(74px, auto) minmax(0, 1fr) 18px; gap: 10px; }
+}
+@media (max-width: 639px) {
+  .student-content h1:not(.ds-page-title) { font-size: 1.7rem; }
+  .student-content h1:not(.ds-page-title)::before { margin-bottom: 5px; font-size: 9px; }
+  .student-content .today-next-content { padding: 17px; }
+  .student-content .today-panel { padding: 15px; }
+  .student-content .absence-compose { padding: 16px; }
+  .student-content .today-action-tile { min-height: 68px; }
 }

@@ -280,13 +280,13 @@ export default function PairSpacePage() {
               </p>
             )}
           </div>
-          <div className="flex flex-wrap gap-2"><Link href={`/attendance?lesson=${lessonId}`} className="inline-flex min-h-11 items-center rounded-xl border px-3 text-sm font-semibold text-sky-700">Посещаемость пары →</Link>
+          <div className="flex flex-wrap gap-2"><Link href={`/attendance?lesson=${lessonId}`} className="inline-flex min-h-11 items-center rounded-xl border px-3 text-sm font-semibold text-indigo-700">Посещаемость пары →</Link>
             {pairSpace.moodleUrl && (
               <a
                 href={pairSpace.moodleUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 transition hover:border-sky-200 hover:text-sky-700"
+                className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 transition hover:border-indigo-200 hover:text-indigo-700"
               >
                 <Icon name="arrow-right" size={15} />
                 Открыть Moodle
@@ -351,13 +351,13 @@ export default function PairSpacePage() {
             {pairSpace.files.map((item) => (
               <Card key={item.id} padding="sm">
                 <div className="flex items-center gap-3">
-                  <Icon name="file" className="text-sky-700" />
+                  <Icon name="file" className="text-indigo-700" />
                   <div className="min-w-0 flex-1">
                     <a
                       href={item.fileUrl?.startsWith("https://") ? item.fileUrl : undefined}
                       target="_blank"
                       rel="noreferrer"
-                      className="truncate text-sm font-semibold text-slate-900 hover:text-sky-700"
+                      className="truncate text-sm font-semibold text-slate-900 hover:text-indigo-700"
                     >
                       {item.fileName}
                     </a>
@@ -442,7 +442,7 @@ export default function PairSpacePage() {
             rows={4}
             aria-label="Текст объявления"
             placeholder="Что важно сообщить группе?"
-            className="block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-sky-500 focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
+            className="block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-indigo-500 focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
           />
           <div className="flex gap-2">
             <Button
@@ -502,7 +502,7 @@ export default function PairSpacePage() {
             onChange={(event) => setHomeworkDescription(event.target.value)}
             rows={3}
             placeholder="Контекст: тема лекции, формат и что принести"
-            className="block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-sky-500 focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
+            className="block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-indigo-500 focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
           />
           <Input
             label="К какой дате"
@@ -593,7 +593,7 @@ export default function PairSpacePage() {
                   setFile({ ...file, fileType: event.target.value });
                   setFormError("");
                 }}
-                className="mt-1 block min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-sky-500 focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
+                className="mt-1 block min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-indigo-500 focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
               >
                 {[
                   ["pdf", "PDF"],

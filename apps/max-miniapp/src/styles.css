@@ -1,5 +1,5 @@
 :root {
-  color: #101b3c;
+  color: #111b34;
   background: #fff;
   font-family:
     Inter,
@@ -17,7 +17,7 @@
 body {
   margin: 0;
   min-width: 320px;
-  background: #f6f8fc;
+  background: #f7f8fc;
 }
 button,
 input,
@@ -90,7 +90,7 @@ button {
   padding: 24px;
   border: 1px solid #e6ebf6;
   border-radius: 24px;
-  background: #f5f8ff;
+  background: #f4f2ff;
 }
 .lesson-status {
   color: #526485;
@@ -101,8 +101,8 @@ button {
 em {
   padding: 7px 12px;
   border-radius: 999px;
-  background: #dbe8ff;
-  color: #165de8;
+  background: #efedff;
+  color: #5146e8;
   font-style: normal;
 }
 .next-lesson h2,
@@ -149,15 +149,15 @@ em {
   width: 100%;
   margin-top: 24px;
   min-height: 52px;
-  border: 2px solid #1665f5;
+  border: 2px solid #5146e8;
   border-radius: 12px;
   background: #fff;
-  color: #1665f5;
+  color: #5146e8;
   font-weight: 750;
 }
 .primary {
   border: 0;
-  background: #1665f5;
+  background: #5146e8;
   color: #fff;
 }
 .schedule-section {
@@ -192,7 +192,7 @@ em {
 }
 .lesson-row time {
   display: grid;
-  color: #101b3c;
+  color: #111b34;
   font-weight: 750;
 }
 .lesson-row time small {
@@ -250,7 +250,7 @@ em {
   line-height: 1;
 }
 .bottom-nav .active {
-  color: #1665f5;
+  color: #5146e8;
   font-weight: 700;
 }
 .secondary-screen {
@@ -277,7 +277,7 @@ em {
   color: #607099;
 }
 .lesson-space a {
-  color: #1665f5;
+  color: #5146e8;
   font-weight: 700;
 }
 .dialog-backdrop {
@@ -425,8 +425,8 @@ textarea {
   margin-top: 22px;
   border: 1px solid #c8d7fa;
   border-radius: 12px;
-  background: #edf4ff;
-  color: #1554ca;
+  background: #efedff;
+  color: #5146e8;
   font-weight: 750;
 }
 .max-login:disabled {
@@ -445,7 +445,7 @@ textarea {
   padding: 13px 12px;
   border: 1px solid #cfd8e9;
   border-radius: 10px;
-  color: #101b3c;
+  color: #111b34;
   background: #fff;
 }
 .login-form button:disabled,
@@ -525,7 +525,7 @@ textarea {
   font-weight: 650;
 }
 .file-list a {
-  color: #1665f5;
+  color: #5146e8;
   font-weight: 650;
 }
 .notification-list {
@@ -564,7 +564,7 @@ textarea {
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  background: #1665f5;
+  background: #5146e8;
 }
 .notification-row .section-title {
   align-items: start;
@@ -621,4 +621,31 @@ textarea {
   font-size: 14px;
   font-weight: 700;
   text-align: right;
+}
+
+@media (min-width: 640px) {
+  body { background: #f7f8fc; }
+  .app-shell {
+    max-width: 640px;
+    padding-right: 32px;
+    padding-left: 32px;
+    box-shadow: 0 20px 70px rgb(17 27 52 / .07);
+  }
+  .bottom-nav {
+    right: auto;
+    left: 50%;
+    width: min(100%, 640px);
+    transform: translateX(-50%);
+    gap: min(8vw, 48px);
+    border-right: 1px solid #e6eaf2;
+    border-left: 1px solid #e6eaf2;
+    border-radius: 16px 16px 0 0;
+  }
+}
+
+@media (min-width: 1000px) {
+  .app-shell { max-width: 760px; padding-right: 40px; padding-left: 40px; }
+  .bottom-nav { width: min(100%, 760px); }
+  .day-groups { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 16px; }
+  .screen-heading h1 { font-size: 46px; }
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Script from 'next/script';
 
 type Workspace = 'student' | 'staff' | 'admin' | 'developer' | 'career';
 type MaxAuthResponse = {
@@ -144,9 +145,11 @@ export function MaxLaunchAuth({
     }
   }
 
-  if (captureOnly) return null;
+  if (captureOnly) return <Script src="https://st.max.ru/js/max-web-app.js" strategy="afterInteractive" />;
 
   return (
+    <>
+    <Script src="https://st.max.ru/js/max-web-app.js" strategy="afterInteractive" />
     <section className="max-login-choice" aria-labelledby="max-login-title">
       <p className="eyebrow">Быстрый вход</p>
       <h2 id="max-login-title">Войти через MAX</h2>
@@ -157,5 +160,6 @@ export function MaxLaunchAuth({
       {error && <p className="max-login-error" role="alert">{error}</p>}
       {retryAvailable && launchData && <button className="max-login-retry" type="button" onClick={() => void signInWithMax(launchData)} disabled={busy}>Повторить вход через MAX</button>}
     </section>
+    </>
   );
 }

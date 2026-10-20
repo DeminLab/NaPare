@@ -112,10 +112,10 @@ export default function PairSpaceIndex() {
   if (error && !preparations.length) return <div className="mx-auto max-w-3xl"><RequestState title="Не удалось загрузить список" description={error} onRetry={() => window.location.reload()} /></div>;
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    <div className="student-preparation-page mx-auto max-w-[1400px] space-y-6">
       <header>
-
         <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">Подготовка</h1>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">Материалы, задания и сроки подготовки к вашим занятиям.</p>
       </header>
 
       {preparations.length > 0 && <Card>

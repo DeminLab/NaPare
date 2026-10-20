@@ -1402,3 +1402,111 @@ footer {
   .login-card .mobile-brand { margin-bottom: 40px; }
   .connections-heading { margin-block: 20px; }
 }
+
+/* MAX account linking follows the student cabinet visual language. */
+.connections-shell { display: flex; min-height: 100svh; flex-direction: column; overflow: clip; background: radial-gradient(ellipse at 13% 18%, #efedff 0, transparent 42%), #f7f8fc; color: #111b34; }
+.connections-topbar { display: flex; min-height: 80px; align-items: center; justify-content: space-between; padding: 0 clamp(20px, 4vw, 60px); }
+.connections-brand { display: inline-flex; align-items: center; gap: 10px; color: #111b34; font-size: 17px; font-weight: 750; letter-spacing: -.03em; text-decoration: none; }
+.connections-brand > span { display: grid; width: 36px; height: 36px; place-items: center; border-radius: 11px; background: linear-gradient(145deg, #746bff, #5146e8); box-shadow: 0 5px 14px rgb(81 70 232 / .2); color: white; }
+.connections-return { display: inline-flex; min-height: 40px; align-items: center; padding: 0 15px; border: 1px solid #e4e8f2; border-radius: 11px; background: white; color: #485573; font: inherit; font-size: 13px; font-weight: 650; text-decoration: none; cursor: pointer; }
+.connections-page { display: grid; width: min(1120px, 100%); max-width: 1120px; flex: 1; grid-template-columns: minmax(0, 1fr) minmax(390px, 470px); align-items: center; gap: clamp(32px, 8vw, 112px); margin: 0 auto; padding: 40px 24px 64px; }
+.connections-story { max-width: 530px; }
+.connections-kicker { display: flex; align-items: center; gap: 9px; margin: 0 0 20px; color: #5146e8; font-size: 12px; font-weight: 750; letter-spacing: .025em; text-transform: uppercase; }
+.connections-kicker span { font-size: 18px; }
+.connections-story h1 { margin: 0; color: #111b34; font-size: clamp(36px, 4.5vw, 50px); line-height: 1.08; letter-spacing: -.045em; }
+.connections-story h1 span { color: #5146e8; }
+.connections-lead { max-width: 430px; margin: 22px 0 28px; color: #71809e; font-size: 16px; line-height: 1.7; }
+.connections-benefits { display: flex; flex-wrap: wrap; gap: 9px; }
+.connections-benefits span { display: inline-flex; min-height: 35px; align-items: center; padding: 0 12px; border: 1px solid #e4e8f2; border-radius: 10px; background: rgb(255 255 255 / .82); color: #586784; font-size: 11px; font-weight: 650; }
+.connections-card { min-width: 0; padding: 32px 34px; border: 1px solid #e2e6f3; border-radius: 24px; background: #fff; box-shadow: 0 22px 70px rgb(39 48 112 / .1); }
+.connections-card-heading { margin-bottom: 18px; }
+.connections-max-mark { display: grid; width: 56px; height: 56px; place-items: center; border-radius: 16px; background: linear-gradient(145deg, #128dff, #5146e8); }
+.connections-max-mark::before { width: 32px; height: 32px; border: 3px solid white; border-radius: 50%; content: ''; }
+.connections-card-heading .connections-status { padding: 6px 10px; border-radius: 8px; background: #f0f2f7; color: #74819a; font-size: 11px; font-weight: 650; }
+.connections-card-heading .connections-status.is-linked { background: #eaf8f1; color: #168252; }
+.connections-card > h2 { margin: 0; color: #111b34; font-size: 24px; letter-spacing: -.025em; }
+.connections-card > p { margin-top: 11px; font-size: 13px; }
+.connections-card .connections-steps { display: grid; gap: 12px; margin: 20px 0 24px; padding: 0; list-style: none; }
+.connections-card .connections-steps li { display: flex; align-items: flex-start; gap: 11px; padding: 0; color: #62718f; font-size: 12px; line-height: 1.55; }
+.connections-steps li > span:first-child { display: grid; width: 22px; height: 22px; flex: 0 0 22px; place-items: center; border-radius: 7px; background: #efedff; color: #5146e8; font-size: 11px; font-weight: 750; }
+.connections-card .connections-button { width: 100%; min-height: 46px; border-radius: 11px; background: #5146e8; color: #fff; box-shadow: 0 8px 18px rgb(81 70 232 / .18); }
+.connections-card .connections-button:disabled { background: #5146e8; opacity: .52; }
+.connections-card .connections-note { margin: 12px 0; padding: 12px; background: #f7f8fc; }
+.connections-card .connections-note p { margin: 0 0 8px; }
+.connections-card .connections-note .connections-button { width: 100%; }
+.connections-card .connections-refresh { display: block; min-height: 40px; margin: 8px auto 0; border: 0; background: transparent; color: #5146e8; font: inherit; font-size: 12px; font-weight: 650; cursor: pointer; }
+.connections-card .connections-secure { margin: 8px 0 0; color: #8995ad; font-size: 11px; }
+.connections-footer { padding: 0 16px 18px; color: #93a0b7; font-size: 11px; text-align: center; }
+@media (max-width: 800px) {
+  .connections-page { width: min(560px, 100%); grid-template-columns: minmax(0, 1fr); gap: 28px; padding-top: 36px; }
+  .connections-story { max-width: 100%; }
+  .connections-story h1 { font-size: clamp(34px, 9vw, 44px); }
+}
+
+/* Public pages share the cabinet's light surfaces and indigo controls while
+   keeping the marketing hero and MAX launch flow purpose-specific. */
+:root {
+  --color-background: #f7f8fc;
+  --color-surface: #ffffff;
+  --color-surface-secondary: #f3f5fb;
+  --color-text: #111b34;
+  --color-text-secondary: #657493;
+  --color-text-muted: #8290aa;
+  --color-border: #e3e8f2;
+  --color-border-strong: #cfd7e7;
+  --color-control-border: #d6deed;
+  --color-brand: #5146e8;
+  --color-brand-strong: #4338ca;
+  --color-brand-soft: #efedff;
+  --color-focus-ring: #5146e8;
+  --color-role: #5146e8;
+  --color-role-soft: #efedff;
+}
+
+body { background: #f7f8fc; color: #111b34; }
+.portal-header {
+  background: rgb(255 255 255 / .94);
+  border-color: #e3e8f2;
+  box-shadow: 0 8px 28px rgb(17 27 52 / .08);
+}
+.portal-header .brand, .portal-header .text-link { color: #111b34; }
+.portal-header .text-link:hover, .portal-nav a:hover { background: #efedff; color: #5146e8; }
+.portal-nav a { color: #53617f; }
+.portal-nav a:hover { color: #5146e8; }
+.role-grid article, .feature-card, .module-table, .pain-list li {
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgb(17 27 52 / .045);
+}
+.primary-action, .login-form button { background: #5146e8; }
+.secondary-action { border-radius: 12px; }
+.section-alt { background: #f1f3fa; }
+.login-layout.login-focused { background: #f7f8fc; }
+.login-focused .login-card { border-color: #e3e8f2; box-shadow: 0 16px 40px rgb(26 35 73 / .07); }
+.login-focused .login-form input { border-color: #d6deed; }
+.login-focused .login-form > button { background: #5146e8; }
+.login-focused .login-password-toggle { color: #596784; }
+.login-focused .login-alt-method summary, .login-focused .login-support-details summary { color: #5146e8; }
+.login-career-link { color: #5146e8; }
+.connections-shell { background: radial-gradient(ellipse at 13% 18%, #efedff 0, transparent 42%), #f7f8fc; }
+
+@media (max-width: 760px) {
+  .portal-header { top: 10px; width: calc(100% - 24px); padding: 8px 10px; }
+  .portal-nav { gap: 0; }
+  .portal-nav a { padding: 8px; font-size: 12px; }
+  .role-grid { grid-template-columns: 1fr; margin-top: 24px; }
+  .proof-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 520px) {
+  .connections-topbar { min-height: 68px; padding-inline: 16px; }
+  .connections-brand { font-size: 15px; }
+  .connections-brand > span { width: 32px; height: 32px; }
+  .connections-return { min-height: 38px; padding-inline: 10px; font-size: 11px; }
+  .connections-page { gap: 22px; padding: 28px 16px 38px; }
+  .connections-kicker { margin-bottom: 13px; font-size: 10px; }
+  .connections-story h1 { font-size: 36px; }
+  .connections-lead { margin: 14px 0 18px; font-size: 14px; }
+  .connections-benefits { gap: 6px; }
+  .connections-benefits span { min-height: 31px; padding-inline: 9px; font-size: 10px; }
+  .connections-card { padding: 22px 20px; border-radius: 20px; }
+  .connections-card > h2 { font-size: 22px; }
+}

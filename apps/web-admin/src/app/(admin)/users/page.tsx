@@ -458,52 +458,53 @@ export default function UsersPage() {
     : undefined;
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-[var(--layout-content-max)] space-y-6">
 
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
+          <p className="workspace-kicker">Университет</p>
+          <h1 className="mt-2 text-3xl font-bold tracking-tight text-[var(--color-text)]">
             Пользователи
           </h1>
-          <p className="mt-1 text-sm text-slate-500">
-            {filtered.length} из {users.length} пользователей
+          <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
+            Управление учетными записями, ролями и принадлежностью к структуре · {filtered.length} из {users.length}
           </p>
         </div>
         <div className="flex flex-wrap gap-2"><Link className="role-link role-link-secondary" href="/curation">Назначить куратора</Link><Button onClick={() => setCreateOpen(true)}>
           Добавить пользователя
         </Button></div>
       </div>
-      <div className="flex gap-2 overflow-x-auto pb-1" aria-label="Быстрые фильтры пользователей">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5" aria-label="Быстрые фильтры пользователей">
         {statCards.map((stat) => (
           <button
             key={stat.label}
             type="button"
             aria-pressed={stat.label === "Заблокированы" ? status === "blocked" : role === stat.filter && status === "all"}
             onClick={() => { setRole(stat.filter); setStatus(stat.label === "Заблокированы" ? "blocked" : "all"); }}
-            className="min-h-11 shrink-0 text-left"
+            className="min-h-11 min-w-0 text-left"
           >
             <Card
-              className={`flex items-center gap-2 rounded-lg !px-3 !py-2 transition-colors ${(stat.label === "Заблокированы" ? status === "blocked" : role === stat.filter && status === "all") ? "border-slate-900" : ""}`}
+              className={`flex h-full items-center justify-between gap-2 rounded-2xl !px-4 !py-3 transition-colors ${(stat.label === "Заблокированы" ? status === "blocked" : role === stat.filter && status === "all") ? "border-[var(--color-brand)] bg-[var(--color-brand-soft)]" : "hover:border-slate-300"}`}
               padding="sm"
             >
-              <p className="text-sm font-medium text-slate-600">
+              <p className="text-sm font-medium text-[var(--color-text-secondary)]">
                 {stat.label}
               </p>
-              <p className="text-sm font-semibold text-slate-950">
+              <p className="text-lg font-bold text-[var(--color-text)]">
                 {stat.value}
               </p>
             </Card>
           </button>
         ))}
       </div>
-      <Card padding="sm"><SearchInput value={search} onChange={event => setSearch(event.target.value)} onSearch={setSearch} placeholder="Поиск пользователей…" />
-        <details className="mt-3"><summary className="min-h-11 cursor-pointer py-2 text-sm font-semibold text-slate-700">Роль, факультет, группа и статус</summary><div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <Card padding="md" className="!rounded-2xl"><SearchInput value={search} onChange={event => setSearch(event.target.value)} onSearch={setSearch} placeholder="Имя или электронная почта…" />
+        <details className="mt-3"><summary className="min-h-11 cursor-pointer py-2 text-sm font-semibold text-[var(--color-text)]">Роль, факультет, группа и статус</summary><div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
 
           <select
             aria-label="Роль"
             value={role}
             onChange={(event) => setRole(event.target.value as Filter)}
-            className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-slate-500"
+            className="h-11 rounded-xl border border-[var(--color-border)] bg-white px-3 text-sm text-[var(--color-text)] outline-none focus:border-[var(--color-brand)]"
           >
             <option value="all">Все роли</option>
             <option value="student">Студенты</option>
@@ -514,7 +515,7 @@ export default function UsersPage() {
             aria-label="Факультет"
             value={faculty}
             onChange={(event) => setFaculty(event.target.value)}
-            className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-slate-500"
+            className="h-11 rounded-xl border border-[var(--color-border)] bg-white px-3 text-sm text-[var(--color-text)] outline-none focus:border-[var(--color-brand)]"
           >
             <option value="all">Все факультеты</option>
             {faculties.map((item) => (
@@ -527,7 +528,7 @@ export default function UsersPage() {
             aria-label="Группа"
             value={group}
             onChange={(event) => setGroup(event.target.value)}
-            className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-slate-500"
+            className="h-11 rounded-xl border border-[var(--color-border)] bg-white px-3 text-sm text-[var(--color-text)] outline-none focus:border-[var(--color-brand)]"
           >
             <option value="all">Все группы</option>
             {groups.map((item) => (
@@ -540,7 +541,7 @@ export default function UsersPage() {
             aria-label="Статус"
             value={status}
             onChange={(event) => setStatus(event.target.value)}
-            className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-slate-500"
+            className="h-11 rounded-xl border border-[var(--color-border)] bg-white px-3 text-sm text-[var(--color-text)] outline-none focus:border-[var(--color-brand)]"
           >
             <option value="all">Любой статус</option>
             <option value="active">Активные</option>
@@ -551,15 +552,15 @@ export default function UsersPage() {
       {selectedIds.length > 0 && (
         <Card
           padding="sm"
-          className="flex flex-col gap-3 border-slate-300 bg-slate-50 sm:flex-row sm:items-center"
+          className="flex flex-col gap-3 rounded-2xl border-[var(--color-brand)] bg-[var(--color-brand-soft)] sm:flex-row sm:items-center"
         >
-          <span className="text-sm font-semibold text-slate-700">
+          <span className="text-sm font-semibold text-[var(--color-text)]">
             Выбрано: {selectedIds.length}
           </span>
           <select
             value={bulkRole}
             onChange={(event) => setBulkRole(event.target.value)}
-            className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm"
+            className="h-10 rounded-lg border border-[var(--color-border)] bg-white px-3 text-sm"
           >
             <option value="teacher">Преподаватель</option>
             <option value="student">Студент</option>
@@ -571,7 +572,7 @@ export default function UsersPage() {
           <button
             type="button"
             onClick={() => setSelectedIds([])}
-            className="text-sm text-slate-500 hover:text-slate-900"
+            className="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"
           >
             Сбросить
           </button>
@@ -605,8 +606,8 @@ export default function UsersPage() {
           description="Измените параметры поиска или фильтров."
         />
       ) : (
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-          <div className="hidden grid-cols-[36px_minmax(190px,1.4fr)_minmax(180px,1.2fr)_140px_140px_130px_110px_110px] gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 2xl:grid">
+        <div className="overflow-hidden rounded-2xl border border-[var(--color-border)] bg-white shadow-sm">
+          <div className="hidden grid-cols-[36px_minmax(190px,1.4fr)_minmax(180px,1.2fr)_140px_140px_130px_110px_110px] gap-3 border-b border-[var(--color-border)] bg-[var(--color-background)] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-secondary)] xl:grid">
             <input
               type="checkbox"
               checked={allVisibleSelected}
@@ -621,7 +622,7 @@ export default function UsersPage() {
             <span>Статус</span>
             <span>Последний вход</span>
           </div>
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-[var(--color-border)]">
             {visible.map((user) => {
               const currentRole = userRole(user);
               const groupItem = groupMap.get(user.groupId || "");
@@ -632,9 +633,9 @@ export default function UsersPage() {
                 raspGroupItem?.faculty || "—";
               return (
                 <div key={user.id}>
-                  <article className="space-y-3 p-4 2xl:hidden"><div className="flex items-start justify-between gap-3"><div className="flex min-w-0 items-start gap-3"><input type="checkbox" checked={selectedIds.includes(user.id)} onChange={() => toggle(user.id)} aria-label={`Выбрать ${user.firstName} ${user.lastName}`} className="mt-1 h-5 w-5 shrink-0" /><div className="min-w-0"><button type="button" onClick={() => setDetail(user)} className="min-h-11 break-words text-left text-base font-semibold text-slate-900">{user.firstName} {user.lastName}</button><p className="text-sm text-slate-600">{roleLabels[currentRole] || currentRole} · {groupName || 'Группа не назначена'}</p></div></div><Badge variant={user.isActive ? 'green' : 'red'}>{user.isActive ? 'Активен' : 'Заблокирован'}</Badge></div><div className="flex flex-wrap items-center justify-between gap-2"><span className="min-w-0 break-all text-sm text-slate-500">{user.email}</span><Button variant="secondary" onClick={() => setDetail(user)}>Данные и действия →</Button></div></article>
+                  <article className="space-y-3 p-4 xl:hidden"><div className="flex items-start justify-between gap-3"><div className="flex min-w-0 items-start gap-3"><input type="checkbox" checked={selectedIds.includes(user.id)} onChange={() => toggle(user.id)} aria-label={`Выбрать ${user.firstName} ${user.lastName}`} className="mt-1 h-5 w-5 shrink-0" /><div className="min-w-0"><button type="button" onClick={() => setDetail(user)} className="min-h-11 break-words text-left text-base font-semibold text-[var(--color-text)]">{user.firstName} {user.lastName}</button><p className="text-sm text-[var(--color-text-secondary)]">{roleLabels[currentRole] || currentRole} · {groupName || 'Группа не назначена'}</p></div></div><Badge variant={user.isActive ? 'green' : 'red'}>{user.isActive ? 'Активен' : 'Заблокирован'}</Badge></div><div className="flex flex-wrap items-center justify-between gap-2"><span className="min-w-0 break-all text-sm text-[var(--color-text-secondary)]">{user.email}</span><Button variant="secondary" onClick={() => setDetail(user)}>Данные и действия →</Button></div></article>
                 <div
-                  className="grid gap-3 px-4 py-4 hidden 2xl:grid-cols-[36px_minmax(190px,1.4fr)_minmax(180px,1.2fr)_140px_140px_130px_110px_110px] 2xl:grid 2xl:items-center 2xl:px-4"
+                  className="grid gap-3 px-4 py-4 hidden xl:grid-cols-[36px_minmax(190px,1.4fr)_minmax(180px,1.2fr)_140px_140px_130px_110px_110px] xl:grid xl:items-center xl:px-4"
                 >
                   <input
                     type="checkbox"
@@ -650,7 +651,7 @@ export default function UsersPage() {
                     <button
                       type="button"
                       onClick={() => setDetail(user)}
-                      className="text-left text-sm font-semibold text-slate-900 hover:text-sky-700"
+                      className="text-left text-sm font-semibold text-[var(--color-text)] hover:text-sky-700"
                     >
                       {user.firstName} {user.lastName}
                     </button>
@@ -659,7 +660,7 @@ export default function UsersPage() {
                     <span className="md:hidden text-xs text-slate-400">
                       Почта ·{" "}
                     </span>
-                    <span className="break-all text-sm text-slate-600">
+                    <span className="break-all text-sm text-[var(--color-text-secondary)]">
                       {user.email}
                     </span>
                   </div>
@@ -674,7 +675,7 @@ export default function UsersPage() {
                       onChange={(event) =>
                         setPendingRole({id:user.id,role:event.target.value})
                       }
-                      className="h-9 max-w-full rounded-lg border border-slate-200 bg-white px-2 text-xs font-medium text-slate-700 outline-none focus:border-sky-500"
+                      className="h-9 max-w-full rounded-lg border border-[var(--color-border)] bg-white px-2 text-xs font-medium text-[var(--color-text)] outline-none focus:border-sky-500"
                     >
                       {currentRole === 'curator' && <option value="curator">Куратор · прежняя роль</option>}
                       {assignableRoles.map((item) => (
@@ -684,13 +685,13 @@ export default function UsersPage() {
                       ))}
                     </select>
                   </div>
-                  <div className="text-sm text-slate-600">
+                  <div className="text-sm text-[var(--color-text-secondary)]">
                     <span className="md:hidden text-xs text-slate-400">
                       Факультет ·{" "}
                     </span>
                     {facultyName}
                   </div>
-                  <div className="text-sm text-slate-600">
+                  <div className="text-sm text-[var(--color-text-secondary)]">
                     <span className="md:hidden text-xs text-slate-400">
                       Группа ·{" "}
                     </span>
@@ -701,7 +702,7 @@ export default function UsersPage() {
                       {user.isActive ? "Активен" : "Заблокирован"}
                     </Badge>
                   </div>
-                  <div className="text-xs text-slate-500">
+                  <div className="text-xs text-[var(--color-text-secondary)]">
                     <span className="md:hidden text-xs text-slate-400">
                       Последний вход ·{" "}
                     </span>
@@ -718,7 +719,7 @@ export default function UsersPage() {
                     <button
                       type="button"
                       onClick={() => setDetail(user)}
-                      className="text-xs font-semibold text-slate-600 hover:text-slate-900"
+                      className="text-xs font-semibold text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"
                     >
                       Изменить
                     </button>
@@ -734,7 +735,7 @@ export default function UsersPage() {
                       type="button"
                       disabled={saving}
                       onClick={() => openPasswordReset(user)}
-                      className="text-xs font-semibold text-slate-600 hover:text-slate-950 disabled:text-slate-400"
+                      className="text-xs font-semibold text-[var(--color-text-secondary)] hover:text-[var(--color-text)] disabled:text-slate-400"
                     >
                       Сброс пароля
                     </button>
@@ -755,7 +756,7 @@ export default function UsersPage() {
                 <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
                   Данные пользователя
                 </p>
-                <h2 className="mt-2 text-xl font-bold text-slate-950">
+                <h2 className="mt-2 text-xl font-bold text-[var(--color-text)]">
                   {detail.firstName} {detail.lastName}
                 </h2>
               </div>
@@ -777,20 +778,20 @@ export default function UsersPage() {
                 <Badge variant={roleVariants[userRole(detail)] || "slate"}>
                   {roleLabels[userRole(detail)] || userRole(detail)}
                 </Badge>
-                <p className="mt-2 text-sm text-slate-500">
+                <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
                   {detail.isActive ? "Активен" : "Заблокирован"}
                 </p>
               </div>
             </div>
-            <dl className="mt-6 divide-y divide-slate-100">
+            <dl className="mt-6 divide-y divide-[var(--color-border)]">
               <div className="flex justify-between gap-4 py-3">
-                <dt className="text-sm text-slate-500">Почта</dt>
+                <dt className="text-sm text-[var(--color-text-secondary)]">Почта</dt>
                 <dd className="break-all text-right text-sm font-medium text-slate-800">
                   {detail.email}
                 </dd>
               </div>
               <div className="flex justify-between gap-4 py-3">
-                <dt className="text-sm text-slate-500">Факультет</dt>
+                <dt className="text-sm text-[var(--color-text-secondary)]">Факультет</dt>
                 <dd className="text-right text-sm font-medium text-slate-800">
                   {facultyMap.get(
                     detail.facultyId ||
@@ -800,7 +801,7 @@ export default function UsersPage() {
                 </dd>
               </div>
               <div className="flex justify-between gap-4 py-3">
-                <dt className="text-sm text-slate-500">Группа</dt>
+                <dt className="text-sm text-[var(--color-text-secondary)]">Группа</dt>
                 <dd className="text-right text-sm font-medium text-slate-800">
                   {userRole(detail) === "teacher"
                     ? detailSibitTeacher?.groups.map((item) => item.name).join(", ") || "Назначается занятиями в расписании"
@@ -809,13 +810,13 @@ export default function UsersPage() {
               </div>
               {userRole(detail) === "teacher" && university?.connectorType === "rasp-sano" && (
                 <div className="space-y-2 py-4">
-                  <label htmlFor="detail-sibit-teacher" className="text-sm font-medium text-slate-700">Преподаватель в расписании СИБИТа</label>
+                  <label htmlFor="detail-sibit-teacher" className="text-sm font-medium text-[var(--color-text)]">Преподаватель в расписании СИБИТа</label>
                   <select
                     id="detail-sibit-teacher"
                     disabled={saving}
                     value={detail.sourceTeacherId || ""}
                     onChange={(event) => void linkSibitTeacher(detail, event.target.value)}
-                    className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-sky-500"
+                    className="h-11 w-full rounded-xl border border-[var(--color-border)] bg-white px-3 text-sm outline-none focus:border-sky-500"
                   >
                     <option value="">Не привязан</option>
                     {raspTeachers.map((teacher) => {
@@ -826,11 +827,11 @@ export default function UsersPage() {
                       </option>;
                     })}
                   </select>
-                  <p className="text-xs leading-5 text-slate-500">Группы и пары назначаются по числовому коду преподавателя источника.</p>
+                  <p className="text-xs leading-5 text-[var(--color-text-secondary)]">Группы и пары назначаются по числовому коду преподавателя источника.</p>
                 </div>
               )}
               <div className="flex justify-between gap-4 py-3">
-                <dt className="text-sm text-slate-500">Последний вход</dt>
+                <dt className="text-sm text-[var(--color-text-secondary)]">Последний вход</dt>
                 <dd className="text-right text-sm font-medium text-slate-800">
                   {lastActive(detail.lastLoginAt)}
                 </dd>
@@ -845,7 +846,7 @@ export default function UsersPage() {
                 disabled={saving}
                 value={userRole(detail)}
                 onChange={event=>setPendingRole({id:detail.id,role:event.target.value})}
-                className="mt-2 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-sky-500"
+                className="mt-2 h-11 w-full rounded-xl border border-[var(--color-border)] bg-white px-3 text-sm outline-none focus:border-sky-500"
               >
                 <option value={userRole(detail)}>
                   {roleLabels[userRole(detail)] || userRole(detail)}
@@ -885,7 +886,7 @@ export default function UsersPage() {
         title="Новая учётная запись"
       >
         <form className="space-y-4" onSubmit={createUser}>
-          <p className="text-sm leading-6 text-slate-500">
+          <p className="text-sm leading-6 text-[var(--color-text-secondary)]">
             Временный пароль передавайте пользователю только защищённым
             способом. Он не будет показан в кабинете после создания.
           </p>
@@ -933,14 +934,14 @@ export default function UsersPage() {
             required
           />
           <div className="grid gap-4 sm:grid-cols-2">
-            <label className="block text-sm font-medium text-slate-700">
+            <label className="block text-sm font-medium text-[var(--color-text)]">
               Роль
               <select
                 value={newUser.role}
                 onChange={(event) =>
                   setNewUser((item) => ({ ...item, role: event.target.value, groupId: "", sourceTeacherId: "" }))
                 }
-                className="mt-1.5 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-sky-500"
+                className="mt-1.5 h-11 w-full rounded-xl border border-[var(--color-border)] bg-white px-3 text-sm outline-none focus:border-sky-500"
               >
                 {assignableRoles.map((item) => (
                   <option key={item} value={item}>
@@ -950,8 +951,8 @@ export default function UsersPage() {
               </select>
             </label>
             {newUser.role === "teacher" ? (
-              <p className="self-center text-sm leading-5 text-slate-500">Группы преподавателя будут связаны через его занятия в расписании.</p>
-            ) : <label className="block text-sm font-medium text-slate-700">
+              <p className="self-center text-sm leading-5 text-[var(--color-text-secondary)]">Группы преподавателя будут связаны через его занятия в расписании.</p>
+            ) : <label className="block text-sm font-medium text-[var(--color-text)]">
               Учебная группа
               <select
                 value={newUser.groupId}
@@ -961,7 +962,7 @@ export default function UsersPage() {
                     groupId: event.target.value,
                   }))
                 }
-                className="mt-1.5 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-sky-500"
+                className="mt-1.5 h-11 w-full rounded-xl border border-[var(--color-border)] bg-white px-3 text-sm outline-none focus:border-sky-500"
               >
                 <option value="">Не назначать</option>
                 {newUser.role === "student" && university?.connectorType === "rasp-sano"
@@ -979,7 +980,7 @@ export default function UsersPage() {
             </label>}
           </div>
           {newUser.role === "teacher" && university?.connectorType === "rasp-sano" && (
-            <label className="block text-sm font-medium text-slate-700">
+            <label className="block text-sm font-medium text-[var(--color-text)]">
               Преподаватель в расписании СИБИТа
               <select
                 value={newUser.sourceTeacherId}
@@ -989,14 +990,14 @@ export default function UsersPage() {
                   const [lastName = "", ...firstNames] = (teacher?.name || "").trim().split(/\s+/);
                   setNewUser((item) => ({ ...item, sourceTeacherId, groupId: "", ...(teacher ? { lastName, firstName: firstNames.join(" ") } : {}) }));
                 }}
-                className="mt-1.5 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-sky-500"
+                className="mt-1.5 h-11 w-full rounded-xl border border-[var(--color-border)] bg-white px-3 text-sm outline-none focus:border-sky-500"
               >
                 <option value="">Не связывать пока</option>
                 {raspTeachers.filter((teacher) => !teacher.linkedUser && !/вакансия|не назначен/i.test(teacher.name)).map((teacher) => (
                   <option key={teacher.id} value={teacher.id}>{teacher.name} · {teacher.lessonCount} пар · {teacher.groups.map((item) => item.name).join(", ")}</option>
                 ))}
               </select>
-              <span className="mt-1 block text-xs font-normal leading-5 text-slate-500">После создания аккаунта расписание привяжется по точному ID преподавателя. Укажите действующую корпоративную почту и временный пароль.</span>
+              <span className="mt-1 block text-xs font-normal leading-5 text-[var(--color-text-secondary)]">После создания аккаунта расписание привяжется по точному ID преподавателя. Укажите действующую корпоративную почту и временный пароль.</span>
             </label>
           )}
           <div className="flex justify-end gap-2 pt-2">
@@ -1020,7 +1021,7 @@ export default function UsersPage() {
         title="Новый временный пароль"
       >
         <form className="space-y-4" onSubmit={resetPassword}>
-          <p className="text-sm leading-6 text-slate-500">
+          <p className="text-sm leading-6 text-[var(--color-text-secondary)]">
             {resetTarget
               ? `Пароль для ${resetTarget.firstName} ${resetTarget.lastName} будет заменён сразу после сохранения.`
               : ""}
@@ -1034,7 +1035,7 @@ export default function UsersPage() {
             onChange={(event) => setReplacementPassword(event.target.value)}
             required
           />
-          <p className="text-xs leading-5 text-slate-500">
+          <p className="text-xs leading-5 text-[var(--color-text-secondary)]">
             Передайте пароль только защищённым способом. После закрытия окна он
             не будет доступен в NaPare.
           </p>

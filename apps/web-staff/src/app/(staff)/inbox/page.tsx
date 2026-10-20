@@ -150,10 +150,10 @@ export default function InboxPage() {
 
       </div>
       <AttentionNavigation active="tasks" />
-      <div role="group" aria-label="Статус действий" className="flex gap-2 overflow-x-auto">{([{ id: "open", label: "Открытые" }, { id: "snoozed", label: "Отложены" }, { id: "done", label: "Разобраны" }] as const).map(item => <button type="button" key={item.id} aria-pressed={filter === item.id} onClick={() => { setActionError(""); setActionStatus(""); setSearch(""); setFilter(item.id); }} className={"min-h-11 shrink-0 rounded-xl border px-3 text-sm font-semibold " + (filter === item.id ? "border-sky-700 bg-sky-50 text-sky-700" : "border-slate-200 bg-white text-slate-600")}>{item.label}</button>)}</div>
+      <div role="group" aria-label="Статус действий" className="flex gap-2 overflow-x-auto">{([{ id: "open", label: "Открытые" }, { id: "snoozed", label: "Отложены" }, { id: "done", label: "Разобраны" }] as const).map(item => <button type="button" key={item.id} aria-pressed={filter === item.id} onClick={() => { setActionError(""); setActionStatus(""); setSearch(""); setFilter(item.id); }} className={"min-h-11 shrink-0 rounded-xl border px-3 text-sm font-semibold " + (filter === item.id ? "border-indigo-700 bg-indigo-50 text-indigo-700" : "border-slate-200 bg-white text-slate-600")}>{item.label}</button>)}</div>
 
       {actionError && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{actionError}</p>}
-      {actionStatus && <p role="status" className="rounded-xl bg-sky-50 p-3 text-sm text-sky-800">{actionStatus}</p>}
+      {actionStatus && <p role="status" className="rounded-xl bg-indigo-50 p-3 text-sm text-indigo-800">{actionStatus}</p>}
       {loading ? (
         <div className="space-y-3">
           <Skeleton className="h-24" />
@@ -175,7 +175,7 @@ export default function InboxPage() {
         <div className="space-y-3"><label className="block"><span className="sr-only">Поиск событий</span><input type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder="Найти событие…" className="min-h-11 w-full rounded-xl border bg-white px-3 text-sm" /></label>{search && hasMore && <p className="text-xs text-slate-500">Поиск охватывает {items.length} загруженных действий. Загрузите ещё, чтобы искать в более ранних.</p>}{Object.values(grouped).flat().filter(item => `${item.title} ${item.description}`.toLocaleLowerCase('ru-RU').includes(search.toLocaleLowerCase('ru-RU'))).map(item => <article
                     key={item.id}
                     aria-labelledby={`inbox-item-${item.id}`}
-                    className={`overflow-hidden rounded-xl border bg-white px-4 py-3 ${item.status === "open" ? "border-l-2 border-l-sky-500 bg-sky-50/30" : ""}`}
+                    className={`overflow-hidden rounded-xl border bg-white px-4 py-3 ${item.status === "open" ? "border-l-2 border-l-indigo-500 bg-indigo-50/30" : ""}`}
                   >
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
@@ -200,7 +200,7 @@ export default function InboxPage() {
                       </div>
                     </div>
                     {item.dueAt && <p className="mt-2 text-xs font-medium text-slate-600">Срок · {new Date(item.dueAt).toLocaleString('ru-RU', { day:'numeric',month:'short',hour:'2-digit',minute:'2-digit' })}</p>}
-                    <div className="mt-3 flex flex-wrap items-center gap-2"><a href={eventHref(item.deepLink)} className="inline-flex min-h-11 items-center rounded-lg border border-slate-200 px-3 text-sm font-semibold text-sky-700">Открыть событие</a>{item.status !== "done" && <Button variant="ghost" size="sm" disabled={!!savingId} onClick={() => void complete(item.id)}>{savingId === item.id ? "Сохраняем…" : "Отметить разобранным"}</Button>}</div>
+                    <div className="mt-3 flex flex-wrap items-center gap-2"><a href={eventHref(item.deepLink)} className="inline-flex min-h-11 items-center rounded-lg border border-slate-200 px-3 text-sm font-semibold text-indigo-700">Открыть событие</a>{item.status !== "done" && <Button variant="ghost" size="sm" disabled={!!savingId} onClick={() => void complete(item.id)}>{savingId === item.id ? "Сохраняем…" : "Отметить разобранным"}</Button>}</div>
 </article>)}{search && !items.some(item => `${item.title} ${item.description}`.toLocaleLowerCase('ru-RU').includes(search.toLocaleLowerCase('ru-RU'))) && <p className="py-4 text-sm text-slate-500">Событий не найдено.</p>}{loadMoreError && <p role="alert" className="text-sm text-red-700">Не удалось загрузить предыдущие действия: {loadMoreError}</p>}{hasMore && <div className="flex justify-center pt-2"><Button variant="secondary" disabled={loadingMore} onClick={() => void loadMore()}>{loadingMore ? "Загружаем…" : "Загрузить ещё"}</Button></div>}</div>
       )}
     </div>

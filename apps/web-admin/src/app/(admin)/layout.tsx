@@ -5,7 +5,7 @@ import { useCurationContext } from '@napare/ui/curation';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 import { WorkspaceShell, type NavigationLinkProps, type WorkspaceCommand, type WorkspaceNavGroup } from '@napare/ui/workspace-shell';
-import { apiFetch, apiFetchList, getUser, logout, type Me } from '@/lib/api';
+import { apiFetch, getUser, logout, type Me } from '@/lib/api';
 
 const groups: WorkspaceNavGroup[] = [
   { label: 'Обзор', items: [{ href: '/dashboard', label: 'Обзор', icon: 'dashboard', keywords: ['overview', 'сводка'] }] },
@@ -27,8 +27,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const [systemStatus, setSystemStatus] = useState<'checking' | 'online' | 'offline'>('checking');
   useEffect(() => {
     getUser().then(setUser).catch(() => router.push('/login'));
-    apiFetchList<{ isRead: boolean }>('/notifications').then((items) => setNotificationCount(items.filter((item) => !item.isRead).length)).catch(() => undefined);
-    apiFetch<{ status: string }>('/health').then(() => setSystemStatus('online')).catch(() => setSystemStatus('offline'));
+    apiFetch<number>('/notifications/unread-count').then((count) => setNotificationCount(Number.isFinite(count) ? Math.max(0, count) : 0)).catch(() => undefined);
+    apiFetch<{ status: string }>('/health').then(({ status }) => setSystemStatus(status === 'ok' ? 'online' : 'offline')).catch(() => setSystemStatus('offline'));
   }, [router]);
   const commands: WorkspaceCommand[] = [
     { id: 'admin:users', label: 'Открыть пользователей', description: 'Управление доступами и ролями', icon: 'users', href: '/users', keywords: ['студенты', 'преподаватели'] },

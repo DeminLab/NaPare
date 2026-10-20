@@ -5,8 +5,14 @@
 @tailwind utilities;
 
 :root {
-  --role-accent: #0369a1; --role-accent-soft: #eff8ff; --color-role: var(--role-accent); --color-role-soft: var(--role-accent-soft); --workspace-accent: var(--role-accent); --workspace-accent-soft: var(--role-accent-soft);
+  --role-accent: #5146e8; --role-accent-soft: #f0efff; --color-role: var(--role-accent); --color-role-soft: var(--role-accent-soft); --workspace-accent: var(--role-accent); --workspace-accent-soft: var(--role-accent-soft);
   --workspace-paper: var(--color-surface); --workspace-line: var(--color-border); --workspace-ink: var(--color-text); --workspace-muted: var(--color-text-secondary); --workspace-focus-ring: var(--color-brand-soft); --workspace-success: var(--color-success); --workspace-warning: var(--color-warning); --workspace-danger: var(--color-danger); --workspace-skeleton: var(--color-surface-tertiary);
+  --color-background: #f7f8fc;
+  --color-text: #111b34;
+  --color-brand: #5146e8;
+  --color-brand-strong: #4338ca;
+  --color-brand-soft: #f0efff;
+  --color-focus-ring: #5146e8;
 }
 @layer components {
   .workspace-hero { display: grid; gap: 1rem; padding: clamp(1.5rem, 4vw, 2.5rem); border: 1px solid var(--color-border); border-radius: var(--radius-xl); background: var(--color-surface); box-shadow: var(--shadow-sm); }
@@ -23,9 +29,10 @@ button, a, input, select, textarea { touch-action: manipulation; }
 
 /* Work pages share a compact content rhythm; the shell keeps its own layout. */
 .role-content { --color-brand: var(--role-accent); --color-brand-strong: var(--role-accent); --color-brand-soft: var(--role-accent-soft); --type-page-size: clamp(1.5rem, 2.4vw, 1.875rem); }
+.role-content { color: var(--color-text); }
 .role-content :is(h1, .ds-page-header__title) { font-size: var(--type-page-size); line-height: 1.25; }
 .role-content .ds-page-header { margin-bottom: 0; }
-.role-content .ds-card { box-shadow: none; }
+.role-content .ds-card { border-radius: 16px; box-shadow: 0 8px 24px rgb(17 27 52 / .035); }
 .role-content .ds-card.p-6:not(.p-0) { padding: 20px; }
 .role-content .ds-card.p-8 { padding: 24px; }
 .role-content .ds-card.p-0 { padding: 0; }
@@ -42,6 +49,9 @@ button, a, input, select, textarea { touch-action: manipulation; }
 .role-content .metric-strip .ds-card > p { display: inline; margin: 0; font-size: 13px; text-transform: none; letter-spacing: normal; }
 .role-content .metric-strip .ds-card > p + p { margin-left: 6px; }
 .role-content input[type="date"] { min-width: 0; }
+.role-content :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea) { border-color: #dce2ef; border-radius: 10px; }
+.role-content :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea):focus { border-color: var(--role-accent); }
+.role-content :is(button, a, [role="button"]) { transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease; }
 @media (max-width: 639px) {
   .role-content .ds-card.p-6:not(.p-0), .role-content .ds-card.p-8 { padding: 16px; }
   .role-content > .space-y-6 > :not([hidden]) ~ :not([hidden]) { margin-top: 20px; }

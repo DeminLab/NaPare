@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
@@ -39,21 +40,22 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-lg shadow">
-        <h2 className="text-center text-3xl font-bold text-gray-900">
+    <main className="flex min-h-screen items-center justify-center bg-[#F7F8FC] px-4 py-10">
+      <div className="w-full max-w-md space-y-7 rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_12px_36px_rgba(17,27,52,0.06)] sm:p-8">
+        <Link href="/" className="mx-auto flex w-fit items-center gap-2.5 text-lg font-bold tracking-tight text-slate-950"><span className="grid h-9 w-9 place-items-center rounded-xl bg-indigo-600 text-sm text-white shadow-sm">Н</span>НаПаре</Link>
+        <h1 className="text-center text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
           Вход в НаПаре
-        </h2>
+        </h1>
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+        <form className="space-y-5" onSubmit={handleSubmit}>
           {error && (
-            <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm">
+            <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
               {error}
             </div>
           )}
 
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="email" className="block text-sm font-semibold text-slate-700">
               Электронная почта
             </label>
             <input
@@ -62,12 +64,12 @@ export default function LoginPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+              className="mt-1 block min-h-12 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-base text-slate-900 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
             />
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="password" className="block text-sm font-semibold text-slate-700">
               Пароль
             </label>
             <input
@@ -76,19 +78,19 @@ export default function LoginPage() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+              className="mt-1 block min-h-12 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-base text-slate-900 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
             />
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50"
+            className="inline-flex min-h-12 w-full items-center justify-center rounded-xl border border-indigo-600 bg-indigo-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-100 disabled:cursor-wait disabled:opacity-60"
           >
             {loading ? 'Вход...' : 'Войти'}
           </button>
         </form>
       </div>
-    </div>
+    </main>
   );
 }

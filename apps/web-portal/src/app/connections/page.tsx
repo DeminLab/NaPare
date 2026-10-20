@@ -152,14 +152,30 @@ export default function ConnectionsPage() {
   return (
     <>
     <MaxLaunchAuth captureOnly onCapture={handleMaxLaunchCapture} />
-    <main className="connections-page">
-      <button type="button" onClick={() => window.history.length > 1 ? window.history.back() : window.location.assign('/')} className="connections-back">← Назад</button>
-      <header className="connections-heading"><h1>Вход через MAX</h1></header>
-      {checking ? <p role="status" className="connections-note">Проверяем подключения…</p> : !signedIn ? <div className="connections-note"><p>Чтобы управлять подключениями, войдите в аккаунт, выданный университетом.</p><Link href="/login" className="connections-button">Войти в НаПаре</Link></div> : null}
-      <div className="connections-grid">
-        <section className="connections-card"><div className="connections-card-heading"><h2>MAX</h2><span>{checking ? "Проверяем…" : !signedIn ? "Нужен вход" : !maxKnown ? "Статус неизвестен" : maxLinked ? "Подключён" : "Не подключён"}</span></div><p>{maxLinked ? "Теперь можно входить через MAX." : insideMax ? "Подключите MAX для быстрого входа." : "Для подключения откройте НаПаре внутри MAX."}</p>{maxLinked ? <span className="connections-success" role="status">Аккаунт подключён</span> : <button type="button" onClick={() => void linkMaxAccount()} disabled={maxBusy || checking || !signedIn || !insideMax} className="connections-button">{maxBusy ? 'Связываем…' : 'Связать MAX'}</button>}{maxError && <p className="connections-error" role="alert">{maxError}</p>}</section>
-      </div><button type="button" className="connections-back" onClick={() => window.location.reload()}>Обновить статус</button>
-    </main>
+    <div className="connections-shell">
+      <header className="connections-topbar"><Link href="/" className="connections-brand"><span aria-hidden="true">Н</span>НаПаре</Link><button type="button" onClick={() => window.history.length > 1 ? window.history.back() : window.location.assign('/')} className="connections-return">← Вернуться в кабинет</button></header>
+      <main className="connections-page">
+        <section className="connections-story">
+          <p className="connections-kicker"><span aria-hidden="true">✧</span> Одна платформа — вся учёба</p>
+          <h1>НаПаре —<br /><span>в вашем MAX</span></h1>
+          <p className="connections-lead">Подключите аккаунт к MAX, чтобы пользоваться учебными сервисами там, где вам удобно.</p>
+          <div className="connections-benefits"><span>✦ Единый аккаунт</span><span>◇ Учебные сервисы</span><span>✓ Защищённая привязка</span></div>
+        </section>
+        <section className="connections-card" aria-labelledby="connections-title">
+          <div className="connections-card-heading"><span className="connections-max-mark" aria-hidden="true" /><span className={`connections-status ${maxLinked ? 'is-linked' : ''}`}>{checking ? 'Проверяем…' : !signedIn ? 'Нужен вход' : !maxKnown ? 'Статус неизвестен' : maxLinked ? 'Подключён' : 'Не подключён'}</span></div>
+          <h2 id="connections-title">Подключить MAX</h2>
+          <p>{maxLinked ? 'Аккаунт НаПаре подключён. Теперь вы можете входить через MAX.' : insideMax ? 'Свяжите MAX с аккаунтом НаПаре. Подтверждение произойдёт здесь, внутри приложения.' : 'Свяжите MAX с аккаунтом НаПаре. Для безопасности подключение подтверждается внутри приложения.'}</p>
+          {!maxLinked && <ol className="connections-steps"><li><span>1</span><span>Откройте приложение <strong>MAX</strong> на телефоне или компьютере.</span></li><li><span>2</span><span>Запустите <strong>НаПаре</strong> внутри MAX и подтвердите подключение.</span></li><li><span>3</span><span>Вернитесь сюда и проверьте статус соединения.</span></li></ol>}
+          {checking && <p role="status" className="connections-note">Проверяем подключение аккаунта…</p>}
+          {!checking && !signedIn && <div className="connections-note"><p>Чтобы управлять подключениями, войдите в аккаунт, выданный университетом.</p><Link href="/login" className="connections-button">Войти в НаПаре</Link></div>}
+          {maxLinked ? <span className="connections-success" role="status">Аккаунт подключён</span> : <button type="button" onClick={() => void linkMaxAccount()} disabled={maxBusy || checking || !signedIn || !insideMax} className="connections-button">{maxBusy ? 'Связываем…' : 'Связать MAX　→'}</button>}
+          {maxError && <p className="connections-error" role="alert">{maxError}</p>}
+          <button type="button" className="connections-refresh" onClick={() => window.location.reload()}>◌　Обновить статус</button>
+          <p className="connections-secure">♢　Подключение выполняется в безопасном режиме</p>
+        </section>
+      </main>
+      <footer className="connections-footer">© 2026 НаПаре · Образовательная система</footer>
+    </div>
     </>
   );
 }
