@@ -1,3 +1,0 @@
-session_code,session_date,scenario,group_size,started_at,finished_at,student_attempts,first_try_successes,retries,failed_scans,manual_corrections,duplicate_conflicts,hints_given,participants_abandoned,notes_without_personal_data
-S01,YYYY-MM-DD,manual,0,,,,,,,,,,,
-S02,YYYY-MM-DD,qr,0,,,,,,,,,,,
