@@ -59,6 +59,10 @@ test-results/
 playwright-report/
 *.lcov
 
+# Local attendance QA build output
+apps/web-staff/.next-attendance-qa/
+apps/web-staff/.next-attendance-qa-turbo/
+
 # Flutter
 .flutter-plugins
 .flutter-plugins-dependencies
