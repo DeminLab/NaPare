@@ -9,7 +9,7 @@ export function ProductShowcase() {
           <span className="preview-brand">
             <span aria-hidden="true">NP</span> НаПаре
           </span>
-          <span className="preview-date">Понедельник, 24 ноября</span>
+          <span className="preview-date">Сегодня</span>
           <span className="preview-avatar" aria-label="Профиль Анны Ким">
             АК
           </span>
@@ -31,7 +31,7 @@ export function ProductShowcase() {
                 <span className="preview-kicker">ЛИЧНЫЙ КАБИНЕТ</span>
                 <h2>Мой день</h2>
               </div>
-              <span className="preview-date-mobile">24 ноября</span>
+              <span className="preview-date-mobile">Сегодня</span>
             </div>
 
             <div className="preview-summary">
