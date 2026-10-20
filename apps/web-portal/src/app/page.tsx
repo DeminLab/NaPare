@@ -3,6 +3,7 @@ import Image from "next/image";
 import { Icon, type IconName } from "@napare/ui";
 import { ProductShowcase } from "../components/ProductShowcase";
 import { MaxLaunchAuth } from "../components/MaxLaunchAuth";
+import { HomeSessionRestore } from "../components/HomeSessionRestore";
 
 const roles = [
   {
@@ -66,6 +67,7 @@ const steps = [
 export default function HomePage() {
   return (
     <main>
+      <HomeSessionRestore />
       <MaxLaunchAuth captureOnly />
       <header className="portal-header">
         <Link href="/" className="brand">

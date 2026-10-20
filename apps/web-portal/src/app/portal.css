@@ -201,6 +201,49 @@ footer {
   margin: 0;
   padding: 12px;
 }
+.login-restore-gate,
+.home-session-gate {
+  align-items: center;
+  background: #f7f8fc;
+  color: #17243a;
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  min-height: 100vh;
+  min-height: 100svh;
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+}
+.login-restore-gate {
+  flex-direction: column;
+  padding: 24px;
+  text-align: center;
+}
+.login-restore-gate button {
+  background: #fff;
+  border: 1px solid var(--color-control-border);
+  border-radius: 10px;
+  color: var(--color-text);
+  cursor: pointer;
+  font: inherit;
+  min-height: 44px;
+  padding: 10px 16px;
+}
+.home-session-gate {
+  font-size: 15px;
+}
+.home-session-spinner {
+  animation: home-session-spin 0.8s linear infinite;
+  border: 3px solid #dbe2ee;
+  border-radius: 50%;
+  border-top-color: #3158c9;
+  height: 22px;
+  width: 22px;
+}
+@keyframes home-session-spin {
+  to { transform: rotate(360deg); }
+}
 .login-form label {
   color: var(--color-text);
   display: grid;

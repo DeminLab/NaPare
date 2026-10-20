@@ -41,7 +41,7 @@ import org.json.JSONObject;
 /** Thin HTTPS client: authentication, permissions and role routing belong to the website. */
 public final class MainActivity extends Activity {
     private static final String ORIGIN = "https://napare.sano.ru";
-    private static final String LOGIN = ORIGIN + "/login";
+    private static final String HOME = ORIGIN + "/";
     private static final int FILE_REQUEST = 41;
     private static final int SAVE_CALENDAR = 42;
     private byte[] pendingCalendar;
@@ -53,7 +53,7 @@ public final class MainActivity extends Activity {
     private ValueCallback<Uri[]> fileCallback;
     private boolean failed;
     private boolean hasLoadedContent;
-    private String retryUrl = LOGIN;
+    private String retryUrl = HOME;
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
@@ -92,8 +92,8 @@ public final class MainActivity extends Activity {
         web.setWebViewClient(new SiteClient());
         web.setWebChromeClient(new ChromeClient());
         configureDownloads();
-        // The website restores a valid session from its origin-scoped local storage.
-        web.loadUrl(LOGIN);
+        // The public home page restores a valid session from origin-scoped local storage.
+        web.loadUrl(HOME);
     }
 
     private boolean isSite(Uri uri) {
@@ -240,7 +240,7 @@ public final class MainActivity extends Activity {
         errorPanel.addView(errorText);
         Button retry = new Button(this);
         retry.setText("Повторить");
-        retry.setOnClickListener(v -> { errorPanel.setVisibility(View.GONE); web.loadUrl(isSite(Uri.parse(retryUrl)) ? retryUrl : LOGIN); });
+        retry.setOnClickListener(v -> { errorPanel.setVisibility(View.GONE); web.loadUrl(isSite(Uri.parse(retryUrl)) ? retryUrl : HOME); });
         errorPanel.addView(retry);
         root.addView(errorPanel, new FrameLayout.LayoutParams(-1, -1));
     }

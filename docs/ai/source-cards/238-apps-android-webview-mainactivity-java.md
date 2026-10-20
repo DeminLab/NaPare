@@ -6,7 +6,7 @@
 
 ## Scope
 
-HTTPS-only wrapper for napare.sano.ru. Cold activity creation opens login and clears only the site's two auth tokens before displaying the form. Website auth controls role routing. Native back, progress, network retry, JS confirmations, document selection and origin-scoped calendar save are implemented. External HTTPS/mail/tel/MAX links leave the WebView. No native push, camera or arbitrary JavaScriptInterface.
+HTTPS-only wrapper for napare.sano.ru. Cold activity creation opens the public home page; website auth restores a saved session and controls role routing. WebView storage persists between launches. Native back, progress, network retry, JS confirmations, document selection and origin-scoped calendar save are implemented. External HTTPS/mail/tel/MAX links leave the WebView. No native push, camera or arbitrary JavaScriptInterface.
 
 The initial blank WebView state now shows a centered indeterminate spinner and a polite accessibility live status (“Открываем НаПаре…”). It is removed after the first successful page render; later in-WebView navigation keeps the page visible and uses the top progress bar. Existing network/TLS error handling and Retry remain authoritative.
 
@@ -24,6 +24,6 @@ Preserve the exact HTTPS host allowlist, normal TLS validation and disabled file
 
 ## Verification
 
-`assembleRelease`, `lintRelease`, APK signature verification, then device login/navigation/network/file checks listed in the Android README.
+`assembleRelease`, `lintRelease`, APK signature verification, then device checks for public home, saved-session role routing, login/navigation/network/files listed in the Android README.
 
 UX-48 local verification: `:app:assembleDebug`, `:app:lintDebug`, and `:app:testDebugUnitTest` passed. No emulator/device or TalkBack verification was run; see `docs/UX_REDESIGN_GOAL.md`.

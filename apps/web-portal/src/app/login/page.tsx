@@ -26,7 +26,7 @@ export default function LoginPage() {
   const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
   const [maxAvailable, setMaxAvailable] = useState(false);
   const [studentRegistrationInfo, setStudentRegistrationInfo] = useState(false);
-  const [sessionRestoreState, setSessionRestoreState] = useState<SessionRestoreState>('idle');
+  const [sessionRestoreState, setSessionRestoreState] = useState<SessionRestoreState>('checking');
   const restoreControllerRef = useRef<AbortController | null>(null);
   const manualLoginStartedRef = useRef(false);
   useEffect(() => {
@@ -40,7 +40,10 @@ export default function LoginPage() {
     const restoreSession = async () => {
       let accessToken = window.localStorage.getItem('accessToken');
       const refreshToken = window.localStorage.getItem('refreshToken');
-      if (!accessToken && !refreshToken) return;
+      if (!accessToken && !refreshToken) {
+        setSessionRestoreState('idle');
+        return;
+      }
       if (!accessToken || !refreshToken) {
         setSessionRestoreState('incomplete');
         return;
@@ -184,6 +187,12 @@ export default function LoginPage() {
 
   return (
     <main className="login-layout login-focused">
+      {sessionRestoreState === 'checking' && (
+        <div className="login-restore-gate" aria-busy="true">
+          <div role="status" aria-live="polite">Проверяем сохранённый вход…</div>
+          <button type="button" onClick={stopSessionRestoreForManualLogin}>Войти вручную</button>
+        </div>
+      )}
       <section className="login-panel">
         <div className="login-card">
           <MaxLaunchAuth captureOnly />

@@ -4,6 +4,8 @@
 
 `apps/web-portal/src/app/page.tsx`
 
+The portal home page includes `HomeSessionRestore`, which keeps the page covered while it restores a saved website session and routes recognized roles to their cabinets.
+
 ## Scope
 
 Public NaPare landing page. The hero uses one full-bleed campus image with readable copy over a dark overlay; a responsive cabinet mockup appears in the next product-focused section. Lower informational sections remain text and interface-led, without an image gallery.

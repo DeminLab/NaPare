@@ -287,6 +287,7 @@ Choose the card matching the task area, read the canonical source and then follo
 - [223 — `apps/web-portal/src/app/career/portfolio/[studentId]/page.tsx`](223-apps-web-portal-src-app-career-portfolio-studentid-page-tsx.md)
 
 - [393 — `apps/web-portal/src/app/career/StudentPortfolio.tsx`](393-apps-web-portal-src-app-career-studentportfolio-tsx.md)
+- [394 — Portal home session restoration](394-apps-web-portal-src-components-homesessionrestore-tsx.md)
 
 - [224 — `apps/web-portal/src/app/career/api.ts`](224-apps-web-portal-src-app-career-api-ts.md)
 
