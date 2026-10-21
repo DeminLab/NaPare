@@ -10,6 +10,11 @@ Choose the card matching the task area, read the canonical source and then follo
 
 ## Cards
 
+- [440 — Backend role policy metadata and matrix](440-backend-role-policy-fixture.md)
+- [441 — Backend role policy HTTP probes](441-backend-role-policy-e2e.md)
+- [442 — Explicit role baseline update](442-backend-update-role-policy.md)
+- [443 — Reviewed route authorization baseline](443-backend-role-policy-baseline.md)
+
 - [285 — Shared UI primitives](285-packages-ui-src-index-tsx.md)
 - [290 — Shared lesson type badge](290-packages-ui-src-lessontypebadge-tsx.md)
 - [291 — Platform student data controller](291-apps-backend-src-platform-data-platform-data-controller-ts.md)
