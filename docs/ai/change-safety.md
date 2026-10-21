@@ -4,6 +4,8 @@
 
 The active role-workspace work must not modify `apps/web-student/**`, shared navigation, `Avatar.tsx`, headers or logo assets. The static boundary check protects these paths.
 
+22 October 2026: the owner explicitly approved student offline schedule changes in the improvement-plan chat. This covers the existing service worker and registration, offline schedule document/helpers, API logout purge and the two exact offline test paths. It does not authorize navigation, header, Avatar or logo changes. See [offline behavior and checks](../clients/student-offline.md).
+
 ## Baseline commands
 
 ```powershell

@@ -8,6 +8,7 @@ Project guides, reference material and historical records live under this direct
 - [API](api/README.md) — API usage and contracts.
 - [Architecture](architecture/README.md) — system structure and historical configuration notes.
 - [Clients](clients/mobile.md) — Android and web client behavior; other client notes are in this directory.
+- [Student offline schedule](clients/student-offline.md) — service worker, сохранение расписания и границы локального кэша.
 - [Database](database/schema-overview.md) — schema notes and migrations.
 - [Decisions](decisions/) — architecture and deployment decisions.
 - [Deployment](deployment/README.md) — production deployment, Nginx, TLS, platform control and app-store procedures.

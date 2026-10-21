@@ -5,12 +5,14 @@ const protectedPath = /^(?:apps\/web-student\/|apps\/[^/]+\/src\/components\/nav
 const approvedStudentExperiencePath = /^apps\/web-student\/(?:package\.json|tailwind\.config\.js|src\/app\/globals\.css|src\/app\/\(student\)\/|src\/components\/navigation\/StudentShell\.tsx$)/i;
 // The approved all-page UX work includes correct empty personal-note responses.
 const approvedStudentApiPath = 'apps/web-student/src/lib/api.ts';
+// Owner approval in the 22 October plan covers offline schedule and its focused tests.
+const approvedOfflineTests = new Set(['apps/web-student/test/load-typescript.cjs', 'apps/web-student/test/offline-worker.test.cjs']);
 
 function assertAllowed(paths) {
   const allowedMigrationPath = 'apps/web-student/next.config.js';
   const blocked = paths.filter((path) => {
     const normalizedPath = path.replace(/\\/g, '/');
-    return normalizedPath !== allowedMigrationPath && normalizedPath !== approvedStudentApiPath && protectedPath.test(normalizedPath) && !approvedStudentExperiencePath.test(normalizedPath);
+    return normalizedPath !== allowedMigrationPath && normalizedPath !== approvedStudentApiPath && !approvedOfflineTests.has(normalizedPath) && protectedPath.test(normalizedPath) && !approvedStudentExperiencePath.test(normalizedPath);
   });
   if (blocked.length) {
     throw new Error(`Role workspace foundation changes include protected paths:\n${blocked.map((path) => `- ${path}`).join('\n')}`);

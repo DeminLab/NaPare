@@ -486,3 +486,11 @@ Choose the card matching the task area, read the canonical source and then follo
 - [tenant-reference-tests](tenant-reference-tests.md)
 
 - [tenant-isolation-http-tests](tenant-isolation-http-tests.md)
+
+- [Student offline 1](offline-1.md)
+
+- [Student offline 2](offline-2.md)
+
+- [Student offline 3](offline-3.md)
+
+- [Student offline 4](offline-4.md)
