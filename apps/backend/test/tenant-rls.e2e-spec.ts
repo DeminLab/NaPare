@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import { randomBytes } from 'node:crypto';
 import { Column, DataSource, Entity, PrimaryColumn, Repository } from 'typeorm';
 
 import { TenantContext } from '../src/common/tenant/tenant-context';
@@ -39,6 +40,7 @@ integration('PostgreSQL tenant RLS with a non-superuser table owner', () => {
   const suffix = `${process.pid}_${Date.now()}`;
   const databaseName = `tenant_test_rls_${suffix}`;
   const roleName = `tenant_test_rls_role_${suffix}`;
+  const rolePassword = randomBytes(24).toString('hex');
   const context = new TenantContext();
   let admin: DataSource;
   let database: DataSource;
@@ -49,11 +51,11 @@ integration('PostgreSQL tenant RLS with a non-superuser table owner', () => {
   beforeAll(async () => {
     if (!['localhost', '127.0.0.1'].includes(new URL(adminUrl!).hostname)) throw new Error('Tenant RLS tests require a separate local PostgreSQL cluster');
     admin = await new DataSource({ type: 'postgres', url: adminUrl }).initialize();
-    await admin.query(`CREATE ROLE "${roleName}" LOGIN NOSUPERUSER NOBYPASSRLS`);
+    await admin.query(`CREATE ROLE "${roleName}" LOGIN NOSUPERUSER NOBYPASSRLS PASSWORD '${rolePassword}'`);
     await admin.query(`CREATE DATABASE "${databaseName}" OWNER "${roleName}"`);
     const url = new URL(adminUrl!);
     url.username = roleName;
-    url.password = '';
+    url.password = rolePassword;
     url.pathname = `/${databaseName}`;
     database = await new DataSource({ type: 'postgres', url: url.toString(), entities: [TenantRow, SnakeRow, AuthRow, CareerCompany, CareerMembership, CareerPartnership, CareerTask, CareerProfile, CareerAdmission, CareerApplication], synchronize: true, extra: { max: 2 } }).initialize();
     await database.getRepository(TenantRow).save([{ id: 'a', universityId: A, label: 'A' }, { id: 'b', universityId: B, label: 'B' }]);
