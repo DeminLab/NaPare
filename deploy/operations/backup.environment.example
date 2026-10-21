@@ -1,0 +1,10 @@
+PGHOST=database.example.invalid
+PGPORT=5432
+PGDATABASE=napare
+PGUSER=napare_backup
+PGPASSFILE=/etc/napare/backup.pgpass
+BACKUP_KEY_FILE=/etc/napare/backup.key
+BACKUP_WORK_DIR=/var/lib/napare-backup/staging
+RCLONE_CONFIG=/etc/napare/rclone.conf
+BACKUP_DESTINATION=archive:napare/daily
+BACKUP_OFFSITE_ACK=destination-is-on-another-machine

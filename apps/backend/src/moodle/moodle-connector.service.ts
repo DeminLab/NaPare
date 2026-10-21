@@ -9,7 +9,10 @@ import { lookup as dnsLookup } from "node:dns/promises";
 import { request as httpsRequest } from "node:https";
 import { BlockList, isIP } from "node:net";
 
-const blockedMoodleAddresses = new BlockList();
+// Node compares IPv4 addresses with IPv4-mapped IPv6 rules. Keep the families
+// separate so blocking ::ffff:0:0/96 does not also reject every public IPv4 host.
+const blockedMoodleIpv4Addresses = new BlockList();
+const blockedMoodleIpv6Addresses = new BlockList();
 const globalMoodleIpv6Addresses = new BlockList();
 globalMoodleIpv6Addresses.addSubnet("2000::", 3, "ipv6");
 for (const [subnet, prefix] of [
@@ -29,7 +32,7 @@ for (const [subnet, prefix] of [
   ["224.0.0.0", 4],
   ["240.0.0.0", 4],
 ] as const) {
-  blockedMoodleAddresses.addSubnet(subnet, prefix, "ipv4");
+  blockedMoodleIpv4Addresses.addSubnet(subnet, prefix, "ipv4");
 }
 for (const [subnet, prefix] of [
   ["::", 128],
@@ -47,7 +50,7 @@ for (const [subnet, prefix] of [
   ["fe80::", 10],
   ["ff00::", 8],
 ] as const) {
-  blockedMoodleAddresses.addSubnet(subnet, prefix, "ipv6");
+  blockedMoodleIpv6Addresses.addSubnet(subnet, prefix, "ipv6");
 }
 
 export interface MoodleConnectionConfig {
@@ -107,7 +110,8 @@ export class MoodleConnectorService {
       addresses.length === 0 ||
       addresses.some(({ address, family }) =>
         isIP(address) !== family ||
-        blockedMoodleAddresses.check(address, family === 4 ? "ipv4" : "ipv6") ||
+        (family === 4 ? blockedMoodleIpv4Addresses : blockedMoodleIpv6Addresses)
+          .check(address, family === 4 ? "ipv4" : "ipv6") ||
         (family === 6 && !globalMoodleIpv6Addresses.check(address, "ipv6")),
       )
     ) {

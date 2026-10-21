@@ -1,0 +1,10 @@
+[Unit]
+Description=NaPare health probe every minute
+
+[Timer]
+OnBootSec=30
+OnUnitActiveSec=60
+Unit=napare-health.service
+
+[Install]
+WantedBy=timers.target
