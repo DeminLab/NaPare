@@ -1,0 +1,18 @@
+[Unit]
+Description=NaPare encrypted PostgreSQL off-server backup
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=napare-backup
+WorkingDirectory=/srv/NaPare
+EnvironmentFile=/etc/napare/backup.environment
+ExecStart=/usr/bin/node /srv/NaPare/scripts/postgres-recovery.cjs backup
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+StateDirectory=napare-backup
+TimeoutStartSec=2h

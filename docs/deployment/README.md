@@ -3,6 +3,7 @@
 Все инструкции по выпуску и эксплуатации собраны в этом разделе. Файлы конфигурации и шаблоны остаются в `deploy/` и `infrastructure/`.
 
 - [Production-деплой](production.md) — Compose, домены и серверный порядок обновления.
+- [Эксплуатационный runbook](runbook.md) — зашифрованный off-server backup, изолированное восстановление, health/алерты и действия при инцидентах.
 - [Системный Nginx](nginx-templates.md) — установка шаблонов из `deploy/nginx/`.
 - [TLS на сервере](tls-host.md) — границы сертификатов и системного Nginx.
 - [Установка platform control](platform-control.md) — привязка владельца и host agent.

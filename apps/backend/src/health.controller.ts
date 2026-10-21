@@ -1,11 +1,42 @@
-import { Controller, Get, ServiceUnavailableException } from "@nestjs/common";
+import {
+  Controller,
+  Get,
+  Inject,
+  Optional,
+  ServiceUnavailableException,
+} from "@nestjs/common";
 import { ApiTags, ApiOperation } from "@nestjs/swagger";
 import { DataSource } from "typeorm";
+
+export const HEALTH_QUEUE_PROBE = Symbol("HEALTH_QUEUE_PROBE");
+
+export interface HealthQueueProbe {
+  check(): Promise<void>;
+}
+
+async function withDeadline(check: () => Promise<unknown>): Promise<void> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    await Promise.race([
+      Promise.resolve().then(check),
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error("Health check timeout")), 3000);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
 
 @ApiTags("health")
 @Controller("health")
 export class HealthController {
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(
+    private readonly dataSource: DataSource,
+    @Optional()
+    @Inject(HEALTH_QUEUE_PROBE)
+    private readonly queue?: HealthQueueProbe,
+  ) {}
 
   @Get()
   @ApiOperation({
@@ -13,20 +44,29 @@ export class HealthController {
   })
   async check() {
     const timestamp = new Date().toISOString();
-    try {
-      await this.dataSource.query("SELECT 1");
+    const queueProbe = this.queue;
+    const [database, queue] = await Promise.allSettled([
+      withDeadline(() => this.dataSource.query("SELECT 1")),
+      queueProbe ? withDeadline(() => queueProbe.check()) : Promise.resolve(),
+    ]);
+    const dependencies = {
+      database: database.status === "fulfilled" ? "ok" : "unavailable",
+      queue: !this.queue
+        ? "not_configured"
+        : queue.status === "fulfilled" ? "ok" : "unavailable",
+    };
+    if (database.status === "fulfilled" && queue.status === "fulfilled") {
       return {
         status: "ok",
-        database: "ok",
+        ...dependencies,
         timestamp,
         uptime: Math.floor(process.uptime()),
       };
-    } catch {
-      throw new ServiceUnavailableException({
-        status: "error",
-        database: "unavailable",
-        timestamp,
-      });
     }
+    throw new ServiceUnavailableException({
+      status: "error",
+      ...dependencies,
+      timestamp,
+    });
   }
 }

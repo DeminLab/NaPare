@@ -1,0 +1,4 @@
+HEALTH_URL=https://api.example.invalid/api/v1/health
+HEALTH_STATE_FILE=/var/lib/napare-monitor/health-state.json
+MONITOR_SEND_ALERTS=false
+ALERT_WEBHOOK_URL=https://alerts.example.invalid/napare

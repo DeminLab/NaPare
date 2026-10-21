@@ -1,0 +1,8 @@
+PGHOST=127.0.0.1
+PGPORT=5432
+PGDATABASE=napare_restore_drill
+PGUSER=napare_restore_drill
+PGPASSFILE=/etc/napare/restore.pgpass
+BACKUP_KEY_FILE=/etc/napare/backup.key
+RESTORE_BACKUP_FILE=/var/lib/napare-restore/latest.dump.enc
+RESTORE_CONFIRM=isolated-empty-test-database
