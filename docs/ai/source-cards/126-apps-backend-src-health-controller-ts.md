@@ -6,7 +6,7 @@
 
 ## Scope
 
-Unauthenticated liveness and readiness endpoint for Docker health checks and the developer workspace. It verifies a simple database query before reporting the API as healthy.
+Unauthenticated readiness endpoint for Docker health checks and the developer workspace. It verifies a database query and an optional `HEALTH_QUEUE_PROBE`, with a three-second deadline per dependency. Without a registered queue it reports `not_configured`.
 
 ## Change boundary
 

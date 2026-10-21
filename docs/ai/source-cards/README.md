@@ -10,6 +10,12 @@ Choose the card matching the task area, read the canonical source and then follo
 
 ## Cards
 
+- [PostgreSQL backup and restore](postgres-recovery.md)
+- [External health monitor](health-monitor.md)
+- [Recovery and monitoring safety tests](postgres-recovery-tests.md)
+- [Real PostgreSQL restore drill test](postgres-recovery-integration.md)
+- [API exception filter and Sentry](exception-filter.md)
+
 - [285 — Shared UI primitives](285-packages-ui-src-index-tsx.md)
 - [290 — Shared lesson type badge](290-packages-ui-src-lessontypebadge-tsx.md)
 - [291 — Platform student data controller](291-apps-backend-src-platform-data-platform-data-controller-ts.md)
