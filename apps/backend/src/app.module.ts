@@ -1,4 +1,5 @@
 import { CareerModule } from './career/career.module';
+import { PaymentModule } from './career-billing/payment.module';
 import { CurationModule } from './curation/curation.module';
 import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
@@ -90,6 +91,7 @@ import { SearchModule } from './search/search.module';
       }],
     }),
     CareerModule,
+    PaymentModule,
     PlatformModule,
     PlatformDataModule,
     PlatformRecordsModule,
