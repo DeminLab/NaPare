@@ -22,6 +22,7 @@ import { LessonOccurrence } from "../academic/entities/lesson-occurrence.entity"
 import { ScheduleChange } from "../academic/entities/schedule-change.entity";
 import { RaspLesson, RaspScraperService } from "../auth/rasp-scraper.service";
 import { Group } from "../users/entities/group.entity";
+import { User } from "../users/entities/user.entity";
 import { UserRole } from "../auth/interfaces/user-role";
 import {
   PaginatedResponse,
@@ -377,6 +378,7 @@ export class ScheduleService {
         "Teachers can only create lessons for themselves",
       );
     }
+    await this.assertLessonReferences(createLessonDto.universityId, createLessonDto.groupId, createLessonDto.teacherId);
     const lesson = this.lessonRepository.create({
       ...createLessonDto,
       ...(actor?.role === UserRole.TEACHER ? { teacherId: actor.id } : {}),
@@ -395,6 +397,10 @@ export class ScheduleService {
     }
     this.tenantContext.assertAccess(lesson.universityId);
     this.assertTeacherCanManageLesson(lesson);
+    if (updateLessonDto.universityId !== undefined && updateLessonDto.universityId !== lesson.universityId) {
+      throw new ForbiddenException('Перенос занятия в другой университет запрещён');
+    }
+    await this.assertLessonReferences(lesson.universityId, updateLessonDto.groupId, updateLessonDto.teacherId);
 
     const oldValue = lessonChangeValues(lesson);
     Object.assign(lesson, updateLessonDto);
@@ -507,6 +513,19 @@ export class ScheduleService {
       },
       priority: "high",
     });
+  }
+
+  private async assertLessonReferences(universityId: string | undefined, groupId?: string, teacherId?: string): Promise<void> {
+    // Background imports resolve their references separately. HTTP mutations
+    // must never attach an own-university row to a foreign group or teacher.
+    if (!this.tenantContext.getUser()) return;
+    if (!universityId) throw new ForbiddenException('Для занятия необходим университет');
+    if (groupId && (!this.groupRepository || !await this.groupRepository.findOne({ where: { id: groupId, universityId } }))) {
+      throw new NotFoundException('Группа своего университета не найдена');
+    }
+    if (teacherId && !await this.dataSource.getRepository(User).findOne({ where: { id: teacherId, universityId } })) {
+      throw new NotFoundException('Преподаватель своего университета не найден');
+    }
   }
 
   private assertTeacherCanManageLesson(lesson: Lesson): void {
