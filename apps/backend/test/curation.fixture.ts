@@ -11,6 +11,9 @@ import { User } from '../src/users/entities/user.entity';
 import { Absence } from '../src/absences/entities/absence.entity';
 import { Lesson } from '../src/schedule/entities/lesson.entity';
 import { CuratorAssignments1700000000020 } from '../src/migrations/1700000000020-CuratorAssignments';
+import { TenantRowSecurity1700000000029 } from '../src/migrations/1700000000029-TenantRowSecurity';
+import { TenantContext } from '../src/common/tenant/tenant-context';
+import { fixtureDatabase } from './tenant-database.fixture';
 
 /** Destructive setup is allowed ONLY in a new disposable curation_test_* database. */
 export async function createCurationFixture(url: string) {
@@ -18,12 +21,22 @@ export async function createCurationFixture(url: string) {
   if (!['localhost', '127.0.0.1'].includes(target.hostname) || !/^\/curation_test_[a-z0-9_]+$/.test(target.pathname)) throw new Error('A local disposable curation_test_* database is required');
   Object.assign(process.env, { DATABASE_URL: url, NODE_ENV: 'test', JWT_SECRET: randomBytes(32).toString('hex'), JWT_REFRESH_SECRET: randomBytes(32).toString('hex'), JWT_ACCESS_EXPIRATION: '15m', JWT_REFRESH_EXPIRATION: '30d', TELEGRAM_BOT_TOKEN: '', TELEGRAM_BOT_USERNAME: '', TELEGRAM_WEBHOOK_SECRET: '', MAX_BOT_TOKEN: '', SENTRY_DSN: '', RATE_LIMIT_MAX: '10000' });
   const { AppModule } = await import('../src/app.module');
-  const module = await Test.createTestingModule({ imports: [AppModule] }).compile();
+  const { CurationService } = await import('../src/curation/curation.service');
+  const dynamic = Reflect.getMetadata('imports', AppModule)[1];
+  console.error('TENANT_DI_DEBUG', Reflect.getMetadata('design:paramtypes', CurationService)[0] === DataSource, dynamic.imports[0].providers[2].provide === DataSource, Reflect.getMetadata('__module:global__', dynamic.imports[0].module));
+  const builder = Test.createTestingModule({ imports: [AppModule] });
+  let module;
+  try { module = await builder.compile(); } catch (error) {
+    for (const item of (builder as any).container.getModules().values()) {
+      if (['CurationModule', 'TypeOrmCoreModule', 'TenantContextModule'].includes(item.metatype.name)) console.error('TENANT_GRAPH', item.metatype.name, item.providers.has(DataSource), item.exports.has(DataSource), [...item.imports].map((part: any) => part.metatype.name));
+    }
+    throw error;
+  }
   const app: INestApplication = module.createNestApplication({ logger: false });
   app.setGlobalPrefix('api/v1');
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
   await app.init();
-  const db = app.get(DataSource);
+  const db = fixtureDatabase(app.get(DataSource), app.get(TenantContext));
   if (await db.getRepository(User).count()) { await app.close(); throw new Error('Fixture database must contain no existing users'); }
   const uni = await db.getRepository(University).save({ name: 'Кураторство — тест', city: 'Омск', status: 'active' });
   const otherUni = await db.getRepository(University).save({ name: 'Другой вуз — тест', city: 'Омск', status: 'active' });
@@ -56,7 +69,10 @@ export async function createCurationFixture(url: string) {
   await db.query('DROP TABLE curator_assignments');
   const runner = db.createQueryRunner();
   await runner.connect();
-  try { await new CuratorAssignments1700000000020().up(runner); } finally { await runner.release(); }
+  try {
+    await new CuratorAssignments1700000000020().up(runner);
+    await new TenantRowSecurity1700000000029().up(runner);
+  } finally { await runner.release(); }
   const now = new Date(); now.setHours(8, 30, 0, 0);
   const lesson = await db.getRepository(Lesson).save({ universityId: uni.id, groupId: groups[0].id, teacherId: users.teacher.id, subject: 'Технологии программирования', teacherName: 'Соколова М.', groupName: groups[0].name, startDate: now, endDate: new Date(now.getTime() + 5400000), startTime: '08:30', endTime: '10:00', dayOfWeek: now.getDay(), pairNumber: 1, room: '416' });
   const makeAbsence = async (student = users.peer) => db.getRepository(Absence).save({ universityId: student.universityId!, studentId: student.id, type: 'sick', startDate: now, endDate: new Date(now.getTime() + 86400000), comment: 'По болезни', confirmationRequired: true });

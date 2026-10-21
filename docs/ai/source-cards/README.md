@@ -10,6 +10,13 @@ Choose the card matching the task area, read the canonical source and then follo
 
 ## Cards
 
+- [Same-connection transaction-local tenant configuration, TypeORM runner interception and startup RLS invariants](tenant-database.md)
+- [Typed explicit university, identity and company relation capabilities](tenant-database-access.md)
+- [Least-scope platform permission mapping to tenant tables and read/write capabilities](tenant-database-platform.md)
+- [Runner scope, existing transactions, rollback, concurrent query serialization and SQL stream rejection](tenant-database-unit-tests.md)
+- [FORCE RLS and mandatory restrictive CRUD policies for scalar university columns; explicit identity and company relations](tenant-row-security-migration.md)
+- [Disposable-database-only explicit test setup/assertion capabilities, separate from HTTP request access](tenant-database-fixture.md)
+- [Real PostgreSQL non-superuser table-owner isolation, pooled TypeORM flows, CRUD, grants, authentication and career company relations](tenant-rls-postgres-tests.md)
 - [285 — Shared UI primitives](285-packages-ui-src-index-tsx.md)
 - [290 — Shared lesson type badge](290-packages-ui-src-lessontypebadge-tsx.md)
 - [291 — Platform student data controller](291-apps-backend-src-platform-data-platform-data-controller-ts.md)
@@ -468,3 +475,9 @@ Choose the card matching the task area, read the canonical source and then follo
 - [383 — Platform PairSpace administration](383-apps-backend-src-platform-pair-space-space-administration.md)
 - [384 — Developer PairSpace panel](384-apps-web-developer-src-app-developer-control-pairspacespanel-tsx.md)
 - [385 — Platform grant university-scope migration](385-apps-backend-src-migrations-1700000000028-platformgrantuniversityscope-ts.md)
+
+- [tenant-route-inventory](tenant-route-inventory.md)
+
+- [tenant-reference-tests](tenant-reference-tests.md)
+
+- [tenant-isolation-http-tests](tenant-isolation-http-tests.md)
