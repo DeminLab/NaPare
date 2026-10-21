@@ -82,7 +82,7 @@ describe('Every declared protected route × every role (real HTTP/JWT/guards, sy
     expect(protectedRoutes.length).toBeGreaterThan(0);
   });
   it('keeps the human-readable matrix identical to the reviewed baseline', () => {
-    expect(readFileSync(join(__dirname, '../../../docs/security/role-matrix.md'), 'utf8')).toBe(renderRoleMatrix(baseline));
+    expect(readFileSync(join(__dirname, '../../../docs/security/role-matrix.md'), 'utf8').replace(/\r\n/g, '\n')).toBe(renderRoleMatrix(baseline));
   });
   it('has no ignored guard or role/permission policy without its enforcing guard', () => {
     for (const route of routes) {

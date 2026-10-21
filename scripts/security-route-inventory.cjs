@@ -24,6 +24,59 @@ function stringArgument(call) {
 function lineOf(node, source) {
   return source.getLineAndCharacterOfPosition(node.getStart(source)).line + 1;
 }
+const sourceCache = new Map();
+function sourceInfo(filename) {
+  if (sourceCache.has(filename)) return sourceCache.get(filename);
+  const source = ts.createSourceFile(filename, fs.readFileSync(filename, 'utf8'), ts.ScriptTarget.Latest, true);
+  const imports = new Map();
+  for (const statement of source.statements.filter(ts.isImportDeclaration)) {
+    if (!statement.moduleSpecifier.text.startsWith('.')) continue;
+    const resolved = path.resolve(path.dirname(filename), statement.moduleSpecifier.text + '.ts');
+    if (!fs.existsSync(resolved)) continue;
+    const bindings = statement.importClause?.namedBindings;
+    if (bindings && ts.isNamedImports(bindings)) for (const item of bindings.elements) imports.set(item.name.text, { file: resolved, name: item.propertyName?.text || item.name.text });
+  }
+  const info = { source, imports };
+  sourceCache.set(filename, info);
+  return info;
+}
+function traceService(filename, className, methodName, depth = 0, visited = new Set()) {
+  const key = `${filename}:${className}.${methodName}`;
+  if (depth > 5 || visited.has(key)) return [];
+  visited.add(key);
+  const { source, imports } = sourceInfo(filename);
+  const declaration = source.statements.filter(ts.isClassDeclaration).find(item => item.name?.text === className);
+  const method = declaration?.members.filter(ts.isMethodDeclaration).find(item => item.name.getText(source) === methodName);
+  if (!method?.body) return [];
+  const dependencies = new Map();
+  const constructor = declaration.members.find(ts.isConstructorDeclaration);
+  for (const parameter of constructor?.parameters || []) {
+    const type = parameter.type?.getText(source);
+    if (type && imports.has(type)) dependencies.set(parameter.name.getText(source), imports.get(type));
+  }
+  const found = [];
+  function visit(node) {
+    if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)) {
+      const expression = node.expression.getText(source);
+      const argumentsText = node.arguments.map(item => item.getText(source)).join(', ').replace(/\s+/g, ' ');
+      if (/assertAccess|assertUniversityScope|requireUniversityId|assert(?:Group|Student|Course|Lesson|.*Manage|.*Read)|\.company$|\.center$|\.require(?:Owner)?$/.test(expression) ||
+          (/\.(?:find\w*|where|andWhere|exists\w*|delete|update)$/.test(expression) && /universityId|university_id/.test(argumentsText))) {
+        found.push({ file: path.relative(root, filename).replaceAll('\\', '/'), line: lineOf(node, source), check: `${expression.replace(/\s+/g, ' ').slice(0, 120)}(${argumentsText.slice(0, 180)})` });
+      }
+      const match = /^this\.(?:(\w+)\.)?(\w+)$/.exec(expression);
+      if (match) {
+        if (!match[1]) found.push(...traceService(filename, className, match[2], depth + 1, visited));
+        else if (dependencies.has(match[1])) {
+          const dependency = dependencies.get(match[1]);
+          found.push(...traceService(dependency.file, dependency.name, match[2], depth + 1, visited));
+        }
+      }
+    }
+    ts.forEachChild(node, visit);
+  }
+  visit(method.body);
+  return found;
+}
 function inventory() {
   const routes = [];
   for (const filename of files(sourceRoot).filter(file => file.endsWith('.controller.ts'))) {
@@ -53,6 +106,7 @@ function inventory() {
             scopeEvidence: [...new Set(body.match(/(?:req|request)\.user(?:\.[a-zA-Z]+)?|(?:dto|query|body)\.universityId|universityId/g) || [])],
             guards: [callDecorator(controller, 'UseGuards'), callDecorator(handler, 'UseGuards')]
               .filter(Boolean).flatMap(call => call.arguments.map(arg => arg.getText(source))),
+            serviceEvidence: traceService(filename, controller.name.text, handler.name.getText(source)),
           });
         }
       }
@@ -84,11 +138,12 @@ function renderInventory(routes) {
     '<!-- tenant-routes:start -->',
     `Снимок исходников: ${routes.length} объявлений маршрутов в ${new Set(routes.map(route => route.file)).size} controller-файлах. Таблица показывает путь передачи scope и точку входа сервиса; она не заменяет выполнение запроса с реальной БД.`,
     '',
-    '| Маршрут | Источник scope и проверка | Обработчик / вызов сервиса |',
-    '| --- | --- | --- |',
+    '| Маршрут | Источник scope и проверка | Обработчик / вызов сервиса | Условие в сервисе (статический путь) |',
+    '| --- | --- | --- | --- |',
     ...routes.map(route => {
       const calls = [...new Set(route.calls.map(call => call.call.replace(/^this\./, '')))].join(', ') || 'controller-local';
-      return `| \`${route.method} ${route.path}\` | ${tenantRule(route)} | [${route.controller}.${route.handler}](../../${route.file}) → \`${calls}\` |`;
+      const checks = route.serviceEvidence.slice(0, 4).map(item => `[${path.basename(item.file)}:${item.line}](../../${item.file}) \`${item.check.replaceAll('|', '\\|').replaceAll('`', "'")}\``).join('; ') || 'Контроллер/self/public либо проверка вне статически прослеженного пути; требуется предметная проверка';
+      return `| \`${route.method} ${route.path}\` | ${tenantRule(route)} | [${route.controller}.${route.handler}](../../${route.file}) → \`${calls}\` | ${checks} |`;
     }),
     '<!-- tenant-routes:end -->',
   ].join('\n');

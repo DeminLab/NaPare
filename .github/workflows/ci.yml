@@ -32,6 +32,11 @@ jobs:
           restore-keys: turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
+      - name: Verify security documentation and protected paths
+        run: |
+          node scripts/security-route-inventory.cjs --check
+          node scripts/verify-ai-documentation.cjs
+          node scripts/verify-role-workspace-boundaries.cjs
 
   typecheck:
     name: Typecheck

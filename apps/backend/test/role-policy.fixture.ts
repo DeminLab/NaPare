@@ -104,7 +104,7 @@ export function renderRoleMatrix(snapshot: ReturnType<typeof rolePolicySnapshot>
     '| Маршрут | Источник |', '| --- | --- |',
     ...snapshot.routes.filter(route => !route.guards.includes('JwtAuthGuard')).map(route => `| \`${route.method} ${route.path}\` | [${route.source}](../../${route.source}) |`), '',
     '## CI и границы проверки', '',
-    'Job Backend E2E уже существовал до этого блока. Теперь он также создаёт отдельные disposable базы `curation_test_ci` и `curation_test_platform_ci` и передаёт CURATION_TEST_DATABASE_URL/PLATFORM_TEST_DATABASE_URL: прежние PostgreSQL suites больше не пропускаются из-за отсутствия этих переменных. Тест транспорта host agent по-прежнему требует PLATFORM_AGENT_SOCKET.', '',
+    'Job Backend E2E создаёт отдельные disposable базы curation/platform/tenant и runtime-роль NOSUPERUSER NOBYPASSRLS. CURATION_TEST_DATABASE_URL, PLATFORM_TEST_DATABASE_URL и TENANT_TEST_DATABASE_URL включают реальные HTTP/БД suites; TENANT_RLS_TEST_ADMIN_URL используется только для создания и удаления изолированных RLS fixtures. Тест транспорта host agent требует PLATFORM_AGENT_SOCKET. Проверка guards не заменяет эти проверки ресурсов и RLS.', '',
     'Старые датированные UX-отчёты с восемью ролями описывают историческую проверку; они не являются актуальной матрицей ACL. [Обзор ролей](../architecture/roles-and-permissions.md).', '',
   ];
   return lines.join('\n');
