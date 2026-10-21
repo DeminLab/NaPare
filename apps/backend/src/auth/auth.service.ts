@@ -20,6 +20,7 @@ import { AppConfig } from "../config/configuration";
 import { UserRole } from "./interfaces/user-role";
 import { User } from "../users/entities/user.entity";
 import { validateMaxInitData } from "./max-init-data";
+import { TenantContext } from '../common/tenant/tenant-context';
 
 export type PortalWorkspace = "student" | "staff" | "admin" | "developer" | "career";
 
@@ -32,10 +33,14 @@ export class AuthService {
     private readonly configService: ConfigService<
       AppConfig & Record<string, unknown>
     >,
+    private readonly tenant: TenantContext = new TenantContext(),
   ) {}
 
   async login(loginDto: LoginDto): Promise<AuthResponse> {
-    const user = await this.usersService.findByEmail(loginDto.email.trim());
+    const user = await this.tenant.runWithDatabaseAccess(
+      { authentication: { email: loginDto.email.trim() } },
+      () => this.usersService.findByEmail(loginDto.email.trim()),
+    );
 
     if (!user || !user.isActive) {
       throw new UnauthorizedException("Invalid credentials");
@@ -96,7 +101,10 @@ export class AuthService {
       });
     }
 
-    let user = await this.usersService.findByMaxUserId(payload.maxUserId);
+    let user = await this.tenant.runWithDatabaseAccess(
+      { authentication: { maxUserId: payload.maxUserId } },
+      () => this.usersService.findByMaxUserId(payload.maxUserId),
+    );
 
     if (!user) {
       if (!maxAuthDto.email || !maxAuthDto.password) {
@@ -151,7 +159,10 @@ export class AuthService {
     if (!user || !user.isActive) {
       throw new UnauthorizedException("Аккаунт недоступен");
     }
-    const alreadyLinked = await this.usersService.findByMaxUserId(payload.maxUserId);
+    const alreadyLinked = await this.tenant.runWithDatabaseAccess(
+      { authentication: { maxUserId: payload.maxUserId } },
+      () => this.usersService.findByMaxUserId(payload.maxUserId),
+    );
     if (alreadyLinked && alreadyLinked.id !== userId) {
       throw new ConflictException("Этот аккаунт MAX уже привязан к другому пользователю");
     }
@@ -182,7 +193,10 @@ export class AuthService {
         secret: this.configService.getOrThrow<string>("auth.jwt.refreshSecret"),
       });
 
-      const user = await this.usersService.findById(payload.sub);
+      const user = await this.tenant.runWithDatabaseAccess(
+        { authentication: { id: payload.sub } },
+        () => this.usersService.findById(payload.sub),
+      );
 
       if (
         !user ||
@@ -282,7 +296,10 @@ export class AuthService {
     email: string,
     password: string,
   ): Promise<User | null> {
-    const user = await this.usersService.findByEmail(email);
+    const user = await this.tenant.runWithDatabaseAccess(
+      { authentication: { email } },
+      () => this.usersService.findByEmail(email),
+    );
 
     if (!user || !user.isActive) {
       return null;
@@ -294,7 +311,10 @@ export class AuthService {
     }
 
     try {
-      return await this.usersService.bindMaxUserIdIfUnlinked(user.id, maxUserId);
+      return await this.tenant.runWithDatabaseAccess(
+        { authentication: { id: user.id, write: true } },
+        () => this.usersService.bindMaxUserIdIfUnlinked(user.id, maxUserId),
+      );
     } catch (error) {
       const driverCode = (error as { driverError?: { code?: string } })
         ?.driverError?.code;

@@ -726,6 +726,7 @@ export class AdminService {
   ): Promise<Group> {
     this.tenantContext.assertAccess(universityId);
     if (data.curatorId) throw new BadRequestException('Назначьте кураторов через управление кураторством после создания группы.');
+    await this.assertFacultyInUniversity(data.facultyId, universityId);
     const group = this.groupRepository.create({
       name: data.name,
       specialization: data.specialization,
@@ -746,8 +747,16 @@ export class AdminService {
     }
     this.tenantContext.assertAccess(group.universityId);
 
+    if (data.facultyId !== undefined) await this.assertFacultyInUniversity(data.facultyId, group.universityId);
+
     Object.assign(group, data);
     return this.groupRepository.save(group) as Promise<Group>;
+  }
+
+  private async assertFacultyInUniversity(facultyId: string | undefined, universityId: string): Promise<void> {
+    if (facultyId && !await this.facultyRepository.findOne({ where: { id: facultyId, universityId } })) {
+      throw new NotFoundException('Факультет своего университета не найден');
+    }
   }
 
   private canManageRole(

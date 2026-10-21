@@ -10,6 +10,7 @@ import { TenantContext } from '../common/tenant/tenant-context';
 import { PaginatedResponse, PaginationQueryDto, toPaginatedResponse } from '../common/dto/pagination-query.dto';
 import { Faculty } from '../users/entities/faculty.entity';
 import { Group } from '../users/entities/group.entity';
+import { User } from '../users/entities/user.entity';
 import { Course } from './entities/course.entity';
 import { LessonSeries } from './entities/lesson-series.entity';
 import { LessonOccurrence } from './entities/lesson-occurrence.entity';
@@ -140,6 +141,9 @@ export class AcademicService {
     const teacherId = dto.teacherId ?? (user.role === UserRole.TEACHER ? user.id : null);
     if (user.role === UserRole.TEACHER && teacherId !== user.id) {
       throw new ForbiddenException('Teacher can only create their own lesson series');
+    }
+    if (teacherId && !await this.dataSource.getRepository(User).findOne({ where: { id: teacherId, universityId: course.universityId } })) {
+      throw new NotFoundException('Teacher not found in this university');
     }
     return this.seriesRepository.save(this.seriesRepository.create({
       ...dto,
@@ -337,6 +341,14 @@ export class AcademicService {
     this.tenantContext.assertAccess(universityId);
     if (dto.courseId) await this.assertCourseManageable(await this.getCourse(dto.courseId));
     if (dto.groupId) await this.assertGroup(universityId, dto.groupId);
+    if (dto.occurrenceId) {
+      const occurrence = await this.occurrenceRepository.findOne({ where: { id: dto.occurrenceId, universityId } });
+      if (!occurrence) throw new NotFoundException('Lesson occurrence not found in this university');
+      await this.assertCourseReadable(await this.getCourse(occurrence.courseId));
+      if ((dto.courseId && dto.courseId !== occurrence.courseId) || (dto.groupId && dto.groupId !== occurrence.groupId)) {
+        throw new ForbiddenException('Academic event references must belong to the same lesson context');
+      }
+    }
     const event = await this.recordAcademicEvent({
       universityId,
       type: dto.type,
