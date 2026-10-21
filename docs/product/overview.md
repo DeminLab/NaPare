@@ -30,7 +30,7 @@
 | Отсутствия | Статусы + дашборд куратора | [modules/absences.md](../modules/absences.md) |
 | Мой день | Персональная сводка | [modules/my-day.md](../modules/my-day.md) |
 | Уведомления | In-app; доставка FCM/APNs не реализована | [modules/notifications.md](../modules/notifications.md) |
-| Роли и доступ | 8 ролей | [architecture/roles-and-permissions.md](../architecture/roles-and-permissions.md) |
+| Роли и доступ | 11 ролей | [architecture/roles-and-permissions.md](../architecture/roles-and-permissions.md), [проверяемая матрица](../security/role-matrix.md) |
 
 ## Что НЕ входит в MVP
 

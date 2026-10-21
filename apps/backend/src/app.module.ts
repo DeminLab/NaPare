@@ -20,6 +20,7 @@ import { PlatformMaintenanceInterceptor } from './platform/platform-maintenance.
 import { join } from 'node:path';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { DataSource, DataSourceOptions } from 'typeorm';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 
@@ -39,6 +40,9 @@ import configuration from './config/configuration';
 import { validateEnvironment } from './config/validate-environment';
 import { AppConfig } from './config/configuration';
 import { TenantContextModule } from './common/tenant/tenant-context.module';
+import { TenantContext } from './common/tenant/tenant-context';
+import { assertTenantDatabase, assertTenantDatabaseRole, installTenantDatabase } from './common/tenant/tenant-database';
+import { TenantRowSecurity1700000000029 } from './migrations/1700000000029-TenantRowSecurity';
 import { EventsModule } from './events/events.module';
 import { AcademicModule } from './academic/academic.module';
 import { SearchModule } from './search/search.module';
@@ -53,13 +57,39 @@ import { SearchModule } from './search/search.module';
       cache: true,
     }),
     TypeOrmModule.forRootAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService<AppConfig & Record<string, unknown>>) => {
+      imports: [ConfigModule, TenantContextModule],
+      inject: [ConfigService, TenantContext],
+      dataSourceFactory: async (options) => {
+        const { tenantContext, ...databaseOptions } = options as DataSourceOptions & { tenantContext: TenantContext };
+        // Connect/build metadata first, but never mutate schema before checking
+        // that the runtime role cannot bypass row security.
+        const source = new DataSource({ ...databaseOptions, synchronize: false, migrationsRun: false } as DataSourceOptions);
+        try {
+          await source.initialize();
+          await assertTenantDatabaseRole(source);
+          if (databaseOptions.migrationsRun) await source.runMigrations({ transaction: databaseOptions.migrationsTransactionMode });
+          // Development schema synchronization does not run migrations. Apply
+          // the same policies so development never silently disables isolation.
+          if (databaseOptions.synchronize) {
+            await source.synchronize();
+            const runner = source.createQueryRunner();
+            try { await new TenantRowSecurity1700000000029().up(runner); }
+            finally { await runner.release(); }
+          }
+          await assertTenantDatabase(source);
+          source.setOptions(databaseOptions as DataSourceOptions);
+          return installTenantDatabase(source, tenantContext);
+        } catch (error) {
+          if (source.isInitialized) await source.destroy();
+          throw error;
+        }
+      },
+      useFactory: (configService: ConfigService<AppConfig & Record<string, unknown>>, tenantContext: TenantContext) => {
         // Support both DATABASE_URL and individual DB_* vars
         const databaseUrl = configService.get<string>('DATABASE_URL');
         if (databaseUrl) {
           return {
+            tenantContext,
             type: 'postgres' as const,
             url: databaseUrl,
             autoLoadEntities: true,
@@ -69,6 +99,7 @@ import { SearchModule } from './search/search.module';
           };
         }
         return {
+          tenantContext,
           type: 'postgres' as const,
           host: configService.get<string>('DB_HOST', 'localhost'),
           port: configService.get<number>('DB_PORT', 5432),

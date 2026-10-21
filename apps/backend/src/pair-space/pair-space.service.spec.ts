@@ -96,7 +96,7 @@ describe("PairSpaceService", () => {
   });
 
   describe("personal lesson notes", () => {
-    const lessonId = "lesson-1";
+    const lessonId = "10000000-0000-4000-8000-000000000001";
     const pairSpace = { id: "space-1", lessonId, universityId: "uni-1" };
     const user = { id: "user-1", universityId: "uni-1", role: UserRole.STUDENT, groupId: "group-1" };
 
@@ -219,13 +219,13 @@ describe("PairSpaceService", () => {
     beforeEach(() => {
       tenantContext.assertAccess.mockImplementation(() => undefined);
       groupRepository.findOne.mockResolvedValue({ id: groupId });
-      lessonRepository.find.mockResolvedValue([{ id: "lesson-1" }, { id: "lesson-2" }]);
+      lessonRepository.find.mockResolvedValue([{ id: "10000000-0000-4000-8000-000000000001" }, { id: "10000000-0000-4000-8000-000000000002" }]);
     });
 
     it("returns only existing tenant-scoped spaces with stable pagination and summary fields", async () => {
       const space = {
         id: "space-1",
-        lessonId: "lesson-2",
+        lessonId: "10000000-0000-4000-8000-000000000002",
         universityId,
         subject: "Базы данных",
         date: new Date("2026-10-12T00:00:00.000Z"),
@@ -247,12 +247,12 @@ describe("PairSpaceService", () => {
       expect(lessonRepository.find).toHaveBeenCalledWith({ where: { groupId, universityId }, select: { id: true } });
       const query = pairSpaceRepository.findAndCount.mock.calls[0][0];
       expect(query.where.universityId).toBe(universityId);
-      expect(query.where.lessonId).toMatchObject({ _type: "in", _value: ["lesson-1", "lesson-2"] });
+      expect(query.where.lessonId).toMatchObject({ _type: "in", _value: ["10000000-0000-4000-8000-000000000001", "10000000-0000-4000-8000-000000000002"] });
       expect(query).toMatchObject({ skip: 25, take: 25, order: { date: "DESC", pairNumber: "DESC", id: "DESC" } });
       expect(result.meta).toEqual({ page: 2, limit: 25, total: 26, totalPages: 2 });
       expect(result.data).toEqual([{
         id: "space-1",
-        lessonId: "lesson-2",
+        lessonId: "10000000-0000-4000-8000-000000000002",
         subject: "Базы данных",
         date: space.date,
         pairNumber: 2,
@@ -289,27 +289,27 @@ describe("PairSpaceService", () => {
   describe("existing teacher lesson space", () => {
     beforeEach(() => {
       tenantContext.getUser.mockReturnValue({ id: "teacher-1", role: UserRole.TEACHER, universityId: "uni-1" });
-      pairSpaceRepository.findOne.mockResolvedValue({ id: "ps-1", lessonId: "lesson-1", universityId: "uni-1", announcements: [], homeworks: [], files: [], messages: [] });
+      pairSpaceRepository.findOne.mockResolvedValue({ id: "ps-1", lessonId: "10000000-0000-4000-8000-000000000001", universityId: "uni-1", announcements: [], homeworks: [], files: [], messages: [] });
     });
 
     it.each(["by-id", "by-lesson", "get-or-create"])("blocks a colleague's existing space through %s", async method => {
-      lessonRepository.findOne.mockResolvedValue({ id: "lesson-1", universityId: "uni-1", teacherId: "teacher-2" });
-      const read = method === "by-id" ? service.findById("ps-1") : method === "by-lesson" ? service.findByLesson("lesson-1", "uni-1") : service.getOrCreateByLesson("lesson-1", "uni-1");
+      lessonRepository.findOne.mockResolvedValue({ id: "10000000-0000-4000-8000-000000000001", universityId: "uni-1", teacherId: "teacher-2" });
+      const read = method === "by-id" ? service.findById("ps-1") : method === "by-lesson" ? service.findByLesson("10000000-0000-4000-8000-000000000001", "uni-1") : service.getOrCreateByLesson("10000000-0000-4000-8000-000000000001", "uni-1");
       await expect(read).rejects.toThrow(ForbiddenException);
       expect(pairSpaceRepository.save).not.toHaveBeenCalled();
     });
 
     it("allows the owner to open the existing lesson space", async () => {
-      lessonRepository.findOne.mockResolvedValue({ id: "lesson-1", universityId: "uni-1", teacherId: "teacher-1" });
-      await expect(service.findByLesson("lesson-1", "uni-1")).resolves.toMatchObject({ id: "ps-1" });
+      lessonRepository.findOne.mockResolvedValue({ id: "10000000-0000-4000-8000-000000000001", universityId: "uni-1", teacherId: "teacher-1" });
+      await expect(service.findByLesson("10000000-0000-4000-8000-000000000001", "uni-1")).resolves.toMatchObject({ id: "ps-1" });
     });
   });
 
   describe("preparation deadline publication", () => {
     it.each(["2026-10-12", "2026-10-12T09:00:00.000Z"])("saves and publishes an ISO deadline without a post-save error: %s", async deadline => {
       tenantContext.getUser.mockReturnValue({ id: "teacher-1", role: UserRole.TEACHER, universityId: "uni-1" });
-      lessonRepository.findOne.mockResolvedValue({ id: "lesson-1", universityId: "uni-1", teacherId: "teacher-1" });
-      pairSpaceRepository.findOne.mockResolvedValue({ id: "ps-1", lessonId: "lesson-1", universityId: "uni-1" });
+      lessonRepository.findOne.mockResolvedValue({ id: "10000000-0000-4000-8000-000000000001", universityId: "uni-1", teacherId: "teacher-1" });
+      pairSpaceRepository.findOne.mockResolvedValue({ id: "ps-1", lessonId: "10000000-0000-4000-8000-000000000001", universityId: "uni-1" });
       const result = await service.createHomework("ps-1", "teacher-1", { title: "Подготовиться", deadline: deadline as unknown as Date });
       expect(result.deadline).toBeInstanceOf(Date);
       expect(homeworkRepository.create).toHaveBeenCalledWith(expect.objectContaining({ deadline: new Date(deadline) }));
@@ -329,12 +329,12 @@ describe("PairSpaceService", () => {
         findOne: jest.fn().mockResolvedValue({
           id: "ps-1",
           universityId: "uni-1",
-          lessonId: "lesson-1",
+          lessonId: "10000000-0000-4000-8000-000000000001",
         }),
       };
       const lessonRepo = {
         findOne: jest.fn().mockResolvedValue({
-          id: "lesson-1",
+          id: "10000000-0000-4000-8000-000000000001",
           universityId: "uni-1",
           groupId: "group-2",
         }),
@@ -384,7 +384,7 @@ describe("PairSpaceService", () => {
       await expect(
         module2
           .get<PairSpaceService>(PairSpaceService)
-          .findByLesson("lesson-1", "uni-1"),
+          .findByLesson("10000000-0000-4000-8000-000000000001", "uni-1"),
       ).rejects.toThrow(ForbiddenException);
     });
 
@@ -393,7 +393,7 @@ describe("PairSpaceService", () => {
         findOne: jest.fn().mockResolvedValue({
           id: "ps-1",
           universityId: "uni-1",
-          lessonId: "lesson-1",
+          lessonId: "10000000-0000-4000-8000-000000000001",
           announcements: [],
           homeworks: [],
           files: [],
@@ -402,7 +402,7 @@ describe("PairSpaceService", () => {
       };
       const lessonRepo = {
         findOne: jest.fn().mockResolvedValue({
-          id: "lesson-1",
+          id: "10000000-0000-4000-8000-000000000001",
           universityId: "uni-1",
           groupId: "group-uuid",
         }),
@@ -456,7 +456,7 @@ describe("PairSpaceService", () => {
       await expect(
         module2
           .get<PairSpaceService>(PairSpaceService)
-          .findByLesson("lesson-1", "uni-1"),
+          .findByLesson("10000000-0000-4000-8000-000000000001", "uni-1"),
       ).resolves.toMatchObject({ id: "ps-1" });
       expect(groupRepo.findOne).toHaveBeenCalledWith({
         where: { universityId: "uni-1", externalId: "12136" },
@@ -468,7 +468,7 @@ describe("PairSpaceService", () => {
         findOne: jest.fn().mockResolvedValue({
           id: "ps-1",
           universityId: "uni-1",
-          lessonId: "lesson-1",
+          lessonId: "10000000-0000-4000-8000-000000000001",
           announcements: [],
           homeworks: [],
           files: [],
@@ -522,7 +522,7 @@ describe("PairSpaceService", () => {
 
       const pairSpace = await module2
         .get<PairSpaceService>(PairSpaceService)
-        .findByLesson("lesson-1", "uni-1");
+        .findByLesson("10000000-0000-4000-8000-000000000001", "uni-1");
 
       expect(pairSpace).toMatchObject({
         id: "ps-1",
@@ -537,7 +537,7 @@ describe("PairSpaceService", () => {
       const pairSpaceRepo = {
         findOne: jest.fn().mockResolvedValueOnce(null).mockResolvedValueOnce({
           id: "space-1",
-          lessonId: "lesson-1",
+          lessonId: "10000000-0000-4000-8000-000000000001",
           universityId: "uni-1",
           announcements: [],
           homeworks: [],
@@ -549,7 +549,7 @@ describe("PairSpaceService", () => {
       };
       const lessonRepo = {
         findOne: jest.fn().mockResolvedValue({
-          id: "lesson-1",
+          id: "10000000-0000-4000-8000-000000000001",
           universityId: "uni-1",
           teacherId: "teacher-1",
           courseId: null,
@@ -606,11 +606,11 @@ describe("PairSpaceService", () => {
       await expect(
         module2
           .get<PairSpaceService>(PairSpaceService)
-          .getOrCreateByLesson("lesson-1", "uni-1"),
-      ).resolves.toMatchObject({ id: "space-1", lessonId: "lesson-1" });
+          .getOrCreateByLesson("10000000-0000-4000-8000-000000000001", "uni-1"),
+      ).resolves.toMatchObject({ id: "space-1", lessonId: "10000000-0000-4000-8000-000000000001" });
       expect(pairSpaceRepo.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          lessonId: "lesson-1",
+          lessonId: "10000000-0000-4000-8000-000000000001",
           universityId: "uni-1",
           subject: "Математика",
           group: "ПИ-21",
@@ -626,7 +626,7 @@ describe("PairSpaceService", () => {
       };
       const lessonRepo = {
         findOne: jest.fn().mockResolvedValue({
-          id: "lesson-1",
+          id: "10000000-0000-4000-8000-000000000001",
           universityId: "uni-1",
           teacherId: "teacher-2",
           groupId: "group-1",
@@ -676,7 +676,7 @@ describe("PairSpaceService", () => {
       await expect(
         module2
           .get<PairSpaceService>(PairSpaceService)
-          .getOrCreateByLesson("lesson-1", "uni-1"),
+          .getOrCreateByLesson("10000000-0000-4000-8000-000000000001", "uni-1"),
       ).rejects.toThrow(ForbiddenException);
       expect(pairSpaceRepo.create).not.toHaveBeenCalled();
     });
@@ -742,13 +742,13 @@ describe("PairSpaceService", () => {
       const pairSpaceRepo = {
         findOne: jest.fn().mockResolvedValue({
           id: "ps-1",
-          lessonId: "lesson-1",
+          lessonId: "10000000-0000-4000-8000-000000000001",
           universityId: "uni-1",
         }),
       };
       const lessonRepo = {
         findOne: jest.fn().mockResolvedValue({
-          id: "lesson-1",
+          id: "10000000-0000-4000-8000-000000000001",
           universityId: "uni-1",
           teacherId: "author-1",
         }),
@@ -810,7 +810,7 @@ describe("PairSpaceService", () => {
       const pairSpaceRepo = {
         findOne: jest.fn().mockResolvedValue({
           id: "ps-1",
-          lessonId: "lesson-1",
+          lessonId: "10000000-0000-4000-8000-000000000001",
           universityId: "uni-1",
         }),
       };
@@ -870,12 +870,12 @@ describe("PairSpaceService", () => {
         findOne: jest.fn().mockResolvedValue({
           id: "ps-1",
           universityId: "uni-1",
-          lessonId: "lesson-1",
+          lessonId: "10000000-0000-4000-8000-000000000001",
         }),
       };
       const lessonRepo = {
         findOne: jest.fn().mockResolvedValue({
-          id: "lesson-1",
+          id: "10000000-0000-4000-8000-000000000001",
           universityId: "uni-1",
           teacherId: "author-1",
           groupId: "group-1",
@@ -935,7 +935,7 @@ describe("PairSpaceService", () => {
       expect(eventBus.publish).toHaveBeenCalledWith(
         expect.objectContaining({
           payload: expect.objectContaining({
-            deepLink: "/pair-space/lesson-1",
+            deepLink: "/pair-space/10000000-0000-4000-8000-000000000001",
           }),
         }),
       );
@@ -950,7 +950,7 @@ describe("PairSpaceService", () => {
           pairSpace: {
             id: "ps-1",
             universityId: "uni-1",
-            lessonId: "lesson-1",
+            lessonId: "10000000-0000-4000-8000-000000000001",
           },
         }),
       };
@@ -1007,7 +1007,7 @@ describe("PairSpaceService", () => {
       const pairSpaceRepo = {
         findOne: jest.fn().mockResolvedValue({
           id: "ps-1",
-          lessonId: "lesson-1",
+          lessonId: "10000000-0000-4000-8000-000000000001",
           universityId: "uni-1",
         }),
       };
