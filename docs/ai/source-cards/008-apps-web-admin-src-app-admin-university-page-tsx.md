@@ -24,6 +24,8 @@ Trace direct imports and the closest route or caller before changing this file.
 
 ## Verification
 
+The academic-office content link opens `/requests`; shared navigation/header assets remain unchanged. Verify the office page and admin typecheck separately.
+
 ```powershell
 pnpm --filter @napare/web-admin exec tsc --noEmit
 ```

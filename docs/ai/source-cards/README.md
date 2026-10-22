@@ -515,3 +515,33 @@ Choose the card matching the task area, read the canonical source and then follo
 - [Real JWT HTTP and non-superuser PostgreSQL import regression tests](schedule-import-http.md)
 - [Sample stable ID CSV with quoted subject and explicit local date](schedule-import-csv-fixture.md)
 - [Bounded UTC recurrence fixture for university export documentation](schedule-import-ics-fixture.md)
+- [office-access](office-access.md)
+
+- [office-request-entities](office-request-entities.md)
+
+- [office-request-dto](office-request-dto.md)
+
+- [office-request-service](office-request-service.md)
+
+- [office-request-controller](office-request-controller.md)
+
+- [office-request-module](office-request-module.md)
+
+- [office-assignment-migration](office-assignment-migration.md)
+
+- [office-request-migration](office-request-migration.md)
+
+- [office-http-tests](office-http-tests.md)
+
+- [office-ui-types](office-ui-types.md)
+
+- [office-ui-queue](office-ui-queue.md)
+
+- [office-ui-request](office-ui-request.md)
+
+- [office-ui-settings](office-ui-settings.md)
+
+- [office-ui-create](office-ui-create.md)
+
+- [office-ui-dispatch](office-ui-dispatch.md)
+

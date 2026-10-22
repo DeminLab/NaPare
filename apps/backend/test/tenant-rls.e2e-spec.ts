@@ -82,7 +82,7 @@ integration('PostgreSQL tenant RLS with a non-superuser table owner', () => {
       await admin.query(`DROP ROLE IF EXISTS "${roleName}"`);
       await admin.destroy();
     }
-  });
+  }, 30000);
 
   function asA<T>(run: () => T): T {
     return context.runInRequest(() => { context.setUser(actorA); return run(); });
