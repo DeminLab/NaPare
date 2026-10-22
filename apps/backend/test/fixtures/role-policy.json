@@ -7615,6 +7615,366 @@
       }
     },
     {
+      "id": "RequestController.assign POST /api/v1/requests/assignments",
+      "source": "apps/backend/src/requests/request.controller.ts",
+      "method": "POST",
+      "path": "/api/v1/requests/assignments",
+      "guards": [
+        "JwtAuthGuard"
+      ],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 403,
+        "career_staff": 403,
+        "career_admin": 403,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
+      "id": "RequestController.assignments GET /api/v1/requests/assignments",
+      "source": "apps/backend/src/requests/request.controller.ts",
+      "method": "GET",
+      "path": "/api/v1/requests/assignments",
+      "guards": [
+        "JwtAuthGuard"
+      ],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 403,
+        "career_staff": 403,
+        "career_admin": 403,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
+      "id": "RequestController.candidates GET /api/v1/requests/candidates",
+      "source": "apps/backend/src/requests/request.controller.ts",
+      "method": "GET",
+      "path": "/api/v1/requests/candidates",
+      "guards": [
+        "JwtAuthGuard"
+      ],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 403,
+        "career_staff": 403,
+        "career_admin": 403,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
+      "id": "RequestController.command POST /api/v1/requests/:id/commands",
+      "source": "apps/backend/src/requests/request.controller.ts",
+      "method": "POST",
+      "path": "/api/v1/requests/:id/commands",
+      "guards": [
+        "JwtAuthGuard"
+      ],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 403,
+        "career_staff": 403,
+        "career_admin": 403,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
+      "id": "RequestController.configureRoute PUT /api/v1/requests/routes",
+      "source": "apps/backend/src/requests/request.controller.ts",
+      "method": "PUT",
+      "path": "/api/v1/requests/routes",
+      "guards": [
+        "JwtAuthGuard"
+      ],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 403,
+        "career_staff": 403,
+        "career_admin": 403,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
+      "id": "RequestController.context GET /api/v1/requests/context",
+      "source": "apps/backend/src/requests/request.controller.ts",
+      "method": "GET",
+      "path": "/api/v1/requests/context",
+      "guards": [
+        "JwtAuthGuard"
+      ],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 403,
+        "career_staff": 403,
+        "career_admin": 403,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
+      "id": "RequestController.create POST /api/v1/requests",
+      "source": "apps/backend/src/requests/request.controller.ts",
+      "method": "POST",
+      "path": "/api/v1/requests",
+      "guards": [
+        "JwtAuthGuard"
+      ],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 403,
+        "career_staff": 403,
+        "career_admin": 403,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
+      "id": "RequestController.debts GET /api/v1/requests/students/:studentId/debts",
+      "source": "apps/backend/src/requests/request.controller.ts",
+      "method": "GET",
+      "path": "/api/v1/requests/students/:studentId/debts",
+      "guards": [
+        "JwtAuthGuard"
+      ],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 403,
+        "career_staff": 403,
+        "career_admin": 403,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
+      "id": "RequestController.dispatchLessons GET /api/v1/requests/dispatch/lessons",
+      "source": "apps/backend/src/requests/request.controller.ts",
+      "method": "GET",
+      "path": "/api/v1/requests/dispatch/lessons",
+      "guards": [
+        "JwtAuthGuard"
+      ],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 403,
+        "career_staff": 403,
+        "career_admin": 403,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
+      "id": "RequestController.get GET /api/v1/requests/:id",
+      "source": "apps/backend/src/requests/request.controller.ts",
+      "method": "GET",
+      "path": "/api/v1/requests/:id",
+      "guards": [
+        "JwtAuthGuard"
+      ],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 403,
+        "career_staff": 403,
+        "career_admin": 403,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
+      "id": "RequestController.list GET /api/v1/requests",
+      "source": "apps/backend/src/requests/request.controller.ts",
+      "method": "GET",
+      "path": "/api/v1/requests",
+      "guards": [
+        "JwtAuthGuard"
+      ],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 403,
+        "career_staff": 403,
+        "career_admin": 403,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
+      "id": "RequestController.report GET /api/v1/requests/report",
+      "source": "apps/backend/src/requests/request.controller.ts",
+      "method": "GET",
+      "path": "/api/v1/requests/report",
+      "guards": [
+        "JwtAuthGuard"
+      ],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 403,
+        "career_staff": 403,
+        "career_admin": 403,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
+      "id": "RequestController.revoke DELETE /api/v1/requests/assignments/:id",
+      "source": "apps/backend/src/requests/request.controller.ts",
+      "method": "DELETE",
+      "path": "/api/v1/requests/assignments/:id",
+      "guards": [
+        "JwtAuthGuard"
+      ],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 403,
+        "career_staff": 403,
+        "career_admin": 403,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
+      "id": "RequestController.routes GET /api/v1/requests/routes",
+      "source": "apps/backend/src/requests/request.controller.ts",
+      "method": "GET",
+      "path": "/api/v1/requests/routes",
+      "guards": [
+        "JwtAuthGuard"
+      ],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 403,
+        "career_staff": 403,
+        "career_admin": 403,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
+      "id": "RequestController.students GET /api/v1/requests/students",
+      "source": "apps/backend/src/requests/request.controller.ts",
+      "method": "GET",
+      "path": "/api/v1/requests/students",
+      "guards": [
+        "JwtAuthGuard"
+      ],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 403,
+        "career_staff": 403,
+        "career_admin": 403,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
       "id": "ScheduleController.create POST /api/v1/schedule",
       "source": "apps/backend/src/schedule/schedule.controller.ts",
       "method": "POST",

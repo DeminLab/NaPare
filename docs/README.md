@@ -15,6 +15,7 @@ Project guides, reference material and historical records live under this direct
 - [Legal](legal/) and [Security](security/) — drafts, privacy and security guidance.
 - [Tenant isolation](security/tenant-isolation.md) and [Role matrix](security/role-matrix.md) — SQL boundaries, route inventory and authorization checks.
 - [Modules](modules/) and [Product](product/) — feature behavior and product boundaries.
+- [Academic office](modules/academic-office.md) — заявления, назначения, согласования и рабочее место диспетчера.
 - [Operations](ops/) and [Process](process/) — routine operations, verification and collaboration.
 - [Planning and history](project-log/) — dated project records; older or superseded material is labeled in [the archive](archive/) and [Superpowers plans](superpowers/).
 - [Strategy](strategy/) — goals and product direction.

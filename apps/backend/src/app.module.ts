@@ -1,5 +1,6 @@
 import { CareerModule } from './career/career.module';
 import { CurationModule } from './curation/curation.module';
+import { RequestModule } from './requests/request.module';
 import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { PlatformModule } from './platform/platform.module';
@@ -135,6 +136,7 @@ import { SearchModule } from './search/search.module';
     PlatformEventsModule,
     PlatformAttachmentsModule,
     CurationModule,
+    RequestModule,
     AuthModule,
     UsersModule,
     ScheduleModule,

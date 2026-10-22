@@ -56,7 +56,7 @@ export default function UniversityPage() {
     <header>
       <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--color-brand)]">Кабинет ВУЗа</p>
       <div className="mt-2 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-        <div><h1 className="text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">Настройки университета</h1><p className="mt-2 text-sm text-slate-500 sm:text-base">Управляйте основной информацией, структурой и источником данных.</p></div>
+        <div><h1 className="text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">Настройки университета</h1><Link href="/requests" className="mt-3 inline-flex min-h-11 items-center rounded-lg px-2 text-sm font-semibold text-indigo-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-200">Учебный офис: заявления и согласования →</Link><p className="mt-2 text-sm text-slate-500 sm:text-base">Управляйте основной информацией, структурой и источником данных.</p></div>
         {!editing && <Button variant="secondary" onClick={() => setEditing(true)}>Редактировать профиль</Button>}
       </div>
     </header>
