@@ -9,6 +9,13 @@
 - [Scoped semester aggregation](semester-service.md)
 - [Semester module wiring](semester-module.md)
 - [Real semester HTTP/PostgreSQL tests](semester-http-tests.md)
+- [University onboarding wizard](onboarding-page.md)
+- [Onboarding view types](onboarding-types.md)
+- [Faculty and group creation](onboarding-structurestep.md)
+- [First administrator handoff](onboarding-administratorstep.md)
+- [Six-format import workflow](onboarding-importstep.md)
+- [Selected-period readiness and teacher binding](onboarding-readinessstep.md)
+
 
 - [240 — Staff absence-review queue](240-apps-web-staff-src-app-staff-absences-page-tsx.md)
 

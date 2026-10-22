@@ -17,6 +17,8 @@ Project guides, reference material and historical records live under this direct
 - [Tenant isolation](security/tenant-isolation.md) and [Role matrix](security/role-matrix.md) — SQL boundaries, route inventory and authorization checks.
 - [Modules](modules/) and [Product](product/) — feature behavior and product boundaries.
 - [Moodle semester overview](integrations/moodle-semester.md) — self API, explicit numeric identities, source attribution and unavailable-data semantics.
+- [University onboarding](modules/university-onboarding.md) — owner bootstrap, administrator handoff, schedule import and scoped readiness checklist.
+
 - [Operations](ops/) and [Process](process/) — routine operations, verification and collaboration.
 - [Planning and history](project-log/) — dated project records; older or superseded material is labeled in [the archive](archive/) and [Superpowers plans](superpowers/).
 - [Strategy](strategy/) — goals and product direction.
