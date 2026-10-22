@@ -20,6 +20,8 @@
 
 ## Проверки и ограничения
 
+- 23 октября: новый audit feed добавил две Next.js находки для 15.5.27. [Security patch](../security/next-patch-2026-10-23.md) закрепляет 15.5.28 для шести приложений; frozen install, runtime resolution, общий typecheck и production audit high=0/critical=0 подтверждены. Windows standalone build остановлен на EPERM; новый Linux CI необходим. Изменения main/production не выполнялись.
+
 - После явного разрешения владельца исправлены A01–A05 из [WCAG-аудита](../ui/student-wcag-audit-2026-10-22.md): 36 светлых и 6 тёмных axe-снимков без violations, page errors и overflow; 16 server HTML titles и client/back/forward; keyboard и status трёх сохранений. Это scoped браузерная проверка с API fixtures, не полное подтверждение WCAG AA/NVDA.
 
 - P2 accessibility: [студенческий WCAG-аудит](../ui/student-wcag-audit-2026-10-22.md) выявил contrast/title/feedback проблемы; axe/Chromium с синтетическим API и исходники. Первичный отчёт PR 15 содержал только находки. Разрешённые исправления A01–A05 опубликованы в PR 16; полный ручной прогон и AA не подтверждены.
