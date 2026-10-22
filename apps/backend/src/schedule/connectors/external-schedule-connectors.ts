@@ -13,7 +13,7 @@ export class SibitScheduleConnector implements ScheduleConnector {
     if (!['sibit', 'rasp-sano', 'rasp_sano'].includes(university.connectorType)) throw new BadRequestException('Для вуза не выбран источник СИБИТ.');
     const catalog = await this.rasp.getCatalog();
     return catalog.lessons.filter(lesson => (!input.startDate || lesson.date >= input.startDate.slice(0, 10)) && (!input.endDate || lesson.date <= input.endDate.slice(0, 10))).map(lesson => ({
-      externalId: lesson.lessonId, groupExternalId: lesson.groupId, groupName: lesson.groupName, subject: lesson.subject,
+      externalId: lesson.lessonId, groupExternalId: lesson.groupId, groupName: lesson.groupName, subject: lesson.subject, localDate: lesson.date,
       // Preserve the original scraper/connector's local-time conversion and source identifiers.
       startDate: new Date(`${lesson.date}T${lesson.startTime}:00`).toISOString(), endDate: new Date(`${lesson.date}T${lesson.endTime}:00`).toISOString(),
       startTime: lesson.startTime, endTime: lesson.endTime, pairNumber: lesson.pairNumber,
@@ -39,8 +39,8 @@ export class MoodleScheduleConnector implements ScheduleConnector {
     const offset = input.utcOffset || '+00:00';
     // Validate the offset with the same row rules before any external request.
     normalizeScheduleRow({ id: 'validation', group: 'validation', subject: 'validation', date: '2026-01-01', startTime: '09:00', endTime: '10:00', pairNumber: 1 }, offset);
-    const from = Math.floor(new Date(input.startDate.slice(0, 10) + 'T00:00:00Z').getTime() / 1000);
-    const to = Math.floor(new Date(input.endDate.slice(0, 10) + 'T23:59:59Z').getTime() / 1000);
+    const from = Math.floor(new Date(input.startDate.slice(0, 10) + 'T00:00:00' + offset).getTime() / 1000);
+    const to = Math.floor(new Date(input.endDate.slice(0, 10) + 'T23:59:59' + offset).getTime() / 1000);
     const events = await this.moodle.getCalendarEvents(config as unknown as MoodleConnectionConfig, ids, from, to);
     return events.map(event => {
       if (!Number.isSafeInteger(event.id) || !Number.isSafeInteger(event.timestart) || !Number.isSafeInteger(event.timeduration) || Number(event.timeduration) < 60 || Number(event.timeduration) > 86400 || event.modulename) throw new BadRequestException('Moodle: импортируются только групповые календарные занятия с ID, временем и длительностью; задания/модули не являются парами.');

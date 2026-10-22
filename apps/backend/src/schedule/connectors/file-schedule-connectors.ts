@@ -31,7 +31,7 @@ export function normalizeScheduleRow(row: Record<string, unknown>, offset: strin
   if (!id || id.length > 200 || !value('subject') || value('subject').length > 500 || !value('group') || value('group').length > 200 || !Number.isInteger(pairNumber) || pairNumber < 1 || pairNumber > 30 || end <= start) throw new BadRequestException('Для занятия нужны стабильный id, группа, предмет, номер пары 1–30 и время окончания позже начала.');
   if (value('status') && !['scheduled', 'cancelled'].includes(value('status'))) throw new BadRequestException('status должен быть scheduled или cancelled.');
   for (const key of ['teacher', 'room']) if (value(key).length > 500) throw new BadRequestException(`Слишком длинное поле ${key}.`);
-  return { externalId: id, groupName: value('group'), subject: value('subject'), startDate: start.toISOString(), endDate: end.toISOString(), startTime: value('startTime'), endTime: value('endTime'), pairNumber, teacherName: value('teacher') || undefined, room: value('room') || undefined, cancelled: value('status') === 'cancelled' };
+  return { externalId: id, groupName: value('group'), subject: value('subject'), localDate: date, startDate: start.toISOString(), endDate: end.toISOString(), startTime: value('startTime'), endTime: value('endTime'), pairNumber, teacherName: value('teacher') || undefined, room: value('room') || undefined, cancelled: value('status') === 'cancelled' };
 }
 
 export function offsetMinutes(offset: string): number {

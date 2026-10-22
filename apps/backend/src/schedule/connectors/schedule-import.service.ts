@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, Logger, NotFoundException, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { createHash, randomUUID } from 'node:crypto';
-import { DataSource, EntityManager, In, Repository } from 'typeorm';
+import { DataSource, EntityManager, Repository } from 'typeorm';
 import { ImportScheduleDto } from '../../admin/dto/import-schedule.dto';
 import { UserRole } from '../../auth/interfaces/user-role';
 import { ScheduleChange } from '../../academic/entities/schedule-change.entity';
@@ -12,7 +12,7 @@ import { University } from '../../users/entities/university.entity';
 import { Group } from '../../users/entities/group.entity';
 import { User } from '../../users/entities/user.entity';
 import { Lesson } from '../entities/lesson.entity';
-import { CsvScheduleConnector, IcsScheduleConnector, MAX_IMPORT_ROWS, normalizeScheduleRow, textFile, XlsxScheduleConnector } from './file-schedule-connectors';
+import { CsvScheduleConnector, IcsScheduleConnector, MAX_IMPORT_ROWS, normalizeScheduleRow, offsetMinutes, textFile, XlsxScheduleConnector } from './file-schedule-connectors';
 import { MoodleScheduleConnector, SibitScheduleConnector } from './external-schedule-connectors';
 import { NormalizedScheduleLesson, ScheduleImportPayload, ScheduleImportQueue, ScheduleImportSummary } from './schedule-connector';
 import { ScheduleImportJob } from './schedule-import-job.entity';
@@ -78,7 +78,7 @@ export class ScheduleImportService implements OnModuleInit, OnModuleDestroy, Sch
   async getChanges(universityId: string, id: string, pagination: PaginationQueryDto) {
     await this.getJob(universityId, id);
     const [data, total] = await this.db.getRepository(ScheduleChange).createQueryBuilder('change')
-      .where('change.universityId = :universityId', { universityId }).andWhere("change.newValue->>'importJobId' = :id", { id })
+      .where('change.universityId = :universityId', { universityId }).andWhere(`"change"."newValue"->>'importJobId' = :id`, { id })
       .orderBy('change.timestamp', 'DESC').addOrderBy('change.id', 'ASC').skip((pagination.page - 1) * pagination.limit).take(pagination.limit).getManyAndCount();
     return toPaginatedResponse(data, total, pagination);
   }
@@ -106,15 +106,17 @@ export class ScheduleImportService implements OnModuleInit, OnModuleDestroy, Sch
       if (!connector) throw new BadRequestException('Неподдерживаемый формат.');
       lessons = await connector.fetchSchedule(university, dto);
     }
-    if (lessons.length > MAX_IMPORT_ROWS || (!lessons.length && !dto.replace) || new Set(lessons.map(lesson => lesson.externalId)).size !== lessons.length) throw new BadRequestException('Нужно 1–1000 занятий без повторных ID; пустой снимок разрешён только с replace.');
+    const groupScopedIdentity = dto.format === 'sibit';
+    const identities = lessons.map(lesson => groupScopedIdentity ? `${lesson.externalId}::${lesson.groupExternalId}` : lesson.externalId);
+    if (lessons.length > MAX_IMPORT_ROWS || (!lessons.length && !dto.replace) || new Set(identities).size !== lessons.length) throw new BadRequestException('Нужно 1–1000 занятий без повторных ID; пустой снимок разрешён только с replace.');
     const groupNames = [...new Set((dto.groupNames || lessons.map(lesson => lesson.groupName)).map(name => name.trim()))];
     const sourceKey = (dto.sourceKey || dto.fileName).trim();
     if (!sourceKey || sourceKey.length > 100 || groupNames.some(name => !name || name.length > 200)) throw new BadRequestException('Некорректное имя источника или группы.');
     const from = dto.startDate?.slice(0, 10), to = dto.endDate?.slice(0, 10);
     if ((from && !to) || (!from && to) || (from && to && (to < from || new Date(to).getTime() - new Date(from).getTime() > 366 * 86400000))) throw new BadRequestException('Нужен согласованный диапазон не больше 366 дней.');
     if (dto.replace && (!dto.sourceKey || !dto.startDate || !dto.endDate || !dto.groupNames?.length)) throw new BadRequestException('replace требует sourceKey, startDate/endDate и явный список groupNames.');
-    if (lessons.some(lesson => (from && lesson.startDate.slice(0, 10) < from) || (to && lesson.startDate.slice(0, 10) > to) || !groupNames.some(name => normalizeName(name) === normalizeName(lesson.groupName)))) throw new BadRequestException('Занятие находится вне явно указанного диапазона или групп.');
-    return { lessons, source: `university-import:${sourceKey}`, fileName: dto.fileName, replace: !!dto.replace, groupNames, startDate: from, endDate: to };
+    if (lessons.some(lesson => (from && lesson.localDate < from) || (to && lesson.localDate > to) || !groupNames.some(name => normalizeName(name) === normalizeName(lesson.groupName)))) throw new BadRequestException('Занятие находится вне явно указанного диапазона или групп.');
+    return { lessons, source: `university-import:${sourceKey}`, fileName: dto.fileName, replace: !!dto.replace, groupNames, startDate: from, endDate: to, utcOffset: dto.format === 'ics' ? '+00:00' : dto.utcOffset || '+00:00', groupScopedIdentity };
   }
 
   processNext(): Promise<boolean> { return this.process(); }
@@ -152,8 +154,7 @@ export class ScheduleImportService implements OnModuleInit, OnModuleDestroy, Sch
 
   /** Adapts to the explicit trusted-capability API introduced by the independent RLS block. */
   private databaseAccess<T>(tables: string[], universityIds: string[] | null, write: boolean, callback: () => Promise<T>): Promise<T> {
-    const context = this.tenant as TenantContext & { runWithDatabaseAccess?: (scope: { tables: string[]; universityIds: string[] | null; write: boolean }, callback: () => Promise<T>) => Promise<T> };
-    return context.runWithDatabaseAccess ? context.runWithDatabaseAccess({ tables, universityIds, write }, callback) : callback();
+    return this.tenant.runWithDatabaseAccess({ tables, universityIds, write }, callback);
   }
 
   private async apply(manager: EntityManager, job: ScheduleImportJob): Promise<ScheduleImportSummary> {
@@ -162,21 +163,24 @@ export class ScheduleImportService implements OnModuleInit, OnModuleDestroy, Sch
     if (!actor || ![UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN].includes(actor.role)) throw new ForbiddenException('Автор задания больше не имеет права импортировать расписание этого вуза.');
     await manager.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [`schedule-import:${job.universityId}:${payload.source}`]);
     const groups = await manager.getRepository(Group).find({ where: { universityId: job.universityId } });
+    if (new Set(groups.map(group => normalizeName(group.name))).size !== groups.length || new Set(groups.filter(group => group.externalId).map(group => group.externalId)).size !== groups.filter(group => group.externalId).length) throw new BadRequestException('Неоднозначные имена или внешние ID групп: исправьте структуру вуза.');
     const byName = new Map(groups.map(group => [normalizeName(group.name), group]));
     const bySource = new Map(groups.filter(group => group.externalId).map(group => [group.externalId!, group]));
     for (const name of payload.groupNames) if (!byName.has(normalizeName(name))) throw new BadRequestException(`Не найдена группа ВУЗа: ${name}. Сначала добавьте её в структуру ВУЗа.`);
-    const resolved = payload.lessons.map(lesson => ({ lesson, group: (lesson.groupExternalId ? bySource.get(lesson.groupExternalId) : undefined) || byName.get(normalizeName(lesson.groupName)) }));
+    const resolved = payload.lessons.map(lesson => ({ lesson, group: lesson.groupExternalId ? bySource.get(lesson.groupExternalId) : byName.get(normalizeName(lesson.groupName)) }));
     if (resolved.some(item => !item.group)) throw new BadRequestException('Не все группы источника сопоставлены с группами этого вуза.');
     const repository = manager.getRepository(Lesson);
     const existing = await repository.find({ where: { universityId: job.universityId, source: payload.source }, withDeleted: true });
     const legacy = payload.lessons.some(lesson => lesson.externalId.startsWith(payload.fileName + ':')) ? await repository.find({ where: { universityId: job.universityId, source: 'university-import' }, withDeleted: true }) : [];
-    const current = new Map(existing.map(lesson => [lesson.externalId, lesson]));
+    const identity = (externalId: string, groupId: string) => payload.groupScopedIdentity ? `${externalId}::${groupId}` : externalId;
+    const current = new Map(existing.map(lesson => [identity(lesson.externalId, lesson.groupId), lesson]));
     for (const lesson of legacy) if (payload.lessons.some(row => row.externalId === lesson.externalId) && !current.has(lesson.externalId)) current.set(lesson.externalId, lesson);
     const result: ScheduleImportSummary = { imported: 0, updated: 0, deleted: 0, unchanged: 0 };
     const seen = new Set<string>();
     for (const { lesson: input, group } of resolved) {
-      seen.add(input.externalId);
-      const old = current.get(input.externalId);
+      const key = identity(input.externalId, group!.id);
+      seen.add(key);
+      const old = current.get(key);
       if (input.cancelled) {
         if (old && !old.deletedAt) { await this.cancel(manager, job, old); result.deleted++; }
         else result.unchanged++;
@@ -185,8 +189,8 @@ export class ScheduleImportService implements OnModuleInit, OnModuleDestroy, Sch
       const values = {
         universityId: job.universityId, groupId: group!.id, groupName: group!.name, subject: input.subject,
         startDate: new Date(input.startDate), endDate: new Date(input.endDate), startTime: input.startTime, endTime: input.endTime,
-        dayOfWeek: new Date(input.startDate).getUTCDay(), pairNumber: input.pairNumber, weekType: 'both',
-        teacherName: input.teacherName || null, room: input.room || null, sourceTeacherId: input.sourceTeacherId || null,
+        dayOfWeek: new Date(input.localDate + 'T00:00:00Z').getUTCDay(), pairNumber: input.pairNumber, weekType: 'both',
+        teacherName: input.teacherName || '', room: input.room || '', sourceTeacherId: input.sourceTeacherId || null,
         source: payload.source, externalId: input.externalId, syncStatus: 'synced', sourceVersion: job.payloadHash, deletedAt: null,
       };
       const before = old ? this.snapshot(old) : {};
@@ -198,7 +202,10 @@ export class ScheduleImportService implements OnModuleInit, OnModuleDestroy, Sch
     }
     if (payload.replace) {
       const groupIds = new Set(payload.groupNames.map(name => byName.get(normalizeName(name))!.id));
-      for (const old of existing) if (!old.deletedAt && !seen.has(old.externalId) && groupIds.has(old.groupId) && new Date(old.startDate).toISOString().slice(0, 10) >= payload.startDate! && new Date(old.startDate).toISOString().slice(0, 10) <= payload.endDate!) { await this.cancel(manager, job, old); result.deleted++; }
+      for (const old of existing) {
+        const date = payload.groupScopedIdentity ? `${old.startDate.getFullYear()}-${String(old.startDate.getMonth() + 1).padStart(2, '0')}-${String(old.startDate.getDate()).padStart(2, '0')}` : new Date(new Date(old.startDate).getTime() + offsetMinutes(payload.utcOffset) * 60000).toISOString().slice(0, 10);
+        if (!old.deletedAt && !seen.has(identity(old.externalId, old.groupId)) && groupIds.has(old.groupId) && date >= payload.startDate! && date <= payload.endDate!) { await this.cancel(manager, job, old); result.deleted++; }
+      }
     }
     return result;
   }

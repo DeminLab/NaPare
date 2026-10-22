@@ -6,6 +6,7 @@ export interface NormalizedScheduleLesson {
   groupExternalId?: string;
   subject: string;
   startDate: string;
+  localDate: string;
   endDate: string;
   startTime: string;
   endTime: string;
@@ -38,6 +39,8 @@ export interface ScheduleImportPayload {
   groupNames: string[];
   startDate?: string;
   endDate?: string;
+  utcOffset: string;
+  groupScopedIdentity: boolean;
 }
 
 export interface ScheduleImportSummary {

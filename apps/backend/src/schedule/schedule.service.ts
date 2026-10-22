@@ -246,6 +246,7 @@ export class ScheduleService {
     const endDate = new Date(`${lesson.date}T${lesson.endTime}:00`);
     return {
       id: `rasp-${lesson.lessonId}-${lesson.groupId}`,
+      deletedAt: null,
       universityId,
       groupId: lesson.groupId,
       courseId: null,

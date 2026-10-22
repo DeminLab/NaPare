@@ -3,6 +3,7 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { DataSource } from 'typeorm';
 import * as bcrypt from 'bcrypt';
+import { json, RequestHandler } from 'express';
 import { UserRole } from '../src/auth/interfaces/user-role';
 import { University } from '../src/users/entities/university.entity';
 import { Faculty } from '../src/users/entities/faculty.entity';
@@ -23,6 +24,8 @@ export async function createCurationFixture(url: string) {
   const { AppModule } = await import('../src/app.module');
   const module = await Test.createTestingModule({ imports: [AppModule] }).compile();
   const app: INestApplication = module.createNestApplication({ logger: false });
+  const uploadJson = json({ limit: '3mb' });
+  app.use('/api/v1/admin/schedule/upload', ((req, res, next) => uploadJson(req, res, next)) as RequestHandler);
   app.setGlobalPrefix('api/v1');
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
   await app.init();

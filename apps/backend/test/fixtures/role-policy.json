@@ -1197,6 +1197,62 @@
       }
     },
     {
+      "id": "AdminController.getScheduleImport GET /api/v1/admin/schedule/imports/:id",
+      "source": "apps/backend/src/admin/admin.controller.ts",
+      "method": "GET",
+      "path": "/api/v1/admin/schedule/imports/:id",
+      "guards": [
+        "JwtAuthGuard",
+        "RolesGuard"
+      ],
+      "roles": [
+        "university_admin",
+        "superadmin"
+      ],
+      "permissions": null,
+      "statuses": {
+        "student": 403,
+        "employer": 403,
+        "career_staff": 403,
+        "career_admin": 403,
+        "teacher": 403,
+        "curator": 403,
+        "faculty_dean": 403,
+        "department_head": 403,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 403
+      }
+    },
+    {
+      "id": "AdminController.getScheduleImportChanges GET /api/v1/admin/schedule/imports/:id/changes",
+      "source": "apps/backend/src/admin/admin.controller.ts",
+      "method": "GET",
+      "path": "/api/v1/admin/schedule/imports/:id/changes",
+      "guards": [
+        "JwtAuthGuard",
+        "RolesGuard"
+      ],
+      "roles": [
+        "university_admin",
+        "superadmin"
+      ],
+      "permissions": null,
+      "statuses": {
+        "student": 403,
+        "employer": 403,
+        "career_staff": 403,
+        "career_admin": 403,
+        "teacher": 403,
+        "curator": 403,
+        "faculty_dean": 403,
+        "department_head": 403,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 403
+      }
+    },
+    {
       "id": "AdminController.getSibitTeachers GET /api/v1/admin/sibit/teachers",
       "source": "apps/backend/src/admin/admin.controller.ts",
       "method": "GET",

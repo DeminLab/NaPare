@@ -5,6 +5,7 @@ import {
   Post,
   Body,
   Param,
+  ParseUUIDPipe,
   Query,
   UseGuards,
   Request,
@@ -53,6 +54,7 @@ export class AdminController {
   constructor(
     private readonly adminService: AdminService,
     private readonly eventBus: EventBusService,
+    private readonly scheduleImports: ScheduleImportService,
   ) {}
 
   @Get("users")
@@ -169,6 +171,20 @@ export class AdminController {
       req.user.universityId,
       importScheduleDto,
     );
+  }
+
+  @Get('schedule/imports/:id')
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @ApiOperation({ summary: 'Статус задания импорта расписания своего вуза' })
+  getScheduleImport(@Request() req, @Param('id', ParseUUIDPipe) id: string) {
+    return this.scheduleImports.getJob(req.user.universityId, id);
+  }
+
+  @Get('schedule/imports/:id/changes')
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @ApiOperation({ summary: 'Добавления, изменения и отмены в задании импорта' })
+  getScheduleImportChanges(@Request() req, @Param('id', ParseUUIDPipe) id: string, @Query() pagination: PaginationQueryDto) {
+    return this.scheduleImports.getChanges(req.user.universityId, id, pagination);
   }
 
   @Post("schedule/sync")

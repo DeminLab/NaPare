@@ -81,6 +81,8 @@ pnpm --filter @napare/backend exec ts-node --transpile-only test/update-role-pol
 | `GET /api/v1/admin/faculties` | JwtAuthGuard, RolesGuard | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 200 | 200 | 403 |
 | `GET /api/v1/admin/groups` | JwtAuthGuard, RolesGuard | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 200 | 200 | 403 |
 | `GET /api/v1/admin/groups/:id/students` | JwtAuthGuard, RolesGuard | 403 | 403 | 403 | 403 | 200 | 200 | 200 | 200 | 200 | 200 | 403 |
+| `GET /api/v1/admin/schedule/imports/:id` | JwtAuthGuard, RolesGuard | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 200 | 200 | 403 |
+| `GET /api/v1/admin/schedule/imports/:id/changes` | JwtAuthGuard, RolesGuard | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 200 | 200 | 403 |
 | `GET /api/v1/admin/sibit/teachers` | JwtAuthGuard, RolesGuard | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 200 | 200 | 403 |
 | `GET /api/v1/admin/stats` | JwtAuthGuard, RolesGuard | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 200 | 200 | 403 |
 | `GET /api/v1/admin/schedule/sync-status` | JwtAuthGuard, RolesGuard | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 200 | 200 | 403 |

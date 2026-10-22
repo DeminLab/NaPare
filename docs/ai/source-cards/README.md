@@ -486,3 +486,15 @@ Choose the card matching the task area, read the canonical source and then follo
 - [tenant-reference-tests](tenant-reference-tests.md)
 
 - [tenant-isolation-http-tests](tenant-isolation-http-tests.md)
+
+- [Normalized schedule connector and durable queue contracts](schedule-connector-contract.md)
+- [Strict CSV, UTC ICS and bounded XLSX file adapters](schedule-file-connectors.md)
+- [SIBIT parser wrapper and explicit Moodle calendar group/time mapping](schedule-external-connectors.md)
+- [Connector provider registration and import service exports](schedule-connectors-module.md)
+- [Tenant durable import payload, idempotency and attempt state](schedule-import-jobs.md)
+- [Atomic queued imports, source ownership and ScheduleChange deltas](schedule-import-service.md)
+- [Queue constraints, soft cancellation and FORCE RLS setup](schedule-import-migration.md)
+- [Fixture CSV/ICS, XLSX, timezone and source identity regression tests](schedule-connectors-unit.md)
+- [Real JWT HTTP and non-superuser PostgreSQL import regression tests](schedule-import-http.md)
+- [Sample stable ID CSV with quoted subject and explicit local date](schedule-import-csv-fixture.md)
+- [Bounded UTC recurrence fixture for university export documentation](schedule-import-ics-fixture.md)
