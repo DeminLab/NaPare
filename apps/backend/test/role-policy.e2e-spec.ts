@@ -113,7 +113,7 @@ describe('Every declared protected route × every role (real HTTP/JWT/guards, sy
     try {
       for (const [index, route] of protectedRoutes.entries()) {
         const platform = /^\/api\/v1\/platform(?:\/|$)/.test(route.path);
-        const account = /^\/api\/v1\/career(?:\/|$)/.test(route.path) || route.path === '/api/v1/users/me' || ['/api/v1/auth/logout', '/api/v1/auth/max/status', '/api/v1/auth/max/link'].includes(route.path);
+        const account = /^\/api\/v1\/career(?:\/|$)/.test(route.path) || ['/api/v1/users/me', '/api/v1/users/me/export'].includes(route.path) || ['/api/v1/auth/logout', '/api/v1/auth/max/status', '/api/v1/auth/max/link'].includes(route.path);
         const baselineStatus = baseline.routes.find(item => item.id === route.id)!.statuses[role];
         await request(app.getHttpServer()).get(`/role-policy-probe/${index}`).auth(tokens.get(role)!, { type: 'bearer' }).expect(platform || account ? baselineStatus : 403);
       }
