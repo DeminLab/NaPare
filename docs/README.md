@@ -4,6 +4,8 @@ Project guides, reference material and historical records live under this direct
 
 ## Sections
 
+- [Procurement drafts](procurement/README.md) — technical specification, price evidence form, product card and registry gaps; [three pricing models](strategy/monetization.md) with synthetic arithmetic, no approved tariffs.
+
 - [Combined improvement verification](project-log/improvement-integration-2026-10-22.md) — integration branch, local test evidence and remaining requirements; no production changes.
 
 - [AI and repository workflow](ai/README.md) — project map, task reading order, change safety, source cards and documentation rules.
