@@ -48,7 +48,7 @@
 - Push P1-1: серверная реализация завершена в отдельной ветке; [справочник доставки](../integrations/notification-delivery.md). Реальный Redis 8.0.5 в отдельном WSL процессе на 56379 и disposable PostgreSQL 18 на 55439 проверены из Windows. Focused E2E: 10/10 (atomic rollback, JWT token ownership, concurrent event idempotence, FORCE RLS, readiness, Redis retries, пять попыток до dead letter и сохранение лимита при пересоздании Redis job). Unit: 38 suites / 394 tests passed; backend typecheck/build, root lint/docs lint/guards прошли. Внешние HTTP запрещены в E2E и заменены synthetic provider responses; actual APK/PWA/бот-аккаунты и production не использовались. Семантика at least once, а не exactly once. CI получает отдельную disposable БД и существующий Redis service.
 - Коннекторы P1-2 продолжаются в своей ветке; реализация и проверки этого блока учитываются отдельно.
 
-Полный прогон ветки P1-1 после интеграции P0: **7 E2E suites / 4099 passed / 1 skipped** (не настроен native host agent). Для cleanup disposable RLS БД увеличен timeout `afterAll` с 5 до 30 секунд; assertions не ослаблялись. Проверка зависимостей: **0 high / 0 critical / 1 moderate** — существующее предупреждение Nest SSE из обзора зависимостей. Реальные внешние уведомления не отправлялись.
+Полный прогон ветки P1-1 на `03d242e` после интеграции P0: **7 E2E suites / 4100 passed / 1 skipped** (не настроен native host agent). Для cleanup disposable RLS БД увеличен timeout `afterAll` с 5 до 30 секунд; assertions не ослаблялись. Проверка зависимостей: **0 high / 0 critical / 1 moderate** — существующее предупреждение Nest SSE из обзора зависимостей. Реальные внешние уведомления не отправлялись.
 
 ## Невыполненные требования
 
