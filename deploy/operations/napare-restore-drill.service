@@ -1,0 +1,15 @@
+[Unit]
+Description=NaPare isolated restore drill (run on recovery machine only)
+
+[Service]
+Type=oneshot
+User=napare-restore
+EnvironmentFile=/etc/napare/restore.environment
+ExecStart=/usr/bin/node /srv/NaPare/scripts/postgres-recovery.cjs restore
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+StateDirectory=napare-restore
+TimeoutStartSec=2h

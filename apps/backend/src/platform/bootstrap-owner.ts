@@ -1,6 +1,8 @@
 import 'reflect-metadata';
 import { DataSource } from 'typeorm';
 import { join } from 'node:path';
+import { TenantContext } from '../common/tenant/tenant-context';
+import { installTenantDatabase } from '../common/tenant/tenant-database';
 
 /** Offline one-time binding; never auto-claims a future registration by email. */
 export async function bindPlatformOwner(db: DataSource, email: string) {
@@ -20,5 +22,7 @@ if (require.main === module) {
   const email = process.argv[process.argv.indexOf('--email') + 1];
   if (!process.argv.includes('--email')) throw new Error('Usage: bootstrap-owner --email existing-owner@example.org');
   const db = new DataSource({ type: 'postgres', ...(process.env.DATABASE_URL ? { url: process.env.DATABASE_URL } : { host: process.env.DB_HOST || 'localhost', port: Number(process.env.DB_PORT || 5432), username: process.env.DB_USERNAME, password: process.env.DB_PASSWORD, database: process.env.DB_NAME }), entities: [], migrations: [join(__dirname, '../migrations/*.{js,ts}')], synchronize: false });
-  db.initialize().then(() => bindPlatformOwner(db, email)).then(() => console.log('Existing account bound as the single platform owner.')).catch(error => { console.error(error.message); process.exitCode = 1; }).finally(() => db.isInitialized && db.destroy());
+  const tenant = new TenantContext();
+  installTenantDatabase(db, tenant);
+  db.initialize().then(() => tenant.runWithDatabaseAccess({ authentication: { email } }, () => bindPlatformOwner(db, email))).then(() => console.log('Existing account bound as the single platform owner.')).catch(error => { console.error(error.message); process.exitCode = 1; }).finally(() => db.isInitialized && db.destroy());
 }

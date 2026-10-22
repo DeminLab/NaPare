@@ -1,12 +1,12 @@
 # Module: Notifications (Уведомления)
 
-Текущее решение от 13 октября 2026: Telegram полностью убран из активного интерфейса и доставки. Внутренние уведомления работают на сайте; MAX остаётся способом входа. Сведения о Telegram ниже относятся к сохранённым legacy-полям/контрактам, а не к действующему пользовательскому сценарию. См. [карьерный модуль](../modules/career.md).
+Реализация P1-1 от 22 октября 2026 добавляет серверную доставку RuStore/WebPush/MAX/Telegram через PostgreSQL outbox и Redis/BullMQ. Внешние каналы выключены по умолчанию; интерфейсы не меняются. Настройка, гарантии и ограничения описаны в [справочнике доставки](../integrations/notification-delivery.md). Это не подтверждение включения каналов в production.
 
 ## 1. Цель и границы
 
 **Цель:** Сообщать пользователям о важных событиях: in-app уведомления, «входящие» (inbox) и счётчики непрочитанного.
 
-**Не делает:** Бизнес-логику (только реагирует на события из других модулей); отправку push через FCM/APNs (см. раздел 8 — интеграции с push-провайдерами в коде нет).
+**Не делает:** Бизнес-логику (только реагирует на события из других модулей); прямую интеграцию FCM/APNs SDK. Серверные push-провайдеры — RuStore и WebPush; получение клиентского токена/подписки и показ на устройстве проверяются отдельно.
 
 ---
 
@@ -19,7 +19,7 @@
 | NotificationPreference | Настройки по типам и каналам   | id, user_id, university_id, schedule_changes, cancellations, room_changes, homework_created, deadlines, messages, announcements, system_alerts, telegram_enabled, quiet_hours_enabled/start/end, IANA time_zone |
 | InboxItem              | «Входящие» (задачи к действию) | id, event_id, user_id, university_id, type, title, description, deep_link, priority, status (`open`/`snoozed`/`done`), due_at, actions, completed_at                          |
 
-Все четыре регистрируются в `apps/backend/src/database/database.module.ts`.
+Сущности регистрируются в TypeORM модулях backend. Дополнительная `NotificationDelivery` в `NotificationsModule` хранит outbox, tenant, канал, target UUID, статус и историю; миграция 34 применяет FORCE RLS.
 
 Типы уведомлений (`NOTIFICATION_TYPES`): `schedule_change`, `new_announcement`, `new_homework`, `new_file`, `deadline`, `absence_decision`, `new_absence`, `system`, `other`.
 
@@ -128,9 +128,9 @@
 | Требование      | Значение                                                                                    |
 | --------------- | ------------------------------------------------------------------------------------------- |
 | Доставка        | In-app создание записи + SSE-стрим событий (`GET /events/stream`, `EventBusService.stream`) |
-| Push (FCM/APNs) | **Не реализовано**: push-SDK в бэкенде нет, `DeviceToken` только сохраняется                |
-| Telegram        | Опционально: только при настроенном боте, привязанном аккаунте и согласии пользователя; ограниченная очередь в памяти процесса, без durable retry |
-| Retry           | Не реализован (TODO)                                                                        |
+| Push | RuStore/WebPush через конфигурацию; старые `provider=legacy` токены не отправляются |
+| Telegram / MAX | Дополнительные default-off флаги и общий флаг внешней доставки; Telegram также требует сохранённого согласия пользователя |
+| Retry | PostgreSQL outbox + BullMQ, пять попыток, exponential backoff, durable dead-letter history; at least once |
 | История         | Хранится без автоочистки (ретеншн не настроен)                                              |
 | Часовые пояса   | Учёт через `quietHoursStart/End` (настройки пользователя)                                   |
 
@@ -144,7 +144,7 @@
 - [x] Пользователь может отключить отдельные типы (`PATCH /notifications/preferences`); студенческий экран сохраняет их на сервере.
 - [ ] Куратор получает уведомление о новом отсутствии (`absence.created`)
 - [ ] Нет массового спама (настройки + тихие часы)
-- [ ] Push на iOS и Android — **не проверяемо, интеграции нет**
+- [ ] Push на реальных iOS/Android/PWA — серверные провайдеры реализованы, получение и показ на устройстве не проверены.
 
 ---
 
@@ -157,10 +157,10 @@
 
 ## 11. Open questions / TODO
 
-- [ ] Интеграция с FCM/APNs (сейчас токены только хранятся)
+- [ ] Прямая интеграция FCM/APNs — отдельно от реализованных RuStore/WebPush
 - [ ] Email-уведомления (после MVP)
 - [ ] SMS-уведомления (для критических событий)
-- [ ] Web push (для web-клиента)
+- [ ] Клиентская подписка и UI разрешений WebPush; серверная доставка реализована
 - [x] Публикатор `homework.deadline_soon`; [ ] публикатор `grade.created`
 
 ---

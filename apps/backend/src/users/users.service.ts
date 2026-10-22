@@ -3,6 +3,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { In, IsNull, Repository } from "typeorm";
 
 import { User } from "./entities/user.entity";
+import { Group } from "./entities/group.entity";
 import { TelegramLinkChallenge } from "./entities/telegram-link-challenge.entity";
 import { CreateUserDto } from "./dto/create-user.dto";
 import { TenantContext } from "../common/tenant/tenant-context";
@@ -23,6 +24,8 @@ export class UsersService {
     @Optional() @InjectRepository(TelegramLinkChallenge)
     private readonly telegramChallenges?: Repository<TelegramLinkChallenge>,
     @Optional() private readonly platform?: PlatformService,
+    @Optional() @InjectRepository(Group)
+    private readonly groups?: Repository<Group>,
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<User> {
@@ -87,6 +90,8 @@ export class UsersService {
         const userId = consumed.raw[0]?.userId as string | undefined;
         if (!userId) return 'invalid';
 
+        // The one-time Telegram challenge above establishes this exact identity.
+        return this.tenantContext.runWithDatabaseAccess({ authentication: { id: userId, write: true } }, async () => {
         const users = manager.getRepository(User);
         const result = await users.createQueryBuilder()
           .update(User)
@@ -97,6 +102,7 @@ export class UsersService {
         const current = await users.findOne({ where: { id: userId } });
         if (current?.telegramUserId === telegramUserId) return 'linked';
         return 'already-linked';
+        });
       });
     } catch (error) {
       const driverCode = (error as { driverError?: { code?: string } })?.driverError?.code;
@@ -191,6 +197,11 @@ export class UsersService {
   }
 
   async bindGroup(id: string, groupId: string): Promise<User> {
+    const user = await this.findById(id);
+    if (!user) throw new NotFoundException('Аккаунт недоступен');
+    if (!user.universityId || !this.groups || !await this.groups.findOne({ where: { id: groupId, universityId: user.universityId } })) {
+      throw new NotFoundException('Группа своего университета не найдена');
+    }
     return this.update(id, { groupId });
   }
 

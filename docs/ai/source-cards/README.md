@@ -10,6 +10,23 @@ Choose the card matching the task area, read the canonical source and then follo
 
 ## Cards
 
+- [PostgreSQL backup and restore](postgres-recovery.md)
+- [External health monitor](health-monitor.md)
+- [Recovery and monitoring safety tests](postgres-recovery-tests.md)
+- [Real PostgreSQL restore drill test](postgres-recovery-integration.md)
+- [API exception filter and Sentry](exception-filter.md)
+- [Same-connection transaction-local tenant configuration, TypeORM runner interception and startup RLS invariants](tenant-database.md)
+- [Typed explicit university, identity and company relation capabilities](tenant-database-access.md)
+- [Least-scope platform permission mapping to tenant tables and read/write capabilities](tenant-database-platform.md)
+- [Runner scope, existing transactions, rollback, concurrent query serialization and SQL stream rejection](tenant-database-unit-tests.md)
+- [FORCE RLS and mandatory restrictive CRUD policies for scalar university columns; explicit identity and company relations](tenant-row-security-migration.md)
+- [Disposable-database-only explicit test setup/assertion capabilities, separate from HTTP request access](tenant-database-fixture.md)
+- [Real PostgreSQL non-superuser table-owner isolation, pooled TypeORM flows, CRUD, grants, authentication and career company relations](tenant-rls-postgres-tests.md)
+- [440 — Backend role policy metadata and matrix](440-backend-role-policy-fixture.md)
+- [441 — Backend role policy HTTP probes](441-backend-role-policy-e2e.md)
+- [442 — Explicit role baseline update](442-backend-update-role-policy.md)
+- [443 — Reviewed route authorization baseline](443-backend-role-policy-baseline.md)
+
 - [285 — Shared UI primitives](285-packages-ui-src-index-tsx.md)
 - [290 — Shared lesson type badge](290-packages-ui-src-lessontypebadge-tsx.md)
 - [291 — Platform student data controller](291-apps-backend-src-platform-data-platform-data-controller-ts.md)
@@ -468,3 +485,16 @@ Choose the card matching the task area, read the canonical source and then follo
 - [383 — Platform PairSpace administration](383-apps-backend-src-platform-pair-space-space-administration.md)
 - [384 — Developer PairSpace panel](384-apps-web-developer-src-app-developer-control-pairspacespanel-tsx.md)
 - [385 — Platform grant university-scope migration](385-apps-backend-src-migrations-1700000000028-platformgrantuniversityscope-ts.md)
+
+- [tenant-route-inventory](tenant-route-inventory.md)
+
+- [tenant-reference-tests](tenant-reference-tests.md)
+
+- [tenant-isolation-http-tests](tenant-isolation-http-tests.md)
+- [Transactional PostgreSQL outbox, scoped worker, BullMQ retry and readiness.](notification-delivery-service.md)
+- [Gated RuStore, WebPush, Telegram and MAX provider implementations and token validation.](notification-delivery-providers.md)
+- [Explicit default-off switches for notification delivery and queue startup.](notification-delivery-config.md)
+- [Tenant-scoped delivery state, unique target, attempts and bounded durable history.](notification-delivery-entity.md)
+- [Provider column and delivery outbox with canonical FORCE RLS policies.](notification-delivery-migration.md)
+- [No-send defaults, endpoint validation and provider protocol/error tests with synthetic responses.](notification-delivery-provider-tests.md)
+- [Actual non-superuser PostgreSQL and Redis tests: atomic outbox, JWT registration, FORCE RLS, retry and dead letters.](notification-delivery-e2e.md)

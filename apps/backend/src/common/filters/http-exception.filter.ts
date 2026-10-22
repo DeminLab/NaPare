@@ -7,6 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import * as Sentry from '@sentry/node';
 
 interface ExceptionResponse {
   message?: string | string[];
@@ -54,6 +55,14 @@ export class AllExceptionsFilter implements ExceptionFilter {
       `${request.method} ${request.url} - ${status}`,
       exception instanceof Error ? exception.stack : '',
     );
+
+    if (status >= 500 && Sentry.getCurrentHub().getClient()) {
+      // Do not send exception text, SQL, credentials, personal data or raw URLs.
+      Sentry.captureMessage('Backend request failed', {
+        level: 'error',
+        tags: { http_status: String(status), http_method: request.method },
+      });
+    }
 
     response.status(status).json({
       statusCode: status,
