@@ -1,5 +1,11 @@
 # Source-card index
 
+- [Personal JSON export](personal-data-service.md)
+- [Reviewed export projections](personal-data-catalog.md)
+- [Self-only SELECT capability](personal-data-migration.md)
+- [Export connection lifecycle tests](personal-data-lifecycle-tests.md)
+- [Personal export PostgreSQL tests](personal-data-e2e.md)
+
 - [Student title: Вход](student-title-login.md)
 - [Student title: Доступ в студенческий кабинет](student-title-register.md)
 - [Student title: Сегодня](student-title-today.md)

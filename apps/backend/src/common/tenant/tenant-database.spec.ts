@@ -33,6 +33,12 @@ describe('Tenant database connection scope', () => {
     expect(execute.mock.calls[0][1]).toEqual(['', '', '[]']);
   });
 
+  it('does not run a settings query before setting a transaction read-only', async () => {
+    const { execute, runner } = fixture(true);
+    await runner.query('SET TRANSACTION READ ONLY');
+    expect(execute.mock.calls).toEqual([['SET TRANSACTION READ ONLY', undefined, undefined]]);
+  });
+
   it('rolls back failed implicit statements before allowing runner reuse', async () => {
     const { execute, runner } = fixture();
     execute.mockImplementation(async sql => { if (sql === 'bad query') throw new Error('failed'); return []; });

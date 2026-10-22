@@ -8,6 +8,8 @@
 
 Same-connection transaction-local tenant configuration, TypeORM runner interception and startup RLS invariants.
 
+`SET TRANSACTION READ ONLY` is transaction control and must execute before injected settings queries. The self-export service starts this mode before taking its first snapshot query.
+
 ## Read sequence
 
 1. Read [change safety](../change-safety.md).

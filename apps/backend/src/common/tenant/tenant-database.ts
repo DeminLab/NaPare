@@ -3,7 +3,7 @@ import { DataSource, QueryRunner } from 'typeorm';
 import { TenantContext } from './tenant-context';
 
 const installed = new WeakSet<DataSource>();
-const transactionControl = /^\s*(?:START TRANSACTION|BEGIN|COMMIT|ROLLBACK(?: TO SAVEPOINT typeorm_\d+)?|SAVEPOINT typeorm_\d+|RELEASE SAVEPOINT typeorm_\d+|SET TRANSACTION ISOLATION LEVEL (?:READ UNCOMMITTED|READ COMMITTED|REPEATABLE READ|SERIALIZABLE))\s*;?\s*$/i;
+const transactionControl = /^\s*(?:START TRANSACTION|BEGIN|COMMIT|ROLLBACK(?: TO SAVEPOINT typeorm_\d+)?|SAVEPOINT typeorm_\d+|RELEASE SAVEPOINT typeorm_\d+|SET TRANSACTION READ ONLY|SET TRANSACTION ISOLATION LEVEL (?:READ UNCOMMITTED|READ COMMITTED|REPEATABLE READ|SERIALIZABLE))\s*;?\s*$/i;
 
 /** Check before migrations/synchronization; a privileged runtime must not mutate schema. */
 export async function assertTenantDatabaseRole(source: DataSource): Promise<void> {

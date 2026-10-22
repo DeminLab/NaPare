@@ -6,7 +6,7 @@
 
 ## Scope
 
-Typed explicit university, identity and company relation capabilities.
+Typed explicit university, identity and company relation capabilities. PersonalDataReadAccess is a self-export SELECT-only capability: SQL independently matches its userId to actor_id. It grants no writes or university-wide access.
 
 ## Read sequence
 

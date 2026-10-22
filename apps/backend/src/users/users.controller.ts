@@ -10,6 +10,7 @@ import {
   Request,
   ForbiddenException,
   NotFoundException,
+  Res,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 
@@ -18,13 +19,22 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { BindGroupDto } from './dto/bind-group.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { User } from './entities/user.entity';
+import { Response } from 'express';
+import { PersonalDataService } from './personal-data.service';
 
 @ApiTags('users')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(private readonly usersService: UsersService, private readonly personalData: PersonalDataService) {}
+
+  @Get('me/export')
+  @ApiOperation({ summary: 'Скачать JSON-экспорт собственных персональных данных' })
+  @ApiResponse({ status: 200, description: 'JSON текущего снимка БД с описанием исключений' })
+  async exportProfile(@Res() response: Response) {
+    await this.personalData.download(response);
+  }
 
   @Get('me')
   @ApiOperation({ summary: 'Получить профиль текущего пользователя' })

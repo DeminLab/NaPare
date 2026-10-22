@@ -4,6 +4,8 @@ Project guides, reference material and historical records live under this direct
 
 ## Sections
 
+- [Personal JSON export](privacy/personal-data-export.md) — snapshot, scope, exclusions and verification contract; [approved archive model](privacy/account-rights-model.md) for the separate deletion implementation.
+
 - [Next.js security patch, 23 October](security/next-patch-2026-10-23.md) — workspace pin, new advisory snapshot and verification boundaries.
 
 - [Student accessibility audit](ui/student-wcag-audit-2026-10-22.md) — WCAG 2.1 A/AA findings, browser fixture coverage and manual gaps; no conformance claim.

@@ -16,4 +16,7 @@ export interface TenantDatabaseRelationAccess {
   relation: { table: string; column: string; value: string; write?: boolean };
 }
 
-export type TenantDatabaseAccess = TenantDatabaseGrant | TenantAuthenticationAccess | TenantDatabaseRelationAccess;
+/** Self export only. SQL checks the authenticated actor again; never grants writes. */
+export interface PersonalDataReadAccess { personalData: { userId: string } }
+
+export type TenantDatabaseAccess = TenantDatabaseGrant | TenantAuthenticationAccess | TenantDatabaseRelationAccess | PersonalDataReadAccess;
