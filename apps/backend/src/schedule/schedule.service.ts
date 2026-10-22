@@ -6,7 +6,8 @@ import {
   Optional,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { DataSource, FindManyOptions, Repository, Between, In, And, Equal } from "typeorm";
+import { DataSource, FindManyOptions, Repository, Between, In, And, Equal, IsNull } from "typeorm";
+import { OfficeAssignment } from '../requests/request.entities';
 import { CurationService } from '../curation/curation.service';
 import { EventEmitter2 } from "@nestjs/event-emitter";
 
@@ -22,6 +23,7 @@ import { LessonOccurrence } from "../academic/entities/lesson-occurrence.entity"
 import { ScheduleChange } from "../academic/entities/schedule-change.entity";
 import { RaspLesson, RaspScraperService } from "../auth/rasp-scraper.service";
 import { Group } from "../users/entities/group.entity";
+import { User } from "../users/entities/user.entity";
 import { UserRole } from "../auth/interfaces/user-role";
 import {
   PaginatedResponse,
@@ -377,6 +379,7 @@ export class ScheduleService {
         "Teachers can only create lessons for themselves",
       );
     }
+    await this.assertLessonReferences(createLessonDto.universityId, createLessonDto.groupId, createLessonDto.teacherId);
     const lesson = this.lessonRepository.create({
       ...createLessonDto,
       ...(actor?.role === UserRole.TEACHER ? { teacherId: actor.id } : {}),
@@ -394,7 +397,22 @@ export class ScheduleService {
       throw new NotFoundException(`Lesson with id ${id} not found`);
     }
     this.tenantContext.assertAccess(lesson.universityId);
-    this.assertTeacherCanManageLesson(lesson);
+    const dispatcher = await this.assertTeacherCanManageLesson(lesson, updateLessonDto.groupId, true);
+    if (dispatcher) {
+      const allowed = new Set(['room', 'building', 'startDate', 'endDate', 'startTime', 'endTime', 'isChanged', 'changeDescription']);
+      if (Object.keys(updateLessonDto).some(key => !allowed.has(key))) throw new ForbiddenException('Диспетчер меняет время и место занятия, без переноса группы, источника или преподавателя.');
+      if (!updateLessonDto.changeDescription?.trim()) throw new ForbiddenException('Диспетчер указывает основание изменения.');
+      if (updateLessonDto.changeDescription.length > 1000 || (updateLessonDto.room?.length ?? 0) > 100 || (updateLessonDto.building?.length ?? 0) > 100) throw new ForbiddenException('Сократите основание, аудиторию или корпус.');
+      for (const key of ['startDate', 'endDate', 'startTime', 'endTime'] as const) if (key in updateLessonDto && updateLessonDto[key] == null) throw new ForbiddenException('Время и даты занятия нельзя очищать.');
+      updateLessonDto.isChanged = true;
+      const start = new Date(updateLessonDto.startDate ?? lesson.startDate).getTime(), end = new Date(updateLessonDto.endDate ?? lesson.endDate).getTime();
+      if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start || end - start > 86400000) throw new ForbiddenException('Проверьте начало и окончание занятия.');
+      for (const time of [updateLessonDto.startTime, updateLessonDto.endTime]) if (time !== undefined && !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(time)) throw new ForbiddenException('Время указывается в формате ЧЧ:ММ.');
+    }
+    if (updateLessonDto.universityId !== undefined && updateLessonDto.universityId !== lesson.universityId) {
+      throw new ForbiddenException('Перенос занятия в другой университет запрещён');
+    }
+    await this.assertLessonReferences(lesson.universityId, updateLessonDto.groupId, updateLessonDto.teacherId);
 
     const oldValue = lessonChangeValues(lesson);
     Object.assign(lesson, updateLessonDto);
@@ -491,7 +509,7 @@ export class ScheduleService {
 
   async delete(id: string): Promise<void> {
     const lesson = await this.findById(id);
-    this.assertTeacherCanManageLesson(lesson);
+    await this.assertTeacherCanManageLesson(lesson);
     await this.lessonRepository.delete(lesson.id);
     await this.eventBus?.publish({
       type: "lesson.cancelled",
@@ -509,14 +527,33 @@ export class ScheduleService {
     });
   }
 
-  private assertTeacherCanManageLesson(lesson: Lesson): void {
+  private async assertLessonReferences(universityId: string | undefined, groupId?: string, teacherId?: string): Promise<void> {
+    // Background imports resolve their references separately. HTTP mutations
+    // must never attach an own-university row to a foreign group or teacher.
+    if (!this.tenantContext.getUser()) return;
+    if (!universityId) throw new ForbiddenException('Для занятия необходим университет');
+    if (groupId && (!this.groupRepository || !await this.groupRepository.findOne({ where: { id: groupId, universityId } }))) {
+      throw new NotFoundException('Группа своего университета не найдена');
+    }
+    if (teacherId && !await this.dataSource.getRepository(User).findOne({ where: { id: teacherId, universityId } })) {
+      throw new NotFoundException('Преподаватель своего университета не найден');
+    }
+  }
+
+  private async assertTeacherCanManageLesson(lesson: Lesson, targetGroupId?: string, allowDispatcher = false): Promise<boolean> {
     const user = this.tenantContext.getUser();
+    if (allowDispatcher && user && (user.role === UserRole.CURATOR || user.role === UserRole.TEACHER && lesson.teacherId !== user.id) && this.dataSource.hasMetadata?.(OfficeAssignment)) {
+      const grants = await this.dataSource.getRepository(OfficeAssignment).findBy({ universityId: lesson.universityId, userId: user.id, duty: 'dispatcher', revokedAt: IsNull() });
+      const groups = await this.dataSource.getRepository(Group).findBy({ universityId: lesson.universityId, id: In([...new Set([lesson.groupId, ...(targetGroupId ? [targetGroupId] : [])])]) });
+      if (groups.some(group => group.id === lesson.groupId) && (!targetGroupId || groups.some(group => group.id === targetGroupId)) && groups.every(group => grants.some(grant => grant.groupIds.includes(group.id) || grant.facultyIds.includes(group.facultyId)))) return true;
+    }
     if (user?.role === UserRole.CURATOR) throw new ForbiddenException('Кураторство не даёт права изменять расписание.');
     if (user?.role === UserRole.TEACHER && lesson.teacherId !== user.id) {
       throw new ForbiddenException(
         "Teachers can only manage their own lessons",
       );
     }
+    return false;
   }
 
   async importLessons(

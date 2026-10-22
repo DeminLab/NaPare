@@ -5,6 +5,7 @@ import { Between, In, Repository } from 'typeorm';
 import { EventBusService } from '../events/event-bus.service';
 import { Homework } from '../pair-space/entities/homework.entity';
 import { Lesson } from '../schedule/entities/lesson.entity';
+import { TenantContext } from '../common/tenant/tenant-context';
 
 const REMINDER_WINDOW_MS = 24 * 60 * 60 * 1000;
 const CHECK_INTERVAL_MS = 15 * 60 * 1000;
@@ -22,6 +23,7 @@ export class HomeworkDeadlineReminderService implements OnModuleInit, OnModuleDe
     @InjectRepository(Lesson)
     private readonly lessonRepository: Repository<Lesson>,
     private readonly eventBus: EventBusService,
+    private readonly tenant: TenantContext = new TenantContext(),
   ) {}
 
   onModuleInit(): void {
@@ -35,6 +37,13 @@ export class HomeworkDeadlineReminderService implements OnModuleInit, OnModuleDe
   }
 
   async checkDueDeadlines(now = new Date()): Promise<void> {
+    return this.tenant.runWithDatabaseAccess(
+      { tables: ['pair_spaces', 'lessons'], universityIds: null },
+      () => this.scanDueDeadlines(now),
+    );
+  }
+
+  private async scanDueDeadlines(now: Date): Promise<void> {
     if (this.checkInProgress) return;
     this.checkInProgress = true;
     try {
@@ -67,7 +76,11 @@ export class HomeworkDeadlineReminderService implements OnModuleInit, OnModuleDe
           if (!lesson || lesson.universityId !== pairSpace.universityId) continue;
 
           try {
-            await this.eventBus.publish({
+            await this.tenant.runWithDatabaseAccess(
+              { tables: ['event_records', 'notification_preferences', 'notifications', 'inbox_items'], universityIds: [pairSpace.universityId], write: true },
+              () => this.tenant.runWithDatabaseAccess(
+                { tables: ['users', 'groups'], universityIds: [pairSpace.universityId] },
+                () => this.eventBus.publish({
               type: 'homework.deadline_soon',
               idempotencyKey: `homework-deadline:${homework.id}:${homework.deadline.toISOString()}`,
               universityId: pairSpace.universityId,
@@ -84,7 +97,9 @@ export class HomeworkDeadlineReminderService implements OnModuleInit, OnModuleDe
                 pairSpaceId: pairSpace.id,
                 deepLink: `/pair-space/${lesson.id}`,
               },
-            });
+                }),
+              ),
+            );
           } catch (error) {
             this.logger.error(`Failed to publish deadline reminder for homework ${homework.id}`, error);
           }
