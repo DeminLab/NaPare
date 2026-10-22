@@ -5,6 +5,8 @@ Project guides, reference material and historical records live under this direct
 ## Sections
 
 - [Student accessibility audit](ui/student-wcag-audit-2026-10-22.md) — WCAG 2.1 A/AA findings, browser fixture coverage and manual gaps; no conformance claim.
+- [Procurement drafts](procurement/README.md) — technical specification, price evidence form, product card and registry gaps; [three pricing models](strategy/monetization.md) with synthetic arithmetic, no approved tariffs.
+
 
 - [Combined improvement verification](project-log/improvement-integration-2026-10-22.md) — integration branch, local test evidence and remaining requirements; no production changes.
 
