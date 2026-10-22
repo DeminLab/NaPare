@@ -11,4 +11,3 @@ Real HTTP/JWT/PostgreSQL migration, tenant isolation and source/revocation scena
 ## Verification
 
 Backend typecheck, unit and E2E tests with disposable `SEMESTER_TEST_DATABASE_URL`, root guards and lint. See [semester contract](../../integrations/moodle-semester.md) for source, setup and evidence limits.
-
