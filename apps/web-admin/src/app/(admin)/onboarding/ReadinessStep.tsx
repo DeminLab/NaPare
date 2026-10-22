@@ -65,4 +65,3 @@ export default function ReadinessStep({ university }: { university: University }
     </section>}
   </Card>;
 }
-
