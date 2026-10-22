@@ -25,4 +25,3 @@ Trace direct imports and the closest route or caller before changing this file.
 ```powershell
 pnpm --filter @napare/backend exec tsc --noEmit
 ```
-

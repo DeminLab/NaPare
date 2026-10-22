@@ -17,4 +17,3 @@ Least-scope platform permission mapping to tenant tables and read/write capabili
 ## Verification
 
 Run focused backend tests and typecheck. PostgreSQL tests require a separate local disposable cluster and TENANT_RLS_TEST_ADMIN_URL; never use production.
-

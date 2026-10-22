@@ -589,4 +589,3 @@ Choose the card matching the task area, read the canonical source and then follo
 - [Student offline 3](offline-3.md)
 
 - [Student offline 4](offline-4.md)
-

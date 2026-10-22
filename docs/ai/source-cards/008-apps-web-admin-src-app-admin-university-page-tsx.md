@@ -29,4 +29,3 @@ The academic-office content link opens `/requests`; shared navigation/header ass
 ```powershell
 pnpm --filter @napare/web-admin exec tsc --noEmit
 ```
-

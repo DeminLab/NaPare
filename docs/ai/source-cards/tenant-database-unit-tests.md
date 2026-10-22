@@ -17,4 +17,3 @@ Runner scope, existing transactions, rollback, concurrent query serialization an
 ## Verification
 
 Run focused backend tests and typecheck. PostgreSQL tests require a separate local disposable cluster and TENANT_RLS_TEST_ADMIN_URL; never use production.
-

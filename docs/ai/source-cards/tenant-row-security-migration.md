@@ -17,4 +17,3 @@ FORCE RLS and mandatory restrictive CRUD policies for scalar university columns;
 ## Verification
 
 Run focused backend tests and typecheck. PostgreSQL tests require a separate local disposable cluster and TENANT_RLS_TEST_ADMIN_URL; never use production.
-

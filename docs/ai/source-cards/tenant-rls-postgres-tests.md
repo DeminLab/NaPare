@@ -17,4 +17,3 @@ Real PostgreSQL non-superuser table-owner isolation, pooled TypeORM flows, CRUD,
 ## Verification
 
 Run focused backend tests and typecheck. PostgreSQL tests require a separate local disposable cluster and TENANT_RLS_TEST_ADMIN_URL; never use production.
-

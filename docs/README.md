@@ -4,6 +4,8 @@ Project guides, reference material and historical records live under this direct
 
 ## Sections
 
+- [Combined improvement verification](project-log/improvement-integration-2026-10-22.md) — integration branch, local test evidence and remaining requirements; no production changes.
+
 - [AI and repository workflow](ai/README.md) — project map, task reading order, change safety, source cards and documentation rules.
 - [API](api/README.md) — API usage and contracts.
 - [University schedule import](integrations/schedule-import.md) — CSV/ICS/XLSX/Moodle/SIBIT formats, durable queue and change journal.

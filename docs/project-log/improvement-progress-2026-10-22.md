@@ -20,6 +20,8 @@
 
 ## Проверки и ограничения
 
+- [Совместная интеграционная проверка PR 1–12](improvement-integration-2026-10-22.md): 41 unit suite/422 passed, 11 E2E suites/4513 passed/1 skipped; общий typecheck шести приложений, backend build, 6 offline VM тестов, lint/docs/guards и inventory355. Это локальные синтетические проверки, не production. Student semester UI опубликован в [PR 12](https://github.com/DeminLab/NaPare/pull/12); API семестра — в [PR 11](https://github.com/DeminLab/NaPare/pull/11).
+
 - Docker Desktop Linux engine недоступен. Это не препятствие для отдельного локального PostgreSQL 18: тестовый кластер создан на `127.0.0.1:55439`, отдельно от установленного сервера.
 - Начальный backend unit baseline: 35 suites, 33 passed, 2 failed; 352 tests, 341 passed, 11 failed. Существующие проблемы: невалидные UUID в PairSpace test fixtures и Moodle BlockList/DNS fixture. Исправления и повторный запуск относятся к P0-2.
 - P0-1 focused unit: 5 suites, 62 tests passed после guard/reference правок. Это результат конкретного запуска, не итог всего блока.
