@@ -6,6 +6,8 @@ The active role-workspace work must not modify `apps/web-student/**`, shared nav
 
 ## Baseline commands
 
+On 22 October 2026 the user explicitly approved the student semester screen and a content link in the profile. This permits `apps/web-student/src/app/(student)/semester/page.tsx` and that link in `profile/page.tsx`; it does not extend approval to navigation, headers, Avatar or logos.
+
 ```powershell
 node scripts/verify-role-workspace-boundaries.cjs
 node scripts/verify-ai-documentation.cjs

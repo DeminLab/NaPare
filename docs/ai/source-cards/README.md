@@ -1,5 +1,7 @@
 # Source-card index
 
+- [Student semester report](student-semester-page.md)
+
 - [Moodle numeric academic identities](semester-identity.md)
 - [Academic identity migration and RLS](semester-migration.md)
 - [Semester request validation](semester-dto.md)
