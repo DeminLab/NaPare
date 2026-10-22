@@ -71,6 +71,10 @@ export class User {
   @Column({ type: "integer", default: 0 })
   sessionVersion: number;
 
+  /** Irreversible local account tombstone, distinct from an administrative block. */
+  @Column({ type: 'timestamp', nullable: true })
+  personalDataDeletedAt: Date | null;
+
   @Column({ nullable: true })
   lastLoginAt: Date;
 

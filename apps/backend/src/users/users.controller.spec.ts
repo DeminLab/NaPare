@@ -3,12 +3,16 @@ import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { PersonalDataService } from './personal-data.service';
+import { AccountErasureService } from './account-erasure.service';
+import { DeleteAccountDto } from './dto/delete-account.dto';
 
 describe('UsersController', () => {
   let controller: UsersController;
   let service: Partial<UsersService>;
+  let erasure: { erase: jest.Mock };
 
   beforeEach(async () => {
+    erasure = { erase: jest.fn().mockResolvedValue({ success: true, archiveModel: 'pseudonymous' }) };
     service = {
       findById: jest.fn().mockResolvedValue({ id: '1', email: 'test@test.com' }),
       update: jest.fn().mockResolvedValue({ id: '1', firstName: 'Updated' }),
@@ -17,7 +21,7 @@ describe('UsersController', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [UsersController],
-      providers: [{ provide: UsersService, useValue: service }, { provide: PersonalDataService, useValue: {} }],
+      providers: [{ provide: UsersService, useValue: service }, { provide: PersonalDataService, useValue: {} }, { provide: AccountErasureService, useValue: erasure }],
     })
       .overrideGuard(JwtAuthGuard)
       .useValue({ canActivate: () => true })
@@ -38,9 +42,11 @@ describe('UsersController', () => {
   });
 
   describe('deleteAccount', () => {
-    it('should deactivate user', async () => {
-      await controller.deleteAccount({ user: { id: '1' } });
-      expect(service.deactivate).toHaveBeenCalledWith('1');
+    it('uses the confirmed erasure operation instead of administrative deactivation', async () => {
+      const dto: DeleteAccountDto = { currentPassword: 'synthetic-password', confirmed: true, acknowledgeRetention: true };
+      await expect(controller.deleteAccount(dto)).resolves.toEqual({ success: true, archiveModel: 'pseudonymous' });
+      expect(erasure.erase).toHaveBeenCalledWith(dto);
+      expect(service.deactivate).not.toHaveBeenCalled();
     });
   });
 });

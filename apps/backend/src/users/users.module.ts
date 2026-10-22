@@ -11,13 +11,14 @@ import { UsersService } from './users.service';
 import { UsersController } from './users.controller';
 import { PlatformModule } from '../platform/platform.module';
 import { PersonalDataService } from './personal-data.service';
+import { AccountErasureService } from './account-erasure.service';
 
 @Module({
   imports: [
     PlatformModule,
     TypeOrmModule.forFeature([User, University, Faculty, Group, Teacher, TelegramLinkChallenge]),
   ],
-  providers: [UsersService, PersonalDataService],
+  providers: [UsersService, PersonalDataService, AccountErasureService],
   controllers: [UsersController],
   exports: [UsersService],
 })
