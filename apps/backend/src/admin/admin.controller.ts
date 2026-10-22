@@ -42,6 +42,7 @@ import { UpdateUniversityUserStatusDto } from "./dto/update-university-user-stat
 import { ResetUniversityUserPasswordDto } from "./dto/reset-university-user-password.dto";
 import { ConfigureMoodleConnectorDto } from "./dto/configure-moodle-connector.dto";
 import { LinkSibitTeacherDto } from "./dto/link-sibit-teacher.dto";
+import { ScheduleImportService } from '../schedule/connectors/schedule-import.service';
 
 @ApiTags("admin")
 @ApiBearerAuth()

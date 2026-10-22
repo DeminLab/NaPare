@@ -4,6 +4,7 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  DeleteDateColumn,
   Index,
 } from 'typeorm';
 
@@ -29,6 +30,9 @@ import {
   'pairNumber',
 ])
 export class Lesson {
+  @DeleteDateColumn({ type: 'timestamp', nullable: true })
+  deletedAt: Date | null;
+
   @PrimaryGeneratedColumn('uuid')
   id: string;
 

@@ -11,6 +11,7 @@ import { In, MoreThanOrEqual, Repository } from "typeorm";
 import * as bcrypt from "bcrypt";
 
 import { UsersService } from "../users/users.service";
+import { ScheduleImportService } from '../schedule/connectors/schedule-import.service';
 import { CurationService } from "../curation/curation.service";
 import { ScheduleService } from "../schedule/schedule.service";
 import { SibitConnectorService } from "../schedule/connectors/sibit-connector.service";
@@ -96,6 +97,7 @@ export class AdminService {
     private readonly raspScraperService: RaspScraperService,
     @Optional() private readonly eventBus?: EventBusService,
     @Optional() private readonly curation?: CurationService,
+    @Optional() private readonly scheduleImports?: ScheduleImportService,
   ) {}
 
   async getUniversityUsers(
@@ -317,11 +319,12 @@ export class AdminService {
     universityId: string,
     importScheduleDto: ImportScheduleDto,
   ): Promise<{ imported: number; updated: number }> {
+    if (this.scheduleImports) return this.scheduleImports.submit(universityId, importScheduleDto) as Promise<{ imported: number; updated: number }>;
     this.tenantContext.assertAccess(universityId);
 
     const groupNames = [
       ...new Set(
-        importScheduleDto.rows.map((row) => row.group.trim()).filter(Boolean),
+        importScheduleDto.rows!.map((row) => row.group.trim()).filter(Boolean),
       ),
     ];
     const groups = await this.groupRepository.find({
@@ -343,7 +346,7 @@ export class AdminService {
       );
     }
 
-    const lessons = importScheduleDto.rows.map((row, index) =>
+    const lessons = importScheduleDto.rows!.map((row, index) =>
       this.toLessonDto(
         row,
         groupsByName.get(row.group.trim().toLocaleLowerCase("ru-RU"))!.id,
