@@ -9,6 +9,8 @@ import { AuthService } from '../auth/auth.service';
 import { requireUniversityId } from '../common/tenant/require-university';
 import { CareerNotice, CareerTest, CareerTestAttempt, CareerCompany, CareerMembership, CareerPartnership, CareerProfile, CareerAdmission, CareerTask, CareerApplication, CareerWork, CareerReview, CareerPortfolio } from './career.entities';
 import { CareerTestDto, CareerAttemptDto, EmployerRegistrationDto, CareerCompanyDto, CareerProfileDto, CareerTaskDto, CareerMessageDto, CareerSubmissionDto, CareerDecisionDto, CareerReviewDto, CareerMembershipDto, CareerAdmissionDto } from './career.dto';
+import { randomUUID } from 'node:crypto';
+import { TenantContext } from '../common/tenant/tenant-context';
 
 type Actor = AuthenticatedUser;
 type CareerTaskListQuery = {offset?: string; limit?: string; q?: string; category?: string; state?: string};
@@ -33,7 +35,7 @@ export function assertCareerResultUrl(value: string): void {
 
 @Injectable()
 export class CareerService {
-  constructor(private readonly db: DataSource, private readonly auth: AuthService) {}
+  constructor(private readonly db: DataSource, private readonly auth: AuthService, private readonly tenant: TenantContext = new TenantContext()) {}
   private repo<T extends object>(entity: new () => T, manager = this.db.manager) { return manager.getRepository(entity); }
   private async university(id: string) { if (!await this.repo(University).existsBy({id})) throw new NotFoundException('Вуз не найден'); }
   private async center(actor: Actor, universityId: string, administrator = false): Promise<void> {
@@ -45,6 +47,9 @@ export class CareerService {
   }
   private async company(actor: Actor, companyId: string, owner = false, manager = this.db.manager): Promise<void> {
     if (!await this.repo(CareerMembership,manager).existsBy({userId:actor.id,companyId,role:In(owner?['company_owner']:['company_owner','company_member']),revokedAt:IsNull()})) throw new ForbiddenException('Нет доступа к компании');
+    // Keep membership management scoped to this proved company, including rows
+    // of invited colleagues whose universityId is deliberately NULL.
+    if (this.tenant.getUser()) this.tenant.authorizeDatabaseAccess({ relation: { table: 'career_membership', column: 'companyId', value: companyId, write: owner } });
   }
   private student(actor: Actor) { if (actor.role !== UserRole.STUDENT) throw new ForbiddenException('Действие доступно студенту'); return requireUniversityId(actor); }
   private async task(id: string, manager = this.db.manager, lock = false) {
@@ -58,8 +63,9 @@ export class CareerService {
   async register(dto: EmployerRegistrationDto) {
     if(Buffer.byteLength(dto.password,'utf8')>72)throw new BadRequestException('Пароль слишком длинный. Используйте более короткую парольную фразу.');
     const email = dto.email.trim().toLowerCase();
-    if (await this.repo(User).createQueryBuilder('u').where('LOWER(u.email) = :email',{email}).getExists()) throw new ConflictException('Аккаунт с такой почтой уже существует. Войдите в него.');
-    try { await this.repo(User).save(this.repo(User).create({email,passwordHash:await bcrypt.hash(dto.password,12),firstName:dto.firstName.trim(),lastName:dto.lastName.trim(),role:UserRole.EMPLOYER,universityId:null})); }
+    if (await this.tenant.runWithDatabaseAccess({ authentication: { email } }, () => this.repo(User).createQueryBuilder('u').where('LOWER(u.email) = :email',{email}).getExists())) throw new ConflictException('Аккаунт с такой почтой уже существует. Войдите в него.');
+    const id = randomUUID();
+    try { await this.tenant.runWithDatabaseAccess({ authentication: { id, write: true } }, async () => this.repo(User).save(this.repo(User).create({id,email,passwordHash:await bcrypt.hash(dto.password,12),firstName:dto.firstName.trim(),lastName:dto.lastName.trim(),role:UserRole.EMPLOYER,universityId:null}))); }
     catch (error) { if ((error as {driverError?:{code?:string}}).driverError?.code === '23505') throw new ConflictException('Аккаунт уже существует'); throw error; }
     return this.auth.portalLogin({email,password:dto.password});
   }
@@ -333,7 +339,12 @@ export class CareerService {
   }
   async addMembership(actor:Actor,dto:CareerMembershipDto) {
     if(dto.companyId){await this.company(actor,dto.companyId,true);if(dto.identityConfirmed!==true)throw new BadRequestException('Подтвердите, что проверили аккаунт сотрудника');}else{await this.center(actor,requireUniversityId(actor),true);}
-    if(Boolean(dto.userId)===Boolean(dto.email))throw new BadRequestException('Укажите сотрудника');const user=dto.userId?await this.repo(User).findOneBy({id:dto.userId,isActive:true}):await this.repo(User).createQueryBuilder('u').where('LOWER(u.email) = :email AND u.isActive = true',{email:dto.email!.trim().toLowerCase()}).getOne();if(!user) throw new NotFoundException('Аккаунт не найден');
+    if(Boolean(dto.userId)===Boolean(dto.email))throw new BadRequestException('Укажите сотрудника');
+    const lookup = () => dto.userId ? this.repo(User).findOneBy({id:dto.userId,isActive:true}) : this.repo(User).createQueryBuilder('u').where('LOWER(u.email) = :email AND u.isActive = true',{email:dto.email!.trim().toLowerCase()}).getOne();
+    const user = dto.companyId
+      ? await this.tenant.runWithDatabaseAccess({ authentication: dto.userId ? { id: dto.userId } : { email: dto.email!.trim() } }, lookup)
+      : await lookup();
+    if(!user) throw new NotFoundException('Аккаунт не найден');
     if(dto.companyId){await this.company(actor,dto.companyId,true);if(dto.role!=='company_member'||[UserRole.STUDENT,UserRole.DEVELOPER,UserRole.SUPERADMIN].includes(user.role)) throw new BadRequestException('Нужен рабочий аккаунт сотрудника');const old=await this.repo(CareerMembership).findOneBy({userId:user.id,companyId:dto.companyId});if(old?.revokedAt===null)throw new ConflictException('Сотрудник уже имеет доступ к компании');return this.repo(CareerMembership).save({...old,userId:user.id,companyId:dto.companyId,universityId:null,role:dto.role,revokedAt:null,revokedBy:null});}
     const universityId=requireUniversityId(actor);await this.center(actor,universityId,true);
     if(user.universityId!==universityId||[UserRole.STUDENT,UserRole.EMPLOYER,UserRole.DEVELOPER,UserRole.SUPERADMIN].includes(user.role)||!['career_staff','career_admin'].includes(dto.role)||dto.role==='career_admin'&&actor.role!==UserRole.UNIVERSITY_ADMIN) throw new ForbiddenException('Недоступное назначение');

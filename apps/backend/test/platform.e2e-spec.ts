@@ -56,6 +56,8 @@ suite('Platform owner and explicitly delegated rights: real PostgreSQL/JWT/HTTP'
     await http().patch('/api/v1/platform/accounts/'+f.users.peer.id).auth(tokens.developer,{type:'bearer'}).send({role:'superadmin'}).expect(403);
   });
   it('creates and edits a university and creates a usable account without exposing credentials',async()=>{
+    // This scenario requires an undelegated developer; the preceding test grants accounts.write.
+    await grant([]).expect(200);
     const uni=await http().post('/api/v1/platform/universities').auth(tokens.owner,{type:'bearer'}).send({name:'Тестовый вуз',city:'Омск',status:'pending'}).expect(201);
     await http().put('/api/v1/platform/universities/'+uni.body.id).auth(tokens.owner,{type:'bearer'}).send({name:'Тестовый вуз',city:'Омск',status:'active'}).expect(200);
     const account={email:'new-user@platform.example.test',firstName:'Новый',lastName:'Студент',role:'student',universityId:uni.body.id,password:'test-created-account-123'};
