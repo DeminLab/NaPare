@@ -17,6 +17,7 @@ import { User } from "../users/entities/user.entity";
 import { MoodleModule } from "../moodle/moodle.module";
 import { CurationModule } from "../curation/curation.module";
 import { RaspModule } from "../rasp/rasp.module";
+import { ScheduleConnectorsModule } from '../schedule/connectors/schedule-connectors.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { RaspModule } from "../rasp/rasp.module";
     MoodleModule,
     CurationModule,
     RaspModule,
+    ScheduleConnectorsModule,
   ],
   providers: [AdminService, SuperadminService],
   controllers: [AdminController, SuperadminController],

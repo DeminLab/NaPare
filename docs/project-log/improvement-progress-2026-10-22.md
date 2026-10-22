@@ -1,0 +1,52 @@
+# Выполнение плана НаПаре от 22 октября 2026
+
+Назначение: рабочий журнал реализации [исходного плана](improvement-plan-2026-10-22.md). Цель активна; непроверенные и согласуемые пункты не считаются завершёнными. Production не изменяется. Исходная база: `6f28912`.
+
+## Состояние блоков
+
+| Блок | Ветка | Состояние | Результат / условие завершения |
+| --- | --- | --- | --- |
+| P0-1, изоляция вузов | `codex/p0-tenant-isolation` | Реализовано; расширение маршрутного охвата | 325 routes; RLS, 11 SQL integration и 47 реальных HTTP сценариев. Это ещё не негативное выполнение каждого бизнес-маршрута |
+| P0-2, роли и CI | `codex/p0-role-boundaries` | Проверено, draft PR | 11 ролей; 4009 guard HTTP probes; PostgreSQL suites обязательны в CI; [PR 1](https://github.com/DeminLab/NaPare/pull/1) |
+| P0-3, восстановление | `codex/p0-backup-recovery` | Проверено локально, draft PR | Backup/restore scripts, readiness, алерты, runbook; [PR 2](https://github.com/DeminLab/NaPare/pull/2). Внешняя доставка/серверное расписание отдельно |
+| P1-1, push и очередь | `codex/p1-notification-delivery` | В работе | Redis delivery, провайдеры, retries, dry run без реальной отправки |
+| P1-2, коннекторы | `codex/p1-schedule-connectors` | Реализовано, проверено локально | [Форматы и инструкция вузу](../integrations/schedule-import.md): ICS/CSV/XLSX/Moodle/SIBIT, PostgreSQL очередь и ScheduleChange журнал. 11 adapter tests, 7 HTTP/PG сценариев; внешние источники mocked |
+| P1-3, новый вуз | — | После коннекторов | Мастер и проверка готовности, без изменения navigation/header |
+| P1-4, учебный офис | `codex/p1-academic-office` | Модель утверждена | Реализация разрешена; начальная ветка подготовлена |
+| P2-1, студент | `codex/p2-student-offline` | Offline реализован, остальные задачи открыты | [PR 5](https://github.com/DeminLab/NaPare/pull/5): worker и cold offline navigation проверены. Семестр, экспорт/обезличивание и аудит доступности ещё не выполнены |
+| P2-2, работодатели | `codex/p2-career-billing` | Оплата реализована, draft PR | [PR 4](https://github.com/DeminLab/NaPare/pull/4): Т-Касса для услуг без выплат студентам; API/провайдер/UI проверены. ИНН/модерация/XLSX остаются открытыми |
+| P2-3, персональные данные | — | В очереди | Карта данных, вопросы юристу, on-premise/RF deployment, договорные проекты |
+| P3, продажи и аналитика | — | В очереди | Закупочные черновики, реестр ПО, 10 метрик, сравнение монетизации |
+
+## Проверки и ограничения
+
+- Docker Desktop Linux engine недоступен. Это не препятствие для отдельного локального PostgreSQL 18: тестовый кластер создан на `127.0.0.1:55439`, отдельно от установленного сервера.
+- Начальный backend unit baseline: 35 suites, 33 passed, 2 failed; 352 tests, 341 passed, 11 failed. Существующие проблемы: невалидные UUID в PairSpace test fixtures и Moodle BlockList/DNS fixture. Исправления и повторный запуск относятся к P0-2.
+- P0-1 focused unit: 5 suites, 62 tests passed после guard/reference правок. Это результат конкретного запуска, не итог всего блока.
+- P0-2 HTTP guard probe: 4009 tests passed на реальных JWT strategy/guards с синтетическим ответом конечного handler. Это не выполнение 325 бизнес-обработчиков с production данными.
+- RLS core: отдельный non-superuser owner PostgreSQL runtime fixture проверяет FORCE RLS, read/write, transaction manager, pool concurrency, auth identity и ограниченные grants. Полный объединённый E2E-прогон прошёл; негативное выполнение всех бизнес-маршрутов ещё не покрыто.
+- Ежедневное расписание backup, внешний storage, реальная доставка push, договор эквайринга, реестр ПО, юридическая оценка и production deployment требуют отдельных операционных действий. Локальный код и инструкции не доказывают их выполнение.
+
+## Согласования, предусмотренные исходным планом
+
+1. Утвердить модель заявлений учебного офиса до реализации backend/UI.
+2. Выбрать провайдера и финансовый сценарий оплаты до кода эквайринга.
+3. Явно разрешить student service worker/offline изменения в защищённом каталоге.
+
+Все три решения получены от владельца в этом чате: модель заявлений утверждена, выбрана Т-Касса для услуг без выплат студентам, student offline-кэш явно разрешён. Повторное согласование этих пунктов не требуется.
+
+После объединения P0-1/P0-2: **37 unit suites / 377 tests passed**; **6 E2E suites / 4090 passed / 1 skipped** (native host agent не настроен). Последний полный прогон использовал обычное разрешение модулей после `pnpm install --offline --frozen-lockfile --ignore-scripts`, без временного Jest mapper. Все тестовые базы отдельные, runtime-роль без SUPERUSER/BYPASSRLS. Сбой двух копий TypeORM был локальным рассогласованием зависимостей; tracked manifests основного checkout не менялись.
+
+Чужие незакоммиченные изменения основного checkout сохранены: страница команды и документ аудита от 21 октября. Блоки реализуются в отдельных worktrees, каждый со своей веткой и проверками.
+
+## Уточнение состояния после согласований
+
+- Учебный офис: [утверждённая модель](../product/academic-office-requests-model.md); backend/UI ещё не реализованы. Ветка подготовлена.
+- Оплата: [утверждённая модель](../product/career-payments-model.md); код в PR 4. Локально 38 unit suites / 387 tests; 7 E2E suites / 4188 passed / 1 skipped. Все шесть CI jobs PR 4 прошли на `e8973b9`, включая сборку, аудит зависимостей и реальный PostgreSQL E2E. Банк в тестах synthetic/mock, настоящий терминал не вызывался.
+- Offline: `bf465c5`, отдельная ветка. 6 focused tests, student typecheck, production build, root lint/docs lint/guards passed. Playwright с синтетическим backend проверил реальный worker на production build: новая offline-вкладка, расписание/задание, чужая identity, очистка, 320 px. Реальные аккаунты, мобильные устройства и production не проверялись. Подробные лимиты автозагрузки описаны в документации ветки.
+- Dependency audit: закреплён `follow-redirects@1.16.1`; CI PR 3 прошёл на `0556899`. Остаточное moderate-предупреждение Nest SSE и существующая прикладная фильтрация описаны в [обзоре зависимостей](../security/dependency-review-2026-10-22.md). Major upgrade Nest не выполнялся.
+- Коннекторы: завершены серверные адаптеры и транзакционная PostgreSQL очередь, обязательная FORCE RLS migration33, delta journal и инструкция вузу. Полный локальный прогон: 38 unit suites / 387 passed; 7 E2E suites / 4123 passed / 1 skipped (native host agent). Обычное разрешение модулей, независимая установка зависимостей; ни live Moodle/СИБИТ, ни production не проверялись. Push выполняется отдельно.
+
+## Невыполненные требования
+
+Полное негативное выполнение каждого бизнес-маршрута; внешняя доставка backup и серверный restore drill; живые push-провайдеры; проверка внешних коннекторов с настройками вуза и onboarding UI; учебный офис; семестровый обзор; экспорт и обезличивание; WCAG-аудит; проверка компании по реестру, модерация и XLSX-отчёт; карта ПД/юридические проекты/RF deployment assessment; закупочные проекты, анализ реестра ПО, 10 метрик и сравнение монетизации. Локальные проверки предыдущих блоков не закрывают эти требования. Цель остаётся активной.

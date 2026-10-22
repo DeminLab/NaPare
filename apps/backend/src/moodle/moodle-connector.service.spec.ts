@@ -1,4 +1,8 @@
 import { BadGatewayException, BadRequestException } from "@nestjs/common";
+import * as dns from "node:dns/promises";
+import * as https from "node:https";
+import { ClientRequest, IncomingMessage } from "node:http";
+import { EventEmitter } from "node:events";
 
 import {
   MoodleConnectorService,
@@ -8,8 +12,29 @@ import {
 describe("MoodleConnectorService", () => {
   const originalKey = process.env.CONNECTOR_ENCRYPTION_KEY;
   const service = new MoodleConnectorService();
+  let responseBody: Record<string, unknown>;
 
   beforeEach(() => {
+    responseBody = { sitename: "University Moodle", username: "api-user", release: "4.5" };
+    jest.spyOn(dns, "lookup").mockResolvedValue([{ address: "93.184.216.34", family: 4 }] as never);
+    jest.spyOn(https, "request").mockImplementation(((
+      _url: URL,
+      _options: https.RequestOptions,
+      onResponse: (response: IncomingMessage) => void,
+    ) => {
+      const transport = new EventEmitter() as ClientRequest;
+      transport.setTimeout = jest.fn().mockReturnValue(transport);
+      transport.destroy = jest.fn().mockImplementation(error => { transport.emit("error", error); return transport; });
+      transport.end = jest.fn().mockImplementation(() => {
+        const response = new EventEmitter() as IncomingMessage;
+        response.statusCode = 200;
+        onResponse(response);
+        response.emit("data", JSON.stringify(responseBody));
+        response.emit("end");
+        return transport;
+      });
+      return transport;
+    }) as typeof https.request);
     process.env.CONNECTOR_ENCRYPTION_KEY = Buffer.alloc(32, 7).toString(
       "base64",
     );
@@ -40,25 +65,15 @@ describe("MoodleConnectorService", () => {
     );
     expect(config.encryptedToken).not.toContain("moodle-super-secret-token");
 
-    const fetchMock = jest.spyOn(global, "fetch").mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          sitename: "University Moodle",
-          username: "api-user",
-          release: "4.5",
-        }),
-        { status: 200 },
-      ),
-    );
     await expect(service.testConnection(config)).resolves.toEqual({
       siteName: "University Moodle",
       userName: "api-user",
       release: "4.5",
     });
-    expect(String(fetchMock.mock.calls[0][0])).toContain(
+    expect(String(jest.mocked(https.request).mock.calls[0][0])).toContain(
       "wsfunction=core_webservice_get_site_info",
     );
-    expect(String(fetchMock.mock.calls[0][0])).toContain(
+    expect(String(jest.mocked(https.request).mock.calls[0][0])).toContain(
       "wstoken=moodle-super-secret-token",
     );
   });
@@ -68,20 +83,41 @@ describe("MoodleConnectorService", () => {
       "https://moodle.example.edu/",
       "valid-token-value",
     );
-    jest.spyOn(global, "fetch").mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          exception: "invalid_response_exception",
-          message: "Invalid token",
-        }),
-        {
-          status: 200,
-        },
-      ),
-    );
+    responseBody = { exception: "invalid_response_exception", message: "Invalid token" };
 
     await expect(service.testConnection(config)).rejects.toThrow(
       BadGatewayException,
     );
+    expect(https.request).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ["127.0.0.1", 4], ["10.20.30.40", 4], ["169.254.169.254", 4],
+    ["::1", 6], ["fe80::1", 6], ["::ffff:127.0.0.1", 6], ["::ffff:93.184.216.34", 6],
+  ])("rejects blocked DNS target %s before opening the transport", async (address, family) => {
+    jest.mocked(dns.lookup).mockResolvedValue([{ address, family }] as never);
+    const config = service.configure("https://moodle.example.edu/", "valid-token-value");
+    await expect(service.testConnection(config)).rejects.toThrow(BadRequestException);
+    expect(https.request).not.toHaveBeenCalled();
+  });
+
+  it("allows public IPv6 and pins the checked DNS addresses for the HTTPS request", async () => {
+    const addresses = [{ address: "2606:4700:4700::1111", family: 6 }];
+    jest.mocked(dns.lookup).mockResolvedValue(addresses as never);
+    const config = service.configure("https://moodle.example.edu/", "valid-token-value");
+    await expect(service.testConnection(config)).resolves.toMatchObject({ siteName: "University Moodle" });
+    const options = jest.mocked(https.request).mock.calls[0][1] as https.RequestOptions;
+    const callback = jest.fn();
+    options.lookup!("moodle.example.edu", { all: true }, callback);
+    expect(callback).toHaveBeenCalledWith(null, addresses);
+  });
+
+  it("rejects mixed public/private DNS responses and DNS failures", async () => {
+    const config = service.configure("https://moodle.example.edu/", "valid-token-value");
+    jest.mocked(dns.lookup).mockResolvedValue([{ address: "93.184.216.34", family: 4 }, { address: "10.0.0.1", family: 4 }] as never);
+    await expect(service.testConnection(config)).rejects.toThrow(BadRequestException);
+    jest.mocked(dns.lookup).mockRejectedValue(new Error("DNS unavailable"));
+    await expect(service.testConnection(config)).rejects.toThrow(BadGatewayException);
+    expect(https.request).not.toHaveBeenCalled();
   });
 });

@@ -15,6 +15,7 @@ import { AuditLog } from "../common/entities/audit-log.entity";
 import { Lesson } from "../schedule/entities/lesson.entity";
 import { EventBusService } from "../events/event-bus.service";
 import { MoodleConnectorService } from "../moodle/moodle-connector.service";
+import { ScheduleImportService } from '../schedule/connectors/schedule-import.service';
 import { RaspScraperService } from "../auth/rasp-scraper.service";
 
 describe("AdminService", () => {
@@ -48,6 +49,7 @@ describe("AdminService", () => {
       catalog: { groups: [], lessons: [], academicYear: "2026-2027" },
     }),
   };
+  const mockScheduleImports = { submit: jest.fn().mockResolvedValue({ status: 'queued', jobId: 'job-1' }) };
   const mockEventBus = { publish: jest.fn().mockResolvedValue(undefined) };
   const mockMoodleConnectorService = {
     configure: jest.fn(),
@@ -90,6 +92,7 @@ describe("AdminService", () => {
     module = await Test.createTestingModule({
       providers: [
         AdminService,
+        { provide: ScheduleImportService, useValue: mockScheduleImports },
         { provide: UsersService, useValue: mockUsersService },
         { provide: ScheduleService, useValue: mockScheduleService },
         { provide: SibitConnectorService, useValue: mockSibitConnectorService },
@@ -458,54 +461,11 @@ describe("AdminService", () => {
     });
   });
 
-  describe("importSchedule", () => {
-    const importRow = {
-      date: "2026-09-26",
-      startTime: "09:00",
-      endTime: "10:30",
-      pairNumber: 1,
-      subject: "Математика",
-      group: "ПИ-21",
-      teacher: "Иванов И.И.",
-      room: "305",
-    };
-
-    it("resolves a university group and imports the actual parsed lesson rows", async () => {
-      const groupRepository = module.get(getRepositoryToken(Group));
-      groupRepository.find.mockResolvedValue([
-        { id: "group-1", name: "ПИ-21", universityId: "uni-1" },
-      ]);
-      mockScheduleService.importLessons.mockClear();
-
-      await service.importSchedule("uni-1", {
-        fileName: "schedule.csv",
-        format: "csv",
-        rows: [importRow],
-      });
-
-      expect(mockScheduleService.importLessons).toHaveBeenCalledWith("uni-1", [
-        expect.objectContaining({
-          groupId: "group-1",
-          groupName: "ПИ-21",
-          subject: "Математика",
-          startTime: "09:00",
-          endTime: "10:30",
-          pairNumber: 1,
-        }),
-      ]);
-    });
-
-    it("rejects rows that reference groups outside the university structure", async () => {
-      const groupRepository = module.get(getRepositoryToken(Group));
-      groupRepository.find.mockResolvedValue([]);
-
-      await expect(
-        service.importSchedule("uni-1", {
-          fileName: "schedule.csv",
-          format: "csv",
-          rows: [importRow],
-        }),
-      ).rejects.toThrow("Не найдены группы ВУЗа");
+  describe('importSchedule', () => {
+    it('always delegates to the durable import service', async () => {
+      const input = { fileName: 'schedule.csv', format: 'csv', rows: [{ date: '2026-10-22', startTime: '09:00', endTime: '10:00', pairNumber: 1, subject: 'Math', group: 'G' }] };
+      expect(await service.importSchedule('uni-1', input)).toEqual({ status: 'queued', jobId: 'job-1' });
+      expect(mockScheduleImports.submit).toHaveBeenCalledWith('uni-1', input);
     });
   });
 

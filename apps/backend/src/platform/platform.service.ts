@@ -17,6 +17,7 @@ import { RaspScraperService, SIBIT_UNIVERSITY } from '../auth/rasp-scraper.servi
 import { PlatformControl, PlatformGrant } from './platform.entity';
 import { PLATFORM_PERMISSIONS, PlatformAccountDto, PlatformCreateAccountDto, PlatformFacultyDto, PlatformGrantDto, PlatformGroupDto, PlatformJobDto, PlatformPermission, PlatformQueryDto, PlatformSettingsDto, PlatformUniversityDto, SERVICE_IDS } from './platform.dto';
 import { ControlAgentClient } from './control-agent.client';
+import { platformDatabaseGrants, PLATFORM_TENANT_TABLES } from '../common/tenant/tenant-database-platform';
 
 type AgentJob = { id: string; service: string; action: string; status: string; actorId: string; createdAt: string; log?: string };
 type PlatformAuditContext = { ip?: string; userAgent?: string };
@@ -43,11 +44,13 @@ export class PlatformService {
   async require(permission: PlatformPermission, service?: string) {
     const access = await this.access();
     if (!access.permissions.includes(permission) || (service && !access.serviceIds.includes(service))) throw new ForbiddenException('Это действие не разрешено владельцем платформы.');
+    for (const grant of platformDatabaseGrants(permission, access.universityIds)) this.tenant.authorizeDatabaseAccess(grant);
     return access;
   }
   async requireOwner() {
     const access = await this.access();
     if (!access.owner) throw new ForbiddenException('Управление разрешениями доступно только владельцу.');
+    this.tenant.authorizeDatabaseAccess({ tables: PLATFORM_TENANT_TABLES, universityIds: null, write: true, replaceActor: true });
     return access;
   }
   assertUniversityScope(access: Awaited<ReturnType<PlatformService['access']>>, universityId: string | null | undefined) {
