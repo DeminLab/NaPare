@@ -60,7 +60,14 @@
 
 Привязки (`academic_identities`) сохраняют userId/universityId, numeric ID Moodle, URL источника, linkedBy/linkedAt в PostgreSQL. Срок автоматического удаления не установлен; DELETE привязки не удаляет audit и данные внешнего Moodle. Оценки существуют в ответе/памяти запроса, этот модуль не сохраняет их в таблицу или Redis. Основание передачи, сроки внешнего Moodle и матрицу хранения определяет оператор/юрист. Общая задача self export/удаления аккаунта остаётся открытой.
 
-## Проверки и первичные источники
+
+## Студенческий экран
+
+Пользователь отдельно разрешил экран семестра и ссылку в профиле 22 октября 2026. `/student/profile` → «Мой семестр» открывает `/student/semester`. Экран запрашивает настроенные периоды, затем по десять курсов выбранного периода. Показывает источник и время ответа, нулевые оценки, отсутствие оценки, скрытие и необходимость пересчёта. Ошибки сети, отсутствие подключения, ненастроенные периоды, отсутствие привязки личности и корректный пустой отчёт имеют разные состояния. При смене периода/страницы и ошибке старые оценки убираются; устаревший запрос отменяется. Оценки не сохраняются в localStorage/CacheStorage.
+
+Локальный Playwright с настоящим Next и синтетическими API-ответами проверил ссылку из профиля, смену периода, переход на вторую страницу, zero/hidden/stale, empty/unlinked/source/unconfigured/error/retry, порядок keyboard focus, отсутствие горизонтального переполнения на 320/768/1440 px и отсутствие page errors. Это отдельное UI-доказательство, не совместный браузерный прогон с реальным Moodle. Student TypeScript, root lint, docs lint и guards прошли.
+
+## Backend-проверки и первичные источники
 
 Локальная проверка использует настоящий Nest/JWT/PostgreSQL под non-superuser и применяет migration36 к пустой feature-таблице disposable `curation_test_*`. Moodle заменяется mock; транспорт отдельно проверяется с pinned HTTPS/DNS fixtures. Сценарии: два вуза, foreign IDs, запрет самопривязки, уникальность numeric ID, source replacement, отзыв на существующей JWT, пагинация, zero/missing/hidden/stale и outage. CI создаёт отдельную БД и задаёт `SEMESTER_TEST_DATABASE_URL`.
 
@@ -78,4 +85,4 @@ pnpm lint:docs
 git diff --check
 ```
 
-Контракт сверялся с первичным кодом Moodle 4.5: [user grade external API](https://github.com/moodle/moodle/blob/MOODLE_405_STABLE/grade/report/user/classes/external/user.php), [регистрация функции](https://github.com/moodle/moodle/blob/MOODLE_405_STABLE/grade/report/user/db/services.php), [enrollment external API](https://github.com/moodle/moodle/blob/MOODLE_405_STABLE/enrol/externallib.php). Версия/права реального Moodle вуза, student UI, официальный реестр задолженностей, production и юридические основания передачи этим блоком не проверены.
+Контракт сверялся с первичным кодом Moodle 4.5: [user grade external API](https://github.com/moodle/moodle/blob/MOODLE_405_STABLE/grade/report/user/classes/external/user.php), [регистрация функции](https://github.com/moodle/moodle/blob/MOODLE_405_STABLE/grade/report/user/db/services.php), [enrollment external API](https://github.com/moodle/moodle/blob/MOODLE_405_STABLE/enrol/externallib.php). Версия/права реального Moodle вуза, совместный UI → live Moodle прогон, официальный реестр задолженностей, production и юридические основания передачи этим блоком не проверены.
