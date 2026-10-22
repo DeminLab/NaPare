@@ -103,6 +103,23 @@ export class MoodleConnectorService {
     return body.events as Record<string, unknown>[];
   }
 
+  async getUserCourses(config: MoodleConnectionConfig, userId: number): Promise<Record<string, unknown>[]> {
+    if (!Number.isSafeInteger(userId) || userId < 1) throw new BadRequestException('Нужен числовой ID пользователя Moodle.');
+    const body = await this.requestApi(config, 'core_enrol_get_users_courses', { userid: String(userId) });
+    if (!Array.isArray(body.courses) || body.courses.length > 1000 || body.courses.some(row => !row || typeof row !== 'object' || Array.isArray(row))) throw new BadGatewayException('Moodle вернул некорректный список курсов.');
+    return body.courses as Record<string, unknown>[];
+  }
+
+  async getUserGradeItems(config: MoodleConnectionConfig, userId: number, courseId: number): Promise<Record<string, unknown>[]> {
+    if (![userId, courseId].every(id => Number.isSafeInteger(id) && id > 0)) throw new BadRequestException('Нужны числовые ID Moodle.');
+    const body = await this.requestApi(config, 'gradereport_user_get_grade_items', { userid: String(userId), courseid: String(courseId) });
+    if (!Array.isArray(body.usergrades) || body.usergrades.length > 1 || (body.warnings !== undefined && (!Array.isArray(body.warnings) || body.warnings.length))) throw new BadGatewayException('Moodle вернул неполный или неоднозначный отчёт оценок.');
+    if (!body.usergrades.length) return [];
+    const report = body.usergrades[0] as Record<string, unknown> | null;
+    if (!report || report.userid !== userId || report.courseid !== courseId || !Array.isArray(report.gradeitems) || report.gradeitems.length > 1000 || report.gradeitems.some(row => !row || typeof row !== 'object' || Array.isArray(row))) throw new BadGatewayException('Отчёт Moodle не соответствует запрошенному студенту и курсу.');
+    return report.gradeitems as Record<string, unknown>[];
+  }
+
   private async requestApi(config: MoodleConnectionConfig, functionName: string, parameters: Record<string, string> = {}): Promise<Record<string, unknown>> {
     const endpoint = new URL(
       "webservice/rest/server.php",
@@ -144,6 +161,7 @@ export class MoodleConnectorService {
     let body: Record<string, unknown>;
     try {
       const parsed: unknown = JSON.parse(response.body);
+      if (Array.isArray(parsed) && functionName === 'core_enrol_get_users_courses') return { courses: parsed };
       if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
         throw new Error("Invalid Moodle response");
       }

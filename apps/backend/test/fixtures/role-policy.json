@@ -7941,6 +7941,141 @@
       }
     },
     {
+      "id": "SemesterController.identity GET /api/v1/academic/identities/moodle/:studentId",
+      "source": "apps/backend/src/semester/semester.controller.ts",
+      "method": "GET",
+      "path": "/api/v1/academic/identities/moodle/:studentId",
+      "guards": [
+        "JwtAuthGuard",
+        "RolesGuard"
+      ],
+      "roles": [
+        "university_admin"
+      ],
+      "permissions": null,
+      "statuses": {
+        "student": 403,
+        "employer": 403,
+        "career_staff": 403,
+        "career_admin": 403,
+        "teacher": 403,
+        "curator": 403,
+        "faculty_dean": 403,
+        "department_head": 403,
+        "university_admin": 200,
+        "superadmin": 403,
+        "developer": 403
+      }
+    },
+    {
+      "id": "SemesterController.link POST /api/v1/academic/identities/moodle/:studentId",
+      "source": "apps/backend/src/semester/semester.controller.ts",
+      "method": "POST",
+      "path": "/api/v1/academic/identities/moodle/:studentId",
+      "guards": [
+        "JwtAuthGuard",
+        "RolesGuard"
+      ],
+      "roles": [
+        "university_admin"
+      ],
+      "permissions": null,
+      "statuses": {
+        "student": 403,
+        "employer": 403,
+        "career_staff": 403,
+        "career_admin": 403,
+        "teacher": 403,
+        "curator": 403,
+        "faculty_dean": 403,
+        "department_head": 403,
+        "university_admin": 200,
+        "superadmin": 403,
+        "developer": 403
+      }
+    },
+    {
+      "id": "SemesterController.overview GET /api/v1/academic/semester",
+      "source": "apps/backend/src/semester/semester.controller.ts",
+      "method": "GET",
+      "path": "/api/v1/academic/semester",
+      "guards": [
+        "JwtAuthGuard",
+        "RolesGuard"
+      ],
+      "roles": [
+        "student"
+      ],
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 403,
+        "career_staff": 403,
+        "career_admin": 403,
+        "teacher": 403,
+        "curator": 403,
+        "faculty_dean": 403,
+        "department_head": 403,
+        "university_admin": 403,
+        "superadmin": 403,
+        "developer": 403
+      }
+    },
+    {
+      "id": "SemesterController.periods GET /api/v1/academic/semester/periods",
+      "source": "apps/backend/src/semester/semester.controller.ts",
+      "method": "GET",
+      "path": "/api/v1/academic/semester/periods",
+      "guards": [
+        "JwtAuthGuard",
+        "RolesGuard"
+      ],
+      "roles": [
+        "student"
+      ],
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 403,
+        "career_staff": 403,
+        "career_admin": 403,
+        "teacher": 403,
+        "curator": 403,
+        "faculty_dean": 403,
+        "department_head": 403,
+        "university_admin": 403,
+        "superadmin": 403,
+        "developer": 403
+      }
+    },
+    {
+      "id": "SemesterController.unlink DELETE /api/v1/academic/identities/moodle/:studentId",
+      "source": "apps/backend/src/semester/semester.controller.ts",
+      "method": "DELETE",
+      "path": "/api/v1/academic/identities/moodle/:studentId",
+      "guards": [
+        "JwtAuthGuard",
+        "RolesGuard"
+      ],
+      "roles": [
+        "university_admin"
+      ],
+      "permissions": null,
+      "statuses": {
+        "student": 403,
+        "employer": 403,
+        "career_staff": 403,
+        "career_admin": 403,
+        "teacher": 403,
+        "curator": 403,
+        "faculty_dean": 403,
+        "department_head": 403,
+        "university_admin": 200,
+        "superadmin": 403,
+        "developer": 403
+      }
+    },
+    {
       "id": "SuperadminController.createUniversity POST /api/v1/superadmin/universities",
       "source": "apps/backend/src/admin/superadmin.controller.ts",
       "method": "POST",

@@ -1,5 +1,15 @@
 # Source-card index
 
+- [Moodle numeric academic identities](semester-identity.md)
+- [Academic identity migration and RLS](semester-migration.md)
+- [Semester request validation](semester-dto.md)
+- [Source grade and period interpretation](semester-source.md)
+- [Semester source regression tests](semester-source-tests.md)
+- [Semester API routes](semester-controller.md)
+- [Scoped semester aggregation](semester-service.md)
+- [Semester module wiring](semester-module.md)
+- [Real semester HTTP/PostgreSQL tests](semester-http-tests.md)
+
 - [240 — Staff absence-review queue](240-apps-web-staff-src-app-staff-absences-page-tsx.md)
 
 Each card points to one existing canonical source file. Cards are navigation aids: they do not replace reading the source, its imports, tests or product documentation.

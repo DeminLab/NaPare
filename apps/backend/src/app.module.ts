@@ -1,4 +1,5 @@
 import { CareerModule } from './career/career.module';
+import { SemesterModule } from './semester/semester.module';
 import { CurationModule } from './curation/curation.module';
 import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
@@ -148,6 +149,7 @@ import { SearchModule } from './search/search.module';
     TenantContextModule,
     EventsModule,
     AcademicModule,
+    SemesterModule,
     SearchModule,
   ],
   controllers: [AppController, HealthController],

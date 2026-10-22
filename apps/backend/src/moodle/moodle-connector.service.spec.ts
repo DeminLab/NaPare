@@ -12,7 +12,7 @@ import {
 describe("MoodleConnectorService", () => {
   const originalKey = process.env.CONNECTOR_ENCRYPTION_KEY;
   const service = new MoodleConnectorService();
-  let responseBody: Record<string, unknown>;
+  let responseBody: unknown;
 
   beforeEach(() => {
     responseBody = { sitename: "University Moodle", username: "api-user", release: "4.5" };
@@ -110,6 +110,26 @@ describe("MoodleConnectorService", () => {
     const callback = jest.fn();
     options.lookup!("moodle.example.edu", { all: true }, callback);
     expect(callback).toHaveBeenCalledWith(null, addresses);
+  });
+
+  it('reads the native course array only for the enrollment function and sends an explicit student ID', async () => {
+    const config = service.configure('https://moodle.example.edu/', 'valid-token-value');
+    responseBody = [{ id: 11, fullname: 'Course' }];
+    await expect(service.getUserCourses(config, 17)).resolves.toEqual(responseBody);
+    const url = jest.mocked(https.request).mock.calls[0][0] as URL;
+    expect(url.searchParams.get('wsfunction')).toBe('core_enrol_get_users_courses');
+    expect(url.searchParams.get('userid')).toBe('17');
+    await expect(service.testConnection(config)).rejects.toThrow(BadGatewayException);
+    await expect(service.getUserCourses(config, 0)).rejects.toThrow(BadRequestException);
+  });
+  it('requires the exact single student/course grade report and rejects warnings', async () => {
+    const config = service.configure('https://moodle.example.edu/', 'valid-token-value');
+    responseBody = { usergrades: [{ userid: 17, courseid: 11, gradeitems: [{ id: 1, graderaw: 0 }] }], warnings: [] };
+    await expect(service.getUserGradeItems(config, 17, 11)).resolves.toEqual([{ id: 1, graderaw: 0 }]);
+    responseBody = { usergrades: [{ userid: 18, courseid: 11, gradeitems: [] }] };
+    await expect(service.getUserGradeItems(config, 17, 11)).rejects.toThrow(BadGatewayException);
+    responseBody = { usergrades: [], warnings: [{ warningcode: 'partial' }] };
+    await expect(service.getUserGradeItems(config, 17, 11)).rejects.toThrow(BadGatewayException);
   });
 
   it("rejects mixed public/private DNS responses and DNS failures", async () => {

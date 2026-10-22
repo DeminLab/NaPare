@@ -341,6 +341,11 @@ pnpm --filter @napare/backend exec ts-node --transpile-only test/update-role-pol
 | `GET /api/v1/schedule/lessons/:id/changes` | JwtAuthGuard, RolesGuard | 200 | 403 | 403 | 403 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
 | `PATCH /api/v1/schedule/:id` | JwtAuthGuard, RolesGuard | 403 | 403 | 403 | 403 | 200 | 200 | 200 | 200 | 200 | 200 | 403 |
 | `GET /api/v1/search` | JwtAuthGuard | 200 | 403 | 403 | 403 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
+| `GET /api/v1/academic/identities/moodle/:studentId` | JwtAuthGuard, RolesGuard | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 200 | 403 | 403 |
+| `POST /api/v1/academic/identities/moodle/:studentId` | JwtAuthGuard, RolesGuard | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 200 | 403 | 403 |
+| `GET /api/v1/academic/semester` | JwtAuthGuard, RolesGuard | 200 | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 403 |
+| `GET /api/v1/academic/semester/periods` | JwtAuthGuard, RolesGuard | 200 | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 403 |
+| `DELETE /api/v1/academic/identities/moodle/:studentId` | JwtAuthGuard, RolesGuard | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 200 | 403 | 403 |
 | `POST /api/v1/superadmin/universities` | JwtAuthGuard, RolesGuard | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 200 | 403 |
 | `DELETE /api/v1/superadmin/universities/:id` | JwtAuthGuard, RolesGuard | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 200 | 403 |
 | `GET /api/v1/superadmin/connectors` | JwtAuthGuard, RolesGuard | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 200 | 403 |
