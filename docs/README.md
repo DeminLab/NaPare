@@ -4,6 +4,8 @@ Project guides, reference material and historical records live under this direct
 
 ## Sections
 
+- [Student accessibility audit](ui/student-wcag-audit-2026-10-22.md) — WCAG 2.1 A/AA findings, browser fixture coverage and manual gaps; no conformance claim.
+
 - [Combined improvement verification](project-log/improvement-integration-2026-10-22.md) — integration branch, local test evidence and remaining requirements; no production changes.
 
 - [AI and repository workflow](ai/README.md) — project map, task reading order, change safety, source cards and documentation rules.
