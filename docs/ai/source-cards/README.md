@@ -1,5 +1,12 @@
 # Source-card index
 
+- [University onboarding wizard](onboarding-page.md)
+- [Onboarding view types](onboarding-types.md)
+- [Faculty and group creation](onboarding-structurestep.md)
+- [First administrator handoff](onboarding-administratorstep.md)
+- [Six-format import workflow](onboarding-importstep.md)
+- [Selected-period readiness and teacher binding](onboarding-readinessstep.md)
+
 - [240 — Staff absence-review queue](240-apps-web-staff-src-app-staff-absences-page-tsx.md)
 
 Each card points to one existing canonical source file. Cards are navigation aids: they do not replace reading the source, its imports, tests or product documentation.
@@ -9,6 +16,18 @@ Each card points to one existing canonical source file. Cards are navigation aid
 Choose the card matching the task area, read the canonical source and then follow its local imports. Do not bulk-edit files merely because a card exists.
 
 ## Cards
+
+- [Same-connection transaction-local tenant configuration, TypeORM runner interception and startup RLS invariants](tenant-database.md)
+- [Typed explicit university, identity and company relation capabilities](tenant-database-access.md)
+- [Least-scope platform permission mapping to tenant tables and read/write capabilities](tenant-database-platform.md)
+- [Runner scope, existing transactions, rollback, concurrent query serialization and SQL stream rejection](tenant-database-unit-tests.md)
+- [FORCE RLS and mandatory restrictive CRUD policies for scalar university columns; explicit identity and company relations](tenant-row-security-migration.md)
+- [Disposable-database-only explicit test setup/assertion capabilities, separate from HTTP request access](tenant-database-fixture.md)
+- [Real PostgreSQL non-superuser table-owner isolation, pooled TypeORM flows, CRUD, grants, authentication and career company relations](tenant-rls-postgres-tests.md)
+- [440 — Backend role policy metadata and matrix](440-backend-role-policy-fixture.md)
+- [441 — Backend role policy HTTP probes](441-backend-role-policy-e2e.md)
+- [442 — Explicit role baseline update](442-backend-update-role-policy.md)
+- [443 — Reviewed route authorization baseline](443-backend-role-policy-baseline.md)
 
 - [285 — Shared UI primitives](285-packages-ui-src-index-tsx.md)
 - [290 — Shared lesson type badge](290-packages-ui-src-lessontypebadge-tsx.md)
@@ -468,3 +487,21 @@ Choose the card matching the task area, read the canonical source and then follo
 - [383 — Platform PairSpace administration](383-apps-backend-src-platform-pair-space-space-administration.md)
 - [384 — Developer PairSpace panel](384-apps-web-developer-src-app-developer-control-pairspacespanel-tsx.md)
 - [385 — Platform grant university-scope migration](385-apps-backend-src-migrations-1700000000028-platformgrantuniversityscope-ts.md)
+
+- [tenant-route-inventory](tenant-route-inventory.md)
+
+- [tenant-reference-tests](tenant-reference-tests.md)
+
+- [tenant-isolation-http-tests](tenant-isolation-http-tests.md)
+
+- [Normalized schedule connector and durable queue contracts](schedule-connector-contract.md)
+- [Strict CSV, UTC ICS and bounded XLSX file adapters](schedule-file-connectors.md)
+- [SIBIT parser wrapper and explicit Moodle calendar group/time mapping](schedule-external-connectors.md)
+- [Connector provider registration and import service exports](schedule-connectors-module.md)
+- [Tenant durable import payload, idempotency and attempt state](schedule-import-jobs.md)
+- [Atomic queued imports, source ownership and ScheduleChange deltas](schedule-import-service.md)
+- [Queue constraints, soft cancellation and FORCE RLS setup](schedule-import-migration.md)
+- [Fixture CSV/ICS, XLSX, timezone and source identity regression tests](schedule-connectors-unit.md)
+- [Real JWT HTTP and non-superuser PostgreSQL import regression tests](schedule-import-http.md)
+- [Sample stable ID CSV with quoted subject and explicit local date](schedule-import-csv-fixture.md)
+- [Bounded UTC recurrence fixture for university export documentation](schedule-import-ics-fixture.md)

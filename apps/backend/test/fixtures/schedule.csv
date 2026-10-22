@@ -1,0 +1,2 @@
+id,date,startTime,endTime,pairNumber,subject,group,teacher,room,status
+csv-1,2026-10-22,01:00,02:30,1,"Математика, анализ",ИН-25,Иванов И.И.,305,scheduled

@@ -9,7 +9,10 @@ import { lookup as dnsLookup } from "node:dns/promises";
 import { request as httpsRequest } from "node:https";
 import { BlockList, isIP } from "node:net";
 
-const blockedMoodleAddresses = new BlockList();
+// Node compares IPv4 addresses with IPv4-mapped IPv6 rules. Keep the families
+// separate so blocking ::ffff:0:0/96 does not also reject every public IPv4 host.
+const blockedMoodleIpv4Addresses = new BlockList();
+const blockedMoodleIpv6Addresses = new BlockList();
 const globalMoodleIpv6Addresses = new BlockList();
 globalMoodleIpv6Addresses.addSubnet("2000::", 3, "ipv6");
 for (const [subnet, prefix] of [
@@ -29,7 +32,7 @@ for (const [subnet, prefix] of [
   ["224.0.0.0", 4],
   ["240.0.0.0", 4],
 ] as const) {
-  blockedMoodleAddresses.addSubnet(subnet, prefix, "ipv4");
+  blockedMoodleIpv4Addresses.addSubnet(subnet, prefix, "ipv4");
 }
 for (const [subnet, prefix] of [
   ["::", 128],
@@ -47,7 +50,7 @@ for (const [subnet, prefix] of [
   ["fe80::", 10],
   ["ff00::", 8],
 ] as const) {
-  blockedMoodleAddresses.addSubnet(subnet, prefix, "ipv6");
+  blockedMoodleIpv6Addresses.addSubnet(subnet, prefix, "ipv6");
 }
 
 export interface MoodleConnectionConfig {
@@ -86,13 +89,29 @@ export class MoodleConnectorService {
   async testConnection(
     config: MoodleConnectionConfig,
   ): Promise<MoodleConnectionInfo> {
+    const body = await this.requestApi(config, "core_webservice_get_site_info");
+    return { siteName: stringOrNull(body.sitename), userName: stringOrNull(body.username), release: stringOrNull(body.release) };
+  }
+
+  async getCalendarEvents(config: MoodleConnectionConfig, groupIds: number[], from: number, to: number): Promise<Record<string, unknown>[]> {
+    if (!groupIds.length || groupIds.length > 100 || groupIds.some(id => !Number.isSafeInteger(id) || id < 1) || !Number.isSafeInteger(from) || !Number.isSafeInteger(to) || to <= from || to - from > 366 * 86400) throw new BadRequestException('Moodle calendar: нужны группы и диапазон не больше 366 дней.');
+    const parameters: Record<string, string> = { 'options[userevents]': '0', 'options[siteevents]': '0', 'options[ignorehidden]': '1', 'options[timestart]': String(from), 'options[timeend]': String(to) };
+    groupIds.forEach((id, index) => { parameters[`events[groupids][${index}]`] = String(id); });
+    const body = await this.requestApi(config, 'core_calendar_get_calendar_events', parameters);
+    if (!Array.isArray(body.events) || body.events.length > 1000 || (Array.isArray(body.warnings) && body.warnings.length)) throw new BadGatewayException('Moodle calendar: неполная выдача, предупреждения или больше 1000 событий.');
+    if (body.events.some(event => !event || typeof event !== 'object' || Array.isArray(event))) throw new BadGatewayException('Moodle calendar: неверный формат событий.');
+    return body.events as Record<string, unknown>[];
+  }
+
+  private async requestApi(config: MoodleConnectionConfig, functionName: string, parameters: Record<string, string> = {}): Promise<Record<string, unknown>> {
     const endpoint = new URL(
       "webservice/rest/server.php",
       normalizeMoodleBaseUrl(config.baseUrl),
     );
     endpoint.searchParams.set("wstoken", this.decryptToken(config));
-    endpoint.searchParams.set("wsfunction", "core_webservice_get_site_info");
+    endpoint.searchParams.set("wsfunction", functionName);
     endpoint.searchParams.set("moodlewsrestformat", "json");
+    for (const [key, value] of Object.entries(parameters)) endpoint.searchParams.set(key, value);
 
     const hostname = endpoint.hostname.replace(/^\[|\]$/g, "");
     let addresses: LookupAddress[];
@@ -107,7 +126,8 @@ export class MoodleConnectorService {
       addresses.length === 0 ||
       addresses.some(({ address, family }) =>
         isIP(address) !== family ||
-        blockedMoodleAddresses.check(address, family === 4 ? "ipv4" : "ipv6") ||
+        (family === 4 ? blockedMoodleIpv4Addresses : blockedMoodleIpv6Addresses)
+          .check(address, family === 4 ? "ipv4" : "ipv6") ||
         (family === 6 && !globalMoodleIpv6Addresses.check(address, "ipv6")),
       )
     ) {
@@ -141,11 +161,7 @@ export class MoodleConnectorService {
           : "Moodle отклонил подключение. Проверьте токен и права Web Services.",
       );
     }
-    return {
-      siteName: stringOrNull(body.sitename),
-      userName: stringOrNull(body.username),
-      release: stringOrNull(body.release),
-    };
+    return body;
   }
 
   private decryptToken(config: MoodleConnectionConfig): string {

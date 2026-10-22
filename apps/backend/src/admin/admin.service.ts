@@ -11,6 +11,7 @@ import { In, MoreThanOrEqual, Repository } from "typeorm";
 import * as bcrypt from "bcrypt";
 
 import { UsersService } from "../users/users.service";
+import { ScheduleImportService } from '../schedule/connectors/schedule-import.service';
 import { CurationService } from "../curation/curation.service";
 import { ScheduleService } from "../schedule/schedule.service";
 import { SibitConnectorService } from "../schedule/connectors/sibit-connector.service";
@@ -21,9 +22,7 @@ import { Group } from "../users/entities/group.entity";
 import { UpdateUserRoleDto } from "./dto/update-user-role.dto";
 import {
   ImportScheduleDto,
-  type ImportScheduleRowDto,
 } from "./dto/import-schedule.dto";
-import { CreateLessonDto } from "../schedule/dto/create-lesson.dto";
 import { UserRole } from "../auth/interfaces/user-role";
 import { TenantContext } from "../common/tenant/tenant-context";
 import { User } from "../users/entities/user.entity";
@@ -94,6 +93,7 @@ export class AdminService {
     private readonly tenantContext: TenantContext,
     private readonly moodleConnectorService: MoodleConnectorService,
     private readonly raspScraperService: RaspScraperService,
+    private readonly scheduleImports: ScheduleImportService,
     @Optional() private readonly eventBus?: EventBusService,
     @Optional() private readonly curation?: CurationService,
   ) {}
@@ -313,46 +313,8 @@ export class AdminService {
     return updatedUser;
   }
 
-  async importSchedule(
-    universityId: string,
-    importScheduleDto: ImportScheduleDto,
-  ): Promise<{ imported: number; updated: number }> {
-    this.tenantContext.assertAccess(universityId);
-
-    const groupNames = [
-      ...new Set(
-        importScheduleDto.rows.map((row) => row.group.trim()).filter(Boolean),
-      ),
-    ];
-    const groups = await this.groupRepository.find({
-      where: { universityId, name: In(groupNames) },
-    });
-    const groupsByName = new Map(
-      groups.map((group) => [
-        group.name.trim().toLocaleLowerCase("ru-RU"),
-        group,
-      ]),
-    );
-    const unknownGroups = groupNames.filter(
-      (name) => !groupsByName.has(name.toLocaleLowerCase("ru-RU")),
-    );
-
-    if (unknownGroups.length) {
-      throw new BadRequestException(
-        `Не найдены группы ВУЗа: ${unknownGroups.slice(0, 5).join(", ")}${unknownGroups.length > 5 ? "…" : ""}. Сначала добавьте их в структуру ВУЗа.`,
-      );
-    }
-
-    const lessons = importScheduleDto.rows.map((row, index) =>
-      this.toLessonDto(
-        row,
-        groupsByName.get(row.group.trim().toLocaleLowerCase("ru-RU"))!.id,
-        importScheduleDto.fileName,
-        index,
-      ),
-    );
-
-    return this.scheduleService.importLessons(universityId, lessons);
+  importSchedule(universityId: string, importScheduleDto: ImportScheduleDto) {
+    return this.scheduleImports.submit(universityId, importScheduleDto);
   }
 
   async syncSchedule(universityId: string): Promise<{
@@ -726,6 +688,7 @@ export class AdminService {
   ): Promise<Group> {
     this.tenantContext.assertAccess(universityId);
     if (data.curatorId) throw new BadRequestException('Назначьте кураторов через управление кураторством после создания группы.');
+    await this.assertFacultyInUniversity(data.facultyId, universityId);
     const group = this.groupRepository.create({
       name: data.name,
       specialization: data.specialization,
@@ -746,8 +709,16 @@ export class AdminService {
     }
     this.tenantContext.assertAccess(group.universityId);
 
+    if (data.facultyId !== undefined) await this.assertFacultyInUniversity(data.facultyId, group.universityId);
+
     Object.assign(group, data);
     return this.groupRepository.save(group) as Promise<Group>;
+  }
+
+  private async assertFacultyInUniversity(facultyId: string | undefined, universityId: string): Promise<void> {
+    if (facultyId && !await this.facultyRepository.findOne({ where: { id: facultyId, universityId } })) {
+      throw new NotFoundException('Факультет своего университета не найден');
+    }
   }
 
   private canManageRole(
@@ -762,43 +733,6 @@ export class AdminService {
     const requesterLevel = ROLE_HIERARCHY[requesterRole] ?? -1;
     const targetLevel = ROLE_HIERARCHY[targetRole] ?? -1;
     return requesterLevel > targetLevel;
-  }
-
-  private toLessonDto(
-    row: ImportScheduleRowDto,
-    groupId: string,
-    fileName: string,
-    index: number,
-  ): CreateLessonDto {
-    const startDate = new Date(`${row.date}T${row.startTime}:00`);
-    const endDate = new Date(`${row.date}T${row.endTime}:00`);
-
-    if (
-      Number.isNaN(startDate.getTime()) ||
-      Number.isNaN(endDate.getTime()) ||
-      endDate <= startDate
-    ) {
-      throw new BadRequestException(
-        `Строка ${index + 1}: время окончания должно быть позже времени начала.`,
-      );
-    }
-
-    return {
-      groupId,
-      groupName: row.group.trim(),
-      subject: row.subject.trim(),
-      teacherName: row.teacher?.trim() || undefined,
-      room: row.room?.trim() || undefined,
-      dayOfWeek: startDate.getDay(),
-      startTime: row.startTime,
-      endTime: row.endTime,
-      pairNumber: row.pairNumber,
-      weekType: "both",
-      startDate,
-      endDate,
-      source: "university-import",
-      externalId: `${fileName}:${index + 1}`,
-    };
   }
 
   async getAuditLog(
