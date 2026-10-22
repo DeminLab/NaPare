@@ -376,6 +376,7 @@ pnpm --filter @napare/backend exec ts-node --transpile-only test/update-role-pol
 | `PATCH /api/v1/superadmin/universities/:id` | JwtAuthGuard, RolesGuard | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 200 | 403 |
 | `POST /api/v1/users/me/bind-group` | JwtAuthGuard | 200 | 403 | 403 | 403 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
 | `DELETE /api/v1/users/me` | JwtAuthGuard | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
+| `GET /api/v1/users/me/export` | JwtAuthGuard | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
 | `GET /api/v1/users/:id` | JwtAuthGuard | 200 | 403 | 403 | 403 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
 | `GET /api/v1/users/me` | JwtAuthGuard | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
 | `PATCH /api/v1/users/me` | JwtAuthGuard | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
