@@ -4169,6 +4169,196 @@
       }
     },
     {
+      "id": "PaymentController.create POST /api/v1/career/payments",
+      "source": "apps/backend/src/career-billing/payment.controller.ts",
+      "method": "POST",
+      "path": "/api/v1/career/payments",
+      "guards": [
+        "JwtAuthGuard"
+      ],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 200,
+        "career_staff": 200,
+        "career_admin": 200,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
+      "id": "PaymentController.get GET /api/v1/career/payments/:id",
+      "source": "apps/backend/src/career-billing/payment.controller.ts",
+      "method": "GET",
+      "path": "/api/v1/career/payments/:id",
+      "guards": [
+        "JwtAuthGuard"
+      ],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 200,
+        "career_staff": 200,
+        "career_admin": 200,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
+      "id": "PaymentController.history GET /api/v1/career/payments/:id/history",
+      "source": "apps/backend/src/career-billing/payment.controller.ts",
+      "method": "GET",
+      "path": "/api/v1/career/payments/:id/history",
+      "guards": [
+        "JwtAuthGuard"
+      ],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 200,
+        "career_staff": 200,
+        "career_admin": 200,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
+      "id": "PaymentController.list GET /api/v1/career/payments",
+      "source": "apps/backend/src/career-billing/payment.controller.ts",
+      "method": "GET",
+      "path": "/api/v1/career/payments",
+      "guards": [
+        "JwtAuthGuard"
+      ],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 200,
+        "career_staff": 200,
+        "career_admin": 200,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
+      "id": "PaymentController.notification POST /api/v1/career/payments/notification",
+      "source": "apps/backend/src/career-billing/payment.controller.ts",
+      "method": "POST",
+      "path": "/api/v1/career/payments/notification",
+      "guards": [],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 200,
+        "career_staff": 200,
+        "career_admin": 200,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
+      "id": "PaymentController.options GET /api/v1/career/payments/options",
+      "source": "apps/backend/src/career-billing/payment.controller.ts",
+      "method": "GET",
+      "path": "/api/v1/career/payments/options",
+      "guards": [
+        "JwtAuthGuard"
+      ],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 200,
+        "career_staff": 200,
+        "career_admin": 200,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
+      "id": "PaymentController.refresh POST /api/v1/career/payments/:id/refresh",
+      "source": "apps/backend/src/career-billing/payment.controller.ts",
+      "method": "POST",
+      "path": "/api/v1/career/payments/:id/refresh",
+      "guards": [
+        "JwtAuthGuard"
+      ],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 200,
+        "career_staff": 200,
+        "career_admin": 200,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
+      "id": "PaymentController.refund POST /api/v1/career/payments/:id/refund",
+      "source": "apps/backend/src/career-billing/payment.controller.ts",
+      "method": "POST",
+      "path": "/api/v1/career/payments/:id/refund",
+      "guards": [
+        "JwtAuthGuard"
+      ],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 200,
+        "career_staff": 200,
+        "career_admin": 200,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
       "id": "PlatformAcademicCatalogController.getCourse GET /api/v1/platform-academic/catalog/courses/:id",
       "source": "apps/backend/src/platform-academic/platform-academic-catalog.controller.ts",
       "method": "GET",

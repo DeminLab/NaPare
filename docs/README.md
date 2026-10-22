@@ -21,6 +21,8 @@ Project guides, reference material and historical records live under this direct
 
 - [Academic office](modules/academic-office.md) — заявления, назначения, согласования и рабочее место диспетчера.
 
+- [T-Касса](integrations/tkassa.md) — оплата услуг платформы, настройка и границы проверки.
+
 - [Operations](ops/) and [Process](process/) — routine operations, verification and collaboration.
 - [Planning and history](project-log/) — dated project records; older or superseded material is labeled in [the archive](archive/) and [Superpowers plans](superpowers/).
 - [Strategy](strategy/) — goals and product direction.

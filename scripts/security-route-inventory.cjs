@@ -115,6 +115,9 @@ function inventory() {
   return routes.sort((a, b) => a.path.localeCompare(b.path) || a.method.localeCompare(b.method));
 }
 function tenantRule(route) {
+  if (route.controller === 'PaymentController') return route.handler === 'notification'
+    ? 'Bank signature + server-to-server lookup; immutable OrderId/PaymentId/amount'
+    : 'JWT actor + active company membership; platform owner required for refunds';
   if (route.controller.startsWith('Platform') && route.controller !== 'PlatformPublicController') {
     return 'Persisted platform permission; universityIds NULL/global, []/none, UUID list; service checks resource university';
   }

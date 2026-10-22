@@ -135,6 +135,8 @@ jobs:
           createdb -h 127.0.0.1 -U napare -O napare_runtime curation_test_semester_ci
           createdb -h 127.0.0.1 -U napare -O napare_runtime curation_test_office_ci
 
+          createdb -h 127.0.0.1 -U napare -O napare_runtime curation_test_payment_ci
+
       - name: Run E2E tests
         shell: bash
         env:
@@ -144,6 +146,8 @@ jobs:
           SCHEDULE_IMPORT_TEST_DATABASE_URL: postgresql://napare_runtime:ci_runtime_password_only@127.0.0.1:5432/curation_test_schedule_ci
           SEMESTER_TEST_DATABASE_URL: postgresql://napare_runtime:ci_runtime_password_only@127.0.0.1:5432/curation_test_semester_ci
           OFFICE_TEST_DATABASE_URL: postgresql://napare_runtime:ci_runtime_password_only@127.0.0.1:5432/curation_test_office_ci
+
+          PAYMENT_TEST_DATABASE_URL: postgresql://napare_runtime:ci_runtime_password_only@127.0.0.1:5432/curation_test_payment_ci
 
           TENANT_RLS_TEST_ADMIN_URL: postgresql://napare:napare_test_password@127.0.0.1:5432/postgres
         run: pnpm test:e2e | tee e2e-test-report.txt

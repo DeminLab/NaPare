@@ -498,6 +498,27 @@ Choose the card matching the task area, read the canonical source and then follo
 - [384 — Developer PairSpace panel](384-apps-web-developer-src-app-developer-control-pairspacespanel-tsx.md)
 - [385 — Platform grant university-scope migration](385-apps-backend-src-migrations-1700000000028-platformgrantuniversityscope-ts.md)
 
+- [billing-provider](billing-provider.md)
+
+- [billing-provider-tests](billing-provider-tests.md)
+
+- [billing-state](billing-state.md)
+
+- [billing-entities](billing-entities.md)
+
+- [billing-dto](billing-dto.md)
+
+- [billing-service](billing-service.md)
+
+- [billing-controller](billing-controller.md)
+
+- [billing-module](billing-module.md)
+
+- [billing-migration](billing-migration.md)
+
+- [billing-http-tests](billing-http-tests.md)
+
+- [billing-panel](billing-panel.md)
 - [tenant-route-inventory](tenant-route-inventory.md)
 
 - [tenant-reference-tests](tenant-reference-tests.md)

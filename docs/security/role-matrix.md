@@ -186,6 +186,13 @@ pnpm --filter @napare/backend exec ts-node --transpile-only test/update-role-pol
 | `PATCH /api/v1/pair-spaces/homeworks/:id/submit` | JwtAuthGuard, RolesGuard | 200 | 403 | 403 | 403 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
 | `PATCH /api/v1/pair-spaces/homeworks/:id/progress` | JwtAuthGuard, RolesGuard | 200 | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 403 |
 | `POST /api/v1/pair-spaces/:lessonId/files` | JwtAuthGuard, RolesGuard | 403 | 403 | 403 | 403 | 200 | 200 | 200 | 200 | 200 | 200 | 403 |
+| `POST /api/v1/career/payments` | JwtAuthGuard | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
+| `GET /api/v1/career/payments/:id` | JwtAuthGuard | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
+| `GET /api/v1/career/payments/:id/history` | JwtAuthGuard | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
+| `GET /api/v1/career/payments` | JwtAuthGuard | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
+| `GET /api/v1/career/payments/options` | JwtAuthGuard | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
+| `POST /api/v1/career/payments/:id/refresh` | JwtAuthGuard | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
+| `POST /api/v1/career/payments/:id/refund` | JwtAuthGuard | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
 | `GET /api/v1/platform-academic/catalog/courses/:id` | JwtAuthGuard | 200 | 403 | 403 | 403 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
 | `GET /api/v1/platform-academic/catalog/series/:id` | JwtAuthGuard | 200 | 403 | 403 | 403 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
 | `GET /api/v1/platform-academic/catalog/courses` | JwtAuthGuard | 200 | 403 | 403 | 403 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
@@ -394,6 +401,7 @@ pnpm --filter @napare/backend exec ts-node --transpile-only test/update-role-pol
 | `GET /api/v1/career/accounts/portfolio/:studentId/cases` | [apps/backend/src/career/career.controller.ts](../../apps/backend/src/career/career.controller.ts) |
 | `POST /api/v1/career/accounts/register` | [apps/backend/src/career/career.controller.ts](../../apps/backend/src/career/career.controller.ts) |
 | `GET /api/v1/health` | [apps/backend/src/health.controller.ts](../../apps/backend/src/health.controller.ts) |
+| `POST /api/v1/career/payments/notification` | [apps/backend/src/career-billing/payment.controller.ts](../../apps/backend/src/career-billing/payment.controller.ts) |
 | `GET /api/v1/platform/public-settings` | [apps/backend/src/platform/platform.controller.ts](../../apps/backend/src/platform/platform.controller.ts) |
 | `POST /api/v1/integrations/telegram/webhook` | [apps/backend/src/auth/telegram-webhook.controller.ts](../../apps/backend/src/auth/telegram-webhook.controller.ts) |
 
