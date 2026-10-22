@@ -27,6 +27,11 @@ Choose the card matching the task area, read the canonical source and then follo
 
 ## Cards
 
+- [PostgreSQL backup and restore](postgres-recovery.md)
+- [External health monitor](health-monitor.md)
+- [Recovery and monitoring safety tests](postgres-recovery-tests.md)
+- [Real PostgreSQL restore drill test](postgres-recovery-integration.md)
+- [API exception filter and Sentry](exception-filter.md)
 - [Same-connection transaction-local tenant configuration, TypeORM runner interception and startup RLS invariants](tenant-database.md)
 - [Typed explicit university, identity and company relation capabilities](tenant-database-access.md)
 - [Least-scope platform permission mapping to tenant tables and read/write capabilities](tenant-database-platform.md)
@@ -565,4 +570,12 @@ Choose the card matching the task area, read the canonical source and then follo
 - [office-ui-create](office-ui-create.md)
 
 - [office-ui-dispatch](office-ui-dispatch.md)
+
+- [Transactional PostgreSQL outbox, scoped worker, BullMQ retry and readiness.](notification-delivery-service.md)
+- [Gated RuStore, WebPush, Telegram and MAX provider implementations and token validation.](notification-delivery-providers.md)
+- [Explicit default-off switches for notification delivery and queue startup.](notification-delivery-config.md)
+- [Tenant-scoped delivery state, unique target, attempts and bounded durable history.](notification-delivery-entity.md)
+- [Provider column and delivery outbox with canonical FORCE RLS policies.](notification-delivery-migration.md)
+- [No-send defaults, endpoint validation and provider protocol/error tests with synthetic responses.](notification-delivery-provider-tests.md)
+- [Actual non-superuser PostgreSQL and Redis tests: atomic outbox, JWT registration, FORCE RLS, retry and dead letters.](notification-delivery-e2e.md)
 

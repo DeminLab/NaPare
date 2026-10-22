@@ -6,6 +6,7 @@ import {
   UpdateDateColumn,
   Index,
 } from 'typeorm';
+import { DeviceProvider } from '../delivery/push-providers';
 
 export const DEVICE_PLATFORMS = ['ios', 'android', 'web'] as const;
 export type DevicePlatform = (typeof DEVICE_PLATFORMS)[number];
@@ -22,6 +23,9 @@ export class DeviceToken {
 
   @Column()
   token: string;
+
+  @Column({ type: 'varchar', length: 16, default: 'legacy' })
+  provider: DeviceProvider;
 
   @Column({
     type: 'enum',

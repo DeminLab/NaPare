@@ -11,29 +11,19 @@ import { UpdateNotificationPreferenceDto } from './dto/update-notification-prefe
 import { NotificationPreference } from './entities/notification-preference.entity';
 import { InboxItem, InboxItemStatus } from './entities/inbox-item.entity';
 import { TenantContext } from '../common/tenant/tenant-context';
-import { User } from '../users/entities/user.entity';
 import { AppConfig } from '../config/configuration';
 import { UserRole } from '../auth/interfaces/user-role';
+import { NotificationDeliveryService } from './delivery/notification-delivery.service';
+import { DeviceProvider, validateDeviceToken } from './delivery/push-providers';
 import { EventEnvelope, NapareEventType } from '../events/event.types';
 import {
   PaginatedResponse,
   PaginationQueryDto,
   toPaginatedResponse,
 } from '../common/dto/pagination-query.dto';
-
-const TELEGRAM_DELIVERY_ENABLED = false;
-
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
-  private readonly telegramDeliveryQueue: Array<{
-    userId: string;
-    notificationId: string;
-    title: string;
-    body: string;
-    deepLink: string;
-  }> = [];
-  private telegramDeliveryWorkerRunning = false;
 
   constructor(
     @InjectRepository(Notification)
@@ -45,10 +35,9 @@ export class NotificationsService {
     @Optional() @InjectRepository(InboxItem)
     private readonly inboxRepository: Repository<InboxItem>,
     private readonly tenantContext: TenantContext,
-    @Optional() @InjectRepository(User)
-    private readonly usersRepository?: Repository<User>,
     @Optional()
     private readonly configService?: ConfigService<AppConfig & Record<string, unknown>>,
+    @Optional() private readonly delivery?: NotificationDeliveryService,
   ) {}
 
   async findByUser(
@@ -79,7 +68,7 @@ export class NotificationsService {
   async create(createNotificationDto: CreateNotificationDto): Promise<Notification> {
     this.tenantContext.assertAccess(createNotificationDto.universityId);
     const notification = this.notificationRepository.create(createNotificationDto);
-    return this.notificationRepository.save(notification);
+    return this.delivery ? this.delivery.persist(createNotificationDto) : this.notificationRepository.save(notification);
   }
 
   async processEvent(event: EventEnvelope, recipientIds: string[]): Promise<void> {
@@ -97,8 +86,8 @@ export class NotificationsService {
       const existingNotification = await this.notificationRepository.findOne({
         where: { eventId: event.id, userId },
       });
-      const isNewNotification = !existingNotification;
-      const notification = existingNotification ?? await this.notificationRepository.save(this.notificationRepository.create({
+
+      const notificationData = {
           userId,
           universityId: event.university.id,
           type: mapped.type,
@@ -110,7 +99,8 @@ export class NotificationsService {
           actions,
           eventId: event.id,
           data: event.payload,
-        }));
+        };
+      const notification = existingNotification ?? (this.delivery ? await this.delivery.persist(notificationData) : await this.notificationRepository.save(this.notificationRepository.create(notificationData)));
 
       if (mapped.inbox) {
         const existingInboxItem = await this.inboxRepository.findOne({
@@ -133,11 +123,6 @@ export class NotificationsService {
           }));
         }
       }
-
-      if (isNewNotification && TELEGRAM_DELIVERY_ENABLED && preference.telegramEnabled) {
-        this.enqueueTelegramNotification(userId, notification.id, mapped.title, mapped.body, deepLink);
-      }
-
       this.logger.debug(`Created notification ${notification.id} for event ${event.id}`);
     }
   }
@@ -225,7 +210,9 @@ export class NotificationsService {
     token: string,
     platform: DevicePlatform,
     deviceName?: string,
+    provider: DeviceProvider = 'legacy',
   ): Promise<DeviceToken> {
+    validateDeviceToken(token, platform, provider, this.configService ?? new ConfigService());
     const currentUser = this.tenantContext?.getUser();
     if (currentUser && currentUser.id !== userId) {
       throw new ForbiddenException('Cannot register a device token for another user');
@@ -242,6 +229,7 @@ export class NotificationsService {
       }
       existingToken.userId = userId;
       existingToken.platform = platform;
+      existingToken.provider = provider;
       existingToken.deviceName = deviceName;
       existingToken.isActive = true;
       return this.deviceTokenRepository.save(existingToken);
@@ -251,6 +239,7 @@ export class NotificationsService {
       userId,
       token,
       platform,
+      provider,
       deviceName,
     });
 
@@ -305,89 +294,6 @@ export class NotificationsService {
     return true;
   }
 
-  private async sendTelegramNotification(
-    userId: string,
-    notificationId: string,
-    title: string,
-    body: string,
-    deepLink: string,
-  ): Promise<void> {
-    const botToken = this.configService?.get<string>('telegram.botToken') ?? '';
-    const appUrl = this.configService?.get<string>('telegram.publicAppUrl') ?? '';
-    if (!botToken || !appUrl || !this.usersRepository) return;
-
-    const user = await this.usersRepository.findOne({
-      where: { id: userId, isActive: true },
-      select: ['id', 'telegramUserId'],
-    });
-    if (!user?.telegramUserId) return;
-
-    let destination: URL;
-    try {
-      const base = new URL(appUrl);
-      if (base.protocol !== 'https:' || !deepLink.startsWith('/') || deepLink.startsWith('//')) return;
-      destination = new URL(deepLink, base);
-      if (destination.origin !== base.origin) return;
-    } catch {
-      return;
-    }
-
-    try {
-      const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chat_id: user.telegramUserId,
-          text: `${title}\n${body}`,
-          reply_markup: { inline_keyboard: [[{ text: 'Открыть в НаПаре', url: destination.toString() }]] },
-        }),
-        signal: AbortSignal.timeout(5000),
-      });
-      if (!response.ok) this.logger.warn(`Telegram delivery failed for notification ${notificationId}: HTTP ${response.status}`);
-    } catch {
-      this.logger.warn(`Telegram delivery failed for notification ${notificationId}: network error`);
-    }
-  }
-
-  private enqueueTelegramNotification(
-    userId: string,
-    notificationId: string,
-    title: string,
-    body: string,
-    deepLink: string,
-  ): void {
-    if (this.telegramDeliveryQueue.length >= 1000) {
-      this.logger.warn(`Telegram delivery queue is full; skipped notification ${notificationId}`);
-      return;
-    }
-
-    this.telegramDeliveryQueue.push({ userId, notificationId, title, body, deepLink });
-    if (!this.telegramDeliveryWorkerRunning) void this.drainTelegramDeliveryQueue();
-  }
-
-  private async drainTelegramDeliveryQueue(): Promise<void> {
-    this.telegramDeliveryWorkerRunning = true;
-    try {
-      while (this.telegramDeliveryQueue.length > 0) {
-        const delivery = this.telegramDeliveryQueue.shift()!;
-        try {
-          await this.sendTelegramNotification(
-            delivery.userId,
-            delivery.notificationId,
-            delivery.title,
-            delivery.body,
-            delivery.deepLink,
-          );
-        } catch {
-          this.logger.warn(`Telegram delivery failed for notification ${delivery.notificationId}: internal error`);
-        }
-        await new Promise(resolve => setTimeout(resolve, 50));
-      }
-    } finally {
-      this.telegramDeliveryWorkerRunning = false;
-      if (this.telegramDeliveryQueue.length > 0) void this.drainTelegramDeliveryQueue();
-    }
-  }
 }
 
 interface EventNotificationMapping {
