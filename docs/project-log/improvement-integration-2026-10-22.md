@@ -1,6 +1,6 @@
 # Совместная проверка улучшений — 22 октября 2026
 
-Документ для ревьюера интеграционной ветки `codex/improvement-integration` (PR 13). Ветка объединяет изменения draft PR 1–12 и 14–16 на базе `6f28912`; это кандидат для совместного ревью, не deployment и не утверждение полного выполнения [плана](improvement-plan-2026-10-22.md).
+Документ для ревьюера интеграционной ветки `codex/improvement-integration` (PR 13). Ветка объединяет изменения PR 1–12 и 14–17 на базе `6f28912`; это кандидат для совместного ревью, не deployment и не утверждение полного выполнения [плана](improvement-plan-2026-10-22.md).
 
 ## Что объединено
 
@@ -24,6 +24,8 @@
 Browser-доказательства feature PR остаются отдельными: onboarding и учебный офис проверены через Next → Nest → PostgreSQL с синтетическими данными; semester UI — настоящий Next с API fixtures, backend отдельно через JWT/PG. Совместного browser-прогона всех ролей этой интеграционной ветки пока нет. Локальная сборка student UI компилирует `/semester`, но Windows standalone packaging выдаёт EPERM; Linux CI должен подтвердить упаковку. Production, native devices и live Moodle/СИБИТ/банк/push не проверялись.
 
 ## Открытые проверки
+
+23 октября включён [Next security patch PR 17](https://github.com/DeminLab/NaPare/pull/17): 15.5.28 у шести приложений, frozen install/typecheck и production audit high=0/critical=0. [Linux CI на 89f9443](https://github.com/DeminLab/NaPare/actions/runs/39829488440) прошёл шесть jobs, включая production build и Backend E2E. На новом runtime повторены 42 browser fixture состояния без violations/page errors/overflow; incomplete и manual gaps сохранены. [Отчёт патча](../security/next-patch-2026-10-23.md). Main/production не обновлялись.
 
 После исходного зелёного CI на `a2e0565` включены [документы P3, PR 14](https://github.com/DeminLab/NaPare/pull/14), [WCAG-аудит, PR 15](https://github.com/DeminLab/NaPare/pull/15) и [исправления A01–A05, PR 16](https://github.com/DeminLab/NaPare/pull/16). Backend tree идентичен `a2e0565` (`7acf221e76965aef1ae5ac0c5f7e01658db35573`); новые изменения — student UI, точные boundary exceptions и документы. Для UI выполнены 36 светлых и 6 целевых тёмных axe-снимков без violations/page errors/overflow, 16 server HTML titles, client/back/forward, keyboard и три save-status сценария с API fixtures; это не полное AA. Подробности и исправление оговорки service-worker перехвата — в [аудите](../ui/student-wcag-audit-2026-10-22.md). Новый общий CI подтверждается отдельно для нового HEAD.
 

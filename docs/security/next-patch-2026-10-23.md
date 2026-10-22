@@ -16,4 +16,8 @@ Vendor указывает Sharp >=0.35.5 как workaround для image issue; �
 
 CI pull-request gate теперь допускает базы `main` и `codex/**`, сохраняя состав тестов, dependency policy и минимальные permissions. Это запускает тот же Linux build/typecheck/unit/E2E/lint/audit для вложенных feature PR. Результат конкретного Linux run фиксируется отдельно после завершения; Windows ошибка не маскируется сменой output config.
 
+На `89f9443` [Linux CI 39829488440](https://github.com/DeminLab/NaPare/actions/runs/39829488440) завершил все шесть jobs успешно, включая production application build и обязательный Backend E2E. Это подтверждение Linux pipeline конкретного исходного commit, не deployment.
+
+Локальный Next **15.5.28** dev runtime дополнительно прошёл 42 axe-снимка (36 светлых + 6 целевых тёмных) с API fixtures/serviceWorkers=block: violations=0, page errors=0, overflow=false. В 111 node instances axe оставил incomplete для ручной проверки; они не считаются passed. Server HTML titles 16 маршрутов и profile/appearance/preferences save status, keyboard/client/back/forward/search проверены повторно. Полное AA, native device и live backend/external providers этим прогоном не подтверждены.
+
 CI policy сохраняется: production high/critical должны быть нулевыми. Умеренная Nest SSE находка и отдельные high/critical dev-tool findings не объявляются устранёнными этим Next-патчем. [Совместный журнал](../project-log/improvement-integration-2026-10-22.md) отделяет эти ограничения от выполненных feature-проверок.
