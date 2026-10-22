@@ -20,6 +20,8 @@
 
 ## Проверки и ограничения
 
+- После явного разрешения владельца исправлены A01–A05 из [WCAG-аудита](../ui/student-wcag-audit-2026-10-22.md): 36 светлых и 6 тёмных axe-снимков без violations, page errors и overflow; 16 server HTML titles и client/back/forward; keyboard и status трёх сохранений. Это scoped браузерная проверка с API fixtures, не полное подтверждение WCAG AA/NVDA.
+
 - P2 accessibility: [студенческий WCAG-аудит](../ui/student-wcag-audit-2026-10-22.md) выявил contrast/title/feedback проблемы; axe/Chromium с синтетическим API и исходники. Отчёт не означает исправление, полный ручной прогон или подтверждение AA. Изменения защищённых UI-файлов не вносились.
 
 - [Совместная интеграционная проверка PR 1–12](improvement-integration-2026-10-22.md): 41 unit suite/422 passed, 11 E2E suites/4513 passed/1 skipped; общий typecheck шести приложений, backend build, 6 offline VM тестов, lint/docs/guards и inventory355. Это локальные синтетические проверки, не production. Student semester UI опубликован в [PR 12](https://github.com/DeminLab/NaPare/pull/12); API семестра — в [PR 11](https://github.com/DeminLab/NaPare/pull/11).
