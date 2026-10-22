@@ -1,5 +1,12 @@
 # Source-card index
 
+- [University onboarding wizard](onboarding-page.md)
+- [Onboarding view types](onboarding-types.md)
+- [Faculty and group creation](onboarding-structurestep.md)
+- [First administrator handoff](onboarding-administratorstep.md)
+- [Six-format import workflow](onboarding-importstep.md)
+- [Selected-period readiness and teacher binding](onboarding-readinessstep.md)
+
 - [240 — Staff absence-review queue](240-apps-web-staff-src-app-staff-absences-page-tsx.md)
 
 Each card points to one existing canonical source file. Cards are navigation aids: they do not replace reading the source, its imports, tests or product documentation.
