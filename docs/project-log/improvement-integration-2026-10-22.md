@@ -1,6 +1,6 @@
 # Совместная проверка улучшений — 22 октября 2026
 
-Документ для ревьюера интеграционной ветки `codex/improvement-integration`. Ветка объединяет изменения draft PR 1–12 на базе `6f28912`; это кандидат для совместного ревью, не deployment и не утверждение полного выполнения [плана](improvement-plan-2026-10-22.md).
+Документ для ревьюера интеграционной ветки `codex/improvement-integration` (PR 13). Ветка объединяет изменения draft PR 1–12 и 14–16 на базе `6f28912`; это кандидат для совместного ревью, не deployment и не утверждение полного выполнения [плана](improvement-plan-2026-10-22.md).
 
 ## Что объединено
 
@@ -24,6 +24,8 @@
 Browser-доказательства feature PR остаются отдельными: onboarding и учебный офис проверены через Next → Nest → PostgreSQL с синтетическими данными; semester UI — настоящий Next с API fixtures, backend отдельно через JWT/PG. Совместного browser-прогона всех ролей этой интеграционной ветки пока нет. Локальная сборка student UI компилирует `/semester`, но Windows standalone packaging выдаёт EPERM; Linux CI должен подтвердить упаковку. Production, native devices и live Moodle/СИБИТ/банк/push не проверялись.
 
 ## Открытые проверки
+
+После исходного зелёного CI на `a2e0565` включены [документы P3, PR 14](https://github.com/DeminLab/NaPare/pull/14), [WCAG-аудит, PR 15](https://github.com/DeminLab/NaPare/pull/15) и [исправления A01–A05, PR 16](https://github.com/DeminLab/NaPare/pull/16). Backend tree идентичен `a2e0565` (`7acf221e76965aef1ae5ac0c5f7e01658db35573`); новые изменения — student UI, точные boundary exceptions и документы. Для UI выполнены 36 светлых и 6 целевых тёмных axe-снимков без violations/page errors/overflow, 16 server HTML titles, client/back/forward, keyboard и три save-status сценария с API fixtures; это не полное AA. Подробности и исправление оговорки service-worker перехвата — в [аудите](../ui/student-wcag-audit-2026-10-22.md). Новый общий CI подтверждается отдельно для нового HEAD.
 
 Полный audit вместе с dev-инструментами показывает high/critical находки в glob/picomatch/tmp/Vite/Vitest/tinypool/Handlebars/braces/markdown-it. Production gate их не включает; это не основание утверждать чистоту всего dependency tree. Нужен отдельный совместимый upgrade инструментов с повтором проверок, а для braces — оценка upstream fix/альтернативы, поскольку audit не указывает исправленную версию.
 
