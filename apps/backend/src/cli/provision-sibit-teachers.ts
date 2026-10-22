@@ -3,6 +3,8 @@ import { randomBytes, randomUUID } from 'node:crypto';
 import { chmod, readFile, rm, writeFile } from 'node:fs/promises';
 import { DataSource } from 'typeorm';
 import * as bcrypt from 'bcrypt';
+import { TenantContext } from '../common/tenant/tenant-context';
+import { installTenantDatabase } from '../common/tenant/tenant-database';
 
 interface TeacherInput {
   sourceTeacherId: string;
@@ -71,12 +73,15 @@ async function main() {
     synchronize: false,
   });
 
+  const tenant = new TenantContext();
+  installTenantDatabase(db, tenant);
   try {
     await db.initialize();
   } catch (error) {
     if (apply) await rm(credentialsPath!, { force: true });
     throw error;
   }
+  await tenant.runWithDatabaseAccess({ tables: ['users', 'lessons'], universityIds: [universityId], write: apply }, async () => {
   let databaseCommitted = false;
   try {
     const universities = await db.query(
@@ -183,6 +188,7 @@ async function main() {
   } finally {
     await db.destroy();
   }
+  });
 }
 
 if (require.main === module) {
