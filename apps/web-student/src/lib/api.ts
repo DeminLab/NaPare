@@ -26,6 +26,9 @@ export function saveTokens(accessToken: string, refreshToken: string): void {
 export function clearTokens(): void {
   window.localStorage.removeItem('accessToken');
   window.localStorage.removeItem('refreshToken');
+  if ('serviceWorker' in navigator) navigator.serviceWorker.controller?.postMessage({ type: 'NAPARE_CLEAR_OFFLINE' });
+  // CacheStorage is also cleared directly when this tab has not been claimed yet.
+  if ('caches' in window) void window.caches.delete('napare-student-schedule-v1').catch(() => undefined);
 }
 
 export function isLoggedIn(): boolean {

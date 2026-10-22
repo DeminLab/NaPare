@@ -580,3 +580,11 @@ Choose the card matching the task area, read the canonical source and then follo
 - [No-send defaults, endpoint validation and provider protocol/error tests with synthetic responses.](notification-delivery-provider-tests.md)
 - [Actual non-superuser PostgreSQL and Redis tests: atomic outbox, JWT registration, FORCE RLS, retry and dead letters.](notification-delivery-e2e.md)
 
+- [Student offline 1](offline-1.md)
+
+- [Student offline 2](offline-2.md)
+
+- [Student offline 3](offline-3.md)
+
+- [Student offline 4](offline-4.md)
+
