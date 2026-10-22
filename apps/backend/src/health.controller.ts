@@ -12,6 +12,7 @@ export const HEALTH_QUEUE_PROBE = Symbol("HEALTH_QUEUE_PROBE");
 
 export interface HealthQueueProbe {
   check(): Promise<void>;
+  isConfigured?(): boolean;
 }
 
 async function withDeadline(check: () => Promise<unknown>): Promise<void> {
@@ -44,14 +45,14 @@ export class HealthController {
   })
   async check() {
     const timestamp = new Date().toISOString();
-    const queueProbe = this.queue;
+    const queueProbe = this.queue?.isConfigured?.() === false ? undefined : this.queue;
     const [database, queue] = await Promise.allSettled([
       withDeadline(() => this.dataSource.query("SELECT 1")),
       queueProbe ? withDeadline(() => queueProbe.check()) : Promise.resolve(),
     ]);
     const dependencies = {
       database: database.status === "fulfilled" ? "ok" : "unavailable",
-      queue: !this.queue
+      queue: !queueProbe
         ? "not_configured"
         : queue.status === "fulfilled" ? "ok" : "unavailable",
     };

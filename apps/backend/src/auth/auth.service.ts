@@ -21,6 +21,7 @@ import { UserRole } from "./interfaces/user-role";
 import { User } from "../users/entities/user.entity";
 import { validateMaxInitData } from "./max-init-data";
 import { TenantContext } from '../common/tenant/tenant-context';
+import { deliveryEnabled } from '../notifications/delivery/delivery-config';
 
 export type PortalWorkspace = "student" | "staff" | "admin" | "developer" | "career";
 
@@ -278,6 +279,7 @@ export class AuthService {
   }
 
   private async sendTelegramMessage(botToken: string, chatId: number, text: string): Promise<void> {
+    if (!deliveryEnabled(this.configService)) return;
     try {
       await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
         method: "POST",

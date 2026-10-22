@@ -491,3 +491,10 @@ Choose the card matching the task area, read the canonical source and then follo
 - [tenant-reference-tests](tenant-reference-tests.md)
 
 - [tenant-isolation-http-tests](tenant-isolation-http-tests.md)
+- [Transactional PostgreSQL outbox, scoped worker, BullMQ retry and readiness.](notification-delivery-service.md)
+- [Gated RuStore, WebPush, Telegram and MAX provider implementations and token validation.](notification-delivery-providers.md)
+- [Explicit default-off switches for notification delivery and queue startup.](notification-delivery-config.md)
+- [Tenant-scoped delivery state, unique target, attempts and bounded durable history.](notification-delivery-entity.md)
+- [Provider column and delivery outbox with canonical FORCE RLS policies.](notification-delivery-migration.md)
+- [No-send defaults, endpoint validation and provider protocol/error tests with synthetic responses.](notification-delivery-provider-tests.md)
+- [Actual non-superuser PostgreSQL and Redis tests: atomic outbox, JWT registration, FORCE RLS, retry and dead letters.](notification-delivery-e2e.md)

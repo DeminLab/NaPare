@@ -33,6 +33,7 @@ export class DevicesController {
       registerDeviceTokenDto.token,
       registerDeviceTokenDto.platform,
       registerDeviceTokenDto.deviceName,
+      registerDeviceTokenDto.provider,
     );
   }
 

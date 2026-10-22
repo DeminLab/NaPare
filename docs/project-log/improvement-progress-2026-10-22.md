@@ -9,7 +9,7 @@
 | P0-1, изоляция вузов | `codex/p0-tenant-isolation` | Реализовано; расширение маршрутного охвата | 325 routes; RLS, 11 SQL integration и 47 реальных HTTP сценариев. Это ещё не негативное выполнение каждого бизнес-маршрута |
 | P0-2, роли и CI | `codex/p0-role-boundaries` | Проверено, draft PR | 11 ролей; 4009 guard HTTP probes; PostgreSQL suites обязательны в CI; [PR 1](https://github.com/DeminLab/NaPare/pull/1) |
 | P0-3, восстановление | `codex/p0-backup-recovery` | Проверено локально, draft PR | Backup/restore scripts, readiness, алерты, runbook; [PR 2](https://github.com/DeminLab/NaPare/pull/2). Внешняя доставка/серверное расписание отдельно |
-| P1-1, push и очередь | `codex/p1-notification-delivery` | В работе | Redis delivery, провайдеры, retries, dry run без реальной отправки |
+| P1-1, push и очередь | `codex/p1-notification-delivery` | Серверная реализация проверена локально | PostgreSQL outbox + Redis/BullMQ, RuStore/WebPush/MAX/Telegram, retries/dead letters; default-off, реальные устройства отдельно |
 | P1-2, коннекторы | `codex/p1-schedule-connectors` | В работе | ICS/CSV/XLSX/Moodle/SIBIT, очередь, журнал, форматы |
 | P1-3, новый вуз | — | После коннекторов | Мастер и проверка готовности, без изменения navigation/header |
 | P1-4, учебный офис | `codex/p1-academic-office` | Модель утверждена | Реализация разрешена; начальная ветка подготовлена |
@@ -45,7 +45,10 @@
 - Оплата: [утверждённая модель](../product/career-payments-model.md); код в PR 4. Локально 38 unit suites / 387 tests; 7 E2E suites / 4188 passed / 1 skipped. Все шесть CI jobs PR 4 прошли на `e8973b9`, включая сборку, аудит зависимостей и реальный PostgreSQL E2E. Банк в тестах synthetic/mock, настоящий терминал не вызывался.
 - Offline: `bf465c5`, отдельная ветка. 6 focused tests, student typecheck, production build, root lint/docs lint/guards passed. Playwright с синтетическим backend проверил реальный worker на production build: новая offline-вкладка, расписание/задание, чужая identity, очистка, 320 px. Реальные аккаунты, мобильные устройства и production не проверялись. Подробные лимиты автозагрузки описаны в документации ветки.
 - Dependency audit: закреплён `follow-redirects@1.16.1`; CI PR 3 прошёл на `0556899`. Остаточное moderate-предупреждение Nest SSE и существующая прикладная фильтрация описаны в [обзоре зависимостей](../security/dependency-review-2026-10-22.md). Major upgrade Nest не выполнялся.
-- Коннекторы и push: имеются незакоммиченные промежуточные реализации в своих worktrees; без законченных проверок и документации они не считаются готовыми. Прерванные агенты не работают в фоне; завершение продолжает основной агент.
+- Push P1-1: серверная реализация завершена в отдельной ветке; [справочник доставки](../integrations/notification-delivery.md). Реальный Redis 8.0.5 в отдельном WSL процессе на 56379 и disposable PostgreSQL 18 на 55439 проверены из Windows. Focused E2E: 10/10 (atomic rollback, JWT token ownership, concurrent event idempotence, FORCE RLS, readiness, Redis retries, пять попыток до dead letter и сохранение лимита при пересоздании Redis job). Unit: 38 suites / 394 tests passed; backend typecheck/build, root lint/docs lint/guards прошли. Внешние HTTP запрещены в E2E и заменены synthetic provider responses; actual APK/PWA/бот-аккаунты и production не использовались. Семантика at least once, а не exactly once. CI получает отдельную disposable БД и существующий Redis service.
+- Коннекторы P1-2 продолжаются в своей ветке; реализация и проверки этого блока учитываются отдельно.
+
+Полный прогон ветки P1-1 после интеграции P0: **7 E2E suites / 4099 passed / 1 skipped** (не настроен native host agent). Для cleanup disposable RLS БД увеличен timeout `afterAll` с 5 до 30 секунд; assertions не ослаблялись. Проверка зависимостей: **0 high / 0 critical / 1 moderate** — существующее предупреждение Nest SSE из обзора зависимостей. Реальные внешние уведомления не отправлялись.
 
 ## Невыполненные требования
 

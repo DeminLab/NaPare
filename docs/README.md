@@ -6,6 +6,7 @@ Project guides, reference material and historical records live under this direct
 
 - [AI and repository workflow](ai/README.md) — project map, task reading order, change safety, source cards and documentation rules.
 - [API](api/README.md) — API usage and contracts.
+- [Notification delivery](integrations/notification-delivery.md) — gated RuStore/WebPush/MAX/Telegram delivery, Redis outbox and operational limits.
 - [Architecture](architecture/README.md) — system structure and historical configuration notes.
 - [Clients](clients/mobile.md) — Android and web client behavior; other client notes are in this directory.
 - [Database](database/schema-overview.md) — schema notes and migrations.

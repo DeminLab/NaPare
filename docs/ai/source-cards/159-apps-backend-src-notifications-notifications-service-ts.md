@@ -8,6 +8,8 @@
 
 Event notifications and inbox items retain existing schemas and scopes. Preparation reminders use preparation wording and explain that submissions and grades remain in Moodle, avoiding false submission instructions to teachers.
 
+Notification creation delegates to the transactional PostgreSQL outbox when the delivery service is installed. Legacy tokens remain inert; WebPush/RuStore registration validates the provider-specific token. See [notification delivery](../../integrations/notification-delivery.md).
+
 ## Read sequence
 
 1. Read [the Notifications module](../../modules/notifications.md) and the [Schedule module](../../modules/schedule.md).
