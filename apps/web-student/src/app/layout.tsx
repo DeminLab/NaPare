@@ -3,7 +3,7 @@ import './globals.css';
 import { NetworkStatus } from '@/components/ui';
 
 export const metadata: Metadata = {
-  title: 'НаПаре — Студент',
+  title: { default: 'НаПаре — учебный день', template: '%s — НаПаре' },
   description: 'Расписание занятий, уведомления и общение — всё в одном месте',
   icons: { icon: '/student/icon.svg', shortcut: '/student/icon.svg' },
 };

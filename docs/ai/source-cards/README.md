@@ -1,5 +1,21 @@
 # Source-card index
 
+- [Student title: Вход](student-title-login.md)
+- [Student title: Доступ в студенческий кабинет](student-title-register.md)
+- [Student title: Сегодня](student-title-today.md)
+- [Student title: Расписание на неделю](student-title-week.md)
+- [Student title: Расписание на месяц](student-title-month.md)
+- [Student title: Подготовка к занятиям](student-title-pair-space.md)
+- [Student title: Пространство пары](student-title-pair-space-lessonId.md)
+- [Student title: Отсутствия](student-title-absences.md)
+- [Student title: Избранное расписание](student-title-groups.md)
+- [Student title: Уведомления](student-title-notifications.md)
+- [Student title: Профиль](student-title-profile.md)
+- [Student title: Настройки](student-title-settings.md)
+- [Student title: Мой семестр](student-title-semester.md)
+- [Student title: Посещаемость](student-title-attendance-check-in.md)
+- [Student title: Кураторство](student-title-curation.md)
+
 - [Student semester report](student-semester-page.md)
 
 - [Moodle numeric academic identities](semester-identity.md)

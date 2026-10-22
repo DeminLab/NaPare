@@ -7,12 +7,20 @@ const approvedStudentExperiencePath = /^apps\/web-student\/(?:package\.json|tail
 const approvedStudentApiPath = 'apps/web-student/src/lib/api.ts';
 // Owner approval in the 22 October plan covers offline schedule and its focused tests.
 const approvedOfflineTests = new Set(['apps/web-student/test/load-typescript.cjs', 'apps/web-student/test/offline-worker.test.cjs']);
+// Explicit owner approval for audit A01–A05: root reflow and server page titles.
+const approvedAccessibilityPaths = new Set([
+  'apps/web-student/src/app/layout.tsx',
+  'apps/web-student/src/app/page.tsx',
+  'apps/web-student/src/app/(auth)/login/layout.tsx',
+  'apps/web-student/src/app/(auth)/login/page.tsx',
+  'apps/web-student/src/app/(auth)/register/layout.tsx',
+]);
 
 function assertAllowed(paths) {
   const allowedMigrationPath = 'apps/web-student/next.config.js';
   const blocked = paths.filter((path) => {
     const normalizedPath = path.replace(/\\/g, '/');
-    return normalizedPath !== allowedMigrationPath && normalizedPath !== approvedStudentApiPath && !approvedOfflineTests.has(normalizedPath) && protectedPath.test(normalizedPath) && !approvedStudentExperiencePath.test(normalizedPath);
+    return normalizedPath !== allowedMigrationPath && normalizedPath !== approvedStudentApiPath && !approvedOfflineTests.has(normalizedPath) && !approvedAccessibilityPaths.has(normalizedPath) && protectedPath.test(normalizedPath) && !approvedStudentExperiencePath.test(normalizedPath);
   });
   if (blocked.length) {
     throw new Error(`Role workspace foundation changes include protected paths:\n${blocked.map((path) => `- ${path}`).join('\n')}`);
@@ -54,13 +62,14 @@ function assertDeveloperSemanticAliases() {
 }
 
 function run() {
+  assertAllowed([...approvedAccessibilityPaths]);
   assertAllowed([
     'apps/web-staff/src/app/globals.css',
     'apps/web-admin/src/components/ui/Card.tsx',
   ]);
 
   for (const path of [
-    'apps/web-student/src/app/page.tsx',
+    'apps/web-student/src/app/(auth)/register/page.tsx',
     'apps/web-staff/src/components/navigation/Sidebar.tsx',
     'apps/web-admin/src/components/ui/Avatar.tsx',
     'apps/web-developer/public/logo.svg',
