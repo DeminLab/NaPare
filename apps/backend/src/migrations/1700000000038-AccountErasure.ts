@@ -14,7 +14,7 @@ export class AccountErasure1700000000038 implements MigrationInterface {
     // The application proves every ID through subject-only selectors before establishing this capability.
     const tables = ['users', 'academic_identities', 'personal_lesson_notes', 'user_favorites', 'notifications',
       'notification_deliveries', 'notification_preferences', 'inbox_items', 'career_profile', 'career_availability',
-      'career_membership', 'career_admission', 'curator_assignments', 'office_assignments', 'groups', 'faculties', 'attendance_qr_sessions'];
+      'career_membership', 'career_admission', 'curator_assignments', 'office_assignments', 'groups', 'faculties', 'attendance_qr_sessions', 'event_records'];
     for (const table of tables) {
       const key = table === 'career_availability' ? 'studentId' : 'id';
       const policies = await runner.query(`SELECT p.polname AS name, pg_get_expr(p.polqual,p.polrelid) AS using, pg_get_expr(p.polwithcheck,p.polrelid) AS checking

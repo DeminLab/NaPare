@@ -1,5 +1,10 @@
 # Source-card index
 
+- [Account erasure and retained archive](account-erasure-service.md)
+- [Tombstone and exact-row erasure guards](account-erasure-migration.md)
+- [Password and retained-record confirmation](account-erasure-dto.md)
+- [Account erasure PostgreSQL tests](account-erasure-e2e.md)
+
 - [Personal JSON export](personal-data-service.md)
 - [Reviewed export projections](personal-data-catalog.md)
 - [Self-only SELECT capability](personal-data-migration.md)

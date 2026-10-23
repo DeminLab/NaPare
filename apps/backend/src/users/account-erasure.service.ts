@@ -71,7 +71,7 @@ export class AccountErasureService {
       const runner = this.db.createQueryRunner();
       try {
         await runner.connect();
-        return { archiveModel: 'pseudonymous', retained: ACCOUNT_RETENTION, blockers: await this.blockers(runner, false),
+        return { accountId: actor.id, archiveModel: 'pseudonymous', retained: ACCOUNT_RETENTION, blockers: await this.blockers(runner, false),
           removed: ['ФИО и контакты профиля, пароль и вход во всех сессиях', 'MAX/Telegram/Moodle-привязки, push-токены и настройки доставки', 'Личные заметки, избранное, уведомления, карьерный профиль и опубликованное портфолио', 'Действующие личные назначения и права платформы'],
           downloadBeforeDeletion: '/api/v1/users/me/export' };
       } finally { await runner.release(); }
@@ -80,6 +80,7 @@ export class AccountErasureService {
 
   async erase(dto: DeleteAccountDto) {
     const actor = this.actor();
+    if (dto.expectedUserId !== actor.id) throw new ConflictException('Аккаунт изменился. Заново откройте экран подтверждения.');
     if (dto.confirmed !== true || dto.acknowledgeRetention !== true) throw new ConflictException('Подтвердите удаление и сохранение перечисленных архивных данных.');
     // Preserve existing protection for platform identities, without leaking delegated grants into self-erasure.
     await this.tenant.runInRequest(async () => { this.tenant.setUser(actor); await this.platform.protectLegacyMutation(actor.id); });
@@ -90,8 +91,12 @@ export class AccountErasureService {
         await runner.connect(); await runner.startTransaction();
         // Shared with existing owner/grant changes; acquire it before any user row lock.
         await runner.query('SELECT pg_advisory_xact_lock(707247126)');
-        const [user] = await runner.query('SELECT id, "passwordHash", "isActive", "personalDataDeletedAt" FROM users WHERE id=$1 FOR UPDATE', [actor.id]);
+        // Same lock/order as office assignment, route and decision mutations: no new stage can target this account after the check.
+        if (actor.universityId) await runner.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))', [`office:${actor.universityId}`]);
+        const [user] = await runner.query('SELECT id, "passwordHash", "isActive", "personalDataDeletedAt",role,"universityId","sessionVersion" FROM users WHERE id=$1 FOR UPDATE', [actor.id]);
         if (!user?.isActive || user.personalDataDeletedAt) throw new UnauthorizedException();
+        if (actor.sessionVersion !== undefined && user.sessionVersion !== actor.sessionVersion) throw new UnauthorizedException('Сессия отозвана. Войдите заново.');
+        if (user.role !== actor.role || user.universityId !== actor.universityId) throw new ConflictException('Учётная запись изменилась. Заново откройте экран подтверждения.');
         if (typeof dto.currentPassword !== 'string' || !await bcrypt.compare(dto.currentPassword, user.passwordHash)) throw new UnauthorizedException('Пароль не подтверждён');
         const blocked = await this.blockers(runner, true);
         if (blocked.length) throw new ConflictException({ message: 'Сначала передайте действующие обязанности.', blockers: blocked });
@@ -100,6 +105,7 @@ export class AccountErasureService {
           const key = table === 'career_availability' ? 'studentId' : table === 'platform_grants' ? 'userId' : 'id';
           rows[table] = (await runner.query(`SELECT "${key}"::text AS id FROM "${table}" WHERE "${column}"=$1`, [actor.id])).map(row => row.id);
         }
+        rows.event_records = (await runner.query('SELECT id::text FROM event_records WHERE actor->>\'id\'=$1', [actor.id])).map(row => row.id);
         const counts: Record<string, number> = {};
         await this.tenant.runWithDatabaseAccess({ personalErasure: { userId: actor.id, rows } }, async () => {
           for (const [table, column] of Object.entries(PRIVATE_ROWS)) {
@@ -118,10 +124,11 @@ export class AccountErasureService {
           await runner.query('UPDATE file_attachments SET "fileUrl"=\'\',"fileName"=\'Удалённый файл\',"revokedAt"=COALESCE("revokedAt",CURRENT_TIMESTAMP),"revokedBy"=$1,"revokeReason"=\'Аккаунт удалён\' WHERE "uploadedBy"=$1', [actor.id]);
           // Scrub the self-authored technical audit payload; other actors' logs are an explicit retained exception.
           await runner.query('UPDATE audit_logs SET "oldValues"=NULL,"newValues"=NULL,ip=NULL,"userAgent"=NULL WHERE "userId"=$1', [actor.id]);
+          await runner.query('UPDATE event_records SET actor=jsonb_build_object(\'type\',\'user\',\'id\',$1::text),payload=\'{"redacted":true}\'::jsonb WHERE actor->>\'id\'=$1', [actor.id]);
           await runner.query(`UPDATE users SET email=$2,"firstName"='Архив',"lastName"=$3,phone=NULL,"avatarUrl"=NULL,"passwordHash"=$4,
             "maxUserId"=NULL,"telegramUserId"=NULL,"sourceTeacherId"=NULL,"isActive"=false,"sessionVersion"="sessionVersion"+1,
             "lastLoginAt"=NULL,"personalDataDeletedAt"=CURRENT_TIMESTAMP,"updatedAt"=CURRENT_TIMESTAMP WHERE id=$1`,
-          [actor.id, `deleted-${actor.id}@account.invalid`, actor.id.slice(0, 8), destroyedPassword]);
+          [actor.id, `deleted-${randomBytes(24).toString('hex')}@account.invalid`, actor.id.slice(0, 8), destroyedPassword]);
         });
         const [receipt] = await runner.query('SELECT "personalDataDeletedAt" AS "deletedAt" FROM users WHERE id=$1', [actor.id]);
         await runner.commitTransaction();

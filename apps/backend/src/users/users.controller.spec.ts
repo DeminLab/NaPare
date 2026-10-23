@@ -43,10 +43,17 @@ describe('UsersController', () => {
 
   describe('deleteAccount', () => {
     it('uses the confirmed erasure operation instead of administrative deactivation', async () => {
-      const dto: DeleteAccountDto = { currentPassword: 'synthetic-password', confirmed: true, acknowledgeRetention: true };
+      const dto: DeleteAccountDto = { expectedUserId: '11111111-1111-4111-8111-111111111111', currentPassword: 'synthetic-password', confirmed: true, acknowledgeRetention: true };
       await expect(controller.deleteAccount(dto)).resolves.toEqual({ success: true, archiveModel: 'pseudonymous' });
       expect(erasure.erase).toHaveBeenCalledWith(dto);
       expect(service.deactivate).not.toHaveBeenCalled();
     });
+  });
+
+  it('returns the safe profile projection after mutation, without password hashes or session/link secrets', async () => {
+    service.update = jest.fn().mockResolvedValue({ id: '1', firstName: 'Updated', passwordHash: 'synthetic-hash', sessionVersion: 8, telegramUserId: 'private-link', maxUserId: 'private-max' });
+    const profile = await controller.updateProfile({ user: { id: '1' } }, { firstName: 'Updated' });
+    expect(profile.firstName).toBe('Updated');
+    for (const field of ['passwordHash', 'sessionVersion', 'telegramUserId', 'maxUserId']) expect(profile).not.toHaveProperty(field);
   });
 });
