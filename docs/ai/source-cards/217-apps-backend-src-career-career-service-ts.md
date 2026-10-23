@@ -6,7 +6,7 @@
 
 ## Scope
 
-Career module: student professional profiles, scoped career-center/company permissions and task lifecycle. Payment provider is intentionally empty; accepted work does not mean paid. Telegram is not used. See [career domain](../../modules/career.md).
+Career module: student professional profiles, scoped career-center/company permissions and task lifecycle. Payments are a separate CareerBillingModule; accepted work does not mean paid. Telegram is not used in this module. See [career domain](../../modules/career.md). `assertCenterAccess()` reuses the existing primary-role/delegated-membership rule for [own-university reports](../../modules/career-university-report.md).
 
 ## Read sequence
 

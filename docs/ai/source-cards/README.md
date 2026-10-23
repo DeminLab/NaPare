@@ -1,5 +1,12 @@
 # Source-card index
 
+- [Career university report: service](career-university-report-service.md)
+- [Career university report: controller](career-university-report-controller.md)
+- [Career university report: e2e](career-university-report-e2e.md)
+- [Career university report: page](career-university-report-page.md)
+- [Career university report: view](career-university-report-view.md)
+- [Career university report: styles](career-university-report-styles.md)
+
 - [Account data route](account-data-page-tsx.md)
 - [Account data controller](account-data-AccountDataControls-tsx.md)
 - [Account data sign-in](account-data-AccountSignIn-tsx.md)

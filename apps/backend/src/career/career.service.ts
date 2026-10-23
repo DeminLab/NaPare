@@ -45,6 +45,11 @@ export class CareerService {
     const roles = administrator ? ['career_admin'] : ['career_admin','career_staff'];
     if (!await this.repo(CareerMembership).existsBy({userId:actor.id,universityId,role:In(roles),revokedAt:IsNull()})) throw new ForbiddenException('Нужны права карьерного центра');
   }
+  async assertCenterAccess(actor: Actor): Promise<string> {
+    const universityId = requireUniversityId(actor);
+    await this.center(actor, universityId);
+    return universityId;
+  }
   private async company(actor: Actor, companyId: string, owner = false, manager = this.db.manager): Promise<void> {
     if (!await this.repo(CareerMembership,manager).existsBy({userId:actor.id,companyId,role:In(owner?['company_owner']:['company_owner','company_member']),revokedAt:IsNull()})) throw new ForbiddenException('Нет доступа к компании');
     // Keep membership management scoped to this proved company, including rows

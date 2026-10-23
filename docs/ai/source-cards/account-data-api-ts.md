@@ -10,4 +10,6 @@ No-store bearer requests, guarded token refresh for reads only, session-change p
 
 ## Verification
 
+The helper also supports a raw successful Response for the career report XLSX. The default JSON mode and session-change checks remain authoritative; binary consumers must check university/MIME and recheck session after reading the body.
+
 Portal typecheck, root lint and repository guards. Browser verification uses disposable synthetic accounts with real local Next/Nest/PostgreSQL; test current-account identity, errors, retained archive, JSON completeness and local cleanup separately from remote/device copies.

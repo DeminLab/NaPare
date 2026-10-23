@@ -3065,6 +3065,54 @@
       }
     },
     {
+      "id": "CareerReportController.download GET /api/v1/career/center/report.xlsx",
+      "source": "apps/backend/src/career/career-report.controller.ts",
+      "method": "GET",
+      "path": "/api/v1/career/center/report.xlsx",
+      "guards": [
+        "JwtAuthGuard"
+      ],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 200,
+        "career_staff": 200,
+        "career_admin": 200,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
+      "id": "CareerReportController.report GET /api/v1/career/center/report",
+      "source": "apps/backend/src/career/career-report.controller.ts",
+      "method": "GET",
+      "path": "/api/v1/career/center/report",
+      "guards": [
+        "JwtAuthGuard"
+      ],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 200,
+        "career_staff": 200,
+        "career_admin": 200,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
       "id": "CurationController.absenceContext GET /api/v1/curation/absences/:id/context",
       "source": "apps/backend/src/curation/curation.controller.ts",
       "method": "GET",

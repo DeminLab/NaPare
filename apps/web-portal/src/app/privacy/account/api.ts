@@ -56,7 +56,7 @@ async function refresh(session: Session): Promise<Session> {
   return refreshing.promise;
 }
 
-export async function accountApi<T>(path: string, session: Session, signal: AbortSignal, options: RequestInit = {}): Promise<T> {
+export async function accountApi<T>(path: string, session: Session, signal: AbortSignal, options: RequestInit = {}, responseMode: 'json' | 'response' = 'json'): Promise<T> {
   assertSession(session);
   const send = (active: Session) => fetch('/api/v1' + path, { ...options, cache: 'no-store', signal: AbortSignal.any([signal, AbortSignal.timeout(120000)]),
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${active.accessToken}` } });
@@ -67,6 +67,10 @@ export async function accountApi<T>(path: string, session: Session, signal: Abor
     signal.throwIfAborted();
     Object.assign(session, next);
     response = await send(session);
+  }
+  if (response.ok && responseMode === 'response') {
+    signal.throwIfAborted(); assertSession(session);
+    return response as T;
   }
   const data = await read(response);
   signal.throwIfAborted();
