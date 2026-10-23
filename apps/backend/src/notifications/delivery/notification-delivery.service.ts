@@ -69,8 +69,13 @@ export class NotificationDeliveryService implements OnModuleInit, OnModuleDestro
   }
 
   private scoped<T>(universityIds: string[] | null, tables: string[], write: boolean, callback: (manager: EntityManager) => Promise<T>): Promise<T> {
-    return this.tenant.runWithDatabaseAccess({ tables, universityIds, write, replaceActor: true },
+    const execute = () => this.tenant.runWithDatabaseAccess({ tables, universityIds, write, replaceActor: true },
       () => this.db.transaction(callback));
+    // Private-row writes check the recipient tombstone. Allow that SELECT in
+    // the same tenant without granting mutations of user records.
+    return write && !tables.includes('users')
+      ? this.tenant.runWithDatabaseAccess({ tables: ['users'], universityIds, write: false, replaceActor: true }, execute)
+      : execute();
   }
 
   async persist(dto: Partial<Notification>): Promise<Notification> {
@@ -128,10 +133,15 @@ export class NotificationDeliveryService implements OnModuleInit, OnModuleDestro
     } finally { this.dispatching = false; }
   }
 
-  async transition(data: DeliveryJob, status: DeliveryStatus, error?: string, increment = false): Promise<NotificationDelivery | null> {
-    return this.scoped([data.universityId], ['notification_deliveries'], true, async manager => {
+  async transition(data: DeliveryJob, status: DeliveryStatus, error?: string, increment = false, revokeDevice = false): Promise<NotificationDelivery | null> {
+    return this.scoped([data.universityId], revokeDevice ? ['notification_deliveries', 'device_tokens'] : ['notification_deliveries'], true, async manager => {
       const row = await manager.findOne(NotificationDelivery, { where: { id: data.deliveryId, universityId: data.universityId }, lock: { mode: 'pessimistic_write' } });
       if (!row || ['delivered', 'dead', 'suppressed'].includes(row.status)) return null;
+      // A terminal rejection and device revocation must become visible together.
+      // Otherwise a crash after saving "dead" leaves a rejected token active forever.
+      if (revokeDevice && ['webpush', 'rustore'].includes(row.channel)) {
+        await manager.update(DeviceToken, { id: row.targetId, userId: row.userId }, { isActive: false });
+      }
       if (increment && row.attempts >= ATTEMPTS) {
         status = 'dead';
         error = 'queue_attempts_exhausted';
@@ -175,10 +185,7 @@ export class NotificationDeliveryService implements OnModuleInit, OnModuleDestro
     } catch (error) {
       const failure = error instanceof DeliveryError ? error : new DeliveryError('delivery_internal');
       const dead = failure.permanent || current.attempts >= ATTEMPTS || job.attemptsMade + 1 >= ATTEMPTS;
-      await this.transition(data, dead ? 'dead' : 'queued', failure.code);
-      if (failure.revokeDevice && ['webpush', 'rustore'].includes(current.channel)) {
-        await this.scoped([data.universityId], ['device_tokens'], true, manager => manager.update(DeviceToken, { id: current.targetId, userId: current.userId }, { isActive: false }));
-      }
+      await this.transition(data, dead ? 'dead' : 'queued', failure.code, false, failure.revokeDevice);
       if (dead) throw new UnrecoverableError(failure.code);
       throw failure;
     }
