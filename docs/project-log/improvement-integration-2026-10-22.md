@@ -1,6 +1,10 @@
 # Совместная проверка улучшений — 22 октября 2026
 
-Документ для ревьюера интеграционной ветки `codex/improvement-integration` (PR 13). Ветка объединяет изменения PR 1–12 и 14–21 на базе `6f28912`; это кандидат для совместного ревью, не deployment и не утверждение полного выполнения [плана](improvement-plan-2026-10-22.md).
+Документ для ревьюера интеграционной ветки `codex/improvement-integration` (PR 13). Ветка объединяет изменения PR 1–12 и 14–22 на базе `6f28912`; это кандидат для совместного ревью, не deployment и не утверждение полного выполнения [плана](improvement-plan-2026-10-22.md).
+
+## Добавление 24 октября: регистрация и ИНН компании
+
+[PR 22](https://github.com/DeminLab/NaPare/pull/22), `184221a`, включён fast-forward после успешного [CI 120](https://github.com/DeminLab/NaPare/actions/runs/40003036750), все шесть jobs. Сохранены результаты ФНС, owner-only recheck и company cooldown; подтверждение партнёрства остаётся отдельным. 23 adapter unit, 43 unit suites/453 tests, 4451 guard probes, 12 настоящих JWT/HTTP/PG сценариев с mocked FNS, 10 erasure regressions, browser с mocked FNS и один отдельный live lookup. Новые панели прошли axe, 7 прежних contrast-находок полного экрана задокументированы. [Контракт](../integrations/company-registry.md). Модерация пока не включена в интеграционную ветку; production не менялся.
 
 ## Добавление 23 октября: отчёт карьерного центра
 
