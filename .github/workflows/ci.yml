@@ -143,6 +143,7 @@ jobs:
           createdb -h 127.0.0.1 -U napare -O napare_runtime curation_test_personal_data_ci
           createdb -h 127.0.0.1 -U napare -O napare_runtime curation_test_erasure_ci
           createdb -h 127.0.0.1 -U napare -O napare_runtime curation_test_career_report_ci
+          createdb -h 127.0.0.1 -U napare -O napare_runtime curation_test_company_registry_ci
 
       - name: Run E2E tests
         shell: bash
@@ -161,6 +162,7 @@ jobs:
           PERSONAL_DATA_TEST_DATABASE_URL: postgresql://napare_runtime:ci_runtime_password_only@127.0.0.1:5432/curation_test_personal_data_ci
           ACCOUNT_ERASURE_TEST_DATABASE_URL: postgresql://napare_runtime:ci_runtime_password_only@127.0.0.1:5432/curation_test_erasure_ci
           CAREER_REPORT_TEST_DATABASE_URL: postgresql://napare_runtime:ci_runtime_password_only@127.0.0.1:5432/curation_test_career_report_ci
+          COMPANY_REGISTRY_TEST_DATABASE_URL: postgresql://napare_runtime:ci_runtime_password_only@127.0.0.1:5432/curation_test_company_registry_ci
           NOTIFICATION_TEST_REDIS_URL: redis://127.0.0.1:6379
         run: pnpm test:e2e | tee e2e-test-report.txt
       - uses: actions/upload-artifact@v4

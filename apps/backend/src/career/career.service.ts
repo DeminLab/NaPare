@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException, Optional, ServiceUnavailableException } from '@nestjs/common';
 import { DataSource, EntityManager, In, IsNull, MoreThanOrEqual, SelectQueryBuilder } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User } from '../users/entities/user.entity';
@@ -11,6 +11,7 @@ import { CareerNotice, CareerTest, CareerTestAttempt, CareerCompany, CareerMembe
 import { CareerTestDto, CareerAttemptDto, EmployerRegistrationDto, CareerCompanyDto, CareerProfileDto, CareerTaskDto, CareerMessageDto, CareerSubmissionDto, CareerDecisionDto, CareerReviewDto, CareerMembershipDto, CareerAdmissionDto } from './career.dto';
 import { randomUUID } from 'node:crypto';
 import { TenantContext } from '../common/tenant/tenant-context';
+import { CompanyRegistryService } from './company-registry.service';
 
 type Actor = AuthenticatedUser;
 type CareerTaskListQuery = {offset?: string; limit?: string; q?: string; category?: string; state?: string};
@@ -35,7 +36,7 @@ export function assertCareerResultUrl(value: string): void {
 
 @Injectable()
 export class CareerService {
-  constructor(private readonly db: DataSource, private readonly auth: AuthService, private readonly tenant: TenantContext = new TenantContext()) {}
+  constructor(private readonly db: DataSource, private readonly auth: AuthService, private readonly tenant: TenantContext = new TenantContext(), @Optional() private readonly registry?: CompanyRegistryService) {}
   private repo<T extends object>(entity: new () => T, manager = this.db.manager) { return manager.getRepository(entity); }
   private async university(id: string) { if (!await this.repo(University).existsBy({id})) throw new NotFoundException('Вуз не найден'); }
   private async center(actor: Actor, universityId: string, administrator = false): Promise<void> {
@@ -57,6 +58,7 @@ export class CareerService {
     if (this.tenant.getUser()) this.tenant.authorizeDatabaseAccess({ relation: { table: 'career_membership', column: 'companyId', value: companyId, write: owner } });
   }
   private student(actor: Actor) { if (actor.role !== UserRole.STUDENT) throw new ForbiddenException('Действие доступно студенту'); return requireUniversityId(actor); }
+  async assertCompanyOwnerAccess(actor: Actor, companyId: string): Promise<void> { await this.company(actor, companyId, true); }
   private async task(id: string, manager = this.db.manager, lock = false) {
     const task = await this.repo(CareerTask,manager).findOne({where:{id},...(lock?{lock:{mode:'pessimistic_write' as const}}:{})});
     if (!task) throw new NotFoundException('Задача не найдена'); return task;
@@ -335,7 +337,11 @@ export class CareerService {
   async createCompany(actor:Actor,dto:CareerCompanyDto) {
     if ([UserRole.STUDENT,UserRole.DEVELOPER,UserRole.SUPERADMIN].includes(actor.role)) throw new ForbiddenException('Нужен рабочий аккаунт работодателя');await this.university(dto.universityId);
     if (!dto.name.trim()) throw new BadRequestException('Укажите компанию');
-    return this.db.transaction(async m=>{const company=await this.repo(CareerCompany,m).save(this.repo(CareerCompany,m).create({name:dto.name.trim(),description:dto.description,createdBy:actor.id}));await this.repo(CareerMembership,m).save({userId:actor.id,companyId:company.id,universityId:null,role:'company_owner'});await this.repo(CareerPartnership,m).save({companyId:company.id,universityId:dto.universityId,state:'pending'});return company;});
+    if (!this.registry) throw new ServiceUnavailableException('Проверка реестра не подключена');
+    const record = await this.registry.lookup(dto.inn);
+    return this.db.transaction(async m=>{const company=await this.repo(CareerCompany,m).save(this.repo(CareerCompany,m).create({name:dto.name.trim(),description:dto.description,createdBy:actor.id,
+      inn:record.inn,registryStatus:record.status,registryCheckedAt:record.checkedAt,registryRequestedAt:record.checkedAt,
+      registryLegalName:record.legalName,registryOgrn:record.ogrn,registryReason:record.reason}));await this.repo(CareerMembership,m).save({userId:actor.id,companyId:company.id,universityId:null,role:'company_owner'});await this.repo(CareerPartnership,m).save({companyId:company.id,universityId:dto.universityId,state:'pending'});return company;});
   }
   async addPartnership(actor:Actor,companyId:string,universityId:string) {await this.company(actor,companyId,true);await this.university(universityId);if(await this.repo(CareerPartnership).existsBy({companyId,universityId})) throw new ConflictException('Заявка уже существует');return this.repo(CareerPartnership).save({companyId,universityId,state:'pending'});}
   async verifyPartnership(actor:Actor,id:string,dto:CareerDecisionDto) {

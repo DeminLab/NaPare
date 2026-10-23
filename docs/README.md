@@ -4,7 +4,7 @@ Project guides, reference material and historical records live under this direct
 
 ## Sections
 
-- [Company registry adapter, partial](integrations/company-registry.md) — public FNS protocol and explicit failure states; registration and persistence remain unfinished.
+- [Company registry verification](integrations/company-registry.md) — company registration, persisted FNS result and owner recheck; public-search limitations and evidence.
 
 - [University career report](modules/career-university-report.md) — own-university aggregates and XLSX; counts of tasks, applications and accepted works, no employment inference.
 

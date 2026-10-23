@@ -6,7 +6,7 @@
 
 ## Scope
 
-Bounded fixed-host public FNS search, checksum validation, exact registry match and explicit unavailable/challenge states; not wired into company registration yet. Read [partial integration contract](../../integrations/company-registry.md) and current source observations before editing. Never bypass CAPTCHA, accept fuzzy INN matches or infer employer trust from search presence.
+Bounded fixed-host public FNS search, checksum validation, exact registry match and explicit unavailable/challenge states. Used by company registration and owner recheck. Read [integration contract](../../integrations/company-registry.md) and current source observations before editing. Never bypass CAPTCHA, accept fuzzy INN matches or infer employer trust from search presence.
 
 ## Verification
 

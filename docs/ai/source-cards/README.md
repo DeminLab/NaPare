@@ -1,6 +1,12 @@
 # Source-card index
 
-- [Company registry adapter, partial](company-registry-service.md)
+- [company-verification-service](company-verification-service.md)
+- [company-verification-controller](company-verification-controller.md)
+- [company-registry-migration](company-registry-migration.md)
+- [company-registry-e2e](company-registry-e2e.md)
+- [company-registry-panel](company-registry-panel.md)
+
+- [Company registry adapter](company-registry-service.md)
 - [Company registry synthetic tests](company-registry-tests.md)
 
 - [Career university report: service](career-university-report-service.md)

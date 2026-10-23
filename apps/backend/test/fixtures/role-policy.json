@@ -3113,6 +3113,30 @@
       }
     },
     {
+      "id": "CompanyVerificationController.recheck POST /api/v1/career/companies/:id/registry-check",
+      "source": "apps/backend/src/career/company-verification.controller.ts",
+      "method": "POST",
+      "path": "/api/v1/career/companies/:id/registry-check",
+      "guards": [
+        "JwtAuthGuard"
+      ],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 200,
+        "career_staff": 200,
+        "career_admin": 200,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
       "id": "CurationController.absenceContext GET /api/v1/curation/absences/:id/context",
       "source": "apps/backend/src/curation/curation.controller.ts",
       "method": "GET",

@@ -9,9 +9,13 @@ export class EmployerRegistrationDto {
   @ApiProperty() @IsString() @MinLength(1) @MaxLength(80) lastName: string;
 }
 export class CareerCompanyDto {
+  @ApiProperty() @IsString() @Matches(/^(?:\d{10}|\d{12})$/) inn: string;
   @ApiProperty() @IsString() @MinLength(2) @MaxLength(160) name: string;
   @ApiProperty() @IsString() @MaxLength(4000) description: string;
   @ApiProperty() @IsUUID() universityId: string;
+}
+export class CompanyRegistryCheckDto {
+  @ApiProperty({required:false}) @IsOptional() @IsString() @Matches(/^(?:\d{10}|\d{12})$/) inn?: string;
 }
 export class CareerProfileDto {
   @ApiProperty() @IsString() @MinLength(2) @MaxLength(180) headline: string;

@@ -10,7 +10,10 @@ import { AuthModule } from '../auth/auth.module';
 import { CareerService } from './career.service';
 import { CareerReportService } from './career-report.service';
 import { CareerReportController } from './career-report.controller';
+import { CompanyRegistryService } from './company-registry.service';
+import { CompanyVerificationService } from './company-verification.service';
+import { CompanyVerificationController } from './company-verification.controller';
 import { CareerController, CareerAccountsController } from './career.controller';
 
-@Module({ imports: [TypeOrmModule.forFeature([...Object.values(entities), User, University ]), AuthModule, ScheduleModule], providers: [CareerService, CareerAiService, CareerPlanningService, CareerReportService], controllers: [CareerController, CareerAccountsController, CareerReportController] })
+@Module({ imports: [TypeOrmModule.forFeature([...Object.values(entities), User, University ]), AuthModule, ScheduleModule], providers: [CareerService, CareerAiService, CareerPlanningService, CareerReportService, CompanyRegistryService, CompanyVerificationService], controllers: [CareerController, CareerAccountsController, CareerReportController, CompanyVerificationController] })
 export class CareerModule {}

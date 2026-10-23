@@ -5,6 +5,14 @@ export class CareerCompany {
   @PrimaryGeneratedColumn('uuid') id: string;
   @Column({type: 'varchar'}) name: string;
   @Column({type: 'text', default: ''}) description: string;
+  @Column({type: 'varchar', length: 12, nullable: true}) inn: string | null;
+  @Column({type: 'varchar', default: 'not_checked'}) registryStatus: string;
+  @Column({type: 'timestamp', nullable: true}) registryCheckedAt: Date | null;
+  @Column({type: 'timestamp', nullable: true}) registryRequestedAt: Date | null;
+  @Column({type: 'text', nullable: true}) registryLegalName: string | null;
+  @Column({type: 'varchar', length: 15, nullable: true}) registryOgrn: string | null;
+  @Column({type: 'varchar', length: 80, nullable: true}) registryReason: string | null;
+  @Column({type: 'integer', default: 0}) registryCheckVersion: number;
   @Column({type: 'uuid'}) createdBy: string;
   @CreateDateColumn() createdAt: Date;
   @UpdateDateColumn() updatedAt: Date;

@@ -1,6 +1,6 @@
 import { CareerPlanningService } from './career-planning.service';
 import { CareerAiService } from './career-ai.service';
-import { Query, Body, Controller, Get, Param, ParseUUIDPipe, Post, Put, Patch, Request, UseGuards } from '@nestjs/common';
+import { Query, Body, Controller, Get, Header, Param, ParseUUIDPipe, Post, Put, Patch, Request, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
@@ -47,7 +47,7 @@ export class CareerController {
   @Post('profiles/:id/verify') verifyProfile(@Request() req:CareerRequest,@Param('id',ParseUUIDPipe) id:string,@Body() dto:CareerDecisionDto){return this.service.verifyProfile(req.user,id,dto);}
   @Post('admissions') requestAdmission(@Request() req:CareerRequest,@Body() dto:CareerAdmissionDto){return this.service.requestAdmission(req.user,dto);}
   @Post('admissions/:id/decision') decideAdmission(@Request() req:CareerRequest,@Param('id',ParseUUIDPipe) id:string,@Body() dto:CareerDecisionDto){return this.service.decideAdmission(req.user,id,dto);}
-  @Post('companies') createCompany(@Request() req:CareerRequest,@Body() dto:CareerCompanyDto){return this.service.createCompany(req.user,dto);}
+  @Post('companies') @Throttle({default:{ttl:60000,limit:3}}) @Header('Cache-Control','no-store, private') createCompany(@Request() req:CareerRequest,@Body() dto:CareerCompanyDto){return this.service.createCompany(req.user,dto);}
   @Post('companies/:id/partnerships') partnership(@Request() req:CareerRequest,@Param('id',ParseUUIDPipe) id:string,@Body() dto:CareerPartnershipDto){return this.service.addPartnership(req.user,id,dto.universityId);}
   @Post('partnerships/:id/verify') verifyPartnership(@Request() req:CareerRequest,@Param('id',ParseUUIDPipe) id:string,@Body() dto:CareerDecisionDto){return this.service.verifyPartnership(req.user,id,dto);}
   @Post('memberships') membership(@Request() req:CareerRequest,@Body() dto:CareerMembershipDto){return this.service.addMembership(req.user,dto);}
