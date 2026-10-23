@@ -1,5 +1,13 @@
 # Source-card index
 
+- [Account data route](account-data-page-tsx.md)
+- [Account data controller](account-data-AccountDataControls-tsx.md)
+- [Account data sign-in](account-data-AccountSignIn-tsx.md)
+- [Account deletion confirmation](account-data-AccountDeletionForm-tsx.md)
+- [Account data transport](account-data-api-ts.md)
+- [Account data contracts](account-data-types-ts.md)
+- [Account data styles](account-data-account-data-module-css.md)
+
 - [Account erasure and retained archive](account-erasure-service.md)
 - [Tombstone and exact-row erasure guards](account-erasure-migration.md)
 - [Password and retained-record confirmation](account-erasure-dto.md)
