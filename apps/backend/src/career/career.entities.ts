@@ -75,6 +75,14 @@ export class CareerAdmission {
 
 @Entity('career_task')
 export class CareerTask {
+  @Column({type: 'varchar', default: 'not_submitted'}) moderationStatus: string;
+  @Column({type: 'jsonb', default: []}) moderationFlags: string[];
+  @Column({type: 'varchar', default: ''}) moderationPolicyVersion: string;
+  @Column({type: 'text', default: ''}) moderationReason: string;
+  @Column({type: 'uuid', nullable: true}) moderationDecidedBy: string | null;
+  @Column({type: 'timestamp', nullable: true}) moderationDecidedAt: Date | null;
+  @Column({type: 'integer', default: 1}) moderationContentVersion: number;
+  @Column({type: 'integer', nullable: true}) moderationReviewedVersion: number | null;
   @Column({default: 'standard'}) level: string;
   @Column({type: 'text', default: ''}) requirements: string;
   @PrimaryGeneratedColumn('uuid') id: string;
@@ -89,6 +97,24 @@ export class CareerTask {
   @Column({type: 'boolean', default: false}) profiled: boolean;
   @Column({type: 'varchar', default: ''}) skill: string;
   @Column({type: 'varchar', default: 'draft'}) state: string;
+  @CreateDateColumn() createdAt: Date;
+  @UpdateDateColumn() updatedAt: Date;
+}
+
+@Entity('career_task_complaint')
+@Index('IDX_career_task_complaint_open', ['taskId', 'studentId'], { unique: true, where: "state = 'open'" })
+export class CareerTaskComplaint {
+  @PrimaryGeneratedColumn('uuid') id: string;
+  @Column({type:'uuid'}) universityId: string;
+  @Column({type:'uuid'}) taskId: string;
+  @Column({type:'uuid'}) studentId: string;
+  @Column({type:'varchar'}) category: string;
+  @Column({type:'text'}) details: string;
+  @Column({type:'jsonb',default:{}}) taskSnapshot: Record<string,string|number|boolean>;
+  @Column({type:'varchar',default:'open'}) state: string;
+  @Column({type:'text',default:''}) resolution: string;
+  @Column({type:'uuid',nullable:true}) resolvedBy: string | null;
+  @Column({type:'timestamp',nullable:true}) resolvedAt: Date | null;
   @CreateDateColumn() createdAt: Date;
   @UpdateDateColumn() updatedAt: Date;
 }

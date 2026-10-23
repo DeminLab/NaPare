@@ -4,6 +4,8 @@ Project guides, reference material and historical records live under this direct
 
 ## Sections
 
+- [Career moderation](modules/career-moderation.md) — versioned manual review, student complaints, scoped decisions and current verification gaps.
+
 - [Company registry verification](integrations/company-registry.md) — company registration, persisted FNS result and owner recheck; public-search limitations and evidence.
 
 - [University career report](modules/career-university-report.md) — own-university aggregates and XLSX; counts of tasks, applications and accepted works, no employment inference.

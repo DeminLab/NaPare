@@ -1,5 +1,20 @@
 # Source-card index
 
+- [career-risk-policy](career-risk-policy.md)
+- [career-risk-policy-tests](career-risk-policy-tests.md)
+- [career-moderation-dto](career-moderation-dto.md)
+- [career-moderation-service](career-moderation-service.md)
+- [career-moderation-controller](career-moderation-controller.md)
+- [career-moderation-migration](career-moderation-migration.md)
+- [career-moderation-e2e](career-moderation-e2e.md)
+- [career-task-revision-panel](career-task-revision-panel.md)
+- [career-task-complaint-form](career-task-complaint-form.md)
+- [career-moderation-page](career-moderation-page.md)
+- [career-moderation-workspace](career-moderation-workspace.md)
+- [career-moderation-decision-card](career-moderation-decision-card.md)
+- [career-complaints-page](career-complaints-page.md)
+- [career-complaint-history](career-complaint-history.md)
+
 - [company-verification-service](company-verification-service.md)
 - [company-verification-controller](company-verification-controller.md)
 - [company-registry-migration](company-registry-migration.md)

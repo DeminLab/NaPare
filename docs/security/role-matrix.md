@@ -143,6 +143,13 @@ pnpm --filter @napare/backend exec ts-node --transpile-only test/update-role-pol
 | `POST /api/v1/career/partnerships/:id/verify` | JwtAuthGuard | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
 | `POST /api/v1/career/profiles/:id/verify` | JwtAuthGuard | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
 | `GET /api/v1/career/workflows` | JwtAuthGuard | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
+| `POST /api/v1/career/tasks/:id/complaints` | JwtAuthGuard | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
+| `GET /api/v1/career/moderation/complaints` | JwtAuthGuard | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
+| `POST /api/v1/career/moderation/tasks/:id/decision` | JwtAuthGuard | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
+| `GET /api/v1/career/complaints/my` | JwtAuthGuard | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
+| `POST /api/v1/career/moderation/complaints/:id/decision` | JwtAuthGuard | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
+| `PATCH /api/v1/career/tasks/:id` | JwtAuthGuard | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
+| `GET /api/v1/career/moderation/tasks` | JwtAuthGuard | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
 | `GET /api/v1/career/center/report.xlsx` | JwtAuthGuard | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
 | `GET /api/v1/career/center/report` | JwtAuthGuard | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
 | `POST /api/v1/career/companies/:id/registry-check` | JwtAuthGuard | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |

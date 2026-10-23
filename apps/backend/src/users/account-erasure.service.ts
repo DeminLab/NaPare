@@ -12,6 +12,7 @@ export const ACCOUNT_RETENTION = [
   'Учебные записи, заявления, работы и результаты остаются в архиве вуза под внутренним кодом. Группа, даты и тексты могут позволить узнать человека: это не полное обезличивание.',
   'Платёжная история компании сохраняется отдельно, включая ранее указанный email для чека. Удаление аккаунта не отменяет платежи и не удаляет документы банка.',
   'Реквизиты компании и полученные из реестра ИНН, имя и ОГРН/ОГРНИП сохраняются отдельно. Для ИП эти сведения могут позволить установить человека; для их исправления и удаления нужен запрос оператору.',
+  'История рассмотрения жалоб по карьерным задачам сохраняется под внутренними кодами. Текст собственной жалобы очищается; решения сотрудников остаются частью истории и могут требовать отдельной проверки оператором.',
   'Журналы других участников и общий учебный контент могут содержать прежние упоминания имени. Для их проверки нужен запрос оператору.',
   'Файлы по внешним URL, Moodle, источники расписания, сообщения внешних сервисов, серверные логи и резервные копии требуют отдельной процедуры. Имя преподавателя из вузовского источника может сохраниться независимо от аккаунта.',
 ] as const;
@@ -23,7 +24,7 @@ const PRIVATE_ROWS: Record<string, string> = {
   career_portfolio: 'studentId', career_notice: 'userId', career_ai_request: 'userId', platform_grants: 'userId',
 };
 const LINKED_ROWS: Record<string, string> = {
-  career_membership: 'userId', career_admission: 'studentId', curator_assignments: 'userId', office_assignments: 'userId', groups: 'curatorId', faculties: 'deanUserId', attendance_qr_sessions: 'createdById',
+  career_membership: 'userId', career_admission: 'studentId', career_task_complaint: 'studentId', curator_assignments: 'userId', office_assignments: 'userId', groups: 'curatorId', faculties: 'deanUserId', attendance_qr_sessions: 'createdById',
 };
 type Blocker = { code: string; message: string };
 
@@ -120,6 +121,7 @@ export class AccountErasureService {
           await runner.query('UPDATE faculties SET "deanUserId"=NULL WHERE "deanUserId"=$1', [actor.id]);
           await runner.query('UPDATE attendance_qr_sessions SET "revokedAt"=COALESCE("revokedAt",CURRENT_TIMESTAMP) WHERE "createdById"=$1', [actor.id]);
           await runner.query('UPDATE career_application SET message=\'\' WHERE "studentId"=$1', [actor.id]);
+          await runner.query('UPDATE career_task_complaint SET details=\'[Текст жалобы удалён пользователем]\' WHERE "studentId"=$1', [actor.id]);
           await runner.query('UPDATE career_admission SET evidence=\'\',reason=\'\' WHERE "studentId"=$1', [actor.id]);
           await runner.query('UPDATE discussion_messages SET text=\'[Сообщение удалено]\',"moderationReason"=NULL WHERE "userId"=$1', [actor.id]);
           await runner.query('UPDATE file_attachments SET "fileUrl"=\'\',"fileName"=\'Удалённый файл\',"revokedAt"=COALESCE("revokedAt",CURRENT_TIMESTAMP),"revokedBy"=$1,"revokeReason"=\'Аккаунт удалён\' WHERE "uploadedBy"=$1', [actor.id]);

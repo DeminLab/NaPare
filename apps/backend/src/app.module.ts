@@ -48,6 +48,7 @@ import { assertTenantDatabase, assertTenantDatabaseRole, installTenantDatabase }
 import { TenantRowSecurity1700000000029 } from './migrations/1700000000029-TenantRowSecurity';
 import { PersonalDataRead1700000000037 } from './migrations/1700000000037-PersonalDataRead';
 import { AccountErasure1700000000038 } from './migrations/1700000000038-AccountErasure';
+import { CareerModeration1700000000040 } from './migrations/1700000000040-CareerModeration';
 import { EventsModule } from './events/events.module';
 import { AcademicModule } from './academic/academic.module';
 import { SearchModule } from './search/search.module';
@@ -78,7 +79,7 @@ import { SearchModule } from './search/search.module';
           if (databaseOptions.synchronize) {
             await source.synchronize();
             const runner = source.createQueryRunner();
-            try { await new TenantRowSecurity1700000000029().up(runner); await new PersonalDataRead1700000000037().up(runner); await new AccountErasure1700000000038().up(runner); }
+            try { await new TenantRowSecurity1700000000029().up(runner); await new PersonalDataRead1700000000037().up(runner); await new AccountErasure1700000000038().up(runner); await new CareerModeration1700000000040().up(runner); }
             finally { await runner.release(); }
           }
           await assertTenantDatabase(source);

@@ -29,6 +29,8 @@ export const PERSONAL_DATASETS: readonly PersonalDataset[] = [
   entry('career_profile', 'studentId', 'id universityId headline about skills verification createdAt updatedAt'),
   entry('career_admission', 'studentId', 'id universityId basis skill evidence state reason createdAt updatedAt'),
   entry('career_application', 'studentId', 'id taskId message state createdAt updatedAt'),
+  entry('career_task_complaint', 'studentId', 'id universityId taskId studentId category details taskSnapshot state resolution resolvedBy resolvedAt createdAt updatedAt'),
+  activity('career_task_complaint', 'resolvedBy', 'id universityId taskId state resolution resolvedBy resolvedAt createdAt updatedAt'),
   entry('career_work', 'studentId', 'id taskId state submission resultUrl decisionReason createdAt updatedAt'),
   entry('career_review', 'authorId', 'id workId rating body publishAllowed createdAt updatedAt'),
   entry('career_portfolio', 'studentId', 'id workId caseText published createdAt updatedAt'),

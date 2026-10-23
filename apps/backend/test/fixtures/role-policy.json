@@ -3065,6 +3065,174 @@
       }
     },
     {
+      "id": "CareerModerationController.complain POST /api/v1/career/tasks/:id/complaints",
+      "source": "apps/backend/src/career/career-moderation.controller.ts",
+      "method": "POST",
+      "path": "/api/v1/career/tasks/:id/complaints",
+      "guards": [
+        "JwtAuthGuard"
+      ],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 200,
+        "career_staff": 200,
+        "career_admin": 200,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
+      "id": "CareerModerationController.complaints GET /api/v1/career/moderation/complaints",
+      "source": "apps/backend/src/career/career-moderation.controller.ts",
+      "method": "GET",
+      "path": "/api/v1/career/moderation/complaints",
+      "guards": [
+        "JwtAuthGuard"
+      ],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 200,
+        "career_staff": 200,
+        "career_admin": 200,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
+      "id": "CareerModerationController.decide POST /api/v1/career/moderation/tasks/:id/decision",
+      "source": "apps/backend/src/career/career-moderation.controller.ts",
+      "method": "POST",
+      "path": "/api/v1/career/moderation/tasks/:id/decision",
+      "guards": [
+        "JwtAuthGuard"
+      ],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 200,
+        "career_staff": 200,
+        "career_admin": 200,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
+      "id": "CareerModerationController.mine GET /api/v1/career/complaints/my",
+      "source": "apps/backend/src/career/career-moderation.controller.ts",
+      "method": "GET",
+      "path": "/api/v1/career/complaints/my",
+      "guards": [
+        "JwtAuthGuard"
+      ],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 200,
+        "career_staff": 200,
+        "career_admin": 200,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
+      "id": "CareerModerationController.resolve POST /api/v1/career/moderation/complaints/:id/decision",
+      "source": "apps/backend/src/career/career-moderation.controller.ts",
+      "method": "POST",
+      "path": "/api/v1/career/moderation/complaints/:id/decision",
+      "guards": [
+        "JwtAuthGuard"
+      ],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 200,
+        "career_staff": 200,
+        "career_admin": 200,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
+      "id": "CareerModerationController.revise PATCH /api/v1/career/tasks/:id",
+      "source": "apps/backend/src/career/career-moderation.controller.ts",
+      "method": "PATCH",
+      "path": "/api/v1/career/tasks/:id",
+      "guards": [
+        "JwtAuthGuard"
+      ],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 200,
+        "career_staff": 200,
+        "career_admin": 200,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
+      "id": "CareerModerationController.tasks GET /api/v1/career/moderation/tasks",
+      "source": "apps/backend/src/career/career-moderation.controller.ts",
+      "method": "GET",
+      "path": "/api/v1/career/moderation/tasks",
+      "guards": [
+        "JwtAuthGuard"
+      ],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 200,
+        "career_staff": 200,
+        "career_admin": 200,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
       "id": "CareerReportController.download GET /api/v1/career/center/report.xlsx",
       "source": "apps/backend/src/career/career-report.controller.ts",
       "method": "GET",
