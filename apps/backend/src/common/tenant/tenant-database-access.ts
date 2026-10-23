@@ -19,4 +19,7 @@ export interface TenantDatabaseRelationAccess {
 /** Self export only. SQL checks the authenticated actor again; never grants writes. */
 export interface PersonalDataReadAccess { personalData: { userId: string } }
 
-export type TenantDatabaseAccess = TenantDatabaseGrant | TenantAuthenticationAccess | TenantDatabaseRelationAccess | PersonalDataReadAccess;
+/** Server-proven row IDs only, after password reauthentication; no tenant-wide writes. */
+export interface PersonalErasureAccess { personalErasure: { userId: string; rows: Record<string, string[]> } }
+
+export type TenantDatabaseAccess = TenantDatabaseGrant | TenantAuthenticationAccess | TenantDatabaseRelationAccess | PersonalDataReadAccess | PersonalErasureAccess;

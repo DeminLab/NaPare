@@ -8858,6 +8858,30 @@
       }
     },
     {
+      "id": "UsersController.deletionPreview GET /api/v1/users/me/deletion-preview",
+      "source": "apps/backend/src/users/users.controller.ts",
+      "method": "GET",
+      "path": "/api/v1/users/me/deletion-preview",
+      "guards": [
+        "JwtAuthGuard"
+      ],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 200,
+        "career_staff": 200,
+        "career_admin": 200,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
       "id": "UsersController.exportProfile GET /api/v1/users/me/export",
       "source": "apps/backend/src/users/users.controller.ts",
       "method": "GET",

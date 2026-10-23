@@ -4,7 +4,7 @@ Project guides, reference material and historical records live under this direct
 
 ## Sections
 
-- [Personal JSON export](privacy/personal-data-export.md) — snapshot, scope, exclusions and verification contract; [approved archive model](privacy/account-rights-model.md) for the separate deletion implementation.
+- [Personal JSON export](privacy/personal-data-export.md) — snapshot, scope, exclusions and verification contract; [account deletion](privacy/account-deletion.md) and [approved archive model](privacy/account-rights-model.md) explain cleanup and retained learning records.
 
 - [Next.js security patch, 23 October](security/next-patch-2026-10-23.md) — workspace pin, new advisory snapshot and verification boundaries.
 

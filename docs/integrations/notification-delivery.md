@@ -69,6 +69,8 @@ E2E `notification-delivery.e2e-spec.ts` выполняется при `NOTIFICAT
 
 ## Первоисточники
 
+23 октября 2026: окончательный отказ провайдера с отзывом устройства сохраняет статус доставки и `isActive=false` токена в одной транзакции. При ошибке записи статуса отзыв также откатывается. Для проверки архивного маркера получателя worker получает отдельное разрешение чтения `users` только своего вуза, без права записи пользователей. Это устраняет промежуточное состояние `dead` с ещё активным токеном и отказ триггера из-за невидимого получателя; изменения не подтверждают реальную доставку внешним провайдером.
+
 - [RuStore: отправка push и авторизация сервисным токеном](https://www.rustore.ru/help/sdk/push-notifications/send-push-notifications).
 - [MAX: POST messages и ограничение скорости](https://dev.max.ru/docs-api/methods/POST/messages).
 - [Telegram Bot API: sendMessage](https://core.telegram.org/bots/api#sendmessage).

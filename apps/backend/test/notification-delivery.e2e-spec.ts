@@ -12,6 +12,8 @@ import { NotificationDelivery } from '../src/notifications/entities/notification
 import { Notification } from '../src/notifications/entities/notification.entity';
 import { DeviceToken } from '../src/notifications/entities/device-token.entity';
 import { NotificationDelivery1700000000034 } from '../src/migrations/1700000000034-NotificationDelivery';
+import { PersonalDataRead1700000000037 } from '../src/migrations/1700000000037-PersonalDataRead';
+import { AccountErasure1700000000038 } from '../src/migrations/1700000000038-AccountErasure';
 
 const databaseUrl = process.env.NOTIFICATION_TEST_DATABASE_URL;
 const redisUrl = process.env.NOTIFICATION_TEST_REDIS_URL;
@@ -67,7 +69,11 @@ integration('Notification delivery with real PostgreSQL RLS and Redis/BullMQ', (
     await fixture.db.query('DROP TABLE notification_deliveries');
     await fixture.db.query('ALTER TABLE device_tokens DROP COLUMN provider');
     const runner = fixture.db.createQueryRunner();
-    try { await new NotificationDelivery1700000000034().up(runner); } finally { await runner.release(); }
+    try {
+      await new NotificationDelivery1700000000034().up(runner);
+      await new PersonalDataRead1700000000037().up(runner);
+      await new AccountErasure1700000000038().up(runner);
+    } finally { await runner.release(); }
     const [security] = await db.query("SELECT relrowsecurity,relforcerowsecurity FROM pg_class WHERE relname='notification_deliveries'");
     expect(security).toEqual({ relrowsecurity: true, relforcerowsecurity: true });
     configure('PUSH_PROVIDER', 'rustore');
@@ -138,6 +144,22 @@ integration('Notification delivery with real PostgreSQL RLS and Redis/BullMQ', (
       expect((await db.getRepository(NotificationDelivery).update({ notificationId: notification.id }, { status: 'dead' })).affected).toBe(0);
     });
     expect((await deliveries(notification.id))[0].status).toBe('pending');
+  });
+
+  it('rolls back device revocation when the terminal delivery write fails', async () => {
+    const notification = await create();
+    const [row] = await deliveries(notification.id);
+    const job = { deliveryId: row.id, universityId: row.universityId };
+    await fixture.db.query(`ALTER TABLE notification_deliveries ADD CONSTRAINT synthetic_terminal_reject CHECK (status <> 'dead') NOT VALID`);
+    try {
+      await expect(service.transition(job, 'dead', 'provider_http_410', false, true)).rejects.toThrow();
+      expect((await deliveries(notification.id))[0].status).toBe('pending');
+      expect((await fixture.db.getRepository(DeviceToken).findOneByOrFail({ id: row.targetId })).isActive).toBe(true);
+    } finally { await fixture.db.query('ALTER TABLE notification_deliveries DROP CONSTRAINT synthetic_terminal_reject'); }
+    await service.transition(job, 'dead', 'provider_http_410', false, true);
+    expect((await deliveries(notification.id))[0].status).toBe('dead');
+    expect((await fixture.db.getRepository(DeviceToken).findOneByOrFail({ id: row.targetId })).isActive).toBe(false);
+    await fixture.db.getRepository(DeviceToken).update({ id: row.targetId }, { isActive: true });
   });
 
   it('recovers durable pending rows through actual BullMQ and terminal duplicate jobs are harmless', async () => {

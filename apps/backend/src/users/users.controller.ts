@@ -11,6 +11,7 @@ import {
   ForbiddenException,
   NotFoundException,
   Res,
+  Header,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 
@@ -21,13 +22,21 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { User } from './entities/user.entity';
 import { Response } from 'express';
 import { PersonalDataService } from './personal-data.service';
+import { AccountErasureService } from './account-erasure.service';
+import { DeleteAccountDto } from './dto/delete-account.dto';
+import { Throttle } from '@nestjs/throttler';
 
 @ApiTags('users')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService, private readonly personalData: PersonalDataService) {}
+  constructor(private readonly usersService: UsersService, private readonly personalData: PersonalDataService, private readonly erasure: AccountErasureService) {}
+
+  @Get('me/deletion-preview')
+  @Header('Cache-Control', 'no-store, private')
+  @ApiOperation({ summary: 'Что будет удалено и что останется в учебном архиве' })
+  async deletionPreview() { return this.erasure.preview(); }
 
   @Get('me/export')
   @ApiOperation({ summary: 'Скачать JSON-экспорт собственных персональных данных' })
@@ -49,17 +58,16 @@ export class UsersController {
   @ApiResponse({ status: 200, description: 'Профиль обновлён' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async updateProfile(@Request() req, @Body() updateUserDto: UpdateUserDto) {
-    return this.usersService.update(req.user.id, updateUserDto);
+    return this.toProfileResponse(await this.usersService.update(req.user.id, updateUserDto));
   }
 
   @Delete('me')
+  @Header('Cache-Control', 'no-store, private')
+  @Throttle({ default: { ttl: 60000, limit: 3 } })
   @ApiOperation({ summary: 'Удалить аккаунт текущего пользователя' })
-  @ApiResponse({ status: 200, description: 'Аккаунт деактивирован' })
+  @ApiResponse({ status: 200, description: 'Доступ и личный профиль удалены; учебный архив сохранён под кодом' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async deleteAccount(@Request() req) {
-    await this.usersService.deactivate(req.user.id);
-    return { success: true };
-  }
+  async deleteAccount(@Body() dto: DeleteAccountDto) { return this.erasure.erase(dto); }
 
   @Post('me/bind-group')
   @ApiOperation({ summary: 'Привязать пользователя к группе' })
@@ -69,7 +77,7 @@ export class UsersController {
     @Request() req,
     @Body() bindGroupDto: BindGroupDto,
   ) {
-    return this.usersService.bindGroup(req.user.id, bindGroupDto.groupId);
+    return this.toProfileResponse(await this.usersService.bindGroup(req.user.id, bindGroupDto.groupId));
   }
 
   @Get(':id')

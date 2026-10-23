@@ -30,7 +30,7 @@ describe("JwtStrategy", () => {
         universityId: "uni-1",
         sessionVersion: 0,
       }),
-    ).resolves.toMatchObject({ id: "u1", role: UserRole.TEACHER });
+    ).resolves.toMatchObject({ id: "u1", role: UserRole.TEACHER, sessionVersion: 0 });
   });
 
   it("rejects a stale or forged role claim", async () => {
