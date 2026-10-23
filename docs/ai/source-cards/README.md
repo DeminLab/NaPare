@@ -1,5 +1,8 @@
 # Source-card index
 
+- [Company registry adapter, partial](company-registry-service.md)
+- [Company registry synthetic tests](company-registry-tests.md)
+
 - [Career university report: service](career-university-report-service.md)
 - [Career university report: controller](career-university-report-controller.md)
 - [Career university report: e2e](career-university-report-e2e.md)

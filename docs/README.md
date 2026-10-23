@@ -4,6 +4,8 @@ Project guides, reference material and historical records live under this direct
 
 ## Sections
 
+- [Company registry adapter, partial](integrations/company-registry.md) — public FNS protocol and explicit failure states; registration and persistence remain unfinished.
+
 - [University career report](modules/career-university-report.md) — own-university aggregates and XLSX; counts of tasks, applications and accepted works, no employment inference.
 
 - [Account data controls](privacy/account-controls.md) — common JSON download/deletion screen, explicit retained archive, matching-session cleanup and browser evidence.
