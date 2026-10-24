@@ -5,26 +5,31 @@ import { TenantContext } from '../src/common/tenant/tenant-context';
 import { User } from '../src/users/entities/user.entity';
 import { UserRole } from '../src/auth/interfaces/user-role';
 import { Faculty } from '../src/users/entities/faculty.entity';
+import { Group } from '../src/users/entities/group.entity';
 import { Lesson } from '../src/schedule/entities/lesson.entity';
 import { Course } from '../src/academic/entities/course.entity';
 import { CourseSpace } from '../src/academic/entities/course-space.entity';
+import { LessonSpace } from '../src/academic/entities/lesson-space.entity';
+import { AcademicEvent } from '../src/academic/entities/academic-event.entity';
 import { LessonSeries } from '../src/academic/entities/lesson-series.entity';
 import { LessonOccurrence } from '../src/academic/entities/lesson-occurrence.entity';
 import { Absence } from '../src/absences/entities/absence.entity';
 import { Notification } from '../src/notifications/entities/notification.entity';
 import { InboxItem } from '../src/notifications/entities/inbox-item.entity';
+import { NotificationEventHandler } from '../src/notifications/events/notification-event.handler';
 
 const suite = process.env.TENANT_TEST_DATABASE_URL ? describe : describe.skip;
 suite('Tenant isolation: real HTTP, JWT, services and PostgreSQL', () => {
   let fixture: Awaited<ReturnType<typeof createCurationFixture>>;
   const tokens: Record<string, string> = {};
   const objects: Record<string, string> = {};
+  const eventWork: Promise<unknown>[] = [];
   const http = () => request(fixture.app.getHttpServer());
   const privileged = <T>(callback: () => Promise<T>) => fixture.app.get(TenantContext).runWithDatabaseAccess({
     tables: fixture.db.entityMetadatas.map(entity => entity.tableName), universityIds: null, write: true,
   }, callback);
-  const call = (method: string, path: string, actor = 'admin') => {
-    const substituted = path.replace(/\{(\w+)\}/g, (_, key: string) => objects[key]);
+  const call = (method: string, path: string, actor = 'admin', resources = objects) => {
+    const substituted = path.replace(/\{(\w+)\}/g, (_, key: string) => resources[key]);
     const server = http();
     const operation = method === 'GET' ? server.get(substituted) : method === 'POST' ? server.post(substituted)
       : method === 'DELETE' ? server.delete(substituted) : method === 'PUT' ? server.put(substituted) : server.patch(substituted);
@@ -32,27 +37,70 @@ suite('Tenant isolation: real HTTP, JWT, services and PostgreSQL', () => {
   };
   beforeAll(async () => {
     fixture = await createCurationFixture(process.env.TENANT_TEST_DATABASE_URL!);
+    // Execute the real listeners, but retain their completion promises for DB assertions.
+    const handler = fixture.app.get(NotificationEventHandler), handle = handler.handle.bind(handler);
+    jest.spyOn(handler, 'handle').mockImplementation(event => {
+      const work = handle(event);
+      eventWork.push(work);
+      return work;
+    });
     await privileged(async () => {
       const student = await fixture.db.getRepository(User).save({ email: `foreign-${randomUUID()}@tenant.test`, firstName: 'Чужой', lastName: 'Студент', role: UserRole.STUDENT, universityId: fixture.otherUni.id, groupId: fixture.groups[3].id, passwordHash: fixture.users.student.passwordHash });
+      fixture.users.foreignStudent = student;
+      fixture.users.foreignAdmin = await fixture.db.getRepository(User).save({ email: `admin-${randomUUID()}@tenant.test`, firstName: 'Другой', lastName: 'Администратор', role: UserRole.UNIVERSITY_ADMIN, universityId: fixture.otherUni.id, passwordHash: fixture.users.student.passwordHash });
       const lesson = await fixture.db.getRepository(Lesson).save({ ...fixture.lesson, id: randomUUID(), universityId: fixture.otherUni.id, groupId: fixture.groups[3].id, teacherId: fixture.users.outsider.id, subject: `private-${randomBytes(8).toString('hex')}` });
       const course = await fixture.db.getRepository(Course).save({ universityId: fixture.otherUni.id, code: 'FOREIGN', name: lesson.subject });
       const ownCourse = await fixture.db.getRepository(Course).save({ universityId: fixture.uni.id, code: 'OWN', name: 'Own course' });
-      await fixture.db.getRepository(CourseSpace).save({ universityId: fixture.otherUni.id, courseId: course.id, name: course.name });
+      const courseSpace = await fixture.db.getRepository(CourseSpace).save({ universityId: fixture.otherUni.id, courseId: course.id, name: course.name });
       const series = await fixture.db.getRepository(LessonSeries).save({ universityId: fixture.otherUni.id, courseId: course.id, groupId: fixture.groups[3].id, teacherId: fixture.users.outsider.id, dayOfWeek: 1, startTime: '08:30', endTime: '10:00', pairNumber: 1, validFrom: new Date('2026-09-01') });
       const occurrence = await fixture.db.getRepository(LessonOccurrence).save({ universityId: fixture.otherUni.id, seriesId: series.id, courseId: course.id, groupId: fixture.groups[3].id, teacherId: fixture.users.outsider.id, startsAt: new Date('2026-10-22T08:30:00Z'), endsAt: new Date('2026-10-22T10:00:00Z') });
+      await fixture.db.getRepository(LessonSpace).save({ universityId: fixture.otherUni.id, courseSpaceId: courseSpace.id, occurrenceId: occurrence.id, name: course.name });
+      const event = await fixture.db.getRepository(AcademicEvent).save({ universityId: fixture.otherUni.id, type: 'university_event', title: lesson.subject, groupId: fixture.groups[3].id, courseId: course.id });
       const absence = await fixture.db.getRepository(Absence).save({ universityId: fixture.otherUni.id, studentId: student.id, type: 'sick', startDate: new Date(), endDate: new Date() });
       const notification = await fixture.db.getRepository(Notification).save({ universityId: fixture.otherUni.id, userId: student.id, type: 'system', title: lesson.subject, body: lesson.subject });
       const inbox = await fixture.db.getRepository(InboxItem).save({ universityId: fixture.otherUni.id, userId: student.id, type: 'system', title: lesson.subject, description: lesson.subject });
       const faculty = await fixture.db.getRepository(Faculty).findOneByOrFail({ universityId: fixture.otherUni.id });
-      Object.assign(objects, { student: student.id, teacher: fixture.users.outsider.id, lesson: lesson.id, ownLesson: fixture.lesson.id, course: course.id, ownCourse: ownCourse.id, series: series.id, occurrence: occurrence.id, absence: absence.id, notification: notification.id, inbox: inbox.id, faculty: faculty.id, group: fixture.groups[3].id, ownGroup: fixture.groups[0].id, ownUniversity: fixture.uni.id, university: fixture.otherUni.id });
+      Object.assign(objects, { student: student.id, teacher: fixture.users.outsider.id, lesson: lesson.id, ownLesson: fixture.lesson.id, course: course.id, ownCourse: ownCourse.id, series: series.id, occurrence: occurrence.id, event: event.id, absence: absence.id, notification: notification.id, inbox: inbox.id, faculty: faculty.id, group: fixture.groups[3].id, ownGroup: fixture.groups[0].id, ownUniversity: fixture.uni.id, university: fixture.otherUni.id });
     });
-    for (const actor of ['student', 'admin', 'teacher'] as const) {
+    for (const actor of ['student', 'admin', 'teacher', 'foreignStudent', 'foreignAdmin'] as const) {
       const user = fixture.users[actor];
       const response = await http().post('/api/v1/auth/login').send({ email: user.email, password: fixture.password }).expect(200);
       tokens[actor] = response.body.accessToken;
     }
+    await call('PUT', '/api/v1/curation/groups/{group}/curators/' + fixture.users.foreignAdmin.id, 'foreignAdmin').expect(200);
+    await call('PUT', '/api/v1/curation/groups/{ownGroup}/curators/' + fixture.users.admin.id).expect(200);
   }, 90000);
   afterAll(async () => { await fixture?.app.close(); });
+
+  // A 404 is meaningful only after the same handler can read the existing B resource.
+  const foreignState = () => privileged(async () => {
+    await new Promise<void>(resolve => setImmediate(resolve));
+    while (eventWork.length) await Promise.all(eventWork.splice(0));
+    const state: Record<string, unknown> = {};
+    for (const entity of fixture.db.entityMetadatas.filter(entity => entity.columns.some(column => column.databaseName === 'universityId'))) {
+      state[entity.tableName] = await fixture.db.query(`SELECT to_jsonb(t) AS row FROM "${entity.tableName}" t WHERE "universityId" = $1 ORDER BY to_jsonb(t)::text`, [fixture.otherUni.id]);
+    }
+    for (const table of ['announcements', 'homeworks', 'file_attachments', 'discussion_messages']) {
+      state[table] = await fixture.db.query(`SELECT to_jsonb(t) AS row FROM "${table}" t JOIN pair_spaces p ON p.id = t."pairSpaceId" WHERE p."universityId" = $1 ORDER BY to_jsonb(t)::text`, [fixture.otherUni.id]);
+    }
+    state.absence_confirmations = await fixture.db.query('SELECT to_jsonb(t) AS row FROM absence_confirmations t JOIN absences a ON a.id = t."absenceId" WHERE a."universityId" = $1 ORDER BY to_jsonb(t)::text', [fixture.otherUni.id]);
+    return state;
+  });
+
+  async function controlResources(path: string) {
+    const resources = { ...objects };
+    const entities = { student: User, faculty: Faculty, group: Group, lesson: Lesson, course: Course, occurrence: LessonOccurrence, series: LessonSeries, absence: Absence, notification: Notification, inbox: InboxItem };
+    await privileged(async () => {
+      for (const key of Object.keys(entities) as (keyof typeof entities)[]) {
+        if (!path.includes(`{${key}}`)) continue;
+        const repository = fixture.db.getRepository(entities[key]);
+        const row = await repository.findOneByOrFail({ id: objects[key] });
+        const clone = { ...row, id: randomUUID(), ...(key === 'student' ? { email: `control-${randomUUID()}@tenant.test` } : {}), ...(key === 'course' ? { code: `CONTROL-${randomUUID()}` } : {}), ...(key === 'occurrence' ? { startsAt: new Date('2026-10-24T08:30:00Z'), endsAt: new Date('2026-10-24T10:00:00Z') } : {}) };
+        resources[key] = (await repository.save(clone)).id;
+      }
+    });
+    return resources;
+  }
 
   it('establishes a successful own-university control request', async () => {
     await call('GET', '/api/v1/admin/university').expect(200).expect(({ body }) => expect(body.id).toBe(fixture.uni.id));
@@ -67,18 +115,60 @@ suite('Tenant isolation: real HTTP, JWT, services and PostgreSQL', () => {
     '/pair-spaces/{lesson}/messages', '/pair-spaces/{lesson}/personal-note',
     '/curation/groups/{group}/students', '/curation/groups/{group}/lessons', '/curation/groups/{group}/curators',
     '/curation/absences/{absence}/context', '/users/{student}',
+    '/absences/lesson/{lesson}', '/absences/attendance/lesson/{lesson}',
   ];
   it.each(reads)('rejects a foreign resource read GET %s', async path => {
+    const control = await call('GET', `/api/v1${path}`, path === '/users/{student}' ? 'foreignStudent' : 'foreignAdmin');
+    expect(control.status).toBeGreaterThanOrEqual(200);
+    expect(control.status).toBeLessThan(300);
+    const before = await foreignState();
     const response = await call('GET', `/api/v1${path}`);
     expect([403, 404]).toContain(response.status);
+    expect(await foreignState()).toEqual(before);
+  });
+
+  it.each(['/absences/student/{student}', '/absences/stats/{student}'])('returns empty aggregates without disclosing foreign student data: %s', async path => {
+    const control = await call('GET', `/api/v1${path}`, 'foreignAdmin').expect(200);
+    if (path.includes('/stats/')) expect(control.body.total).toBeGreaterThan(0);
+    else expect(control.body.meta.total).toBeGreaterThan(0);
+    const before = await foreignState();
+    const response = await call('GET', `/api/v1${path}`).expect(200);
+    if (path.includes('/stats/')) expect(response.body).toEqual({ total: 0, byType: {} });
+    else { expect(response.body.data).toEqual([]); expect(response.body.meta.total).toBe(0); }
+    expect(await foreignState()).toEqual(before);
   });
 
   it('does not return students of a foreign group', async () => {
+    const control = await call('GET', '/api/v1/admin/groups/{group}/students', 'foreignAdmin').expect(200);
+    expect(control.body.data.some((row: { id: string }) => row.id === objects.student)).toBe(true);
     const response = await call('GET', '/api/v1/admin/groups/{group}/students');
     if (response.status === 200) {
       expect(response.body.data).toEqual([]);
       expect(response.body.meta.total).toBe(0);
     } else expect([403, 404]).toContain(response.status);
+  });
+
+  it.each([
+    ['/admin/users', 'student'], ['/admin/faculties', 'faculty'], ['/admin/groups', 'group'],
+    ['/academic/courses', 'course'], ['/academic/occurrences', 'occurrence'], ['/academic/events', 'event'],
+    ['/curation/manage/groups', 'group'], ['/curation/manage/candidates', 'student'],
+    ['/academic/occurrences?groupId={group}', 'occurrence'], ['/academic/events?groupId={group}', 'event'],
+  ])('scopes list results to the JWT university: GET %s', async (path, key) => {
+    const control = await call('GET', `/api/v1${path}`, 'foreignAdmin').expect(200);
+    expect(JSON.stringify(control.body)).toContain(objects[key]);
+    const before = await foreignState();
+    const response = await call('GET', `/api/v1${path}`).expect(200);
+    for (const foreignId of ['student', 'faculty', 'group', 'course', 'occurrence', 'event']) expect(JSON.stringify(response.body)).not.toContain(objects[foreignId]);
+    expect(await foreignState()).toEqual(before);
+  });
+
+  it('rejects foreign attendance with valid nested DTO and preserves B rows', async () => {
+    const body = { lessonId: objects.lesson, entries: [{ studentId: objects.student, status: 'present' }] };
+    await call('POST', '/api/v1/absences/attendance', 'foreignAdmin').send(body).expect(201);
+    const before = await foreignState();
+    const response = await call('POST', '/api/v1/absences/attendance').send(body);
+    expect([403, 404]).toContain(response.status);
+    expect(await foreignState()).toEqual(before);
   });
 
   const mutations: [string, string, string, Record<string, unknown>][] = [
@@ -99,10 +189,17 @@ suite('Tenant isolation: real HTTP, JWT, services and PostgreSQL', () => {
     ['PUT', '/pair-spaces/{lesson}/personal-note', 'student', { content: 'Changed' }],
     ['POST', '/pair-spaces/{lesson}/messages', 'student', { text: 'Changed' }],
     ['POST', '/pair-spaces/{lesson}/announcements', 'admin', { text: 'Changed' }],
+    ['POST', '/pair-spaces/{lesson}/homeworks', 'admin', { title: 'Changed', description: 'Synthetic preparation' }],
+    ['POST', '/pair-spaces/{lesson}/files', 'admin', { fileUrl: 'https://example.test/synthetic.pdf', fileName: 'synthetic.pdf', fileType: 'pdf', size: 64 }],
   ];
   it.each(mutations)('rejects foreign mutation %s %s (%s)', async (method, path, actor, body) => {
+    const control = await call(method, `/api/v1${path}`, actor === 'student' ? 'foreignStudent' : 'foreignAdmin', await controlResources(path)).send(body);
+    expect(control.status).toBeGreaterThanOrEqual(200);
+    expect(control.status).toBeLessThan(300);
+    const before = await foreignState();
     const response = await call(method, `/api/v1${path}`, actor).send(body);
     expect([403, 404]).toContain(response.status);
+    expect(await foreignState()).toEqual(before);
   });
 
   it('rejects a university move through the schedule PATCH body', async () => {
@@ -129,14 +226,36 @@ suite('Tenant isolation: real HTTP, JWT, services and PostgreSQL', () => {
     }).expect(404);
   });
   it('cannot mark a foreign notification as read', async () => {
+    await call('PATCH', '/api/v1/notifications/{notification}/read', 'foreignStudent', await controlResources('{notification}')).expect(200);
+    const before = await foreignState();
     const response = await call('PATCH', '/api/v1/notifications/{notification}/read', 'student');
     expect([200, 403, 404]).toContain(response.status);
+    expect(await foreignState()).toEqual(before);
     await privileged(async () => expect((await fixture.db.getRepository(Notification).findOneByOrFail({ id: objects.notification })).isRead).toBe(false));
   });
   it('cannot complete a foreign inbox item', async () => {
+    await call('PATCH', '/api/v1/notifications/inbox/{inbox}/complete', 'foreignStudent', await controlResources('{inbox}')).expect(200);
+    const before = await foreignState();
     const response = await call('PATCH', '/api/v1/notifications/inbox/{inbox}/complete', 'student');
     expect([200, 403, 404]).toContain(response.status);
+    expect(await foreignState()).toEqual(before);
     await privileged(async () => expect((await fixture.db.getRepository(InboxItem).findOneByOrFail({ id: objects.inbox })).status).toBe('open'));
+  });
+  it('cannot snooze a foreign inbox item with a valid date', async () => {
+    const body = { until: new Date(Date.now() + 3600000).toISOString() };
+    await call('PATCH', '/api/v1/notifications/inbox/{inbox}/snooze', 'foreignStudent', await controlResources('{inbox}')).send(body).expect(200);
+    const before = await foreignState();
+    const response = await call('PATCH', '/api/v1/notifications/inbox/{inbox}/snooze', 'student').send(body);
+    expect([403, 404]).toContain(response.status);
+    expect(await foreignState()).toEqual(before);
+  });
+  it.each([['/notifications', 'notification'], ['/notifications/inbox', 'inbox']])('keeps recipient lists private: GET %s', async (path, key) => {
+    const control = await call('GET', `/api/v1${path}`, 'foreignStudent').expect(200);
+    expect(JSON.stringify(control.body)).toContain(objects[key]);
+    const before = await foreignState();
+    const response = await call('GET', `/api/v1${path}`, 'student').expect(200);
+    expect(JSON.stringify(response.body)).not.toContain(objects[key]);
+    expect(await foreignState()).toEqual(before);
   });
   it('keeps foreign rows unchanged after the negative HTTP probes', async () => {
     await privileged(async () => {
