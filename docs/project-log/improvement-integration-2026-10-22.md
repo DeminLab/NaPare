@@ -1,6 +1,10 @@
 # Совместная проверка улучшений — 22 октября 2026
 
-Документ для ревьюера интеграционной ветки `codex/improvement-integration` (PR 13). Ветка объединяет изменения PR 1–12 и 14–32 на базе `6f28912`; это кандидат для совместного ревью, не deployment и не утверждение полного выполнения [плана](improvement-plan-2026-10-22.md).
+Документ для ревьюера интеграционной ветки `codex/improvement-integration` (PR 13). Ветка объединяет изменения PR 1–12 и 14–33 на базе `6f28912`; это кандидат для совместного ревью, не deployment и не утверждение полного выполнения [плана](improvement-plan-2026-10-22.md).
+
+## Добавление 25 октября: отказ вместо 500 при чужом homework
+
+[PR 33](https://github.com/DeminLab/NaPare/pull/33), `f74dac5`, включён после [успешного CI](https://github.com/DeminLab/NaPare/actions/runs/40122303479), все шесть jobs. Недоступный parent PairSpace больше не разыменовывается при progress/legacy-submit: чужой запрос получает 404 до записи, успешные контракты своего вуза сохраняются. Исходный код воспроизводил четыре 500; исправленный локальный suite — 92 HTTP/PG passed, включая снимки обоих вузов и связанных progress/submission строк. 32 существующих unit-теста Pair Space и backend typecheck/lint/docs/guards также прошли. Матрица 12 PairSpace routes — выбранные контексты, не полный P0-1; legacy submit не вводится как новый UI workflow.
 
 ## Добавление 25 октября: academic/schedule HTTP boundaries
 

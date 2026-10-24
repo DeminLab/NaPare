@@ -2,7 +2,7 @@
 
 ## Актуальная сводка — 25 октября
 
-Цель **не завершена**. PR 1–12 и 14–32 включены в `codex/improvement-integration`; main/production не изменялись. WebPush PR 27, tenant-проверки PR 28/32, внешние копии PR 29, закупочные материалы PR 30 и сверка плана PR 31 прошли CI, все шесть jobs каждого. [Аудит](improvement-evidence-audit-2026-10-25.md) сохраняет снимок PR 1–30; последующие результаты приведены здесь и в интеграционном отчёте.
+Цель **не завершена**. PR 1–12 и 14–33 включены в `codex/improvement-integration`; main/production не изменялись. PR 27–33 прошли CI, все шесть jobs каждого: WebPush, предметные tenant-проверки, внешние копии, закупочные материалы, сверка плана и исправление чужих homework 500 → 404. [Аудит](improvement-evidence-audit-2026-10-25.md) сохраняет снимок PR 1–30; последующие результаты приведены здесь и в интеграционном отчёте.
 
 Открыты полный бизнес-охват P0-1, полная ручная доступность, реальные источники/банк/push-устройства/offsite restore/alert, операторские основания/сроки/площадки и актуальная юридическая сверка реестра ПО. Настройки внешних подключений не подготовлены; реквизиты/тарифы/налоговый режим пользователь предоставит позже. В таблицах ниже отражён текущий результат; датированные дополнения сохраняют историю запусков и могут описывать уже исправленные пробелы.
 
@@ -44,7 +44,7 @@ CI 113 PR 19 обнаружил отказ отзыва push-токена пос
 
 | Блок | Ветка | Состояние | Результат / условие завершения |
 | --- | --- | --- | --- |
-| P0-1, изоляция вузов | `codex/p0-tenant-isolation`, `codex/p0-business-tenant-probes`, `codex/p0-academic-schedule-tenant-probes` | Реализовано; полный бизнес-охват открыт | Inventory375; RLS, SQL suites и 88 учебных HTTP/PG плюс feature suites. PR 28/32 включены после CI. Выбранные сценарии 15 academic/9 schedule routes, включая студентов/преподавателей date/my/range; это не все роли/состояния и не каждый бизнес-маршрут |
+| P0-1, изоляция вузов | `codex/p0-tenant-isolation`, `codex/p0-business-tenant-probes`, `codex/p0-academic-schedule-tenant-probes`, `codex/p0-pairspace-tenant-probes` | Реализовано; полный бизнес-охват открыт | Inventory375; RLS, SQL suites и 92 учебных HTTP/PG плюс feature suites. PR 28/32/33 включены после CI. Матрицы 15 academic/9 schedule/12 PairSpace routes в выбранных контекстах; чужие homework возвращают 404 вместо 500 без записи. Это не каждый бизнес-маршрут/роль/состояние |
 | P0-2, роли и CI | `codex/p0-role-boundaries` | Проверено, включено в интеграцию | 11 ролей; 4646 guard HTTP probes по 375 routes; PostgreSQL suites обязательны в CI; [PR 1](https://github.com/DeminLab/NaPare/pull/1). Это входной контроль, не бизнес-обработчики |
 | P0-3, восстановление | `codex/p0-backup-recovery` | Проверено локально, draft PR | Backup/restore scripts, readiness, алерты, runbook; [PR 2](https://github.com/DeminLab/NaPare/pull/2). Внешняя доставка/серверное расписание отдельно |
 | P1-1, push и очередь | `codex/p1-notification-delivery`, `codex/p1-webpush-client` | Код/CI/интеграция выполнены; реальные устройства открыты | [PR 7](https://github.com/DeminLab/NaPare/pull/7): outbox/Redis/providers/retries; [PR 27](https://github.com/DeminLab/NaPare/pull/27): WebPush setup/opt-in/отзыв/worker. Browser permission/PushManager/provider mocked, отправка default-off |
@@ -118,7 +118,7 @@ PR 24 аналитики опубликован на `786aece`. [CI 125](https:/
 
 | Требование | Что осталось и какое свидетельство нужно |
 | --- | --- |
-| P0-1: каждый бизнес-маршрут | 88 учебных HTTP/PG; [PR 28](https://github.com/DeminLab/NaPare/pull/28) и [PR 32](https://github.com/DeminLab/NaPare/pull/32) включены после CI, все шесть jobs. 15 academic/9 schedule routes в выбранных контекстах, контроли Б и снимки строк А/Б. Полная сверка остальных бизнес-маршрутов/состояний ещё нужна; 4646 guard probes не заменяют её. [Доказательства и границы](../security/business-tenant-probes-2026-10-25.md) |
+| P0-1: каждый бизнес-маршрут | 92 учебных HTTP/PG; PR 28/32 и [PR 33](https://github.com/DeminLab/NaPare/pull/33) включены после CI, все шесть jobs. 15 academic/9 schedule/12 PairSpace routes в выбранных контекстах, контроли Б и снимки А/Б; исправлены четыре чужих homework 500. Полная сверка остальных маршрутов/состояний ещё нужна; 4646 guard probes не заменяют её. [Доказательства и границы](../security/business-tenant-probes-2026-10-25.md) |
 | P0-3: эксплуатационное восстановление | Внешнее зашифрованное хранилище, расписание на сервере, restore drill на другой машине и доставка алерта. Production по цели не изменять |
 | P1-1: доставка пользователю | WebPush-клиент, отдельный worker, opt-in/отзыв и очистка реализованы в [PR 27](https://github.com/DeminLab/NaPare/pull/27), включены в интеграцию после [успешного CI 131](https://github.com/DeminLab/NaPare/actions/runs/40118625370), все шесть jobs. 11 HTTP/PG, 505 unit, 4646 guard probes и browser прошли. Permission/PushManager/provider подменены; реальные тестовые провайдеры/устройства остаются открытыми. См. [WebPush](../clients/webpush.md) |
 | P1-2/P2-1: источники вуза | Настроенный Moodle/СИБИТ и реальные разрешённые источники; mock transport не доказывает совместимость конкретного вуза |
