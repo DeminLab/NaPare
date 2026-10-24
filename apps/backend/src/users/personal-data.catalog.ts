@@ -103,6 +103,7 @@ export const PERSONAL_EXPORT_LIMITATIONS = [
 
 /** Every entity needs an export projection or an explicit non-export classification. */
 export const PERSONAL_EXPORT_EXCLUDED_TABLES: Record<string, string> = {
+  product_analytics_state: 'University-level collection/readiness timestamps and period bounds; no account or actor reference. Own activity days are exported separately.',
   telegram_link_challenges: 'Authentication secrets; no token hashes are downloadable.',
   universities: 'Shared university and secret connector configuration; account carries its university ID.',
   platform_control: 'Shared platform settings; no personal content other than the existing owner reference.',
