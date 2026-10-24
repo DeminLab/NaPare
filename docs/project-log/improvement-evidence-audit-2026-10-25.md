@@ -4,6 +4,8 @@
 
 ## Область снимка
 
+Сам аудит опубликован в [PR 31](https://github.com/DeminLab/NaPare/pull/31), `a737e15`, и включён после [успешного CI](https://github.com/DeminLab/NaPare/actions/runs/40120844652), все шесть jobs. Таблица ниже сохраняет снимок до этого PR; более поздние результаты фиксируются в журнале, не подменяя исторические SHA/CI.
+
 Проверенный удалённый integration HEAD: `96279f20eba295b2259257d95d6bea6a373ab38d`. HEAD main: `6f28912cebd7100bcb109166360cd7fc8920b573`; main и production этим блоком не изменялись. Для каждого PR получены фактические head SHA и CI на этом SHA, затем выполнен `git merge-base --is-ancestor HEAD_PR codex/improvement-integration`. Все feature heads PR 1–12 и 14–30 входят в интеграцию; PR 13 — сама агрегированная ветка. Статус open/closed на GitHub не используется как доказательство наличия кода.
 
 [CI PR 28](https://github.com/DeminLab/NaPare/actions/runs/40119582581) подтвердил 20 E2E suites, 4869 passed/1 skipped и все шесть jobs. Отдельный [CI PR 29](https://github.com/DeminLab/NaPare/actions/runs/40119974434) также успешен. Это Linux build/typechecks/tests/audit, а не развёртывание. Guard probes входят в общее число E2E; нельзя представлять 4869 как число предметных проверок бизнес-обработчиков. Внешние провайдеры большинства suites подменены. Пропуск host agent не является успешной runtime-проверкой.
