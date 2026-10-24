@@ -1,6 +1,12 @@
 # Совместная проверка улучшений — 22 октября 2026
 
-Документ для ревьюера интеграционной ветки `codex/improvement-integration` (PR 13). Ветка объединяет изменения PR 1–12 и 14–26 на базе `6f28912`; это кандидат для совместного ревью, не deployment и не утверждение полного выполнения [плана](improvement-plan-2026-10-22.md).
+Документ для ревьюера интеграционной ветки `codex/improvement-integration` (PR 13). Ветка объединяет изменения PR 1–12 и 14–27 на базе `6f28912`; это кандидат для совместного ревью, не deployment и не утверждение полного выполнения [плана](improvement-plan-2026-10-22.md).
+
+## Добавление 25 октября: клиент WebPush
+
+[PR 27](https://github.com/DeminLab/NaPare/pull/27), `a22662b`, включён fast-forward после [успешного CI 131](https://github.com/DeminLab/NaPare/actions/runs/40118625370): все шесть jobs, включая полный E2E и Linux production build. Экран портала, явный opt-in, отдельный worker, self API, миграция 43, атомарный отзыв при logout и очистка после удаления аккаунта. Две настоящие HTTP/PG гонки проверяют невозможность восстановления отозванного разрешения.
+
+Локально: 11 HTTP/PG, 5 export regressions, 505 unit и 12 affected unit после последней правки, 4646 guard probes, backend/portal typecheck, lint/docs/guards. Browser использовал настоящий Next/Nest/PG и service worker, проверил основной сценарий, ошибки, смену аккаунта и удаление, keyboard/четыре ширины/scoped axe без находок. Permission/PushManager и provider были подменены. [Реальные устройства и внешняя доставка остаются открытыми](../clients/webpush.md); отправка default-off, main/production не менялись.
 
 ## Добавление 24 октября: контингент и подтверждённые реестры долгов
 
