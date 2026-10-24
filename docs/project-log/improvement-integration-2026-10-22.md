@@ -1,6 +1,14 @@
 # Совместная проверка улучшений — 22 октября 2026
 
-Документ для ревьюера интеграционной ветки `codex/improvement-integration` (PR 13). Ветка объединяет изменения PR 1–12 и 14–23 на базе `6f28912`; это кандидат для совместного ревью, не deployment и не утверждение полного выполнения [плана](improvement-plan-2026-10-22.md).
+Документ для ревьюера интеграционной ветки `codex/improvement-integration` (PR 13). Ветка объединяет изменения PR 1–12 и 14–25 на базе `6f28912`; это кандидат для совместного ревью, не deployment и не утверждение полного выполнения [плана](improvement-plan-2026-10-22.md).
+
+## Добавление 24 октября: аналитика и HTTP parser patch
+
+[PR 24](https://github.com/DeminLab/NaPare/pull/24) вместе с отдельным [PR 25](https://github.com/DeminLab/NaPare/pull/25) включены fast-forward на `768bb11` после успешного [CI 126](https://github.com/DeminLab/NaPare/actions/runs/40079616987): все шесть jobs, включая Linux production build, полный Backend E2E и dependency security audit. CI 123 предыдущего интеграционного `07d161c` также был успешным. Main и production не изменялись.
+
+Реализованы 10 метрик собственного вуза, default-off сбор дневной активности с allowlist, 400-дневная очистка, серверная фиксация готовности onboarding и экран `/deanery/analytics`. Локально проверены 492 unit tests, 4568 guard probes, 9 настоящих JWT/HTTP/PostgreSQL сценариев аналитики и ещё 5 self-export регрессий после явной классификации общей таблицы состояния. Browser Next/Nest/PG подтвердил известные значения метрик, readiness, error/retry/session-состояния и четыре ширины; scoped axe без violations/incomplete. Это не доказательство непрерывности реального сбора или утверждения вузом политики. [Контракт и ограничения аналитики](../modules/product-analytics.md).
+
+Патч body-parser 1.20.9/multer 2.5.0 устранил две high-находки; production audit high=0/critical=0/moderate=1. Отдельный Node/HTTP regression подтверждает работу новых пакетов, локальный отрицательный контроль — падение старых. [Описание и границы проверки](../security/request-parser-patch-2026-10-24.md). Новые advisory могут изменить последующие результаты audit.
 
 ## Добавление 24 октября: модерация и жалобы
 
