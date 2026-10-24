@@ -12,6 +12,8 @@ Each resource read and ordinary mutation has a successful B-actor control before
 
 Academic create/reference checks also snapshot A to reject partial writes on error. Same-code course and unlinked-event controls prove permitted creations derive their university from JWT. The documented 15-route academic matrix is a route subset, not exhaustive role/state coverage.
 
+Schedule list/date/range/group/teacher/changed controls require a real B lesson in the positive result. Manual creation tests override an injected university ID with JWT scope and reject foreign references without partial writes. The 9-route matrix uses administrators; separate cases execute date/my/range for students and teachers with internal UUID groups. Legacy numeric/SIBIT and platform branches remain separate.
+
 ## Read sequence
 
 1. Read [change safety](../change-safety.md).

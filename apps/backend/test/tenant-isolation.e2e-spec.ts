@@ -48,7 +48,7 @@ suite('Tenant isolation: real HTTP, JWT, services and PostgreSQL', () => {
       const student = await fixture.db.getRepository(User).save({ email: `foreign-${randomUUID()}@tenant.test`, firstName: 'Чужой', lastName: 'Студент', role: UserRole.STUDENT, universityId: fixture.otherUni.id, groupId: fixture.groups[3].id, passwordHash: fixture.users.student.passwordHash });
       fixture.users.foreignStudent = student;
       fixture.users.foreignAdmin = await fixture.db.getRepository(User).save({ email: `admin-${randomUUID()}@tenant.test`, firstName: 'Другой', lastName: 'Администратор', role: UserRole.UNIVERSITY_ADMIN, universityId: fixture.otherUni.id, passwordHash: fixture.users.student.passwordHash });
-      const lesson = await fixture.db.getRepository(Lesson).save({ ...fixture.lesson, id: randomUUID(), universityId: fixture.otherUni.id, groupId: fixture.groups[3].id, teacherId: fixture.users.outsider.id, subject: `private-${randomBytes(8).toString('hex')}` });
+      const lesson = await fixture.db.getRepository(Lesson).save({ ...fixture.lesson, id: randomUUID(), universityId: fixture.otherUni.id, groupId: fixture.groups[3].id, teacherId: fixture.users.outsider.id, subject: `private-${randomBytes(8).toString('hex')}`, isChanged: true });
       const course = await fixture.db.getRepository(Course).save({ universityId: fixture.otherUni.id, code: 'FOREIGN', name: lesson.subject });
       const ownCourse = await fixture.db.getRepository(Course).save({ universityId: fixture.uni.id, code: 'OWN', name: 'Own course' });
       const courseSpace = await fixture.db.getRepository(CourseSpace).save({ universityId: fixture.otherUni.id, courseId: course.id, name: course.name });
@@ -62,7 +62,7 @@ suite('Tenant isolation: real HTTP, JWT, services and PostgreSQL', () => {
       const faculty = await fixture.db.getRepository(Faculty).findOneByOrFail({ universityId: fixture.otherUni.id });
       Object.assign(objects, { student: student.id, teacher: fixture.users.outsider.id, lesson: lesson.id, ownLesson: fixture.lesson.id, course: course.id, ownCourse: ownCourse.id, series: series.id, occurrence: occurrence.id, event: event.id, absence: absence.id, notification: notification.id, inbox: inbox.id, faculty: faculty.id, group: fixture.groups[3].id, ownGroup: fixture.groups[0].id, ownUniversity: fixture.uni.id, university: fixture.otherUni.id });
     });
-    for (const actor of ['student', 'admin', 'teacher', 'foreignStudent', 'foreignAdmin'] as const) {
+    for (const actor of ['student', 'admin', 'teacher', 'outsider', 'foreignStudent', 'foreignAdmin'] as const) {
       const user = fixture.users[actor];
       const response = await http().post('/api/v1/auth/login').send({ email: user.email, password: fixture.password }).expect(200);
       tokens[actor] = response.body.accessToken;
@@ -169,6 +169,50 @@ suite('Tenant isolation: real HTTP, JWT, services and PostgreSQL', () => {
     const response = await call('POST', '/api/v1/absences/attendance').send(body);
     expect([403, 404]).toContain(response.status);
     expect(await foreignState()).toEqual(before);
+  });
+
+  it.each([
+    '/schedule?date={date}', '/schedule?date={date}&groupId={group}', '/schedule?date={date}&teacherId={teacher}',
+    '/schedule/my?startDate={date}&endDate={date}', '/schedule/range?startDate={date}&endDate={date}', '/schedule/changes?date={date}',
+  ])('keeps schedule lists and filters within the JWT university: GET %s', async template => {
+    const date = fixture.lesson.startDate.toISOString().slice(0, 10);
+    const path = '/api/v1' + template.replaceAll('{date}', date);
+    const control = await call('GET', path, 'foreignAdmin').expect(200);
+    expect(JSON.stringify(control.body)).toContain(objects.lesson);
+    const before = await foreignState();
+    const response = await call('GET', path).expect(200);
+    expect(JSON.stringify(response.body)).not.toContain(objects.lesson);
+    expect(await foreignState()).toEqual(before);
+  });
+
+  const scheduleBody = () => ({ subject: 'Synthetic manual lesson', groupId: objects.group, teacherId: objects.teacher,
+    dayOfWeek: fixture.lesson.dayOfWeek, startTime: '08:30', endTime: '10:00', pairNumber: 1,
+    startDate: fixture.lesson.startDate.toISOString(), endDate: fixture.lesson.endDate.toISOString() });
+  it.each([['student', 'foreignStudent'], ['teacher', 'outsider']])('scopes the %s date/my/range branches without exposing B', async (aActor, bActor) => {
+    const date = fixture.lesson.startDate.toISOString().slice(0, 10);
+    for (const path of [`/schedule?date=${date}&groupId={group}&teacherId={teacher}`, `/schedule/my?startDate=${date}&endDate=${date}`, `/schedule/range?startDate=${date}&endDate=${date}`]) {
+      const control = await call('GET', '/api/v1' + path, bActor).expect(200);
+      expect(JSON.stringify(control.body)).toContain(objects.lesson);
+      const before = await foreignState();
+      const response = await call('GET', '/api/v1' + path, aActor).expect(200);
+      expect(JSON.stringify(response.body)).not.toContain(objects.lesson);
+      expect(await foreignState()).toEqual(before);
+    }
+  });
+  it('ignores a supplied foreign universityId on manual lesson creation and preserves B', async () => {
+    const b = await call('POST', '/api/v1/schedule', 'foreignAdmin').send({ ...scheduleBody(), universityId: fixture.uni.id }).expect(201);
+    expect(b.body.universityId).toBe(fixture.otherUni.id);
+    const before = await foreignState();
+    const a = await call('POST', '/api/v1/schedule').send({ ...scheduleBody(), groupId: objects.ownGroup, teacherId: fixture.users.teacher.id, universityId: fixture.otherUni.id }).expect(201);
+    expect(a.body.universityId).toBe(fixture.uni.id);
+    expect(await foreignState()).toEqual(before);
+  });
+  it.each(['groupId', 'teacherId'] as const)('rejects a foreign %s during manual lesson creation without partial rows', async field => {
+    await call('POST', '/api/v1/schedule', 'foreignAdmin').send(scheduleBody()).expect(201);
+    const beforeB = await foreignState(), beforeA = await foreignState(fixture.uni.id);
+    await call('POST', '/api/v1/schedule').send({ ...scheduleBody(), groupId: field === 'groupId' ? objects.group : objects.ownGroup, teacherId: field === 'teacherId' ? objects.teacher : fixture.users.teacher.id }).expect(404);
+    expect(await foreignState()).toEqual(beforeB);
+    expect(await foreignState(fixture.uni.id)).toEqual(beforeA);
   });
 
   const mutations: [string, string, string, Record<string, unknown>][] = [
