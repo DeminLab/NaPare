@@ -6,6 +6,8 @@
 
 ## Scope
 
+Registers the semester module with its exact-user Moodle self API; see [contract](../../integrations/moodle-semester.md).
+
 NestJS module composition. Registers platform data modules, including attachment moderation, and the global maintenance interceptor; enabled read-only mode blocks mutating campus API requests while preserving auth and platform control. Read [platform control](../../product/platform-control.md).
 
 ## Read sequence
@@ -23,4 +25,3 @@ Trace direct imports and the closest route or caller before changing this file.
 ```powershell
 pnpm --filter @napare/backend exec tsc --noEmit
 ```
-

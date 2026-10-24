@@ -1,0 +1,15 @@
+# Account data sign-in
+
+## Canonical source
+
+`apps/web-portal/src/app/privacy/account/AccountSignIn.tsx`
+
+## Scope
+
+Accessible in-place email/password login; failed submissions preserve the draft. Read [account controls](../../privacy/account-controls.md), [deletion contract](../../privacy/account-deletion.md) and [export contract](../../privacy/personal-data-export.md) before changing this source. Preserve shared headers, navigation and student source boundaries.
+
+## Verification
+
+An optional submit label allows reuse on the WebPush setup page; the default account-data label remains unchanged.
+
+Portal typecheck, root lint and repository guards. Browser verification uses disposable synthetic accounts with real local Next/Nest/PostgreSQL; test current-account identity, errors, retained archive, JSON completeness and local cleanup separately from remote/device copies.

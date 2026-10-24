@@ -49,7 +49,7 @@ function ActivityList({ items, limit }: { items: ActivityItem[]; limit?: number 
 }
 
 function ProfileContent({ user }: { user: StudentUser }) {
-  return <Card padding="sm"><h2 className="mb-2 text-base font-semibold text-slate-900">Данные аккаунта</h2><InfoRow label="Email" value={user.email} /><InfoRow label="Аккаунт" value={user.isActive ? 'Активен' : 'Неактивен'} /><a href="/career?tab=profile" className="mt-3 flex min-h-11 items-center justify-between gap-3 border-t border-slate-100 text-sm font-semibold text-indigo-700">Портфолио и навыки<Icon name="ChevronRight" className="h-4 w-4" /></a></Card>;
+  return <Card padding="sm"><h2 className="mb-2 text-base font-semibold text-slate-900">Данные аккаунта</h2><Link href="/semester" className="flex min-h-11 items-center justify-between gap-3 text-sm font-semibold text-indigo-700">Мой семестр<Icon name="ChevronRight" className="h-4 w-4" /></Link><InfoRow label="Email" value={user.email} /><InfoRow label="Аккаунт" value={user.isActive ? 'Активен' : 'Неактивен'} /><a href="/career?tab=profile" className="mt-3 flex min-h-11 items-center justify-between gap-3 border-t border-slate-100 text-sm font-semibold text-indigo-700">Портфолио и навыки<Icon name="ChevronRight" className="h-4 w-4" /></a></Card>;
 }
 
 export default function ProfilePage() {

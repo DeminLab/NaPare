@@ -1,0 +1,17 @@
+[Unit]
+Description=NaPare external health probe
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=napare-monitor
+EnvironmentFile=/etc/napare/health.environment
+ExecStart=/usr/bin/node /srv/NaPare/scripts/monitor-health.cjs
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+StateDirectory=napare-monitor
+TimeoutStartSec=30

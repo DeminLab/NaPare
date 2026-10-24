@@ -1,11 +1,12 @@
 import { CareerPlanningService } from './career-planning.service';
 import { CareerAiService } from './career-ai.service';
-import { Query, Body, Controller, Get, Param, ParseUUIDPipe, Post, Put, Patch, Request, UseGuards } from '@nestjs/common';
+import { Query, Body, Controller, Get, Header, Param, ParseUUIDPipe, Post, Put, Patch, Request, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { CareerService } from './career.service';
+import { CareerModerationService } from './career-moderation.service';
 import { CareerTestDto, CareerAttemptDto, EmployerRegistrationDto, CareerCompanyDto, CareerProfileDto, CareerTaskDto, CareerMessageDto, CareerSubmissionDto, CareerDecisionDto, CareerReviewDto, CareerMembershipDto, CareerAdmissionDto, CareerPublishDto, CareerPartnershipDto, CareerAiConsentDto, CareerAiTaskDto, CareerCaseTextDto, CareerAvailabilityDto } from './career.dto';
 type CareerRequest = {user:AuthenticatedUser};
 
@@ -20,7 +21,7 @@ export class CareerAccountsController {
 }
 @ApiTags('career') @ApiBearerAuth() @UseGuards(JwtAuthGuard) @Controller('career')
 export class CareerController {
-  constructor(private readonly service:CareerService, private readonly ai:CareerAiService, private readonly planning:CareerPlanningService) {}
+  constructor(private readonly service:CareerService, private readonly ai:CareerAiService, private readonly planning:CareerPlanningService, private readonly moderation:CareerModerationService) {}
   @Get('planning') planningStatus(@Request() req:CareerRequest){return this.planning.get(req.user);}
   @Put('availability') saveAvailability(@Request() req:CareerRequest,@Body() dto:CareerAvailabilityDto){return this.planning.save(req.user,dto);}
   @Get('ai/status') aiStatus(){return this.ai.status();}
@@ -47,13 +48,13 @@ export class CareerController {
   @Post('profiles/:id/verify') verifyProfile(@Request() req:CareerRequest,@Param('id',ParseUUIDPipe) id:string,@Body() dto:CareerDecisionDto){return this.service.verifyProfile(req.user,id,dto);}
   @Post('admissions') requestAdmission(@Request() req:CareerRequest,@Body() dto:CareerAdmissionDto){return this.service.requestAdmission(req.user,dto);}
   @Post('admissions/:id/decision') decideAdmission(@Request() req:CareerRequest,@Param('id',ParseUUIDPipe) id:string,@Body() dto:CareerDecisionDto){return this.service.decideAdmission(req.user,id,dto);}
-  @Post('companies') createCompany(@Request() req:CareerRequest,@Body() dto:CareerCompanyDto){return this.service.createCompany(req.user,dto);}
+  @Post('companies') @Throttle({default:{ttl:60000,limit:3}}) @Header('Cache-Control','no-store, private') createCompany(@Request() req:CareerRequest,@Body() dto:CareerCompanyDto){return this.service.createCompany(req.user,dto);}
   @Post('companies/:id/partnerships') partnership(@Request() req:CareerRequest,@Param('id',ParseUUIDPipe) id:string,@Body() dto:CareerPartnershipDto){return this.service.addPartnership(req.user,id,dto.universityId);}
   @Post('partnerships/:id/verify') verifyPartnership(@Request() req:CareerRequest,@Param('id',ParseUUIDPipe) id:string,@Body() dto:CareerDecisionDto){return this.service.verifyPartnership(req.user,id,dto);}
   @Post('memberships') membership(@Request() req:CareerRequest,@Body() dto:CareerMembershipDto){return this.service.addMembership(req.user,dto);}
   @Post('tasks') createTask(@Request() req:CareerRequest,@Body() dto:CareerTaskDto){return this.service.createTask(req.user,dto);}
-  @Post('tasks/:id/publish') publishTask(@Request() req:CareerRequest,@Param('id',ParseUUIDPipe) id:string){return this.service.publishTask(req.user,id);}
-  @Post('tasks/:id/approve') approveTask(@Request() req:CareerRequest,@Param('id',ParseUUIDPipe) id:string){return this.service.publishTask(req.user,id,true);}
+  @Post('tasks/:id/publish') publishTask(@Request() req:CareerRequest,@Param('id',ParseUUIDPipe) id:string){return this.moderation.publish(req.user,id);}
+  @Post('tasks/:id/approve') approveTask(@Request() req:CareerRequest,@Param('id',ParseUUIDPipe) id:string){return this.moderation.decide(req.user,id,'approve');}
   @Post('tasks/:id/apply') apply(@Request() req:CareerRequest,@Param('id',ParseUUIDPipe) id:string,@Body() dto:CareerMessageDto){return this.service.apply(req.user,id,dto);}
   @Post('applications/:id/select') select(@Request() req:CareerRequest,@Param('id',ParseUUIDPipe) id:string){return this.service.select(req.user,id);}
   @Post('works/:id/submit') submit(@Request() req:CareerRequest,@Param('id',ParseUUIDPipe) id:string,@Body() dto:CareerSubmissionDto){return this.service.submit(req.user,id,dto);}

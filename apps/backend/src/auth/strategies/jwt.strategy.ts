@@ -7,6 +7,7 @@ import { UsersService } from "../../users/users.service";
 import { JwtPayload } from "../interfaces/jwt-payload.interface";
 import { AppConfig } from "../../config/configuration";
 import { isUserRole } from "../interfaces/user-role";
+import { TenantContext } from '../../common/tenant/tenant-context';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -15,6 +16,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       AppConfig & Record<string, unknown>
     >,
     private readonly usersService: UsersService,
+    private readonly tenant: TenantContext = new TenantContext(),
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
@@ -24,7 +26,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: JwtPayload) {
-    const user = await this.usersService.findById(payload.sub);
+    const user = await this.tenant.runWithDatabaseAccess(
+      { authentication: { id: payload.sub } },
+      () => this.usersService.findById(payload.sub),
+    );
 
     if (
       !user ||
@@ -42,6 +47,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       role: user.role,
       universityId: user.universityId,
       groupId: user.groupId,
+      sessionVersion: user.sessionVersion,
     };
   }
 }

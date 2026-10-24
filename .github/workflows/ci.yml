@@ -2,7 +2,7 @@ name: CI
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, 'codex/**']
   push:
     branches: [main]
   workflow_dispatch:
@@ -32,6 +32,11 @@ jobs:
           restore-keys: turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
+      - name: Verify security documentation and protected paths
+        run: |
+          node scripts/security-route-inventory.cjs --check
+          node scripts/verify-ai-documentation.cjs
+          node scripts/verify-role-workspace-boundaries.cjs
 
   typecheck:
     name: Typecheck
@@ -63,7 +68,10 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Run unit tests with coverage
+        shell: bash
         run: pnpm --filter @napare/backend exec jest --ci --runInBand --coverage | tee unit-test-report.txt
+      - name: Student offline cache boundaries
+        run: pnpm --filter @napare/web-student test:offline
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -101,9 +109,9 @@ jobs:
       DB_HOST: 127.0.0.1
       DB_PORT: 5432
       DB_NAME: napare_test
-      DB_USERNAME: napare
-      DB_PASSWORD: napare_test_password
-      DATABASE_URL: postgresql://napare:napare_test_password@127.0.0.1:5432/napare_test
+      DB_USERNAME: napare_runtime
+      DB_PASSWORD: ci_runtime_password_only
+      DATABASE_URL: postgresql://napare_runtime:ci_runtime_password_only@127.0.0.1:5432/napare_test
       JWT_SECRET: ci-access-secret-not-for-production
       JWT_REFRESH_SECRET: ci-refresh-secret-not-for-production
       JWT_ACCESS_EXPIRATION: 15m
@@ -116,13 +124,68 @@ jobs:
           node-version: 20
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Create disposable authorization test databases
+        env:
+          PGPASSWORD: napare_test_password
+        run: |
+          psql -h 127.0.0.1 -U napare -d postgres -v ON_ERROR_STOP=1 -c "CREATE ROLE napare_runtime LOGIN NOSUPERUSER NOBYPASSRLS PASSWORD 'ci_runtime_password_only'"
+          psql -h 127.0.0.1 -U napare -d postgres -v ON_ERROR_STOP=1 -c "ALTER DATABASE napare_test OWNER TO napare_runtime"
+          createdb -h 127.0.0.1 -U napare -O napare_runtime curation_test_ci
+          createdb -h 127.0.0.1 -U napare -O napare_runtime curation_test_platform_ci
+          createdb -h 127.0.0.1 -U napare -O napare_runtime curation_test_tenant_ci
+          createdb -h 127.0.0.1 -U napare -O napare_runtime curation_test_schedule_ci
+          createdb -h 127.0.0.1 -U napare -O napare_runtime curation_test_semester_ci
+          createdb -h 127.0.0.1 -U napare -O napare_runtime curation_test_office_ci
+
+          createdb -h 127.0.0.1 -U napare -O napare_runtime curation_test_payment_ci
+
+          createdb -h 127.0.0.1 -U napare -O napare_runtime curation_test_notification_ci
+          createdb -h 127.0.0.1 -U napare -O napare_runtime curation_test_personal_data_ci
+          createdb -h 127.0.0.1 -U napare -O napare_runtime curation_test_erasure_ci
+          createdb -h 127.0.0.1 -U napare -O napare_runtime curation_test_career_report_ci
+          createdb -h 127.0.0.1 -U napare -O napare_runtime curation_test_company_registry_ci
+          createdb -h 127.0.0.1 -U napare -O napare_runtime curation_test_career_moderation_ci
+          createdb -h 127.0.0.1 -U napare -O napare_runtime curation_test_analytics_ci
+          createdb -h 127.0.0.1 -U napare -O napare_runtime curation_test_office_report_ci
+          createdb -h 127.0.0.1 -U napare -O napare_runtime curation_test_webpush_ci
+
       - name: Run E2E tests
+        shell: bash
+        env:
+          BUSINESS_ROUTE_EVIDENCE_FILE: output/business-route-evidence.jsonl
+          CURATION_TEST_DATABASE_URL: postgresql://napare_runtime:ci_runtime_password_only@127.0.0.1:5432/curation_test_ci
+          PLATFORM_TEST_DATABASE_URL: postgresql://napare_runtime:ci_runtime_password_only@127.0.0.1:5432/curation_test_platform_ci
+          TENANT_TEST_DATABASE_URL: postgresql://napare_runtime:ci_runtime_password_only@127.0.0.1:5432/curation_test_tenant_ci
+          SCHEDULE_IMPORT_TEST_DATABASE_URL: postgresql://napare_runtime:ci_runtime_password_only@127.0.0.1:5432/curation_test_schedule_ci
+          SEMESTER_TEST_DATABASE_URL: postgresql://napare_runtime:ci_runtime_password_only@127.0.0.1:5432/curation_test_semester_ci
+          OFFICE_TEST_DATABASE_URL: postgresql://napare_runtime:ci_runtime_password_only@127.0.0.1:5432/curation_test_office_ci
+
+          PAYMENT_TEST_DATABASE_URL: postgresql://napare_runtime:ci_runtime_password_only@127.0.0.1:5432/curation_test_payment_ci
+
+          TENANT_RLS_TEST_ADMIN_URL: postgresql://napare:napare_test_password@127.0.0.1:5432/postgres
+          NOTIFICATION_TEST_DATABASE_URL: postgresql://napare_runtime:ci_runtime_password_only@127.0.0.1:5432/curation_test_notification_ci
+          PERSONAL_DATA_TEST_DATABASE_URL: postgresql://napare_runtime:ci_runtime_password_only@127.0.0.1:5432/curation_test_personal_data_ci
+          ACCOUNT_ERASURE_TEST_DATABASE_URL: postgresql://napare_runtime:ci_runtime_password_only@127.0.0.1:5432/curation_test_erasure_ci
+          CAREER_REPORT_TEST_DATABASE_URL: postgresql://napare_runtime:ci_runtime_password_only@127.0.0.1:5432/curation_test_career_report_ci
+          COMPANY_REGISTRY_TEST_DATABASE_URL: postgresql://napare_runtime:ci_runtime_password_only@127.0.0.1:5432/curation_test_company_registry_ci
+          CAREER_MODERATION_TEST_DATABASE_URL: postgresql://napare_runtime:ci_runtime_password_only@127.0.0.1:5432/curation_test_career_moderation_ci
+          ANALYTICS_TEST_DATABASE_URL: postgresql://napare_runtime:ci_runtime_password_only@127.0.0.1:5432/curation_test_analytics_ci
+          OFFICE_REPORT_TEST_DATABASE_URL: postgresql://napare_runtime:ci_runtime_password_only@127.0.0.1:5432/curation_test_office_report_ci
+          WEBPUSH_TEST_DATABASE_URL: postgresql://napare_runtime:ci_runtime_password_only@127.0.0.1:5432/curation_test_webpush_ci
+          NOTIFICATION_TEST_REDIS_URL: redis://127.0.0.1:6379
         run: pnpm test:e2e | tee e2e-test-report.txt
+      - name: Report observed business HTTP routes
+        if: always()
+        run: node scripts/report-business-route-evidence.cjs --require-evidence
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: e2e-test-report
-          path: e2e-test-report.txt
+          path: |
+            e2e-test-report.txt
+            output/business-route-evidence.jsonl
+            output/business-route-evidence-report.json
+            output/business-route-evidence-report.md
 
   build:
     name: Production application build

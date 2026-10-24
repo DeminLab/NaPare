@@ -1,5 +1,136 @@
 # Source-card index
 
+- [Test HTTP route metadata](http-route-evidence.md)
+- [Business route observation report](business-route-evidence-report.md)
+- [App HTTP smoke tests](app-e2e-http-tests.md)
+
+- [webpush-policy](webpush-policy.md)
+- [webpush-policy-tests](webpush-policy-tests.md)
+- [webpush-worker-tests](webpush-worker-tests.md)
+- [webpush-client-service](webpush-client-service.md)
+- [webpush-consent-dto](webpush-consent-dto.md)
+- [webpush-consent-migration](webpush-consent-migration.md)
+- [webpush-client-e2e](webpush-client-e2e.md)
+- [webpush-browser-worker](webpush-browser-worker.md)
+- [webpush-browser-helper](webpush-browser-helper.md)
+- [webpush-setup-client](webpush-setup-client.md)
+- [webpush-setup-page](webpush-setup-page.md)
+- [webpush-setup-styles](webpush-setup-styles.md)
+- [device-webpush-api](device-webpush-api.md)
+- [device-token-entity](device-token-entity.md)
+
+- [office-report-service](office-report-service.md)
+- [office-report-controller](office-report-controller.md)
+- [office-report-dto](office-report-dto.md)
+- [office-report-entities](office-report-entities.md)
+- [office-report-migration](office-report-migration.md)
+- [office-report-e2e](office-report-e2e.md)
+- [office-report-page](office-report-page.md)
+- [office-report-workspace](office-report-workspace.md)
+- [office-report-import-form](office-report-import-form.md)
+
+- [request-parser-e2e](request-parser-e2e.md)
+
+- [analytics-policy](analytics-policy.md)
+- [analytics-policy-tests](analytics-policy-tests.md)
+- [analytics-entities](analytics-entities.md)
+- [analytics-service](analytics-service.md)
+- [analytics-controller](analytics-controller.md)
+- [analytics-dto](analytics-dto.md)
+- [analytics-interceptor](analytics-interceptor.md)
+- [analytics-interceptor-tests](analytics-interceptor-tests.md)
+- [analytics-module](analytics-module.md)
+- [analytics-migration](analytics-migration.md)
+- [analytics-e2e](analytics-e2e.md)
+- [analytics-page](analytics-page.md)
+- [analytics-dashboard](analytics-dashboard.md)
+- [analytics-styles](analytics-styles.md)
+
+- [career-risk-policy](career-risk-policy.md)
+- [career-risk-policy-tests](career-risk-policy-tests.md)
+- [career-moderation-dto](career-moderation-dto.md)
+- [career-moderation-service](career-moderation-service.md)
+- [career-moderation-controller](career-moderation-controller.md)
+- [career-moderation-migration](career-moderation-migration.md)
+- [career-moderation-e2e](career-moderation-e2e.md)
+- [career-task-revision-panel](career-task-revision-panel.md)
+- [career-task-complaint-form](career-task-complaint-form.md)
+- [career-moderation-page](career-moderation-page.md)
+- [career-moderation-workspace](career-moderation-workspace.md)
+- [career-moderation-decision-card](career-moderation-decision-card.md)
+- [career-complaints-page](career-complaints-page.md)
+- [career-complaint-history](career-complaint-history.md)
+
+- [company-verification-service](company-verification-service.md)
+- [company-verification-controller](company-verification-controller.md)
+- [company-registry-migration](company-registry-migration.md)
+- [company-registry-e2e](company-registry-e2e.md)
+- [company-registry-panel](company-registry-panel.md)
+
+- [Company registry adapter](company-registry-service.md)
+- [Company registry synthetic tests](company-registry-tests.md)
+
+- [Career university report: service](career-university-report-service.md)
+- [Career university report: controller](career-university-report-controller.md)
+- [Career university report: e2e](career-university-report-e2e.md)
+- [Career university report: page](career-university-report-page.md)
+- [Career university report: view](career-university-report-view.md)
+- [Career university report: styles](career-university-report-styles.md)
+
+- [Account data route](account-data-page-tsx.md)
+- [Account data controller](account-data-AccountDataControls-tsx.md)
+- [Account data sign-in](account-data-AccountSignIn-tsx.md)
+- [Account deletion confirmation](account-data-AccountDeletionForm-tsx.md)
+- [Account data transport](account-data-api-ts.md)
+- [Account data contracts](account-data-types-ts.md)
+- [Account data styles](account-data-account-data-module-css.md)
+
+- [Account erasure and retained archive](account-erasure-service.md)
+- [Tombstone and exact-row erasure guards](account-erasure-migration.md)
+- [Password and retained-record confirmation](account-erasure-dto.md)
+- [Account erasure PostgreSQL tests](account-erasure-e2e.md)
+
+- [Personal JSON export](personal-data-service.md)
+- [Reviewed export projections](personal-data-catalog.md)
+- [Self-only SELECT capability](personal-data-migration.md)
+- [Export connection lifecycle tests](personal-data-lifecycle-tests.md)
+- [Personal export PostgreSQL tests](personal-data-e2e.md)
+
+- [Student title: Вход](student-title-login.md)
+- [Student title: Доступ в студенческий кабинет](student-title-register.md)
+- [Student title: Сегодня](student-title-today.md)
+- [Student title: Расписание на неделю](student-title-week.md)
+- [Student title: Расписание на месяц](student-title-month.md)
+- [Student title: Подготовка к занятиям](student-title-pair-space.md)
+- [Student title: Пространство пары](student-title-pair-space-lessonId.md)
+- [Student title: Отсутствия](student-title-absences.md)
+- [Student title: Избранное расписание](student-title-groups.md)
+- [Student title: Уведомления](student-title-notifications.md)
+- [Student title: Профиль](student-title-profile.md)
+- [Student title: Настройки](student-title-settings.md)
+- [Student title: Мой семестр](student-title-semester.md)
+- [Student title: Посещаемость](student-title-attendance-check-in.md)
+- [Student title: Кураторство](student-title-curation.md)
+
+- [Student semester report](student-semester-page.md)
+
+- [Moodle numeric academic identities](semester-identity.md)
+- [Academic identity migration and RLS](semester-migration.md)
+- [Semester request validation](semester-dto.md)
+- [Source grade and period interpretation](semester-source.md)
+- [Semester source regression tests](semester-source-tests.md)
+- [Semester API routes](semester-controller.md)
+- [Scoped semester aggregation](semester-service.md)
+- [Semester module wiring](semester-module.md)
+- [Real semester HTTP/PostgreSQL tests](semester-http-tests.md)
+- [University onboarding wizard](onboarding-page.md)
+- [Onboarding view types](onboarding-types.md)
+- [Faculty and group creation](onboarding-structurestep.md)
+- [First administrator handoff](onboarding-administratorstep.md)
+- [Six-format import workflow](onboarding-importstep.md)
+- [Selected-period readiness and teacher binding](onboarding-readinessstep.md)
+
+
 - [240 — Staff absence-review queue](240-apps-web-staff-src-app-staff-absences-page-tsx.md)
 
 Each card points to one existing canonical source file. Cards are navigation aids: they do not replace reading the source, its imports, tests or product documentation.
@@ -9,6 +140,24 @@ Each card points to one existing canonical source file. Cards are navigation aid
 Choose the card matching the task area, read the canonical source and then follow its local imports. Do not bulk-edit files merely because a card exists.
 
 ## Cards
+
+- [PostgreSQL backup and restore](postgres-recovery.md)
+- [External health monitor](health-monitor.md)
+- [Recovery and monitoring safety tests](postgres-recovery-tests.md)
+- [Real PostgreSQL restore drill test](postgres-recovery-integration.md)
+- [API exception filter and Sentry](exception-filter.md)
+- [Same-connection transaction-local tenant configuration, TypeORM runner interception and startup RLS invariants](tenant-database.md)
+- [Typed explicit university, identity and company relation capabilities](tenant-database-access.md)
+- [Least-scope platform permission mapping to tenant tables and read/write capabilities](tenant-database-platform.md)
+- [Runner scope, existing transactions, rollback, concurrent query serialization and SQL stream rejection](tenant-database-unit-tests.md)
+- [FORCE RLS and mandatory restrictive CRUD policies for scalar university columns; explicit identity and company relations](tenant-row-security-migration.md)
+- [Disposable-database-only explicit test setup/assertion capabilities, separate from HTTP request access](tenant-database-fixture.md)
+- [Real PostgreSQL non-superuser table-owner isolation, pooled TypeORM flows, CRUD, grants, authentication and career company relations](tenant-rls-postgres-tests.md)
+
+- [440 — Backend role policy metadata and matrix](440-backend-role-policy-fixture.md)
+- [441 — Backend role policy HTTP probes](441-backend-role-policy-e2e.md)
+- [442 — Explicit role baseline update](442-backend-update-role-policy.md)
+- [443 — Reviewed route authorization baseline](443-backend-role-policy-baseline.md)
 
 - [285 — Shared UI primitives](285-packages-ui-src-index-tsx.md)
 - [290 — Shared lesson type badge](290-packages-ui-src-lessontypebadge-tsx.md)
@@ -468,3 +617,87 @@ Choose the card matching the task area, read the canonical source and then follo
 - [383 — Platform PairSpace administration](383-apps-backend-src-platform-pair-space-space-administration.md)
 - [384 — Developer PairSpace panel](384-apps-web-developer-src-app-developer-control-pairspacespanel-tsx.md)
 - [385 — Platform grant university-scope migration](385-apps-backend-src-migrations-1700000000028-platformgrantuniversityscope-ts.md)
+
+- [billing-provider](billing-provider.md)
+
+- [billing-provider-tests](billing-provider-tests.md)
+
+- [billing-state](billing-state.md)
+
+- [billing-entities](billing-entities.md)
+
+- [billing-dto](billing-dto.md)
+
+- [billing-service](billing-service.md)
+
+- [billing-controller](billing-controller.md)
+
+- [billing-module](billing-module.md)
+
+- [billing-migration](billing-migration.md)
+
+- [billing-http-tests](billing-http-tests.md)
+
+- [billing-panel](billing-panel.md)
+- [tenant-route-inventory](tenant-route-inventory.md)
+
+- [tenant-reference-tests](tenant-reference-tests.md)
+
+- [tenant-isolation-http-tests](tenant-isolation-http-tests.md)
+
+- [Normalized schedule connector and durable queue contracts](schedule-connector-contract.md)
+- [Strict CSV, UTC ICS and bounded XLSX file adapters](schedule-file-connectors.md)
+- [SIBIT parser wrapper and explicit Moodle calendar group/time mapping](schedule-external-connectors.md)
+- [Connector provider registration and import service exports](schedule-connectors-module.md)
+- [Tenant durable import payload, idempotency and attempt state](schedule-import-jobs.md)
+- [Atomic queued imports, source ownership and ScheduleChange deltas](schedule-import-service.md)
+- [Queue constraints, soft cancellation and FORCE RLS setup](schedule-import-migration.md)
+- [Fixture CSV/ICS, XLSX, timezone and source identity regression tests](schedule-connectors-unit.md)
+- [Real JWT HTTP and non-superuser PostgreSQL import regression tests](schedule-import-http.md)
+- [Sample stable ID CSV with quoted subject and explicit local date](schedule-import-csv-fixture.md)
+- [Bounded UTC recurrence fixture for university export documentation](schedule-import-ics-fixture.md)
+- [office-access](office-access.md)
+
+- [office-request-entities](office-request-entities.md)
+
+- [office-request-dto](office-request-dto.md)
+
+- [office-request-service](office-request-service.md)
+
+- [office-request-controller](office-request-controller.md)
+
+- [office-request-module](office-request-module.md)
+
+- [office-assignment-migration](office-assignment-migration.md)
+
+- [office-request-migration](office-request-migration.md)
+
+- [office-http-tests](office-http-tests.md)
+
+- [office-ui-types](office-ui-types.md)
+
+- [office-ui-queue](office-ui-queue.md)
+
+- [office-ui-request](office-ui-request.md)
+
+- [office-ui-settings](office-ui-settings.md)
+
+- [office-ui-create](office-ui-create.md)
+
+- [office-ui-dispatch](office-ui-dispatch.md)
+
+- [Transactional PostgreSQL outbox, scoped worker, BullMQ retry and readiness.](notification-delivery-service.md)
+- [Gated RuStore, WebPush, Telegram and MAX provider implementations and token validation.](notification-delivery-providers.md)
+- [Explicit default-off switches for notification delivery and queue startup.](notification-delivery-config.md)
+- [Tenant-scoped delivery state, unique target, attempts and bounded durable history.](notification-delivery-entity.md)
+- [Provider column and delivery outbox with canonical FORCE RLS policies.](notification-delivery-migration.md)
+- [No-send defaults, endpoint validation and provider protocol/error tests with synthetic responses.](notification-delivery-provider-tests.md)
+- [Actual non-superuser PostgreSQL and Redis tests: atomic outbox, JWT registration, FORCE RLS, retry and dead letters.](notification-delivery-e2e.md)
+
+- [Student offline 1](offline-1.md)
+
+- [Student offline 2](offline-2.md)
+
+- [Student offline 3](offline-3.md)
+
+- [Student offline 4](offline-4.md)

@@ -6,6 +6,8 @@
 
 ## Scope
 
+Approved A01–A05 changes restore contrast for muted/secondary text, menu labels, role previews and step numbers; semantic surfaces/text preserve dark palette contrast. Public role-preview tracks can shrink and wrap at 320 px. Navigation/header markup and logo assets are unchanged.
+
 Student workspace palette overrides, responsive content styling and appearance preferences, including light/dark palettes and accent variants. The focus ring follows the selected light accent at its 600 shade and uses the dark palette's 400 shade for contrast. Global navigation and shared shell structure live in `StudentShell` and `packages/ui/src/WorkspaceShell.tsx`.
 
 ## Read sequence

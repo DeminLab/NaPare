@@ -1,5 +1,6 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { AuthService } from "./auth.service";
+import { TenantContext } from '../common/tenant/tenant-context';
 import { UsersService } from "../users/users.service";
 import { JwtService } from "@nestjs/jwt";
 import { ConfigService } from "@nestjs/config";
@@ -62,6 +63,7 @@ describe("AuthService", () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
+        TenantContext,
         { provide: UsersService, useValue: usersService },
         { provide: JwtService, useValue: jwtService },
         {
@@ -318,6 +320,7 @@ describe("AuthService", () => {
       const module = await Test.createTestingModule({
         providers: [
           AuthService,
+          TenantContext,
           { provide: UsersService, useValue: usersService },
           { provide: JwtService, useValue: jwtService },
           { provide: ConfigService, useValue: configService },
