@@ -110,6 +110,8 @@ node /srv/NaPare/scripts/postgres-recovery.cjs restore
 
 ## Проверки и первоисточники
 
+Перед допуском восстановленной копии к пользователям и внешним отправкам выполняется [сверка последующих удалений аккаунтов](../privacy/external-copies-procedure.md). Текущий restore script не выполняет replay tombstones/очистки автоматически. Если журнал неполон или проверенная процедура replay не готова, восстановление остаётся в карантине.
+
 ```powershell
 node --test scripts/test-postgres-recovery.cjs
 pnpm --filter @napare/backend exec jest src/health.controller.spec.ts src/common/filters/http-exception.filter.spec.ts --runInBand

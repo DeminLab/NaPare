@@ -19,6 +19,7 @@ Project guides, reference material and historical records live under this direct
 - [University career report](modules/career-university-report.md) — own-university aggregates and XLSX; counts of tasks, applications and accepted works, no employment inference.
 
 - [Account data controls](privacy/account-controls.md) — common JSON download/deletion screen, explicit retained archive, matching-session cleanup and browser evidence.
+- [External copies after deletion](privacy/external-copies-procedure.md) — operator evidence, files/sources/logs/backups and restore quarantine; real execution remains unconfirmed.
 
 - [Personal JSON export](privacy/personal-data-export.md) — snapshot, scope, exclusions and verification contract; [account deletion](privacy/account-deletion.md) and [approved archive model](privacy/account-rights-model.md) explain cleanup and retained learning records.
 
