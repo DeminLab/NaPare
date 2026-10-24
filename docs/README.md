@@ -47,6 +47,7 @@ Project guides, reference material and historical records live under this direct
 - [Personal data assessment](legal/personal-data-assessment.md), [data map](privacy/data-map.md), [RF/on-premise deployment](legal/rf-deployment-assessment.md), [processing agreement](legal/data-processing-agreement-draft.md) and [consent drafts](legal/consent-drafts.md) — dated engineering findings and drafts for operator/legal review; deployment and compliance are not confirmed.
 - [Tenant isolation](security/tenant-isolation.md) and [Role matrix](security/role-matrix.md) — SQL boundaries, route inventory and authorization checks.
 - [Business tenant probes, 25 October](security/business-tenant-probes-2026-10-25.md) — successful B controls, foreign HTTP denials/empty lists and PostgreSQL invariance.
+- [Improvement evidence audit, 25 October](project-log/improvement-evidence-audit-2026-10-25.md) — every plan block, PR head ancestry, historical CI and remaining proof gaps.
 - [Modules](modules/) and [Product](product/) — feature behavior and product boundaries.
 - [Moodle semester overview](integrations/moodle-semester.md) — self API, explicit numeric identities, source attribution and unavailable-data semantics.
 - [University onboarding](modules/university-onboarding.md) — owner bootstrap, administrator handoff, schedule import and scoped readiness checklist.
