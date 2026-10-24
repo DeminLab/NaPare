@@ -14,6 +14,8 @@ Academic create/reference checks also snapshot A to reject partial writes on err
 
 Schedule list/date/range/group/teacher/changed controls require a real B lesson in the positive result. Manual creation tests override an injected university ID with JWT scope and reject foreign references without partial writes. The 9-route matrix uses administrators; separate cases execute date/my/range for students and teachers with internal UUID groups. Legacy numeric/SIBIT and platform branches remain separate.
 
+Seed a real B homework via HTTP. Progress and legacy submit create/update controls use its B student; foreign A calls must return 403/404 and preserve both universities. Include homework_progress/homework_submissions through their homework/space parent in snapshots; their lack of a direct university column must not omit them.
+
 ## Read sequence
 
 1. Read [change safety](../change-safety.md).

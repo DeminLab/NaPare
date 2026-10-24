@@ -69,6 +69,8 @@ suite('Tenant isolation: real HTTP, JWT, services and PostgreSQL', () => {
     }
     await call('PUT', '/api/v1/curation/groups/{group}/curators/' + fixture.users.foreignAdmin.id, 'foreignAdmin').expect(200);
     await call('PUT', '/api/v1/curation/groups/{ownGroup}/curators/' + fixture.users.admin.id).expect(200);
+    const homework = await call('POST', '/api/v1/pair-spaces/{lesson}/homeworks', 'foreignAdmin').send({ title: 'Synthetic B homework', description: 'Private B preparation' }).expect(201);
+    objects.homework = homework.body.id;
   }, 90000);
   afterAll(async () => { await fixture?.app.close(); });
 
@@ -84,6 +86,9 @@ suite('Tenant isolation: real HTTP, JWT, services and PostgreSQL', () => {
       state[table] = await fixture.db.query(`SELECT to_jsonb(t) AS row FROM "${table}" t JOIN pair_spaces p ON p.id = t."pairSpaceId" WHERE p."universityId" = $1 ORDER BY to_jsonb(t)::text`, [universityId]);
     }
     state.absence_confirmations = await fixture.db.query('SELECT to_jsonb(t) AS row FROM absence_confirmations t JOIN absences a ON a.id = t."absenceId" WHERE a."universityId" = $1 ORDER BY to_jsonb(t)::text', [universityId]);
+    for (const table of ['homework_progress', 'homework_submissions']) {
+      state[table] = await fixture.db.query(`SELECT to_jsonb(t) AS row FROM "${table}" t JOIN homeworks h ON h.id = t."homeworkId" JOIN pair_spaces p ON p.id = h."pairSpaceId" WHERE p."universityId" = $1 ORDER BY to_jsonb(t)::text`, [universityId]);
+    }
     return state;
   });
 
@@ -320,6 +325,26 @@ suite('Tenant isolation: real HTTP, JWT, services and PostgreSQL', () => {
     const a = await call('POST', '/api/v1/academic/events').send(body).expect(201);
     expect(a.body.universityId).toBe(fixture.uni.id);
     expect(await foreignState()).toEqual(before);
+  });
+  it.each(['done', 'in_progress'])('cannot write preparation state %s to a foreign homework', async state => {
+    const body = { state, subtasks: [{ id: randomUUID(), title: 'Synthetic private checklist', done: state === 'done' }] };
+    const control = await call('PATCH', '/api/v1/pair-spaces/homeworks/{homework}/progress', 'foreignStudent').send(body).expect(200);
+    expect(control.body).toMatchObject({ homeworkId: objects.homework, studentId: fixture.users.foreignStudent.id, state, subtasks: body.subtasks });
+    const beforeB = await foreignState(), beforeA = await foreignState(fixture.uni.id);
+    const response = await call('PATCH', '/api/v1/pair-spaces/homeworks/{homework}/progress', 'student').send(body);
+    expect([403, 404]).toContain(response.status);
+    expect(await foreignState()).toEqual(beforeB);
+    expect(await foreignState(fixture.uni.id)).toEqual(beforeA);
+  });
+  it.each(['First synthetic submission', 'Updated synthetic submission'])('cannot submit or replace work for a foreign homework: %s', async comment => {
+    const body = { comment, fileUrl: 'https://example.test/synthetic-submission.pdf' };
+    const control = await call('PATCH', '/api/v1/pair-spaces/homeworks/{homework}/submit', 'foreignStudent').send(body).expect(200);
+    expect(control.body).toMatchObject({ homeworkId: objects.homework, studentId: fixture.users.foreignStudent.id, status: 'submitted', ...body });
+    const beforeB = await foreignState(), beforeA = await foreignState(fixture.uni.id);
+    const response = await call('PATCH', '/api/v1/pair-spaces/homeworks/{homework}/submit', 'student').send(body);
+    expect([403, 404]).toContain(response.status);
+    expect(await foreignState()).toEqual(beforeB);
+    expect(await foreignState(fixture.uni.id)).toEqual(beforeA);
   });
   it('rejects a foreign occurrence on an own-university academic event', async () => {
     await call('POST', '/api/v1/academic/events').send({
