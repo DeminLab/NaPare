@@ -20,6 +20,7 @@ async function bootstrap() {
   // Wrapping prevents Nest's parser-name detection from suppressing its
   // default JSON parser on unrelated routes.
   app.use('/api/v1/admin/schedule/upload', ((req, res, next) => uploadJson(req, res, next)) as RequestHandler);
+  app.use('/api/v1/requests/reports/debt-snapshots', ((req, res, next) => uploadJson(req, res, next)) as RequestHandler);
 
   const configService = app.get<ConfigService>(ConfigService);
 

@@ -170,7 +170,7 @@ suite('Academic office: persisted assignments, workflow and PostgreSQL RLS', () 
   });
   it('reports unavailable debt source without synthetic marks and filters the queue', async () => {
     await get(`/students/${f.users.student.id}/debts`, 'student').expect(200).expect(({ body }) => { expect(body.available).toBe(false); expect(body.source).toBeNull(); expect(body.records).toEqual([]); });
-    await get(`/students/${foreignStudent.id}/debts`, 'teacher').expect(400);
+    await get(`/students/${foreignStudent.id}/debts`, 'teacher').expect(404);
     await get(`/report?groupId=${f.groups[3].id}`, 'teacher').expect(200).expect(({ body }) => expect(body.data).toEqual([]));
     await get('?status=closed', 'teacher').expect(200).expect(({ body }) => expect(body.data.every(row => row.status === 'closed')).toBe(true));
   });

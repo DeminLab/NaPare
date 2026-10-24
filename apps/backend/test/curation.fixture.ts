@@ -13,6 +13,7 @@ import { Absence } from '../src/absences/entities/absence.entity';
 import { Lesson } from '../src/schedule/entities/lesson.entity';
 import { CuratorAssignments1700000000020 } from '../src/migrations/1700000000020-CuratorAssignments';
 import { TenantRowSecurity1700000000029 } from '../src/migrations/1700000000029-TenantRowSecurity';
+import { OfficeReports1700000000042 } from '../src/migrations/1700000000042-OfficeReports';
 import { TenantContext } from '../src/common/tenant/tenant-context';
 import { fixtureDatabase } from './tenant-database.fixture';
 
@@ -26,6 +27,7 @@ export async function createCurationFixture(url: string, options: { universityId
   const app: INestApplication = module.createNestApplication({ logger: false });
   const uploadJson = json({ limit: '3mb' });
   app.use('/api/v1/admin/schedule/upload', ((req, res, next) => uploadJson(req, res, next)) as RequestHandler);
+  app.use('/api/v1/requests/reports/debt-snapshots', ((req, res, next) => uploadJson(req, res, next)) as RequestHandler);
   app.setGlobalPrefix('api/v1');
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
   await app.init();
@@ -65,6 +67,7 @@ export async function createCurationFixture(url: string, options: { universityId
   try {
     await new CuratorAssignments1700000000020().up(runner);
     await new TenantRowSecurity1700000000029().up(runner);
+    await new OfficeReports1700000000042().up(runner);
   } finally { await runner.release(); }
   const now = new Date(); now.setHours(8, 30, 0, 0);
   const lesson = await db.getRepository(Lesson).save({ universityId: uni.id, groupId: groups[0].id, teacherId: users.teacher.id, subject: 'Технологии программирования', teacherName: 'Соколова М.', groupName: groups[0].name, startDate: now, endDate: new Date(now.getTime() + 5400000), startTime: '08:30', endTime: '10:00', dayOfWeek: now.getDay(), pairNumber: 1, room: '416' });

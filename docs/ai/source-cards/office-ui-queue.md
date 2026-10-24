@@ -6,7 +6,7 @@
 
 ## Scope
 
-Scoped filtered queue, current-page CSV, request detail, creation and content-level settings/dispatcher sections.
+Scoped filtered queue, current-page CSV, request detail, creation and content-level settings/dispatcher sections. A content link opens the separate contingent/debt reports; shared navigation remains unchanged.
 
 ## Verification
 

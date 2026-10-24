@@ -4,6 +4,8 @@ Project guides, reference material and historical records live under this direct
 
 ## Sections
 
+- [Academic office reports](modules/academic-office-reports.md) — current-account contingent, confirmed group debt snapshots, scope and history.
+
 - [HTTP parser security patch, 24 October](security/request-parser-patch-2026-10-24.md) — body-parser/multer pins, isolated crash regressions and audit boundaries.
 
 - [Product analytics](modules/product-analytics.md) — ten defined own-university metrics, default-off daily activity, observed onboarding readiness and privacy lifecycle.

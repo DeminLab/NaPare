@@ -6,7 +6,7 @@
 
 ## Scope
 
-Registers office entities, access service, request service and controller.
+Registers office/request entities and services plus the report controller/service and debt snapshot entities. Read the [report contract](../../modules/academic-office-reports.md).
 
 ## Verification
 

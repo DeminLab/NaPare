@@ -15,6 +15,7 @@ import { toPaginatedResponse } from '../common/dto/pagination-query.dto';
 import { OfficeAccessService, OFFICE_STAFF_ROLES, routeDuties } from './office-access.service';
 import { CreateRequestDto, DispatcherQueryDto, OfficeAssignmentDto, OfficeRouteDto, RequestCommandDto, RequestQueryDto } from './request.dto';
 import { OfficeAssignment, OfficeRoute, RequestDecision, RequestDocument, RequestStep, StepDuty, StudentRequest } from './request.entities';
+import { OfficeReportService } from './office-report.service';
 
 function canonical(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(canonical);
@@ -26,7 +27,7 @@ const ack = (row: StudentRequest) => ({ id: row.id, status: row.status, version:
 
 @Injectable()
 export class RequestService {
-  constructor(private readonly db: DataSource, private readonly access: OfficeAccessService) {}
+  constructor(private readonly db: DataSource, private readonly access: OfficeAccessService, private readonly reports: OfficeReportService) {}
   private async lock(manager: EntityManager) {
     // Grant revocation, route changes and decisions have a single ordering per university.
     await manager.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [`office:${this.access.actor().universityId}`]);
@@ -44,7 +45,7 @@ export class RequestService {
     const curators = allowed.length ? await manager.findBy(CuratorAssignment, { universityId: actor.universityId, groupId: In(allowed.map(group => group.id)), revokedAt: IsNull() }) : [];
     const peopleIds = [...new Set([...grants.filter(row => allowed.some(group => this.access.covers(row, group))).map(row => row.userId), ...curators.map(row => row.userId), ...faculties.flatMap(row => row.deanUserId ? [row.deanUserId] : [])])];
     const assignees = peopleIds.length ? await manager.find(User, { where: { id: In(peopleIds), universityId: actor.universityId, isActive: true }, select: ['id', 'firstName', 'lastName'] }) : [];
-    return { canManage: actor.role === UserRole.UNIVERSITY_ADMIN, canCreateForStudents: assignments.some(row => row.duty === 'office' && row.canCreateForStudents), groups: allowed.map(({ id, name, facultyId }) => ({ id, name, facultyId })), faculties: faculties.map(({ id, name }) => ({ id, name })), assignees, assignments, debtSource: { available: false, source: null, message: 'Вуз не подключил источник оценок и академических задолженностей.' } };
+    return { canManage: actor.role === UserRole.UNIVERSITY_ADMIN, canCreateForStudents: assignments.some(row => row.duty === 'office' && row.canCreateForStudents), groups: allowed.map(({ id, name, facultyId }) => ({ id, name, facultyId })), faculties: faculties.map(({ id, name }) => ({ id, name })), assignees, assignments, debtSource: await this.reports.sourceStatus(allowed) };
   }
   async candidates(query: RequestQueryDto) {
     const actor = this.access.actor();
@@ -85,9 +86,7 @@ export class RequestService {
     return toPaginatedResponse(rows, total, query);
   }
   async debts(studentId: string) {
-    const group = await this.studentGroup(this.db.manager, studentId), actor = this.access.actor();
-    if (studentId !== actor.id && actor.role !== UserRole.UNIVERSITY_ADMIN && !await this.access.hasDuty(this.db.manager, group, 'office') && !await this.access.canPerform(this.db.manager, group, 'curator_or_dean', actor.id)) throw new ForbiddenException('Нет доступа к этому студенту.');
-    return { studentId, available: false, source: null, records: [], message: 'Вуз не подключил подтверждённый источник оценок и академических задолженностей.' };
+    return this.reports.studentDebts(studentId);
   }
   async dispatchLessons(query: DispatcherQueryDto) {
     const group = await this.access.group(this.db.manager, query.groupId);

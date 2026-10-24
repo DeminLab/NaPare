@@ -6,7 +6,7 @@
 
 ## Scope
 
-Tenant-scoped queues, routes, idempotent commands, durable decisions, explicit operator submission and debt-source empty state.
+Tenant-scoped queues, routes, idempotent commands, durable decisions and explicit operator submission. The debt endpoint delegates to OfficeReportService and context reports coverage of confirmed group snapshots; unavailable remains explicit without a source.
 
 ## Verification
 

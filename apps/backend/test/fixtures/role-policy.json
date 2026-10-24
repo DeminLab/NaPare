@@ -4083,6 +4083,78 @@
       }
     },
     {
+      "id": "OfficeReportController.contingent GET /api/v1/requests/reports/contingent",
+      "source": "apps/backend/src/requests/office-report.controller.ts",
+      "method": "GET",
+      "path": "/api/v1/requests/reports/contingent",
+      "guards": [
+        "JwtAuthGuard"
+      ],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 403,
+        "career_staff": 403,
+        "career_admin": 403,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
+      "id": "OfficeReportController.debts GET /api/v1/requests/reports/debts",
+      "source": "apps/backend/src/requests/office-report.controller.ts",
+      "method": "GET",
+      "path": "/api/v1/requests/reports/debts",
+      "guards": [
+        "JwtAuthGuard"
+      ],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 403,
+        "career_staff": 403,
+        "career_admin": 403,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
+      "id": "OfficeReportController.importDebts POST /api/v1/requests/reports/debt-snapshots",
+      "source": "apps/backend/src/requests/office-report.controller.ts",
+      "method": "POST",
+      "path": "/api/v1/requests/reports/debt-snapshots",
+      "guards": [
+        "JwtAuthGuard"
+      ],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 403,
+        "career_staff": 403,
+        "career_admin": 403,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
       "id": "PairSpaceController.createAnnouncement POST /api/v1/pair-spaces/:lessonId/announcements",
       "source": "apps/backend/src/pair-space/pair-space.controller.ts",
       "method": "POST",

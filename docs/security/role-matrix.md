@@ -184,6 +184,9 @@ pnpm --filter @napare/backend exec ts-node --transpile-only test/update-role-pol
 | `PATCH /api/v1/notifications/:id/read` | JwtAuthGuard | 200 | 403 | 403 | 403 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
 | `PATCH /api/v1/notifications/inbox/:id/snooze` | JwtAuthGuard | 200 | 403 | 403 | 403 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
 | `PATCH /api/v1/notifications/preferences` | JwtAuthGuard | 200 | 403 | 403 | 403 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
+| `GET /api/v1/requests/reports/contingent` | JwtAuthGuard | 200 | 403 | 403 | 403 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
+| `GET /api/v1/requests/reports/debts` | JwtAuthGuard | 200 | 403 | 403 | 403 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
+| `POST /api/v1/requests/reports/debt-snapshots` | JwtAuthGuard | 200 | 403 | 403 | 403 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
 | `POST /api/v1/pair-spaces/:lessonId/announcements` | JwtAuthGuard, RolesGuard | 403 | 403 | 403 | 403 | 200 | 200 | 200 | 200 | 200 | 200 | 403 |
 | `POST /api/v1/pair-spaces/:lessonId/homeworks` | JwtAuthGuard, RolesGuard | 403 | 403 | 403 | 403 | 200 | 200 | 200 | 200 | 200 | 200 | 403 |
 | `POST /api/v1/pair-spaces/:lessonId/messages` | JwtAuthGuard, RolesGuard | 200 | 403 | 403 | 403 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |

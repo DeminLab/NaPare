@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { apiFetch, type PaginatedResponse } from '@/lib/api';
 import { Button, Card, EmptyState, RequestState, Skeleton } from '@/components/ui';
 import { OfficeSettings } from './OfficeSettings';
@@ -41,6 +42,7 @@ export default function RequestsPage() {
   }
   const set = (label: string, key: keyof typeof blankFilters, options: { value: string; label: string }[]) => <label className="grid gap-2 text-sm font-semibold text-slate-800">{label}<select className={controlClass} value={filters[key]} onChange={event => filter(key,event.target.value)}><option value="">Все</option>{options.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>;
   return <div className="mx-auto max-w-[1400px] space-y-6">
+    <Link href="/requests/reports" className="inline-flex min-h-11 items-center text-sm font-semibold text-indigo-800 underline">Отчёты по контингенту и задолженностям</Link>
     <div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-sm font-semibold text-indigo-700">Учебный офис</p><h1 className="mt-1 text-3xl font-bold text-slate-950">Заявления и согласования</h1><p className="mt-2 max-w-2xl text-sm text-slate-600">Отсутствия, переводы и пересдачи: текущий этап, ответственный и история решения.</p></div>{context?.canCreateForStudents && <Button onClick={() => { setDetail(null); setCreating(true); setTab('queue'); }}>Новое заявление</Button>}</div>
     {context && (context.canManage || canDispatch) && <div className="flex flex-wrap gap-2" aria-label="Разделы учебного офиса"><Button variant={tab === 'queue' ? 'primary' : 'secondary'} aria-pressed={tab === 'queue'} onClick={() => setTab('queue')}>Очередь заявлений</Button>{context.canManage && <Button variant={tab === 'settings' ? 'primary' : 'secondary'} aria-pressed={tab === 'settings'} onClick={() => setTab('settings')}>Назначения и маршруты</Button>}{canDispatch && <Button variant={tab === 'dispatch' ? 'primary' : 'secondary'} aria-pressed={tab === 'dispatch'} onClick={() => setTab('dispatch')}>Рабочее место диспетчера</Button>}</div>}
     {error && <RequestState title="Не удалось загрузить данные" description={error} onRetry={() => { void loadContext().catch(() => undefined); void loadList(); }} />}
