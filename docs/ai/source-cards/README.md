@@ -1,5 +1,20 @@
 # Source-card index
 
+- [analytics-policy](analytics-policy.md)
+- [analytics-policy-tests](analytics-policy-tests.md)
+- [analytics-entities](analytics-entities.md)
+- [analytics-service](analytics-service.md)
+- [analytics-controller](analytics-controller.md)
+- [analytics-dto](analytics-dto.md)
+- [analytics-interceptor](analytics-interceptor.md)
+- [analytics-interceptor-tests](analytics-interceptor-tests.md)
+- [analytics-module](analytics-module.md)
+- [analytics-migration](analytics-migration.md)
+- [analytics-e2e](analytics-e2e.md)
+- [analytics-page](analytics-page.md)
+- [analytics-dashboard](analytics-dashboard.md)
+- [analytics-styles](analytics-styles.md)
+
 - [career-risk-policy](career-risk-policy.md)
 - [career-risk-policy-tests](career-risk-policy-tests.md)
 - [career-moderation-dto](career-moderation-dto.md)

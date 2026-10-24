@@ -16,6 +16,7 @@ const activity = (table: string, owners: string, fields: string, key = 'id'): Pe
 });
 
 export const PERSONAL_DATASETS: readonly PersonalDataset[] = [
+  entry('product_activity_days', 'userId', 'id universityId userId day role'),
   entry('users', 'id', 'id email firstName lastName phone avatarUrl role universityId groupId sourceTeacherId maxUserId telegramUserId isActive lastLoginAt createdAt updatedAt'),
   entry('absences', 'studentId', 'id universityId type startDate endDate comment isSensitive confirmationRequired affectedLessonIds affectedLessonsCount source lastSyncedAt sourceVersion syncStatus createdAt updatedAt'),
   entry('attendance_records', 'studentId', 'id universityId lessonId status comment createdAt updatedAt'),

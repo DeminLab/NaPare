@@ -18,6 +18,7 @@ export const ACCOUNT_RETENTION = [
 ] as const;
 
 const PRIVATE_ROWS: Record<string, string> = {
+  product_activity_days: 'userId',
   academic_identities: 'userId', personal_lesson_notes: 'userId', user_favorites: 'userId',
   notifications: 'userId', notification_deliveries: 'userId', notification_preferences: 'userId', inbox_items: 'userId',
   device_tokens: 'userId', telegram_link_challenges: 'userId', career_profile: 'studentId', career_availability: 'studentId',

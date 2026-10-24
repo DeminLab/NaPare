@@ -70,6 +70,7 @@ describe("NotificationsService", () => {
 
     service = module.get<NotificationsService>(NotificationsService);
     jest.clearAllMocks();
+    mockPreferenceRepo.findOne.mockResolvedValue(null);
     mockTenantContext.getUser.mockReturnValue(undefined);
   });
 

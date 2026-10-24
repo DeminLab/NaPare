@@ -547,7 +547,7 @@ export class AbsencesService {
         ? { id: user.id, type: "user", role: user.role }
         : { id: markedById, type: "user" },
       target: { type: "lesson", id: lesson.id },
-      payload: { lessonId: lesson.id, records: saved.length },
+      payload: { lessonId: lesson.id, records: saved.length, source: 'manual' },
       priority: "normal",
       recipients: studentIds,
     });

@@ -348,6 +348,8 @@ pnpm --filter @napare/backend exec ts-node --transpile-only test/update-role-pol
 | `PUT /api/v1/platform-records/users/:userId/preferences` | JwtAuthGuard | 200 | 403 | 403 | 403 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
 | `GET /api/v1/platform-records/users/:userId` | JwtAuthGuard | 200 | 403 | 403 | 403 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
 | `GET /api/v1/platform-records/users` | JwtAuthGuard | 200 | 403 | 403 | 403 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
+| `POST /api/v1/analytics/onboarding-observation` | JwtAuthGuard, RolesGuard | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 200 | 403 | 403 |
+| `GET /api/v1/analytics/report` | JwtAuthGuard, RolesGuard | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 200 | 403 | 403 |
 | `POST /api/v1/requests/assignments` | JwtAuthGuard | 200 | 403 | 403 | 403 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
 | `GET /api/v1/requests/assignments` | JwtAuthGuard | 200 | 403 | 403 | 403 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
 | `GET /api/v1/requests/candidates` | JwtAuthGuard | 200 | 403 | 403 | 403 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |

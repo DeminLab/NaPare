@@ -12,22 +12,29 @@ export default function ReadinessStep({ university }: { university: University }
   const [offset, setOffset] = useState('+06:00');
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null), [error, setError] = useState(''), [busy, setBusy] = useState(false), [saving, setSaving] = useState(''), [page, setPage] = useState(1);
   const [teacher, setTeacher] = useState<Record<string, string>>({});
+  const [analyticsNotice, setAnalyticsNotice] = useState('');
   const pending = useRef<AbortController | null>(null);
   useEffect(() => () => pending.current?.abort(), []);
-  useEffect(() => { pending.current?.abort(); setBusy(false); setSnapshot(null); }, [start, end, offset]);
+  useEffect(() => { pending.current?.abort(); setBusy(false); setSnapshot(null); setAnalyticsNotice(''); }, [start, end, offset]);
   async function check() {
     const from = Date.parse(`${start}T00:00:00Z`), to = Date.parse(`${end}T00:00:00Z`);
     if (!Number.isFinite(from) || !Number.isFinite(to) || to < from || to - from > 31 * 86400000) { setError('Выберите период от 1 до 32 дней.'); return; }
     if (!/^[+-](?:0\d|1[0-4]):[0-5]\d$/.test(offset)) { setError('Укажите смещение времени проверки, например +06:00.'); return; }
     const period = new URLSearchParams({ startDate: new Date(`${start}T00:00:00${offset}`).toISOString(), endDate: new Date(`${end}T23:59:59.999${offset}`).toISOString() });
     pending.current?.abort(); const controller = new AbortController(); pending.current = controller;
-    setBusy(true); setError(''); setSnapshot(null); setPage(1);
+    setBusy(true); setError(''); setAnalyticsNotice(''); setSnapshot(null); setPage(1);
     try {
       const [faculties, groups, users, lessons] = await Promise.all([
         apiFetchAllPages<Faculty>('/admin/faculties', { signal: controller.signal }), apiFetchAllPages<Group>('/admin/groups', { signal: controller.signal }),
         apiFetchAllPages<Account>('/admin/users', { signal: controller.signal }), apiFetchAllPages<Lesson>(`/schedule/range?${period}`, { signal: controller.signal }),
       ]);
       if (!controller.signal.aborted) setSnapshot({ faculties, groups, users, lessons, start, end, offset, at: new Date().toLocaleString('ru-RU') });
+      if (!controller.signal.aborted) {
+        try {
+          const observed = await apiFetch<{ enabled: boolean; ready: boolean | null; recordedAt: string | null }>('/analytics/onboarding-observation', { method: 'POST', body: JSON.stringify({ startDate: period.get('startDate'), endDate: period.get('endDate') }), signal: controller.signal });
+          if (!controller.signal.aborted && observed.enabled) setAnalyticsNotice(observed.ready ? 'Сервер подтвердил готовность. Первое наблюдение сохранено для показателя времени подключения.' : 'Сервер пока не подтвердил готовность для аналитики. Проверьте список и повторите проверку после исправлений.');
+        } catch { if (!controller.signal.aborted) setAnalyticsNotice('Проверка готовности загружена, но наблюдение для аналитики сохранить не удалось. Повторная проверка безопасна.'); }
+      }
     } catch (cause) { if (!controller.signal.aborted) setError(errorMessage(cause)); }
     finally { if (!controller.signal.aborted) setBusy(false); }
   }
@@ -55,6 +62,7 @@ export default function ReadinessStep({ university }: { university: University }
   return <Card><h2 className="text-xl font-bold text-slate-950">Проверка готовности</h2><p className="mt-2 text-sm text-slate-600">Проверяется выбранный период, все страницы групп, пользователей и расписания. При ошибке запроса готовность не вычисляется.</p>
     <label className="mt-5 grid max-w-xs gap-2 text-sm font-semibold">Смещение времени проверки<input required className={fieldClass} value={offset} onChange={event => setOffset(event.target.value)} placeholder="+06:00" /></label><div className="mt-5 grid items-end gap-4 sm:grid-cols-3"><label className="grid gap-2 text-sm font-semibold">Начало проверки<input type="date" required className={fieldClass} value={start} onChange={event => { setStart(event.target.value); setSnapshot(null); }} /></label><label className="grid gap-2 text-sm font-semibold">Конец проверки<input type="date" required min={start} className={fieldClass} value={end} onChange={event => { setEnd(event.target.value); setSnapshot(null); }} /></label><Button disabled={busy || !!saving} loading={busy} onClick={() => void check()}>Проверить готовность</Button></div>
     {error && <p role="alert" className="mt-4 break-words text-red-800">{error}</p>}
+    {analyticsNotice && <p role="status" className="mt-4 break-words text-slate-700">{analyticsNotice}</p>}
     {snapshot && <section className="mt-6" aria-live="polite"><h3 className={`text-lg font-bold ${checks.every(check => check.ok) ? 'text-emerald-900' : 'text-amber-900'}`}>{checks.every(check => check.ok) ? 'Учебная настройка готова для выбранного периода' : 'Остались незавершённые шаги'}</h3><p className="mt-2 text-sm text-slate-600">{snapshot.start} — {snapshot.end}, UTC{snapshot.offset}; получено {snapshot.lessons.length} занятий. Проверено {snapshot.at}. Это не подтверждение всего семестра, юридической или серверной готовности.</p>
       <ul className="mt-4 space-y-3">{checks.map(check => <li key={check.label} className="flex gap-3 text-sm"><span className={`shrink-0 font-bold ${check.ok ? 'text-emerald-800' : 'text-amber-900'}`}>{check.ok ? 'Готово' : 'Нужно'}</span><span>{check.label}</span></li>)}</ul>
       {emptyGroups.length > 0 && <p className="mt-4 break-words text-sm text-amber-900">Без занятий: {emptyGroups.map(group => group.name).join(', ')}.</p>}

@@ -17,7 +17,7 @@ import { TenantContext } from '../src/common/tenant/tenant-context';
 import { fixtureDatabase } from './tenant-database.fixture';
 
 /** Destructive setup is allowed ONLY in a new disposable curation_test_* database. */
-export async function createCurationFixture(url: string) {
+export async function createCurationFixture(url: string, options: { universityIds?: [string,string] } = {}) {
   const target = new URL(url);
   if (!['localhost', '127.0.0.1'].includes(target.hostname) || !/^\/curation_test_[a-z0-9_]+$/.test(target.pathname)) throw new Error('A local disposable curation_test_* database is required');
   Object.assign(process.env, { DATABASE_URL: url, NODE_ENV: 'test', JWT_SECRET: randomBytes(32).toString('hex'), JWT_REFRESH_SECRET: randomBytes(32).toString('hex'), JWT_ACCESS_EXPIRATION: '15m', JWT_REFRESH_EXPIRATION: '30d', TELEGRAM_BOT_TOKEN: '', TELEGRAM_BOT_USERNAME: '', TELEGRAM_WEBHOOK_SECRET: '', MAX_BOT_TOKEN: '', SENTRY_DSN: '', RATE_LIMIT_MAX: '10000' });
@@ -31,8 +31,8 @@ export async function createCurationFixture(url: string) {
   await app.init();
   const db = fixtureDatabase(app.get(DataSource), app.get(TenantContext));
   if (await db.getRepository(User).count()) { await app.close(); throw new Error('Fixture database must contain no existing users'); }
-  const uni = await db.getRepository(University).save({ name: 'Кураторство — тест', city: 'Омск', status: 'active' });
-  const otherUni = await db.getRepository(University).save({ name: 'Другой вуз — тест', city: 'Омск', status: 'active' });
+  const uni = await db.getRepository(University).save({ ...(options.universityIds?{id:options.universityIds[0]}:{}), name: 'Кураторство — тест', city: 'Омск', status: 'active' });
+  const otherUni = await db.getRepository(University).save({ ...(options.universityIds?{id:options.universityIds[1]}:{}), name: 'Другой вуз — тест', city: 'Омск', status: 'active' });
   const faculty = await db.getRepository(Faculty).save({ universityId: uni.id, name: 'Информатика', code: 'ИН' });
   const otherFaculty = await db.getRepository(Faculty).save({ universityId: otherUni.id, name: 'Другой факультет', code: 'ДР' });
   const groups = await db.getRepository(Group).save([
