@@ -16,6 +16,8 @@ Schedule list/date/range/group/teacher/changed controls require a real B lesson 
 
 Seed a real B homework via HTTP. Progress and legacy submit create/update controls use its B student; foreign A calls must return 403/404 and preserve both universities. Include homework_progress/homework_submissions through their homework/space parent in snapshots; their lack of a direct university column must not omit them.
 
+Personal-route controls use same-key favorites in A/B, search results (excluding the intentional query echo), student/teacher My Day and actual loopback HTTP SSE replay. EventBus writes are fixture preparation, not proof of a user's publishing permission; replay is not live dispatch/reconnect coverage. My Day can create its own PairSpace, so compare B rather than calling the whole GET read-only.
+
 ## Read sequence
 
 1. Read [change safety](../change-safety.md).

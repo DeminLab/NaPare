@@ -17,6 +17,7 @@ import { Absence } from '../src/absences/entities/absence.entity';
 import { Notification } from '../src/notifications/entities/notification.entity';
 import { InboxItem } from '../src/notifications/entities/inbox-item.entity';
 import { NotificationEventHandler } from '../src/notifications/events/notification-event.handler';
+import { EventBusService } from '../src/events/event-bus.service';
 
 const suite = process.env.TENANT_TEST_DATABASE_URL ? describe : describe.skip;
 suite('Tenant isolation: real HTTP, JWT, services and PostgreSQL', () => {
@@ -383,6 +384,80 @@ suite('Tenant isolation: real HTTP, JWT, services and PostgreSQL', () => {
     expect(JSON.stringify(response.body)).not.toContain(objects[key]);
     expect(await foreignState()).toEqual(before);
   });
+  it.each(['group', 'teacher'])('keeps favorites private during same-key add/update/delete: %s', async kind => {
+    const externalId = kind === 'group' ? '987654321' : 'synthetic-teacher';
+    const bLabel = `Private B favorite ${randomUUID()}`, aLabel = 'Own A favorite';
+    await call('POST', '/api/v1/users/me/favorites', 'foreignStudent').send({ kind, externalId, label: bLabel }).expect(201);
+    const control = await call('GET', '/api/v1/users/me/favorites', 'foreignStudent').expect(200);
+    expect(control.body).toEqual(expect.arrayContaining([expect.objectContaining({ kind, externalId, label: bLabel, userId: fixture.users.foreignStudent.id, universityId: fixture.otherUni.id })]));
+    const before = await foreignState();
+    await call('POST', '/api/v1/users/me/favorites', 'student').send({ kind, externalId, label: aLabel }).expect(201);
+    await call('POST', '/api/v1/users/me/favorites', 'student').send({ kind, externalId, label: aLabel + ' updated' }).expect(201);
+    const own = await call('GET', '/api/v1/users/me/favorites', 'student').expect(200);
+    expect(JSON.stringify(own.body)).not.toContain(bLabel);
+    expect(own.body).toEqual(expect.arrayContaining([expect.objectContaining({ kind, externalId, userId: fixture.users.student.id, universityId: fixture.uni.id })]));
+    await call('DELETE', '/api/v1/users/me/favorites', 'student').send({ kind, externalId }).expect(200);
+    expect(await foreignState()).toEqual(before);
+  });
+  it.each([['admin', 'foreignAdmin'], ['student', 'foreignStudent'], ['teacher', 'outsider']])('keeps search private for %s with a real B hit', async (aActor, bActor) => {
+    const lesson = await privileged(() => fixture.db.getRepository(Lesson).findOneByOrFail({ id: objects.lesson }));
+    const path = '/api/v1/search?q=' + encodeURIComponent(lesson.subject);
+    const control = await call('GET', path, bActor).expect(200);
+    expect(JSON.stringify(control.body.results)).toContain(objects.lesson);
+    const before = await foreignState();
+    const response = await call('GET', path, aActor).expect(200);
+    expect(response.body.query).toBe(lesson.subject);
+    expect(response.body.results).toEqual([]);
+    expect(await foreignState()).toEqual(before);
+  });
+  it.each([['student', 'foreignStudent'], ['teacher', 'outsider']])('keeps my-day private for %s with actual B lessons', async (aActor, bActor) => {
+    const path = '/api/v1/my-day?timeZone=Asia%2FOmsk';
+    const control = await call('GET', path, bActor).expect(200);
+    expect(JSON.stringify(control.body)).toContain(objects.lesson);
+    const before = await foreignState();
+    const response = await call('GET', path, aActor).expect(200);
+    expect(JSON.stringify(response.body)).not.toContain(objects.lesson);
+    expect(JSON.stringify(response.body)).not.toContain(objects.homework);
+    expect(await foreignState()).toEqual(before);
+  });
+  it('keeps event history and real HTTP SSE replay private across universities', async () => {
+    const tenant = fixture.app.get(TenantContext), bus = fixture.app.get(EventBusService);
+    const publish = (actorKey: string, studentKey: string, label: string) => tenant.runInRequest(() => {
+      const actor = fixture.users[actorKey]; tenant.setUser(actor);
+      return bus.publish({ type: 'lesson.changed', universityId: actor.universityId!, actor: { type: 'user', id: actor.id, role: actor.role },
+        target: { type: 'lesson', id: actorKey === 'admin' ? objects.ownLesson : objects.lesson },
+        recipients: [fixture.users[studentKey].id], payload: { subject: label, deepLink: '/schedule' } });
+    });
+    const bMarker = `private-b-${randomUUID()}`, aMarker = `own-a-${randomUUID()}`;
+    await publish('foreignAdmin', 'foreignStudent', bMarker);
+    await publish('admin', 'student', aMarker);
+    const before = await foreignState();
+    const b = await call('GET', '/api/v1/events', 'foreignStudent').expect(200);
+    expect(JSON.stringify(b.body)).toContain(bMarker);
+    const a = await call('GET', '/api/v1/events', 'student').expect(200);
+    expect(JSON.stringify(a.body)).toContain(aMarker);
+    expect(JSON.stringify(a.body)).not.toContain(bMarker);
+    const server = fixture.app.getHttpServer();
+    if (!server.listening) await fixture.app.listen(0, '127.0.0.1');
+    const port = (server.address() as { port: number }).port;
+    const replay = async (actor: string, marker: string) => {
+      const controller = new AbortController(), timeout = setTimeout(() => controller.abort(), 4000);
+      let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
+      try {
+        const response = await fetch(`http://127.0.0.1:${port}/api/v1/events/stream`, { headers: { Authorization: `Bearer ${tokens[actor]}` }, signal: controller.signal });
+        expect(response.status).toBe(200); expect(response.headers.get('content-type')).toContain('text/event-stream');
+        reader = response.body!.getReader(); const decoder = new TextDecoder(); let text = '';
+        while (!text.includes(marker)) {
+          const part = await reader.read(); if (part.done) throw new Error('SSE ended before the owned event');
+          text += decoder.decode(part.value, { stream: true }); if (text.length > 1000000) throw new Error('SSE fixture exceeded its evidence bound');
+        }
+        return text;
+      } finally { clearTimeout(timeout); controller.abort(); await reader?.cancel().catch(() => undefined); }
+    };
+    expect(await replay('foreignStudent', bMarker)).toContain(bMarker);
+    expect(await replay('student', aMarker)).not.toContain(bMarker);
+    expect(await foreignState()).toEqual(before);
+  }, 15000);
   it('keeps foreign rows unchanged after the negative HTTP probes', async () => {
     await privileged(async () => {
       expect((await fixture.db.getRepository(Lesson).findOneByOrFail({ id: objects.lesson })).room).toBe(fixture.lesson.room);
