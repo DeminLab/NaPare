@@ -2,6 +2,8 @@
 
 25 октября 2026. Инструмент аудита P0-1: связывает AST-инвентаризацию с фактическими HTTP-ответами тестовых AppModule. Это перечень наблюдений, **не verdict безопасности и не процент выполнения цели**. Предметные доказательства с положительным Б/отрицательным А и проверкой строк описаны [отдельно](business-tenant-probes-2026-10-25.md).
 
+Полный [CI PR 35](https://github.com/DeminLab/NaPare/actions/runs/40124663302) на `784d2b2` прошёл все шесть jobs: 20 E2E suites, 4902 passed/1 skipped. Зафиксированы 912 ответов по 161 объявлению, 214 без наблюдений, неизвестных шаблонов 0. [Artifact e2e-test-report](https://github.com/DeminLab/NaPare/actions/runs/40124663302/artifacts/12572710595) хранится по политике GitHub CI; копии метаданных допускаются в ignored output, не в Git. Крупные группы без наблюдений: `PlatformCareerController` — 36, `CareerController` — 33, `PlatformController` — 15, `AdminController` — 14, `PlatformRecordsController` — 14. Это список для дальнейшего разбора, не verdict.
+
 ## Сбор
 
 [Test-only middleware](../../apps/backend/test/http-route-evidence.ts) подключён к curation fixture (ею пользуются также platform и feature suites) и app.e2e-spec. Он выключен без `BUSINESS_ROUTE_EVIDENCE_FILE` и запрещён вне NODE_ENV=test. Guard-probe серверы и отдельные parser-серверы этим helper не инструментируются. Прямые service/SQL-вызовы в HTTP-отчёт не входят.
@@ -13,7 +15,7 @@
 | method/path | Метод и объявленный Express route template, без подставленных ID/query/originalUrl |
 | status | Фактический код ответа |
 | role | Enum роли либо anonymous/other; не имя пользователя |
-| scope | primary/secondary для двух вузов fixture, other/none; UUID не записывается |
+| scope | Bucket основной привязки req.user.universityId: primary/secondary для двух вузов fixture, other/none. Это не область ресурса/SQL или дополнительных platform grants; UUID не записывается |
 | suite | Только basename E2E-файла |
 | caseId | Хеш названия test/setup; само название и параметры не сохраняются |
 

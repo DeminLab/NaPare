@@ -1,6 +1,18 @@
 # Совместная проверка улучшений — 22 октября 2026
 
-Документ для ревьюера интеграционной ветки `codex/improvement-integration` (PR 13). Ветка объединяет изменения PR 1–12 и 14–33 на базе `6f28912`; это кандидат для совместного ревью, не deployment и не утверждение полного выполнения [плана](improvement-plan-2026-10-22.md).
+Документ для ревьюера интеграционной ветки `codex/improvement-integration` (PR 13). Ветка объединяет изменения PR 1–12 и 14–35 на базе `6f28912`; это кандидат для совместного ревью, не deployment и не утверждение полного выполнения [плана](improvement-plan-2026-10-22.md).
+
+## Добавление 25 октября: наблюдаемые HTTP-маршруты CI
+
+[PR 35](https://github.com/DeminLab/NaPare/pull/35), `784d2b2`, включён после [успешного CI](https://github.com/DeminLab/NaPare/actions/runs/40124663302), все шесть jobs. Полный E2E — 20 suites, 4902 passed/1 skipped. Test-only сборщик на настоящих AppModules записал 912 ответов по 161 объявлению из inventory375; 214 без наблюдений этого прогона, неизвестных шаблонов 0. Guard probes не инструментируются. [Artifact](https://github.com/DeminLab/NaPare/actions/runs/40124663302/artifacts/12572710595) содержит только метаданные и обычный Jest log; сырые evidence-файлы в Git не включены.
+
+[Контракт и ограничения](../security/business-route-evidence.md): response code не доказывает выполнение handler/корректный Б/А контроль/неизменность БД. Крупные группы без HTTP-наблюдений: `PlatformCareerController` — 36, `CareerController` — 33, `PlatformController` — 15, `AdminController` — 14, `PlatformRecordsController` — 14. Это вход для разбора, не автоматический verdict или заявление, что все эти методы небезопасны/вообще не имеют service-тестов. Полный P0-1 остаётся открытым. Код приложения не менялся этим сборщиком; production-телеметрии нет.
+
+## Добавление 25 октября: личные маршруты и настоящий SSE replay
+
+[PR 34](https://github.com/DeminLab/NaPare/pull/34), `ffb34d7`, включён после [успешного CI](https://github.com/DeminLab/NaPare/actions/runs/40123794480), все шесть jobs; 20 E2E suites, 4902 passed/1 skipped. Локальный tenant suite — 100 passed. Добавлены same-key favorites add/update/delete, поиск трёх ролей, My Day студента/преподавателя и настоящий loopback HTTP SSE replay с разными вузами/получателями. Снимки Б неизменны; query echo поиска отделён от результатов. SSE live dispatch/reconnect и numeric/SIBIT не выводятся из replay.
+
+Первый CI на `c1f6236` выявил ошибку timezone тестовых данных: локальные 08:30 на UTC-host были вчера для текущего дня Asia/Omsk. Контрольное занятие теперь привязано к текущему instant непосредственно перед My Day. Повторный настоящий прогон под TZ=UTC — 100 passed; продуктовые правила/проверки изоляции не ослаблялись. My Day getOrCreate может материализовать своё пространство; весь GET не объявляется read-only.
 
 ## Добавление 25 октября: отказ вместо 500 при чужом homework
 
