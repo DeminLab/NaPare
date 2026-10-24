@@ -1,6 +1,12 @@
 # Совместная проверка улучшений — 22 октября 2026
 
-Документ для ревьюера интеграционной ветки `codex/improvement-integration` (PR 13). Ветка объединяет изменения PR 1–12 и 14–25 на базе `6f28912`; это кандидат для совместного ревью, не deployment и не утверждение полного выполнения [плана](improvement-plan-2026-10-22.md).
+Документ для ревьюера интеграционной ветки `codex/improvement-integration` (PR 13). Ветка объединяет изменения PR 1–12 и 14–26 на базе `6f28912`; это кандидат для совместного ревью, не deployment и не утверждение полного выполнения [плана](improvement-plan-2026-10-22.md).
+
+## Добавление 24 октября: контингент и подтверждённые реестры долгов
+
+[PR 26](https://github.com/DeminLab/NaPare/pull/26), `dfcdc4c`, включён fast-forward после [успешного CI](https://github.com/DeminLab/NaPare/actions/runs/40082067624): все шесть jobs, включая полный Backend E2E и Linux production build. Предшествующий интеграционный `47ad066` также прошёл [общий CI](https://github.com/DeminLab/NaPare/actions/runs/40080034532).
+
+Отчёты текущих активных аккаунтов, подтверждённые полные снимки задолженностей групп, атомарная история/повтор импорта, office/dean scope, source coverage и CSV текущей страницы. FORCE RLS migration42, собственный export и сохранение учебного архива под кодом. 11 новых настоящих JWT/HTTP/PG, 14 office regressions, 5 export regressions, 492 unit и 4607 guard probes; browser Next/Nest/PG прошёл импорт/ошибку/пустой снимок/45 строк/пагинацию/CSV/keyboard/network/session и четыре ширины, scoped axe 0 violations/0 incomplete. [Контракт и границы](../modules/academic-office-reports.md). Подтверждение администратора не является независимой проверкой подлинности документа; реальный реестр не предоставлен. Контингент платформы не заменяет приказы вуза. Main/production не менялись.
 
 ## Добавление 24 октября: аналитика и HTTP parser patch
 
