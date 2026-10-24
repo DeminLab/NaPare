@@ -411,6 +411,9 @@ suite('Tenant isolation: real HTTP, JWT, services and PostgreSQL', () => {
     expect(await foreignState()).toEqual(before);
   });
   it.each([['student', 'foreignStudent'], ['teacher', 'outsider']])('keeps my-day private for %s with actual B lessons', async (aActor, bActor) => {
+    // A host-local 08:30 fixture may be yesterday in Asia/Omsk on a UTC CI host.
+    const now = new Date();
+    await privileged(() => fixture.db.getRepository(Lesson).update(objects.lesson, { startDate: now, endDate: new Date(now.getTime() + 3600000) }));
     const path = '/api/v1/my-day?timeZone=Asia%2FOmsk';
     const control = await call('GET', path, bActor).expect(200);
     expect(JSON.stringify(control.body)).toContain(objects.lesson);
