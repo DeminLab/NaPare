@@ -4,7 +4,7 @@ const root = path.resolve(__dirname, '..'), output = path.join(root, 'output');
 const filename = path.resolve(root, process.env.BUSINESS_ROUTE_EVIDENCE_FILE || 'output/business-route-evidence.jsonl');
 const relative = path.relative(output, filename);
 if (relative.startsWith('..') || path.isAbsolute(relative) || !filename.endsWith('.jsonl')) throw new Error('Evidence input must be JSONL inside output');
-const key = (method, route) => method + ' ' + route.replace(/\/+$/, '').replace(/:[A-Za-z_][A-Za-z0-9_]*/g, ':param');
+const key = (method, route) => (method === 'GET/SSE' ? 'GET' : method) + ' ' + route.replace(/\/+$/, '').replace(/:[A-Za-z_][A-Za-z0-9_]*/g, ':param');
 const records = fs.existsSync(filename) ? fs.readFileSync(filename, 'utf8').split(/\r?\n/).filter(Boolean).map((line, index) => {
   try { return JSON.parse(line); } catch { throw new Error(`Invalid evidence JSONL at line ${index + 1}`); }
 }) : [];

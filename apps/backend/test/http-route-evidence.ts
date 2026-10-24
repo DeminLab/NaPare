@@ -15,7 +15,10 @@ export function installHttpRouteEvidence(app: INestApplication, universityIds: (
   if (relative.startsWith('..') || path.isAbsolute(relative) || !filename.endsWith('.jsonl')) throw new Error('Evidence must be a JSONL file inside workspace output');
   mkdirSync(path.dirname(filename), { recursive: true });
   app.use((req: Request, res: Response, next: NextFunction) => {
-    res.once('finish', () => {
+    let recorded = false;
+    const recordResponse = () => {
+      if (recorded || !res.headersSent) return;
+      recorded = true;
       const route: unknown = req.route?.path;
       if (typeof route !== 'string' || !route.startsWith('/api/v1') || !['GET', 'POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) return;
       const state = typeof expect === 'function' ? expect.getState() : undefined;
@@ -27,7 +30,9 @@ export function installHttpRouteEvidence(app: INestApplication, universityIds: (
       const role = actor?.role && Object.values(UserRole).includes(actor.role) ? actor.role : actor ? 'other' : 'anonymous';
       appendFileSync(filename, JSON.stringify({ method: req.method, path: route, status: res.statusCode, role, scope, suite,
         caseId: createHash('sha256').update(suite + ':' + (state?.currentTestName || 'setup')).digest('hex').slice(0, 16) }) + '\n');
-    });
+    };
+    res.once('finish', recordResponse);
+    res.once('close', recordResponse);
     next();
   });
 }
