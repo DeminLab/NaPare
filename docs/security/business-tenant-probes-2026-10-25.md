@@ -26,7 +26,7 @@
 
 ## Границы результата
 
-25 октября локально прошли все 67 HTTP/PostgreSQL сценариев этого suite, backend typecheck, root lint/docs lint, AI/boundary guards, inventory375 и проверка локальных ссылок. Это число сценариев, а не число уникальных маршрутов. PR/CI и включение в интеграцию ещё проверяются отдельно.
+25 октября локально прошли все 67 HTTP/PostgreSQL сценариев этого suite, backend typecheck, root lint/docs lint, AI/boundary guards, inventory375 и проверка локальных ссылок. Это число сценариев, а не число уникальных маршрутов. [PR 28](https://github.com/DeminLab/NaPare/pull/28) включён в интеграцию после [успешного CI](https://github.com/DeminLab/NaPare/actions/runs/40119582581), все шесть jobs.
 
 Окончательные число сценариев, PR и CI фиксируются в [журнале выполнения](../project-log/improvement-progress-2026-10-22.md). Эта серия усиливает существующий учебный HTTP suite; отдельные suites офисных запросов/отчётов, платформенных grants, карьеры, платежей, экспорта/удаления, аналитики и WebPush остаются самостоятельными доказательствами.
 
