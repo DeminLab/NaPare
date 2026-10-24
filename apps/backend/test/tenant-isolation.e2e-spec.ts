@@ -73,17 +73,17 @@ suite('Tenant isolation: real HTTP, JWT, services and PostgreSQL', () => {
   afterAll(async () => { await fixture?.app.close(); });
 
   // A 404 is meaningful only after the same handler can read the existing B resource.
-  const foreignState = () => privileged(async () => {
+  const foreignState = (universityId = fixture.otherUni.id) => privileged(async () => {
     await new Promise<void>(resolve => setImmediate(resolve));
     while (eventWork.length) await Promise.all(eventWork.splice(0));
     const state: Record<string, unknown> = {};
     for (const entity of fixture.db.entityMetadatas.filter(entity => entity.columns.some(column => column.databaseName === 'universityId'))) {
-      state[entity.tableName] = await fixture.db.query(`SELECT to_jsonb(t) AS row FROM "${entity.tableName}" t WHERE "universityId" = $1 ORDER BY to_jsonb(t)::text`, [fixture.otherUni.id]);
+      state[entity.tableName] = await fixture.db.query(`SELECT to_jsonb(t) AS row FROM "${entity.tableName}" t WHERE "universityId" = $1 ORDER BY to_jsonb(t)::text`, [universityId]);
     }
     for (const table of ['announcements', 'homeworks', 'file_attachments', 'discussion_messages']) {
-      state[table] = await fixture.db.query(`SELECT to_jsonb(t) AS row FROM "${table}" t JOIN pair_spaces p ON p.id = t."pairSpaceId" WHERE p."universityId" = $1 ORDER BY to_jsonb(t)::text`, [fixture.otherUni.id]);
+      state[table] = await fixture.db.query(`SELECT to_jsonb(t) AS row FROM "${table}" t JOIN pair_spaces p ON p.id = t."pairSpaceId" WHERE p."universityId" = $1 ORDER BY to_jsonb(t)::text`, [universityId]);
     }
-    state.absence_confirmations = await fixture.db.query('SELECT to_jsonb(t) AS row FROM absence_confirmations t JOIN absences a ON a.id = t."absenceId" WHERE a."universityId" = $1 ORDER BY to_jsonb(t)::text', [fixture.otherUni.id]);
+    state.absence_confirmations = await fixture.db.query('SELECT to_jsonb(t) AS row FROM absence_confirmations t JOIN absences a ON a.id = t."absenceId" WHERE a."universityId" = $1 ORDER BY to_jsonb(t)::text', [universityId]);
     return state;
   });
 
@@ -219,6 +219,63 @@ suite('Tenant isolation: real HTTP, JWT, services and PostgreSQL', () => {
       groupId: objects.ownGroup, teacherId: objects.teacher, dayOfWeek: 1,
       startTime: '08:30', endTime: '10:00', pairNumber: 1, validFrom: '2026-09-01',
     }).expect(404);
+  });
+
+  it('creates identical course codes within each JWT university without touching B', async () => {
+    const body = { code: `ISOLATED-${randomUUID()}`, name: 'Synthetic scoped course' };
+    const b = await call('POST', '/api/v1/academic/courses', 'foreignAdmin').send(body).expect(201);
+    expect(b.body.universityId).toBe(fixture.otherUni.id);
+    const before = await foreignState();
+    const a = await call('POST', '/api/v1/academic/courses').send(body).expect(201);
+    expect(a.body.universityId).toBe(fixture.uni.id);
+    expect(a.body.id).not.toBe(b.body.id);
+    await call('GET', '/api/v1/academic/courses/' + a.body.id + '/space').expect(200);
+    expect(await foreignState()).toEqual(before);
+  });
+  it.each(['POST', 'PATCH'])('rejects a foreign faculty during course %s without partial writes in either university', async method => {
+    const body = method === 'POST' ? { code: `FACULTY-${randomUUID()}`, name: 'Synthetic course', facultyId: objects.faculty } : { facultyId: objects.faculty };
+    const bPath = method === 'POST' ? '/api/v1/academic/courses' : '/api/v1/academic/courses/{course}';
+    await call(method, bPath, 'foreignAdmin').send(body).expect(method === 'POST' ? 201 : 200);
+    const beforeB = await foreignState(), beforeA = await foreignState(fixture.uni.id);
+    const aPath = method === 'POST' ? bPath : '/api/v1/academic/courses/{ownCourse}';
+    await call(method, aPath).send(body).expect(404);
+    expect(await foreignState()).toEqual(beforeB);
+    expect(await foreignState(fixture.uni.id)).toEqual(beforeA);
+  });
+  it('rejects creation of a series under a foreign course with a valid B context', async () => {
+    const body = { groupId: objects.group, teacherId: objects.teacher, dayOfWeek: 2, startTime: '10:00', endTime: '11:30', pairNumber: 2, validFrom: '2026-09-01' };
+    const path = '/api/v1/academic/courses/{course}/series';
+    await call('POST', path, 'foreignAdmin').send(body).expect(201);
+    const beforeB = await foreignState(), beforeA = await foreignState(fixture.uni.id);
+    await call('POST', path).send(body).expect(404);
+    expect(await foreignState()).toEqual(beforeB);
+    expect(await foreignState(fixture.uni.id)).toEqual(beforeA);
+  });
+  it.each(['groupId', 'teacherId'] as const)('rejects a foreign %s in a new series of an own course', async field => {
+    const body = { groupId: objects.group, teacherId: objects.teacher, dayOfWeek: 3, startTime: '10:00', endTime: '11:30', pairNumber: 2, validFrom: '2026-09-01' };
+    await call('POST', '/api/v1/academic/courses/{course}/series', 'foreignAdmin').send(body).expect(201);
+    const beforeB = await foreignState(), beforeA = await foreignState(fixture.uni.id);
+    await call('POST', '/api/v1/academic/courses/{ownCourse}/series').send({ ...body, groupId: field === 'groupId' ? objects.group : objects.ownGroup, teacherId: field === 'teacherId' ? objects.teacher : fixture.users.teacher.id }).expect(404);
+    expect(await foreignState()).toEqual(beforeB);
+    expect(await foreignState(fixture.uni.id)).toEqual(beforeA);
+  });
+  it.each(['courseId', 'groupId', 'occurrenceId'] as const)('rejects a foreign %s in event creation without partial rows', async field => {
+    const key = field === 'courseId' ? 'course' : field === 'groupId' ? 'group' : 'occurrence';
+    const body = { type: 'university_event', title: 'Synthetic referenced event', [field]: objects[key] };
+    await call('POST', '/api/v1/academic/events', 'foreignAdmin').send(body).expect(201);
+    const beforeB = await foreignState(), beforeA = await foreignState(fixture.uni.id);
+    await call('POST', '/api/v1/academic/events').send(body).expect(404);
+    expect(await foreignState()).toEqual(beforeB);
+    expect(await foreignState(fixture.uni.id)).toEqual(beforeA);
+  });
+  it('creates unlinked events only in the JWT university', async () => {
+    const body = { type: 'university_event', title: 'Synthetic unlinked event' };
+    const b = await call('POST', '/api/v1/academic/events', 'foreignAdmin').send(body).expect(201);
+    expect(b.body.universityId).toBe(fixture.otherUni.id);
+    const before = await foreignState();
+    const a = await call('POST', '/api/v1/academic/events').send(body).expect(201);
+    expect(a.body.universityId).toBe(fixture.uni.id);
+    expect(await foreignState()).toEqual(before);
   });
   it('rejects a foreign occurrence on an own-university academic event', async () => {
     await call('POST', '/api/v1/academic/events').send({
