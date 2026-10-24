@@ -171,6 +171,7 @@ export default function ConnectionsPage() {
           {maxLinked ? <span className="connections-success" role="status">Аккаунт подключён</span> : <button type="button" onClick={() => void linkMaxAccount()} disabled={maxBusy || checking || !signedIn || !insideMax} className="connections-button">{maxBusy ? 'Связываем…' : 'Связать MAX　→'}</button>}
           {maxError && <p className="connections-error" role="alert">{maxError}</p>}
           <button type="button" className="connections-refresh" onClick={() => window.location.reload()}>◌　Обновить статус</button>
+          <p><Link href="/notifications/setup">Настроить уведомления этого браузера</Link></p>
           <p className="connections-secure">♢　Подключение выполняется в безопасном режиме</p>
         </section>
       </main>

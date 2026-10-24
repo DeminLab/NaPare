@@ -93,7 +93,7 @@ export default function AccountDataControls() {
       if (result.success !== true || result.archiveCode !== details.account.id || !result.deletedAt || !Array.isArray(result.retained)) throw new Error('Сервер не подтвердил результат удаления.');
       setReceipt(result); setDetails(null);
       const cleared = await clearAccountSession(details.session);
-      setStatus(cleared ? 'Сессия и локальный кэш расписания в этом браузере очищены.' : 'Удаление подтверждено, но очистку локального кэша проверить не удалось. Очистите данные сайта в настройках браузера.');
+      setStatus(cleared ? 'Сессия, локальный кэш расписания и подписка уведомлений в этом браузере очищены.' : 'Удаление подтверждено, но очистку локальных данных и подписки уведомлений проверить не удалось. Очистите данные сайта в настройках браузера.');
     } catch (failure) {
       if (!next.signal.aborted) setError(`${failure instanceof Error ? failure.message : 'Не удалось получить ответ сервера.'} Если связь прервалась, операция могла завершиться. Обновите сведения перед повторной попыткой.`);
     } finally { pending.current = false; if (!next.signal.aborted) setBusy(false); }

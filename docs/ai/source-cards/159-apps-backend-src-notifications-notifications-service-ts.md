@@ -10,6 +10,8 @@ Event notifications and inbox items retain existing schemas and scopes. Preparat
 
 Notification creation delegates to the transactional PostgreSQL outbox when the delivery service is installed. Legacy tokens remain inert; WebPush/RuStore registration validates the provider-specific token. See [notification delivery](../../integrations/notification-delivery.md).
 
+Legacy token updates whitelist registration fields instead of saving a stale entity. They cannot restore WebPush consent revoked by concurrent logout; explicit consent belongs to the dedicated self API. Preserve this separation and the HTTP/PostgreSQL race regression.
+
 ## Read sequence
 
 1. Read [the Notifications module](../../modules/notifications.md) and the [Schedule module](../../modules/schedule.md).

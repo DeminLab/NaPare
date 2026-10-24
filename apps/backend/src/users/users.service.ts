@@ -9,6 +9,7 @@ import { CreateUserDto } from "./dto/create-user.dto";
 import { TenantContext } from "../common/tenant/tenant-context";
 import { UserRole } from "../auth/interfaces/user-role";
 import { PlatformService } from '../platform/platform.service';
+import { DeviceToken } from '../notifications/entities/device-token.entity';
 import {
   PaginatedResponse,
   PaginationQueryDto,
@@ -215,7 +216,10 @@ export class UsersService {
     if (this.tenantContext.getUser()?.id !== id) await this.platform?.protectLegacyMutation(id);
     const user = await this.findById(id);
     if (!user) throw new NotFoundException(`User with id ${id} not found`);
-    await this.usersRepository.increment({ id: user.id }, "sessionVersion", 1);
+    await this.usersRepository.manager.transaction(async manager => {
+      await manager.increment(User, { id: user.id }, 'sessionVersion', 1);
+      await manager.update(DeviceToken, { userId: user.id, provider: 'webpush' }, { isActive: false, webPushRevokedAt: new Date() });
+    });
   }
 
   async deactivate(id: string): Promise<void> {

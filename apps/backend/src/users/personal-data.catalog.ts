@@ -47,7 +47,7 @@ export const PERSONAL_DATASETS: readonly PersonalDataset[] = [
   entry('curator_assignments', 'userId', 'id universityId groupId createdAt revokedAt'),
   activity('curator_assignments', 'grantedBy revokedBy', 'id universityId groupId createdAt revokedAt'),
   entry('user_favorites', 'userId', 'id universityId kind externalId label createdAt updatedAt'),
-  entry('device_tokens', 'userId', 'id provider platform deviceName isActive createdAt updatedAt'),
+  entry('device_tokens', 'userId', 'id provider platform deviceName isActive webPushConsentedAt webPushConsentVersion webPushRevokedAt createdAt updatedAt'),
   entry('inbox_items', 'userId', 'id universityId type title description deepLink priority status dueAt completedAt createdAt updatedAt'),
   entry('notification_deliveries', 'userId', 'id universityId notificationId channel status attempts createdAt updatedAt'),
   entry('notification_preferences', 'userId', 'id universityId scheduleChanges cancellations roomChanges homeworkCreated deadlines messages announcements systemAlerts telegramEnabled quietHoursEnabled quietHoursStart quietHoursEnd timeZone updatedAt'),

@@ -39,6 +39,10 @@ export class DeviceToken {
   @Column({ default: true })
   isActive: boolean;
 
+  @Column('timestamp', { nullable: true }) webPushConsentedAt: Date | null;
+  @Column('varchar', { nullable: true }) webPushConsentVersion: string | null;
+  @Column('timestamp', { nullable: true }) webPushRevokedAt: Date | null;
+
   @CreateDateColumn()
   createdAt: Date;
 

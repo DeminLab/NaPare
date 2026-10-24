@@ -10,4 +10,6 @@ Authenticated profile/preview loading, verified complete JSON download, explicit
 
 ## Verification
 
+Deletion receipts distinguish confirmed server deletion from partial local cache/push cleanup. Preserve the new-session guard.
+
 Portal typecheck, root lint and repository guards. Browser verification uses disposable synthetic accounts with real local Next/Nest/PostgreSQL; test current-account identity, errors, retained archive, JSON completeness and local cleanup separately from remote/device copies.

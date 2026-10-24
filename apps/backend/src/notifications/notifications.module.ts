@@ -21,6 +21,7 @@ import { NotificationDelivery } from './entities/notification-delivery.entity';
 import { NotificationDeliveryService } from './delivery/notification-delivery.service';
 import { NotificationProviders } from './delivery/push-providers';
 import { HEALTH_QUEUE_PROBE } from '../health.controller';
+import { WebPushClientService } from './webpush-client.service';
 
 @Module({
   imports: [
@@ -32,7 +33,7 @@ import { HEALTH_QUEUE_PROBE } from '../health.controller';
     EventEmitterModule,
     EventsModule,
   ],
-  providers: [NotificationsService, NotificationEventHandler, HomeworkDeadlineReminderService,
+  providers: [NotificationsService, WebPushClientService, NotificationEventHandler, HomeworkDeadlineReminderService,
     NotificationDeliveryService, NotificationProviders,
     { provide: HEALTH_QUEUE_PROBE, useExisting: NotificationDeliveryService }],
   controllers: [NotificationsController, DevicesController],

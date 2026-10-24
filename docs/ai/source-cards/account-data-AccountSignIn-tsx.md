@@ -10,4 +10,6 @@ Accessible in-place email/password login; failed submissions preserve the draft.
 
 ## Verification
 
+An optional submit label allows reuse on the WebPush setup page; the default account-data label remains unchanged.
+
 Portal typecheck, root lint and repository guards. Browser verification uses disposable synthetic accounts with real local Next/Nest/PostgreSQL; test current-account identity, errors, retained archive, JSON completeness and local cleanup separately from remote/device copies.

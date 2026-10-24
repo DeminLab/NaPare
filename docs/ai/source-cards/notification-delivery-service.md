@@ -8,6 +8,8 @@
 
 Transactional PostgreSQL outbox, scoped worker, BullMQ retry and readiness.
 
+WebPush targets require current unrevoked opt-in both when the outbox is created and immediately before provider sending. Legacy registration cannot override revocation; see [WebPush lifecycle](../../clients/webpush.md).
+
 ## Read sequence
 
 1. Read [notification delivery](../../integrations/notification-delivery.md).

@@ -10,4 +10,6 @@ Current password and two required confirmations; retained archive disclosure and
 
 ## Verification
 
+The disclosure includes local browser push cleanup after server confirmation; external copies remain an operator procedure.
+
 Portal typecheck, root lint and repository guards. Browser verification uses disposable synthetic accounts with real local Next/Nest/PostgreSQL; test current-account identity, errors, retained archive, JSON completeness and local cleanup separately from remote/device copies.

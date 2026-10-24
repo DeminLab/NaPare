@@ -3668,6 +3668,30 @@
       }
     },
     {
+      "id": "DevicesController.registerWebPush POST /api/v1/devices/webpush",
+      "source": "apps/backend/src/notifications/devices.controller.ts",
+      "method": "POST",
+      "path": "/api/v1/devices/webpush",
+      "guards": [
+        "JwtAuthGuard"
+      ],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 200,
+        "career_staff": 200,
+        "career_admin": 200,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
       "id": "DevicesController.removeToken DELETE /api/v1/devices/token",
       "source": "apps/backend/src/notifications/devices.controller.ts",
       "method": "DELETE",
@@ -3682,6 +3706,54 @@
         "employer": 403,
         "career_staff": 403,
         "career_admin": 403,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
+      "id": "DevicesController.revokeWebPush DELETE /api/v1/devices/webpush",
+      "source": "apps/backend/src/notifications/devices.controller.ts",
+      "method": "DELETE",
+      "path": "/api/v1/devices/webpush",
+      "guards": [
+        "JwtAuthGuard"
+      ],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 200,
+        "career_staff": 200,
+        "career_admin": 200,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
+      "id": "DevicesController.webPushStatus GET /api/v1/devices/webpush",
+      "source": "apps/backend/src/notifications/devices.controller.ts",
+      "method": "GET",
+      "path": "/api/v1/devices/webpush",
+      "guards": [
+        "JwtAuthGuard"
+      ],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 200,
+        "career_staff": 200,
+        "career_admin": 200,
         "teacher": 200,
         "curator": 200,
         "faculty_dean": 200,

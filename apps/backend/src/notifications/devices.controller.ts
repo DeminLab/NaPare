@@ -2,6 +2,8 @@ import {
   Controller,
   Delete,
   Post,
+  Get,
+  Header,
   Body,
   UseGuards,
   Request,
@@ -12,13 +14,22 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { RegisterDeviceTokenDto } from '../notifications/dto/register-device-token.dto';
 import { RemoveDeviceTokenDto } from '../notifications/dto/remove-device-token.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { WebPushClientService } from './webpush-client.service';
+import { WebPushConsentDto, WebPushTokenDto } from './dto/webpush-consent.dto';
 
 @ApiTags('devices')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('devices')
 export class DevicesController {
-  constructor(private readonly notificationsService: NotificationsService) {}
+  constructor(private readonly notificationsService: NotificationsService, private readonly webPush: WebPushClientService) {}
+
+  @Get('webpush') @Header('Cache-Control', 'private, no-store')
+  webPushStatus() { return this.webPush.status(); }
+  @Post('webpush') @Header('Cache-Control', 'private, no-store')
+  registerWebPush(@Body() dto: WebPushConsentDto) { return this.webPush.register(dto); }
+  @Delete('webpush') @Header('Cache-Control', 'private, no-store')
+  revokeWebPush(@Body() dto: WebPushTokenDto) { return this.webPush.revoke(dto.token); }
 
   @Post('token')
   @ApiOperation({ summary: 'Зарегистрировать токен устройства' })

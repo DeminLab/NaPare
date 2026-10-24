@@ -21,7 +21,7 @@ export default function AccountDeletionForm({ preview, busy, onSubmit }: {
     <ul>{preview.removed.map(item => <li key={item}>{item}</li>)}</ul>
     <h3>Что сохранится</h3>
     <ul id="account-retention">{preview.retained.map(item => <li key={item}>{item}</li>)}</ul>
-    <p>Копии на других устройствах не удаляются автоматически. Расписание в этом браузере будет очищено после подтверждения сервера.</p>
+    <p>Копии на других устройствах не удаляются автоматически. Расписание и подписка уведомлений в этом браузере будут очищены после подтверждения сервера.</p>
     {preview.blockers.length > 0 ? <div className={styles.notice}>
       <h3>Сначала передайте обязанности</h3>
       <ul>{preview.blockers.map(item => <li key={item.code}>{item.message}</li>)}</ul>

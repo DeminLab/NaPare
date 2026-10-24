@@ -64,7 +64,7 @@ export function rolePolicySnapshot(routes = discoverRoleRoutes()) {
       // Reviewable baseline for guard admission. Services, grants and ownership may still deny access.
       statuses: Object.fromEntries(USER_ROLES.map(role => {
         const careerRole = [UserRole.EMPLOYER, UserRole.CAREER_STAFF, UserRole.CAREER_ADMIN].includes(role);
-        const careerPath = /^\/api\/v1\/career(?:\/|$)/.test(path) || ['/api/v1/users/me', '/api/v1/users/me/export', '/api/v1/users/me/deletion-preview'].includes(path) || ['/api/v1/auth/logout', '/api/v1/auth/max/status', '/api/v1/auth/max/link'].includes(path);
+        const careerPath = /^\/api\/v1\/career(?:\/|$)/.test(path) || ['/api/v1/users/me', '/api/v1/users/me/export', '/api/v1/users/me/deletion-preview', '/api/v1/devices/webpush'].includes(path) || ['/api/v1/auth/logout', '/api/v1/auth/max/status', '/api/v1/auth/max/link'].includes(path);
         const denied = (guards.some(guard => guard.name === 'JwtAuthGuard') && careerRole && !careerPath) ||
           (guards.some(guard => guard.name === 'RolesGuard') && roles !== null && !roles.includes(role)) ||
           (guards.some(guard => guard.name === 'PermissionsGuard') && permissions?.some(permission => !ROLE_PERMISSIONS[role].includes(permission)));

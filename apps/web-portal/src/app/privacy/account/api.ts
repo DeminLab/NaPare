@@ -83,13 +83,22 @@ export async function clearAccountSession(session: Session): Promise<boolean> {
   localStorage.removeItem('accessToken');
   localStorage.removeItem('refreshToken');
   try {
+    let complete = true;
     const registrations = await navigator.serviceWorker?.getRegistrations();
     if (localStorage.getItem('accessToken') || localStorage.getItem('refreshToken')) return false;
     for (const registration of registrations || []) {
       if (new URL(registration.scope).pathname === '/student/') {
         for (const worker of [registration.active, registration.waiting, registration.installing]) worker?.postMessage({ type: 'NAPARE_CLEAR_OFFLINE' });
       }
+      if (new URL(registration.scope).pathname === '/notifications/') {
+        const script = registration.active?.scriptURL || registration.waiting?.scriptURL || registration.installing?.scriptURL;
+        if (!script || new URL(script).pathname !== '/notifications/push-worker.js') { complete = false; continue; }
+        const subscription = await registration.pushManager.getSubscription();
+        if (localStorage.getItem('accessToken') || localStorage.getItem('refreshToken')) return false;
+        if (subscription && !await subscription.unsubscribe()) complete = false;
+      }
     }
-    return !('caches' in window) || await caches.delete('napare-student-schedule-v1').then(() => true);
+    if (localStorage.getItem('accessToken') || localStorage.getItem('refreshToken')) return false;
+    return (!('caches' in window) || await caches.delete('napare-student-schedule-v1').then(() => true)) && complete;
   } catch { return false; }
 }

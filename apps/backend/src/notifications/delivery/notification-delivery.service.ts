@@ -7,6 +7,7 @@ import { TenantContext } from '../../common/tenant/tenant-context';
 import { Notification } from '../entities/notification.entity';
 import { NotificationDelivery, DeliveryStatus } from '../entities/notification-delivery.entity';
 import { DeviceToken } from '../entities/device-token.entity';
+import { hasWebPushConsent } from '../webpush-policy';
 import { NotificationPreference } from '../entities/notification-preference.entity';
 import { User } from '../../users/entities/user.entity';
 import { NotificationProviders, DeliveryError, DeliveryChannel } from './push-providers';
@@ -94,7 +95,7 @@ export class NotificationDeliveryService implements OnModuleInit, OnModuleDestro
       const devices = await manager.find(DeviceToken, { where: { userId: user.id, isActive: true } });
       const preferences = await manager.findOne(NotificationPreference, { where: { userId: user.id, universityId: dto.universityId } });
       const targets: Array<{ channel: DeliveryChannel; targetId: string }> = devices
-        .filter(device => device.provider === 'webpush' || device.provider === 'rustore')
+        .filter(device => device.provider === 'rustore' || device.provider === 'webpush' && hasWebPushConsent(device))
         .map(device => ({ channel: device.provider as DeliveryChannel, targetId: device.id }));
       if (preferences?.telegramEnabled && user.telegramUserId) targets.push({ channel: 'telegram', targetId: user.id });
       if (user.maxUserId && this.providers.supports('max')) targets.push({ channel: 'max', targetId: user.id });
@@ -173,7 +174,7 @@ export class NotificationDeliveryService implements OnModuleInit, OnModuleDestro
         else if (current.channel === 'max') token = user.maxUserId;
         else {
           const device = await manager.findOne(DeviceToken, { where: { id: current.targetId, userId: user.id, provider: current.channel, isActive: true } });
-          token = device?.token;
+          token = device && (current.channel !== 'webpush' || hasWebPushConsent(device)) ? device.token : null;
         }
         if (!token) throw new DeliveryError('target_revoked', true);
         return { token, notification };

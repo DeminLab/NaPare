@@ -4,6 +4,8 @@ Project guides, reference material and historical records live under this direct
 
 ## Sections
 
+- [WebPush browser setup](clients/webpush.md) — explicit opt-in, own worker scope, revocation/session lifecycle and device-test limits.
+
 - [Academic office reports](modules/academic-office-reports.md) — current-account contingent, confirmed group debt snapshots, scope and history.
 
 - [HTTP parser security patch, 24 October](security/request-parser-patch-2026-10-24.md) — body-parser/multer pins, isolated crash regressions and audit boundaries.

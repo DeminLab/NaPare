@@ -227,12 +227,11 @@ export class NotificationsService {
       if (currentUser && existingToken.userId !== userId) {
         throw new ForbiddenException('Device token belongs to another user');
       }
-      existingToken.userId = userId;
-      existingToken.platform = platform;
-      existingToken.provider = provider;
-      existingToken.deviceName = deviceName;
-      existingToken.isActive = true;
-      return this.deviceTokenRepository.save(existingToken);
+      // Never write a stale full entity over consent revoked by a concurrent logout.
+      await this.deviceTokenRepository.update({ id: existingToken.id, userId }, { platform, provider, deviceName, isActive: true });
+      const updated = await this.deviceTokenRepository.findOne({ where: { id: existingToken.id, userId } });
+      if (!updated) throw new ForbiddenException('Device token is no longer available');
+      return updated;
     }
 
     const deviceToken = this.deviceTokenRepository.create({
