@@ -6,4 +6,6 @@ export interface AuthenticatedUser {
   role: UserRole;
   universityId: string | null;
   groupId?: string | null;
+  /** Version checked by JwtStrategy, retained for locked revalidation of destructive actions. */
+  sessionVersion?: number;
 }

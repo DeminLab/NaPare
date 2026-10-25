@@ -17,18 +17,26 @@ import { Lesson } from '../schedule/entities/lesson.entity';
 import { EventsModule } from '../events/events.module';
 import { HomeworkDeadlineReminderService } from './homework-deadline-reminder.service';
 import { HomeworkProgress } from '../pair-space/entities/homework-progress.entity';
+import { NotificationDelivery } from './entities/notification-delivery.entity';
+import { NotificationDeliveryService } from './delivery/notification-delivery.service';
+import { NotificationProviders } from './delivery/push-providers';
+import { HEALTH_QUEUE_PROBE } from '../health.controller';
+import { WebPushClientService } from './webpush-client.service';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([
       Notification, DeviceToken, NotificationPreference, InboxItem, User,
       Homework, HomeworkProgress, PairSpace, Lesson,
+      NotificationDelivery,
     ]),
     EventEmitterModule,
     EventsModule,
   ],
-  providers: [NotificationsService, NotificationEventHandler, HomeworkDeadlineReminderService],
+  providers: [NotificationsService, WebPushClientService, NotificationEventHandler, HomeworkDeadlineReminderService,
+    NotificationDeliveryService, NotificationProviders,
+    { provide: HEALTH_QUEUE_PROBE, useExisting: NotificationDeliveryService }],
   controllers: [NotificationsController, DevicesController],
-  exports: [NotificationsService],
+  exports: [NotificationsService, HEALTH_QUEUE_PROBE],
 })
 export class NotificationsModule {}

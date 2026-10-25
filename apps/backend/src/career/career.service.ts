@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException, Optional, ServiceUnavailableException } from '@nestjs/common';
 import { DataSource, EntityManager, In, IsNull, MoreThanOrEqual, SelectQueryBuilder } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User } from '../users/entities/user.entity';
@@ -9,6 +9,9 @@ import { AuthService } from '../auth/auth.service';
 import { requireUniversityId } from '../common/tenant/require-university';
 import { CareerNotice, CareerTest, CareerTestAttempt, CareerCompany, CareerMembership, CareerPartnership, CareerProfile, CareerAdmission, CareerTask, CareerApplication, CareerWork, CareerReview, CareerPortfolio } from './career.entities';
 import { CareerTestDto, CareerAttemptDto, EmployerRegistrationDto, CareerCompanyDto, CareerProfileDto, CareerTaskDto, CareerMessageDto, CareerSubmissionDto, CareerDecisionDto, CareerReviewDto, CareerMembershipDto, CareerAdmissionDto } from './career.dto';
+import { randomUUID } from 'node:crypto';
+import { TenantContext } from '../common/tenant/tenant-context';
+import { CompanyRegistryService } from './company-registry.service';
 
 type Actor = AuthenticatedUser;
 type CareerTaskListQuery = {offset?: string; limit?: string; q?: string; category?: string; state?: string};
@@ -33,7 +36,7 @@ export function assertCareerResultUrl(value: string): void {
 
 @Injectable()
 export class CareerService {
-  constructor(private readonly db: DataSource, private readonly auth: AuthService) {}
+  constructor(private readonly db: DataSource, private readonly auth: AuthService, private readonly tenant: TenantContext = new TenantContext(), @Optional() private readonly registry?: CompanyRegistryService) {}
   private repo<T extends object>(entity: new () => T, manager = this.db.manager) { return manager.getRepository(entity); }
   private async university(id: string) { if (!await this.repo(University).existsBy({id})) throw new NotFoundException('Вуз не найден'); }
   private async center(actor: Actor, universityId: string, administrator = false): Promise<void> {
@@ -43,10 +46,19 @@ export class CareerService {
     const roles = administrator ? ['career_admin'] : ['career_admin','career_staff'];
     if (!await this.repo(CareerMembership).existsBy({userId:actor.id,universityId,role:In(roles),revokedAt:IsNull()})) throw new ForbiddenException('Нужны права карьерного центра');
   }
+  async assertCenterAccess(actor: Actor): Promise<string> {
+    const universityId = requireUniversityId(actor);
+    await this.center(actor, universityId);
+    return universityId;
+  }
   private async company(actor: Actor, companyId: string, owner = false, manager = this.db.manager): Promise<void> {
     if (!await this.repo(CareerMembership,manager).existsBy({userId:actor.id,companyId,role:In(owner?['company_owner']:['company_owner','company_member']),revokedAt:IsNull()})) throw new ForbiddenException('Нет доступа к компании');
+    // Keep membership management scoped to this proved company, including rows
+    // of invited colleagues whose universityId is deliberately NULL.
+    if (this.tenant.getUser()) this.tenant.authorizeDatabaseAccess({ relation: { table: 'career_membership', column: 'companyId', value: companyId, write: owner } });
   }
   private student(actor: Actor) { if (actor.role !== UserRole.STUDENT) throw new ForbiddenException('Действие доступно студенту'); return requireUniversityId(actor); }
+  async assertCompanyOwnerAccess(actor: Actor, companyId: string): Promise<void> { await this.company(actor, companyId, true); }
   private async task(id: string, manager = this.db.manager, lock = false) {
     const task = await this.repo(CareerTask,manager).findOne({where:{id},...(lock?{lock:{mode:'pessimistic_write' as const}}:{})});
     if (!task) throw new NotFoundException('Задача не найдена'); return task;
@@ -58,8 +70,9 @@ export class CareerService {
   async register(dto: EmployerRegistrationDto) {
     if(Buffer.byteLength(dto.password,'utf8')>72)throw new BadRequestException('Пароль слишком длинный. Используйте более короткую парольную фразу.');
     const email = dto.email.trim().toLowerCase();
-    if (await this.repo(User).createQueryBuilder('u').where('LOWER(u.email) = :email',{email}).getExists()) throw new ConflictException('Аккаунт с такой почтой уже существует. Войдите в него.');
-    try { await this.repo(User).save(this.repo(User).create({email,passwordHash:await bcrypt.hash(dto.password,12),firstName:dto.firstName.trim(),lastName:dto.lastName.trim(),role:UserRole.EMPLOYER,universityId:null})); }
+    if (await this.tenant.runWithDatabaseAccess({ authentication: { email } }, () => this.repo(User).createQueryBuilder('u').where('LOWER(u.email) = :email',{email}).getExists())) throw new ConflictException('Аккаунт с такой почтой уже существует. Войдите в него.');
+    const id = randomUUID();
+    try { await this.tenant.runWithDatabaseAccess({ authentication: { id, write: true } }, async () => this.repo(User).save(this.repo(User).create({id,email,passwordHash:await bcrypt.hash(dto.password,12),firstName:dto.firstName.trim(),lastName:dto.lastName.trim(),role:UserRole.EMPLOYER,universityId:null}))); }
     catch (error) { if ((error as {driverError?:{code?:string}}).driverError?.code === '23505') throw new ConflictException('Аккаунт уже существует'); throw error; }
     return this.auth.portalLogin({email,password:dto.password});
   }
@@ -324,7 +337,11 @@ export class CareerService {
   async createCompany(actor:Actor,dto:CareerCompanyDto) {
     if ([UserRole.STUDENT,UserRole.DEVELOPER,UserRole.SUPERADMIN].includes(actor.role)) throw new ForbiddenException('Нужен рабочий аккаунт работодателя');await this.university(dto.universityId);
     if (!dto.name.trim()) throw new BadRequestException('Укажите компанию');
-    return this.db.transaction(async m=>{const company=await this.repo(CareerCompany,m).save(this.repo(CareerCompany,m).create({name:dto.name.trim(),description:dto.description,createdBy:actor.id}));await this.repo(CareerMembership,m).save({userId:actor.id,companyId:company.id,universityId:null,role:'company_owner'});await this.repo(CareerPartnership,m).save({companyId:company.id,universityId:dto.universityId,state:'pending'});return company;});
+    if (!this.registry) throw new ServiceUnavailableException('Проверка реестра не подключена');
+    const record = await this.registry.lookup(dto.inn);
+    return this.db.transaction(async m=>{const company=await this.repo(CareerCompany,m).save(this.repo(CareerCompany,m).create({name:dto.name.trim(),description:dto.description,createdBy:actor.id,
+      inn:record.inn,registryStatus:record.status,registryCheckedAt:record.checkedAt,registryRequestedAt:record.checkedAt,
+      registryLegalName:record.legalName,registryOgrn:record.ogrn,registryReason:record.reason}));await this.repo(CareerMembership,m).save({userId:actor.id,companyId:company.id,universityId:null,role:'company_owner'});await this.repo(CareerPartnership,m).save({companyId:company.id,universityId:dto.universityId,state:'pending'});return company;});
   }
   async addPartnership(actor:Actor,companyId:string,universityId:string) {await this.company(actor,companyId,true);await this.university(universityId);if(await this.repo(CareerPartnership).existsBy({companyId,universityId})) throw new ConflictException('Заявка уже существует');return this.repo(CareerPartnership).save({companyId,universityId,state:'pending'});}
   async verifyPartnership(actor:Actor,id:string,dto:CareerDecisionDto) {
@@ -333,7 +350,12 @@ export class CareerService {
   }
   async addMembership(actor:Actor,dto:CareerMembershipDto) {
     if(dto.companyId){await this.company(actor,dto.companyId,true);if(dto.identityConfirmed!==true)throw new BadRequestException('Подтвердите, что проверили аккаунт сотрудника');}else{await this.center(actor,requireUniversityId(actor),true);}
-    if(Boolean(dto.userId)===Boolean(dto.email))throw new BadRequestException('Укажите сотрудника');const user=dto.userId?await this.repo(User).findOneBy({id:dto.userId,isActive:true}):await this.repo(User).createQueryBuilder('u').where('LOWER(u.email) = :email AND u.isActive = true',{email:dto.email!.trim().toLowerCase()}).getOne();if(!user) throw new NotFoundException('Аккаунт не найден');
+    if(Boolean(dto.userId)===Boolean(dto.email))throw new BadRequestException('Укажите сотрудника');
+    const lookup = () => dto.userId ? this.repo(User).findOneBy({id:dto.userId,isActive:true}) : this.repo(User).createQueryBuilder('u').where('LOWER(u.email) = :email AND u.isActive = true',{email:dto.email!.trim().toLowerCase()}).getOne();
+    const user = dto.companyId
+      ? await this.tenant.runWithDatabaseAccess({ authentication: dto.userId ? { id: dto.userId } : { email: dto.email!.trim() } }, lookup)
+      : await lookup();
+    if(!user) throw new NotFoundException('Аккаунт не найден');
     if(dto.companyId){await this.company(actor,dto.companyId,true);if(dto.role!=='company_member'||[UserRole.STUDENT,UserRole.DEVELOPER,UserRole.SUPERADMIN].includes(user.role)) throw new BadRequestException('Нужен рабочий аккаунт сотрудника');const old=await this.repo(CareerMembership).findOneBy({userId:user.id,companyId:dto.companyId});if(old?.revokedAt===null)throw new ConflictException('Сотрудник уже имеет доступ к компании');return this.repo(CareerMembership).save({...old,userId:user.id,companyId:dto.companyId,universityId:null,role:dto.role,revokedAt:null,revokedBy:null});}
     const universityId=requireUniversityId(actor);await this.center(actor,universityId,true);
     if(user.universityId!==universityId||[UserRole.STUDENT,UserRole.EMPLOYER,UserRole.DEVELOPER,UserRole.SUPERADMIN].includes(user.role)||!['career_staff','career_admin'].includes(dto.role)||dto.role==='career_admin'&&actor.role!==UserRole.UNIVERSITY_ADMIN) throw new ForbiddenException('Недоступное назначение');
@@ -347,19 +369,20 @@ export class CareerService {
     if(!Number.isFinite(Date.parse(dto.deadline))||new Date(dto.deadline).toISOString().slice(0,10)!==dto.deadline||dto.deadline<new Date().toISOString().slice(0,10)) throw new BadRequestException('Нужна существующая будущая дата');
     return this.repo(CareerTask).save({...dto,title:dto.title.trim(),skill:dto.skill.trim().toLowerCase(),level:dto.level||'standard',requirements:dto.requirements?.trim()||'',state:'draft'});
   }
-  async publishTask(actor:Actor,id:string,approve=false) {
-    return this.db.transaction(async m=>{const task=await this.task(id,m,true);if(approve){await this.center(actor,task.universityId);if(await this.repo(CareerMembership,m).existsBy({userId:actor.id,companyId:task.companyId,revokedAt:IsNull()}))throw new ForbiddenException('Нельзя модерировать собственную задачу');assertCareerTransition(task.state,['review']);task.state='open';}else{await this.company(actor,task.companyId,false,m);assertCareerTransition(task.state,['draft']);task.state='review';}return this.repo(CareerTask,m).save(task);});
-  }
   async apply(actor:Actor,id:string,dto:CareerMessageDto) {
-    const universityId=this.student(actor);const task=await this.task(id);if(task.universityId!==universityId) throw new ForbiddenException('Задача другого вуза');assertCareerTransition(task.state,['open']);
-    if(task.deadline<new Date().toISOString().slice(0,10)) throw new ConflictException('Срок задачи истёк');
-    if(!await this.repo(CareerProfile).existsBy({studentId:actor.id,verification:'verified'})) throw new ForbiddenException('Подтвердите профессиональный профиль в карьерном центре');
-    if(task.profiled&&!await this.repo(CareerAdmission).existsBy({studentId:actor.id,skill:task.skill,state:'approved'})) throw new ForbiddenException('Нет допуска к этому направлению');
-    if(await this.repo(CareerWork).countBy({studentId:actor.id,state:In(['in_progress','revision','submitted'])})>=3) throw new ConflictException('Сначала завершите текущие задачи');
-    if(await this.repo(CareerApplication).existsBy({taskId:id,studentId:actor.id})) throw new ConflictException('Отклик уже отправлен');try{return await this.repo(CareerApplication).save({taskId:id,studentId:actor.id,message:dto.message,state:'pending'});}catch(error){if((error as {driverError?:{code?:string}}).driverError?.code==='23505')throw new ConflictException('Отклик уже отправлен');throw error;}
+    const universityId=this.student(actor);
+    return this.db.transaction(async manager=>{
+      const task=await this.task(id,manager,true);if(task.universityId!==universityId) throw new ForbiddenException('Задача другого вуза');assertCareerTransition(task.state,['open']);
+      if(['suspended','pending','rejected'].includes(task.moderationStatus)) throw new ConflictException('Задача ограничена модерацией');
+      if(task.deadline<new Date().toISOString().slice(0,10)) throw new ConflictException('Срок задачи истёк');
+      if(!await this.repo(CareerProfile,manager).existsBy({studentId:actor.id,verification:'verified'})) throw new ForbiddenException('Подтвердите профессиональный профиль в карьерном центре');
+      if(task.profiled&&!await this.repo(CareerAdmission,manager).existsBy({studentId:actor.id,skill:task.skill,state:'approved'})) throw new ForbiddenException('Нет допуска к этому направлению');
+      if(await this.repo(CareerWork,manager).countBy({studentId:actor.id,state:In(['in_progress','revision','submitted'])})>=3) throw new ConflictException('Сначала завершите текущие задачи');
+      if(await this.repo(CareerApplication,manager).existsBy({taskId:id,studentId:actor.id})) throw new ConflictException('Отклик уже отправлен');try{return await this.repo(CareerApplication,manager).save({taskId:id,studentId:actor.id,message:dto.message,state:'pending'});}catch(error){if((error as {driverError?:{code?:string}}).driverError?.code==='23505')throw new ConflictException('Отклик уже отправлен');throw error;}
+    });
   }
   async select(actor:Actor,id:string) {
-    return this.db.transaction(async m=>{const application=await this.repo(CareerApplication,m).findOneBy({id});if(!application) throw new NotFoundException();const task=await this.task(application.taskId,m,true);await this.company(actor,task.companyId,false,m);if(task.deadline<new Date().toISOString().slice(0,10))throw new ConflictException('Срок задачи уже истёк');assertCareerTransition(task.state,['open']);assertCareerTransition(application.state,['pending']);
+    return this.db.transaction(async m=>{const application=await this.repo(CareerApplication,m).findOneBy({id});if(!application) throw new NotFoundException();const task=await this.task(application.taskId,m,true);await this.company(actor,task.companyId,false,m);if(['suspended','pending','rejected'].includes(task.moderationStatus))throw new ConflictException('Задача ограничена модерацией');if(task.deadline<new Date().toISOString().slice(0,10))throw new ConflictException('Срок задачи уже истёк');assertCareerTransition(task.state,['open']);assertCareerTransition(application.state,['pending']);
       await m.query('SELECT pg_advisory_xact_lock(hashtext($1))',[`career-work:${application.studentId}`]);if(await this.repo(CareerWork,m).countBy({studentId:application.studentId,state:In(['in_progress','revision','submitted'])})>=3)throw new ConflictException('У студента уже три активные работы');const candidate=await this.repo(User,m).findOneBy({id:application.studentId,role:UserRole.STUDENT,isActive:true,universityId:task.universityId});if(!candidate||!await this.repo(CareerProfile,m).existsBy({studentId:candidate.id,verification:'verified'})||task.profiled&&!await this.repo(CareerAdmission,m).existsBy({studentId:candidate.id,skill:task.skill,state:'approved'}))throw new ForbiddenException('Допуск кандидата изменился');task.state='assigned';await this.repo(CareerApplication,m).update({taskId:task.id,state:'pending'},{state:'not_selected'});application.state='selected';await this.repo(CareerTask,m).save(task);await this.repo(CareerApplication,m).save(application);await this.notify(m,application.studentId,'Вы выбраны исполнителем',task.title);return this.repo(CareerWork,m).save({taskId:task.id,studentId:application.studentId,state:'in_progress'});});
   }
   async submit(actor:Actor,id:string,dto:CareerSubmissionDto) {

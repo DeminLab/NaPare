@@ -18,7 +18,9 @@
 | DeviceToken | Токен устройства для push | id, user_id, platform, token, device_name, is_active                                                                                                                               |
 | AuditLog    | Лог действий              | id, user_id, action, entity, entity_id, old_values, new_values, ip, user_agent                                                                                                     |
 
-Роли (`users.role`, enum, одна роль на пользователя): `student`, `teacher`, `curator`, `faculty_dean`, `department_head`, `university_admin`, `superadmin`, `developer`.
+Роли (`users.role`, enum, одна основная роль на пользователя): `student`, `employer`, `career_staff`, `career_admin`, `teacher`, `curator`, `faculty_dean`, `department_head`, `university_admin`, `superadmin`, `developer`. Назначение куратора и дополнительные обязанности существуют отдельно от основной роли; актуальный входной контроль приведён в [матрице 11 ролей](../security/role-matrix.md).
+
+Таблица сущностей описывает внутреннее хранилище, не JSON ответа профиля. В User также есть `personalDataDeletedAt` для неизменяемой архивной записи. GET/PATCH профиля и привязка группы возвращают явную безопасную проекцию без passwordHash/sessionVersion/MAX/Telegram идентификаторов; аннотация `@Exclude` сама по себе не заменяет такую проекцию.
 
 Подробнее: [architecture/data-model.md](../architecture/data-model.md).
 
@@ -45,8 +47,10 @@
 | `/api/v1/auth/refresh`        | POST   | Обновление access token (тело: `refreshToken`)                                                                          |
 | `/api/v1/auth/logout`         | POST   | Выход со всех устройств: повышает `sessionVersion`, инвалидируя выданные access/refresh JWT                             |
 | `/api/v1/users/me`            | GET    | Текущий пользователь                                                                                                    |
+| `/api/v1/users/me/export` | GET | JSON своих данных из единого снимка БД; секретные колонки и внешние копии исключены явно |
+| `/api/v1/users/me/deletion-preview` | GET | Удаляемые/сохраняемые классы и необходимые передачи обязанностей |
 | `/api/v1/users/me`            | PATCH  | Обновление профиля                                                                                                      |
-| `/api/v1/users/me`            | DELETE | Удаление аккаунта (деактивация)                                                                                         |
+| `/api/v1/users/me` | DELETE | Парольное подтверждение, очистка профиля и приватных наборов, сохранение учебного архива под кодом |
 | `/api/v1/users/me/bind-group` | POST   | Привязка к группе                                                                                                       |
 
 SMS/кодовых эндпоинтов (`request-code`, `verify-code`) **нет**.
@@ -63,7 +67,7 @@ SMS/кодовых эндпоинтов (`request-code`, `verify-code`) **нет
 | Регистрация                      | —                            | Отключена: `POST /auth/register` → 403; аккаунт создаёт `university_admin` / `superadmin` через `POST /admin/users` |
 | Просмотр профиля                 | Любая                        | Только свой профиль (`/users/me`)                                                                                   |
 | Назначение ролей                 | university_admin, superadmin | Иерархия ролей: можно назначить только роль нижнего уровня (`admin.service.canManageRole`)                          |
-| Удаление аккаунта                | Любая                        | Только свой аккаунт; деактивация `isActive=false`                                                                   |
+| Удаление аккаунта | Любая, с сохранением платформенной защиты | Только свой аккаунт; текущий пароль, expectedUserId и явное подтверждение сохранения учебного архива; передача обязанностей при blockers |
 | Публичные rasp.\* / universities | Без аутентификации           | —                                                                                                                   |
 
 Матрица прав: [architecture/roles-and-permissions.md](../architecture/roles-and-permissions.md).
@@ -95,7 +99,7 @@ SMS/кодовых эндпоинтов (`request-code`, `verify-code`) **нет
 2. **Создание и восстановление аккаунтов:** админ `POST /admin/users` создаёт запись (email, пароль ≥ 10 символов, имя, роль, опционально группа); `POST /admin/users/:id/reset-password` заменяет пароль только управляемого пользователя своего ВУЗа. В обоих случаях сервер хранит bcrypt-хеш, а интерфейс не сохраняет временный пароль после отправки. Приглашение/саморегистрация недоступны.
 3. **Rate limiting:** глобальный `ThrottlerGuard` ограничивает запросы по IP значениями `RATE_LIMIT_MAX` / `RATE_LIMIT_WINDOW_MS` (по умолчанию 100/60 сек); `/auth/login`, `/auth/portal-login`, `/auth/max` и `/auth/max/link` дополнительно ограничены 10 запросами за 60 сек. В production Express учитывает два прокси в текущем маршруте host Nginx → Docker Nginx → backend. SMS-лимитов (3/час, блокировка после 5) не существует вместе с SMS-входом.
 4. **Токены и отзыв:** пара `accessToken` + `refreshToken` подписывается с `JWT_ACCESS_EXPIRATION` / `JWT_REFRESH_EXPIRATION` (`apps/backend/src/config/configuration.ts`), а также содержит текущий `sessionVersion` пользователя. `POST /auth/logout`, блокировка/разблокировка, смена роли и сброс пароля повышают версию: JWT, выданные до этого, перестают проходить и на refresh, и на защищённых маршрутах. Refresh принимает токен в теле `POST /auth/refresh` — отдельной refresh-стратегии/гарда в коде нет. Хранение на клиенте: Secure Storage (mobile) / куки или storage (web).
-5. **Удаление аккаунта:** `DELETE /users/me` → `usersService.deactivate()` — немедленное `isActive=false` (`apps/backend/src/users/users.service.ts:114`). Окна восстановления 30 дней нет; деактивированный пользователь не проходит `login`/`portalLogin`/`maxAuth`.
+5. **Удаление аккаунта:** `DELETE /users/me` вызывает парольное подтверждение и транзакционную очистку через AccountErasureService. Старые access/refresh JWT отклоняются; неизменяемая запись с кодом, вузом/группой и учебной историей остаётся. Это псевдонимизация с перечисленными исключениями, не полное уничтожение всех копий. Перед операцией доступны self JSON export и preview; [контракт удаления](../privacy/account-deletion.md) описывает подтверждения, передачи обязанностей, rollback и границы проверки. Административная `deactivate()` остаётся отдельной блокировкой.
 6. **Восстановление пароля:** эндпоинта нет (TODO).
 7. **Вход через MAX:** `POST /auth/max` проверяет подпись `initData` токеном `MAX_BOT_TOKEN`; `users.maxUserId` (unique) хранит привязку. Без токена — ответ 503 `MAX_NOT_CONFIGURED`. В общей форме входа пользователь явно выбирает MAX либо университетские email/пароль. Уже привязанный MAX входит в свой аккаунт независимо от сохранённой локальной сессии сайта. Непривязанный MAX получает 401 `MAX_ACCOUNT_NOT_LINKED`; пользователь может войти по email/паролю и связать MAX позже в «Настройки → Подключения аккаунта». `GET /auth/max/status` возвращает только `{ linked: boolean }` для текущей JWT-сессии. `POST /auth/max/link` требует JWT и свежий MAX `initData`, связывает только текущего пользователя атомарно и не перезаписывает существующие связи. Свежесть `initData` ограничена `MAX_INIT_DATA_TTL_SECONDS` (по умолчанию 900 секунд / 15 минут).
 8. **Привязка Telegram:** вошедший пользователь создаёт в `/connections` одноразовую ссылку через JWT. Её случайный 192-битный код хранится только как SHA-256, истекает через 10 минут и погашается атомарно один раз через приватный `/start` webhook с `X-Telegram-Bot-Api-Secret-Token`. `users.telegramUserId` уникален; код и Telegram ID не позволяют переназначить существующую связь. Пароль в Telegram не передаётся. Связь Telegram не подтверждает MAX-идентичность: MAX привязывается отдельно проверенным `initData` внутри MAX.

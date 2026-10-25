@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
+import { installHttpRouteEvidence } from './http-route-evidence';
 
 describe('AppController (e2e)', () => {
   let app: INestApplication;
@@ -14,6 +15,7 @@ describe('AppController (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    installHttpRouteEvidence(app);
     app.setGlobalPrefix('api/v1');
     app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
     await app.init();

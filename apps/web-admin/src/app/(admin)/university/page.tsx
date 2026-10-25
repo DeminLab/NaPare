@@ -50,13 +50,13 @@ export default function UniversityPage() {
   const facultyGroups = useMemo(() => faculties.map((faculty) => ({ ...faculty, count: groups.filter((group) => group.facultyId === faculty.id).length })), [faculties, groups]);
 
   if (loading) return <div className="space-y-4"><Skeleton className="h-24" /><Skeleton className="h-48" /><Skeleton className="h-64" /></div>;
-  if (!university) return <RequestState title="Не удалось загрузить университет" description={error || 'Данные недоступны.'} onRetry={load} />;
+  if (!university) return <div className="space-y-4"><RequestState title="Не удалось загрузить университет" description={error || 'Данные недоступны.'} onRetry={load} /><Link href="/onboarding" className="inline-flex min-h-11 items-center font-semibold text-indigo-700 underline">Новый вуз / первичная настройка</Link></div>;
 
   return <div className="mx-auto max-w-[1500px] space-y-6">
     <header>
       <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--color-brand)]">Кабинет ВУЗа</p>
       <div className="mt-2 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-        <div><h1 className="text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">Настройки университета</h1><p className="mt-2 text-sm text-slate-500 sm:text-base">Управляйте основной информацией, структурой и источником данных.</p></div>
+        <div><h1 className="text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">Настройки университета</h1><p className="mt-2 text-sm text-slate-500 sm:text-base">Управляйте основной информацией, структурой и источником данных.</p><div className="flex flex-wrap gap-x-4"><Link href="/onboarding" className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-indigo-700 underline">Открыть мастер подключения вуза</Link><Link href="/requests" className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-indigo-700 underline">Учебный офис: заявления и согласования →</Link><Link href="/analytics" className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-indigo-700 underline">Аналитика использования →</Link></div></div>
         {!editing && <Button variant="secondary" onClick={() => setEditing(true)}>Редактировать профиль</Button>}
       </div>
     </header>

@@ -584,7 +584,7 @@ docker compose --env-file <secure-env-file> -f docker-compose.prod.yml up -d
 
 ### Авторизация
 
-- Role-based access control (RBAC) — 8 ролей
+- Role-based access control (RBAC) — 11 ролей; [матрица разрешений и маршрутов](docs/security/role-matrix.md)
 - Tenant и role/resource scope проверяются backend guards и сервисами
 - PostgreSQL RLS policies в миграциях не настроены
 

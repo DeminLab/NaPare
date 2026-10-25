@@ -1,0 +1,28 @@
+# Source card: apps/backend/test/tenant-isolation.e2e-spec.ts
+
+## Canonical source
+
+`apps/backend/test/tenant-isolation.e2e-spec.ts`
+
+## Scope
+
+Real JWT HTTP and PostgreSQL tenant boundary regression tests.
+
+Each resource read and ordinary mutation has a successful B-actor control before the A-actor denial. Mutation controls use separate copies, including deletes. Snapshot every B-owned entity plus linked content before/after the negative request; drain real async notification work through a delegating spy. Empty filtered absence aggregates preserve the existing API contract. See [business probe evidence and limits](../../security/business-tenant-probes-2026-10-25.md); do not describe this subset as coverage of every route.
+
+Academic create/reference checks also snapshot A to reject partial writes on error. Same-code course and unlinked-event controls prove permitted creations derive their university from JWT. The documented 15-route academic matrix is a route subset, not exhaustive role/state coverage.
+
+Schedule list/date/range/group/teacher/changed controls require a real B lesson in the positive result. Manual creation tests override an injected university ID with JWT scope and reject foreign references without partial writes. The 9-route matrix uses administrators; separate cases execute date/my/range for students and teachers with internal UUID groups. Legacy numeric/SIBIT and platform branches remain separate.
+
+Seed a real B homework via HTTP. Progress and legacy submit create/update controls use its B student; foreign A calls must return 403/404 and preserve both universities. Include homework_progress/homework_submissions through their homework/space parent in snapshots; their lack of a direct university column must not omit them.
+
+Personal-route controls use same-key favorites in A/B, search results (excluding the intentional query echo), student/teacher My Day and actual loopback HTTP SSE replay. EventBus writes are fixture preparation, not proof of a user's publishing permission; replay is not live dispatch/reconnect coverage. My Day can create its own PairSpace, so compare B rather than calling the whole GET read-only.
+
+## Read sequence
+
+1. Read [change safety](../change-safety.md).
+2. Read the canonical source and direct dependencies.
+
+## Verification
+
+Run focused backend tests, backend typecheck, and repository guards.

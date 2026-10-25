@@ -24,6 +24,7 @@ describe("NotificationsService", () => {
   };
 
   const mockDeviceTokenRepo = {
+    update: jest.fn().mockResolvedValue({ affected: 1 }),
     find: jest.fn().mockResolvedValue([]),
     findOne: jest.fn().mockResolvedValue(null),
     create: jest.fn().mockImplementation((dto) => ({ id: "1", ...dto })),
@@ -70,6 +71,7 @@ describe("NotificationsService", () => {
 
     service = module.get<NotificationsService>(NotificationsService);
     jest.clearAllMocks();
+    mockPreferenceRepo.findOne.mockResolvedValue(null);
     mockTenantContext.getUser.mockReturnValue(undefined);
   });
 
@@ -162,7 +164,7 @@ describe("NotificationsService", () => {
 
     it("should update existing token", async () => {
       const existing = { id: "1", token: "token-1", isActive: false };
-      mockDeviceTokenRepo.findOne.mockResolvedValue(existing);
+      mockDeviceTokenRepo.findOne.mockResolvedValueOnce(existing).mockResolvedValueOnce({ ...existing, isActive: true });
       const result = await service.registerDeviceToken(
         "user-1",
         "token-1",

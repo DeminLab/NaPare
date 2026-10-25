@@ -655,7 +655,9 @@ export class PairSpaceService {
     return pairSpace;
   }
 
-  private async assertRoleScopedAccess(pairSpace: PairSpace): Promise<void> {
+  private async assertRoleScopedAccess(pairSpace: PairSpace | null | undefined): Promise<void> {
+    // A legacy child row can be visible while RLS hides its joined parent space.
+    if (!pairSpace) throw new NotFoundException('PairSpace not found');
     this.tenantContext.assertAccess(pairSpace.universityId);
     const user = this.tenantContext.getUser();
     if (user?.role === UserRole.CURATOR && this.curation) {

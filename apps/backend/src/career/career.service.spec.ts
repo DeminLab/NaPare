@@ -13,17 +13,17 @@ describe('Career resource boundaries',()=>{
   it('does not accept a work or select a student twice',()=>{expect(()=>assertCareerTransition('accepted',['submitted'])).toThrow(ConflictException);expect(()=>assertCareerTransition('assigned',['open'])).toThrow(ConflictException);});
   it('denies an application to a task at another university before reading a profile',async()=>{
     const getRepository=jest.fn(()=>({findOne:jest.fn().mockResolvedValue({id:'task-a',universityId:'university-b',state:'open'})}));
-    const service=new CareerService({manager:{getRepository}} as unknown as DataSource,{} as AuthService);
+    const service=new CareerService({manager:{getRepository},transaction:async callback=>callback({getRepository})} as unknown as DataSource,{} as AuthService);
     await expect(service.apply(student,'task-a',{message:'I am a qualified applicant'})).rejects.toThrow(ForbiddenException);expect(getRepository).toHaveBeenCalledTimes(1);
   });
   it('requires verified professional profile before an application',async()=>{
     const getRepository=jest.fn(entity=>entity===CareerTask?{findOne:jest.fn().mockResolvedValue({universityId:'university-a',state:'open',deadline:'2099-12-01'})}:{existsBy:jest.fn().mockResolvedValue(false)});
-    const service=new CareerService({manager:{getRepository}} as unknown as DataSource,{} as AuthService);
+    const service=new CareerService({manager:{getRepository},transaction:async callback=>callback({getRepository})} as unknown as DataSource,{} as AuthService);
     await expect(service.apply(student,'task-a',{message:'I am a qualified applicant'})).rejects.toThrow('Подтвердите профессиональный профиль');expect(getRepository).toHaveBeenCalledWith(CareerProfile);
   });
   it('requires admission for the exact profiled direction',async()=>{
     const getRepository=jest.fn(entity=>entity===CareerTask?{findOne:jest.fn().mockResolvedValue({universityId:'university-a',state:'open',deadline:'2099-12-01',profiled:true,skill:'design'})}:entity===CareerProfile?{existsBy:jest.fn().mockResolvedValue(true)}:{existsBy:jest.fn().mockResolvedValue(false)});
-    const service=new CareerService({manager:{getRepository}} as unknown as DataSource,{} as AuthService);
+    const service=new CareerService({manager:{getRepository},transaction:async callback=>callback({getRepository})} as unknown as DataSource,{} as AuthService);
     await expect(service.apply(student,'task-a',{message:'I am a qualified applicant'})).rejects.toThrow('Нет допуска');expect(getRepository).toHaveBeenCalledWith(CareerAdmission);
   });
   it('does not allow a student to verify their own profile',async()=>{

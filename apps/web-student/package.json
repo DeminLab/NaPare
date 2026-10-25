@@ -6,7 +6,8 @@
     "build": "next build",
     "dev": "next dev -p 3001",
     "start": "next start -p 3001",
-    "test:config": "node --test test/register-page.test.cjs"
+    "test:config": "node --test test/register-page.test.cjs",
+    "test:offline": "node --test test/offline-worker.test.cjs"
   },
   "dependencies": {
     "@napare/design-tokens": "workspace:*",

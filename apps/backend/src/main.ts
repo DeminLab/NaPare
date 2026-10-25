@@ -3,6 +3,7 @@ import { ValidationPipe, Logger } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 import * as Sentry from '@sentry/node';
+import { json, RequestHandler } from 'express';
 
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
@@ -13,6 +14,13 @@ import { PaginatedResponseDto } from './common/dto/pagination-query.dto';
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
   const app = await NestFactory.create(AppModule);
+  // XLSX is base64 in JSON (2 MiB binary -> <3 MiB request). Other endpoints
+  // retain Nest/Express's default body limit.
+  const uploadJson = json({ limit: '3mb' });
+  // Wrapping prevents Nest's parser-name detection from suppressing its
+  // default JSON parser on unrelated routes.
+  app.use('/api/v1/admin/schedule/upload', ((req, res, next) => uploadJson(req, res, next)) as RequestHandler);
+  app.use('/api/v1/requests/reports/debt-snapshots', ((req, res, next) => uploadJson(req, res, next)) as RequestHandler);
 
   const configService = app.get<ConfigService>(ConfigService);
 

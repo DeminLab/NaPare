@@ -8,6 +8,8 @@
 
 Real application, JWT and disposable local PostgreSQL fixtures. Rejects nonlocal/non-test databases and nonempty user data.
 
+Optional HTTP metadata collection is test-only and disabled without an explicit output JSONL setting. Primary/secondary university buckets are assigned after synthetic seed; never record raw UUIDs, tokens or payloads. Guard probes use separate servers and are excluded.
+
 ## Change boundary
 
 Read [account curatorship](../../product/account-curatorship.md) and direct callers. Preserve primary roles, existing sessions, tenant/group checks and audit history. UI visibility is not authorization.

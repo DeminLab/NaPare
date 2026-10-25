@@ -33,7 +33,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
         this.tenantContext.setUser(actor);
         return user;
       }
-      if (!/^\/api\/v1\/career(?:\/|$)/.test(path) && path !== '/api/v1/users/me' && !['/api/v1/auth/logout','/api/v1/auth/max/status','/api/v1/auth/max/link'].includes(path)) throw new ForbiddenException('Для этого раздела необходима привязка к вузу');
+      if (!/^\/api\/v1\/career(?:\/|$)/.test(path) && !['/api/v1/users/me', '/api/v1/users/me/export', '/api/v1/users/me/deletion-preview', '/api/v1/devices/webpush'].includes(path) && !['/api/v1/auth/logout','/api/v1/auth/max/status','/api/v1/auth/max/link'].includes(path)) throw new ForbiddenException('Для этого раздела необходима привязка к вузу');
     }
     this.tenantContext.setUser(user);
     return user;

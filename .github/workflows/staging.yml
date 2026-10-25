@@ -42,22 +42,27 @@ jobs:
             image: web-student
             file: infrastructure/docker/web.Dockerfile
             build_args: APP_DIR=apps/web-student
+            package_name: '@napare/web-student'
           - name: portal web
             image: web-portal
             file: infrastructure/docker/web.Dockerfile
             build_args: APP_DIR=apps/web-portal
+            package_name: '@napare/web-portal'
           - name: staff web
             image: web-staff
             file: infrastructure/docker/web.Dockerfile
             build_args: APP_DIR=apps/web-staff
+            package_name: '@napare/web-staff'
           - name: admin web
             image: web-admin
             file: infrastructure/docker/web.Dockerfile
             build_args: APP_DIR=apps/web-admin
+            package_name: '@napare/web-admin'
           - name: developer web
             image: web-developer
             file: infrastructure/docker/web.Dockerfile
             build_args: APP_DIR=apps/web-developer
+            package_name: '@napare/web-developer'
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
@@ -70,7 +75,9 @@ jobs:
         with:
           context: .
           file: ${{ matrix.file }}
-          build-args: ${{ matrix.build_args }}
+          build-args: |
+            ${{ matrix.build_args }}
+            PACKAGE_NAME=${{ matrix.package_name }}
           push: true
           tags: ${{ needs.image-prefix.outputs.prefix }}-${{ matrix.image }}:${{ github.event.workflow_run.head_sha }}
 
