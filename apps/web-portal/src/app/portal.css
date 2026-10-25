@@ -2110,6 +2110,19 @@ footer .footer-copy {
 .login-focused .login-alt-method, .login-focused .login-support-details { border-top: 0; padding-top: 0; margin-top: 8px; }
 .login-focused .login-alt-method summary, .login-focused .login-support-details summary { font-size: 13px; }
 .login-focused .login-career-link { width: 100%; justify-content: center; border-top: 1px solid #e1e6ef; padding-top: 20px; }
+.login-focused .login-panel { flex-direction: column; gap: 12px; }
+.login-focused .login-privacy-link {
+  align-items: center;
+  align-self: center;
+  color: var(--color-text-secondary);
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 600;
+  justify-content: center;
+  min-height: 44px;
+  transition: color 160ms ease;
+}
+.login-focused .login-privacy-link:hover { color: var(--color-brand); }
 @media (max-width: 639px) {
   .login-layout.login-focused { background: #fff; }
   .login-focused .login-panel { align-items: flex-start; padding: 32px 24px; }
