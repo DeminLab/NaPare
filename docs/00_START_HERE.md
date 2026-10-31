@@ -15,7 +15,7 @@ B2B2C SaaS для вузов: расписание, задания, матери
 |---|-----------|-----------|
 | Новый разработчик | Поднять проект и начать кодить | [01_ONBOARDING.md](01_ONBOARDING.md) |
 | Любой разработчик | Понять, какой документ менять | [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) |
-| AI-агент | Изучить контекст перед задачей | [AI_CONTEXT.md](../AI_CONTEXT.md) → [reading order](ai/reading-order.md) |
+| AI-агент | Изучить контекст перед задачей | [AI_CONTEXT.md](../AI_CONTEXT.md) |
 | Продукт / команда | Видение и проверяемые продуктовые гипотезы | [strategy/](strategy/vision.md), [product/](product/overview.md) |
 | Новый участник команды | Понять контекст | [02_GLOSSARY.md](02_GLOSSARY.md), [architecture/README.md](architecture/README.md) |
 

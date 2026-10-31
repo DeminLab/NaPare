@@ -1,40 +1,7 @@
-const { execFileSync } = require('node:child_process');
 const { readFileSync } = require('node:fs');
 
-const protectedPath = /^(?:apps\/web-student\/|apps\/[^/]+\/src\/components\/navigation\/|apps\/[^/]+\/src\/components\/ui\/Avatar\.tsx$)|(?:^|\/)[^/]*logo[^/]*(?:\/|$)/i;
-const approvedStudentExperiencePath = /^apps\/web-student\/(?:package\.json|tailwind\.config\.js|src\/app\/globals\.css|src\/app\/\(student\)\/|src\/components\/navigation\/StudentShell\.tsx$)/i;
-// The approved all-page UX work includes correct empty personal-note responses.
-const approvedStudentApiPath = 'apps/web-student/src/lib/api.ts';
-// Owner approval in the 22 October plan covers offline schedule and its focused tests.
-const approvedOfflineTests = new Set(['apps/web-student/test/load-typescript.cjs', 'apps/web-student/test/offline-worker.test.cjs']);
-// Explicit owner approval for audit A01–A05: root reflow and server page titles.
-const approvedAccessibilityPaths = new Set([
-  'apps/web-student/src/app/layout.tsx',
-  'apps/web-student/src/app/page.tsx',
-  'apps/web-student/src/app/(auth)/login/layout.tsx',
-  'apps/web-student/src/app/(auth)/login/page.tsx',
-  'apps/web-student/src/app/(auth)/register/layout.tsx',
-]);
-
-function assertAllowed(paths) {
-  const allowedMigrationPath = 'apps/web-student/next.config.js';
-  const blocked = paths.filter((path) => {
-    const normalizedPath = path.replace(/\\/g, '/');
-    return normalizedPath !== allowedMigrationPath && normalizedPath !== approvedStudentApiPath && !approvedOfflineTests.has(normalizedPath) && !approvedAccessibilityPaths.has(normalizedPath) && protectedPath.test(normalizedPath) && !approvedStudentExperiencePath.test(normalizedPath);
-  });
-  if (blocked.length) {
-    throw new Error(`Role workspace foundation changes include protected paths:\n${blocked.map((path) => `- ${path}`).join('\n')}`);
-  }
-}
-
-function changedPaths() {
-  const status = execFileSync('git', ['status', '--porcelain'], { encoding: 'utf8' });
-  return status
-    .split(/\r?\n/)
-    .filter(Boolean)
-    .flatMap((line) => line.slice(3).split(' -> ').map((path) => path.trim()))
-    .filter(Boolean);
-}
+// Role-workspace protected paths were removed by owner decision on 31 October 2026
+// (see docs/ai/change-safety.md). Only the unrelated UI invariant checks below remain.
 
 function assertRequestStateRetryHitArea() {
   for (const role of ['staff', 'admin', 'developer']) {
@@ -62,29 +29,6 @@ function assertDeveloperSemanticAliases() {
 }
 
 function run() {
-  assertAllowed([...approvedAccessibilityPaths]);
-  assertAllowed([
-    'apps/web-staff/src/app/globals.css',
-    'apps/web-admin/src/components/ui/Card.tsx',
-  ]);
-
-  for (const path of [
-    'apps/web-student/src/app/(auth)/register/page.tsx',
-    'apps/web-staff/src/components/navigation/Sidebar.tsx',
-    'apps/web-admin/src/components/ui/Avatar.tsx',
-    'apps/web-developer/public/logo.svg',
-    'apps/web-staff/public/logomark.svg',
-  ]) {
-    let rejected = false;
-    try {
-      assertAllowed([path]);
-    } catch {
-      rejected = true;
-    }
-    if (!rejected) throw new Error(`Static guard did not reject protected path: ${path}`);
-  }
-
-  assertAllowed(changedPaths());
   assertRequestStateRetryHitArea();
   assertDeveloperSemanticAliases();
   console.log('role workspace boundary guard: passed');

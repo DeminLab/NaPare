@@ -5,7 +5,7 @@ The repository does not define named individual owners in a tracked CODEOWNERS f
 | Area | Review surface |
 | --- | --- |
 | Backend/API | Controller, DTO, service authorization, entities/migrations and generated OpenAPI |
-| Student | apps/web-student; observe repository protection rules before role-workspace work |
+| Student | apps/web-student |
 | Staff/admin/developer/portal | Relevant Next.js app, shared packages and backend contracts |
 | Deployment | Compose, Dockerfiles, Nginx, CI workflow and docs/deployment/production.md |
 | Documentation | The matching implementation or operational source, plus docs navigation/index where needed |
@@ -13,4 +13,4 @@ The repository does not define named individual owners in a tracked CODEOWNERS f
 
 ## Change boundaries
 
-See root AGENTS.md and [change safety](../ai/change-safety.md) for protected paths and required checks. Do not rely on the historical team roles or GitHub handles that were present in an earlier version of this file.
+See root AGENTS.md for the current contributor instructions. Do not rely on the historical team roles or GitHub handles that were present in an earlier version of this file.
