@@ -9,7 +9,7 @@ import {
   type WorkspaceCommand,
   type WorkspaceNavGroup,
 } from "@napare/ui/workspace-shell";
-import { apiFetch, getHealth, getUser, logout } from "@/lib/api";
+import { apiFetch, getHealth, getUser, logout, readUserCache } from "@/lib/api";
 import type { HealthInfo, UserInfo } from "@/lib/api";
 
 const groups: WorkspaceNavGroup[] = [
@@ -87,7 +87,12 @@ const AppLink = ({ href, children, ...props }: NavigationLinkProps) => href === 
 export default function DeveloperLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [user, setUser] = useState<UserInfo | null>(null);
+  // Paint instantly from a cached developer profile; the fresh /users/me response reconciles in the background.
+  // The cache is only trusted when the role still grants access to this workspace.
+  const [user, setUser] = useState<UserInfo | null>(() => {
+    const cached = readUserCache();
+    return cached && ['developer', 'superadmin'].includes(cached.role) ? cached : null;
+  });
   const [health, setHealth] = useState<HealthInfo | null>(null);
   const [healthChecked, setHealthChecked] = useState(false);
   const [unread, setUnread] = useState(0);
@@ -143,13 +148,7 @@ export default function DeveloperLayout({ children }: { children: ReactNode }) {
   const apiAvailable = health
     ? ["ok", "healthy"].includes(health.status.toLowerCase())
     : false;
-  if (!user) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[var(--color-background)] text-sm text-[var(--color-text-secondary)]">
-        Проверяем доступ…
-      </div>
-    );
-  }
+  // No blocking gate: the shell (menu, header) renders immediately; access is re-verified in the background.
   return (
     <WorkspaceShell
       className="developer-shell"

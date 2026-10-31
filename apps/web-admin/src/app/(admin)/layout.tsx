@@ -5,7 +5,7 @@ import { useCurationContext } from '@napare/ui/curation';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 import { WorkspaceShell, type NavigationLinkProps, type WorkspaceCommand, type WorkspaceNavGroup } from '@napare/ui/workspace-shell';
-import { apiFetch, getUser, logout, type Me } from '@/lib/api';
+import { apiFetch, getUser, logout, readUserCache, type Me } from '@/lib/api';
 
 const groups: WorkspaceNavGroup[] = [
   { label: 'Обзор', items: [{ href: '/dashboard', label: 'Обзор', icon: 'dashboard', keywords: ['overview', 'сводка'] }] },
@@ -21,7 +21,8 @@ const AppLink = ({ href, children, ...props }: NavigationLinkProps) => href === 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [user, setUser] = useState<Me | null>(null);
+  // Paint instantly from the cached profile; the fresh /users/me response reconciles in the background.
+  const [user, setUser] = useState<Me | null>(() => readUserCache());
   const [notificationCount, setNotificationCount] = useState(0);
   const curation = useCurationContext(apiFetch, Boolean(user));
   const [systemStatus, setSystemStatus] = useState<'checking' | 'online' | 'offline'>('checking');
@@ -36,10 +37,10 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     { id: 'admin:import', label: 'Импортировать расписание', icon: 'upload', href: '/schedule-import', keywords: ['расписание'] },
     { id: 'admin:logs', label: 'Открыть журнал аудита', icon: 'list', href: '/audit-log', keywords: ['логи', 'аудит'] },
   ];
-  if (!user) return <div className="flex min-h-screen items-center justify-center bg-[var(--color-background)] text-sm text-[var(--color-text-secondary)]">Загрузка панели…</div>;
-  const fullName = user.firstName + ' ' + user.lastName;
+  // No blocking gate: the shell (menu, header) renders immediately, even before the first API answer.
+  const fullName = user ? user.firstName + ' ' + user.lastName : '';
   const curationItems: WorkspaceNavGroup['items'] = curation?.canCurate || curation?.canManage ? [{ href: '/curation', label: 'Кураторство', icon: 'users', keywords: ['куратор', 'назначения'] }] : [];
   const resolvedGroups = groups.map((group) => ({ ...group, items: [...group.items, ...(group.label === 'Университет' ? curationItems : [])].map((item) => item.href === '/notifications' ? { ...item, badge: notificationCount } : item) }));
   const status = systemStatus === 'online' ? { label: 'Система работает', tone: 'success' as const } : systemStatus === 'offline' ? { label: 'Система недоступна', tone: 'danger' as const } : { label: 'Проверка системы', tone: 'warning' as const };
-  return <WorkspaceShell LinkComponent={AppLink} pathname={pathname} groups={resolvedGroups} roleLabel="Кабинет ВУЗа" homeHref="/dashboard" user={{ name: fullName, role: 'Сотрудник ВУЗа', id: user.id }} unreadCount={notificationCount} status={status} commands={commands} mobileHrefs={['/dashboard', '/schedule-import', '/users', '/absences']} onLogout={logout}><div className="role-content">{children}</div></WorkspaceShell>;
+  return <WorkspaceShell LinkComponent={AppLink} pathname={pathname} groups={resolvedGroups} roleLabel="Кабинет ВУЗа" homeHref="/dashboard" user={user ? { name: fullName, role: 'Сотрудник ВУЗа', id: user.id } : undefined} unreadCount={notificationCount} status={status} commands={commands} mobileHrefs={['/dashboard', '/schedule-import', '/users', '/absences']} onLogout={logout}><div className="role-content">{children}</div></WorkspaceShell>;
 }

@@ -12,7 +12,7 @@ import {
   type WorkspaceCommand,
   type WorkspaceNavGroup,
 } from "@napare/ui/workspace-shell";
-import { apiFetch, getUnreadCount, getUser, isLoggedIn, logout } from "@/lib/api";
+import { apiFetch, getUnreadCount, getUser, isLoggedIn, logout, readUserCache } from "@/lib/api";
 
 const groups: WorkspaceNavGroup[] = [
   {
@@ -161,7 +161,8 @@ const installStaffHistoryTracker = () => {
 export default function StaffLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [user, setUser] = useState<Awaited<ReturnType<typeof getUser>> | null>(null);
+  // Paint instantly from the cached profile; the fresh /users/me response reconciles in the background.
+  const [user, setUser] = useState<Awaited<ReturnType<typeof getUser>> | null>(() => (isLoggedIn() ? readUserCache() : null));
   const [unread, setUnread] = useState(0);
   const curation = useCurationContext(apiFetch, Boolean(user));
   useEffect(() => {
@@ -218,17 +219,13 @@ export default function StaffLayout({ children }: { children: ReactNode }) {
       href: "/profile",
     },
   ];
-  if (!user)
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[var(--color-background)] text-sm text-[var(--color-text-secondary)]">
-        Загрузка…
-      </div>
-    );
-  const fullName = user.firstName + " " + user.lastName;
+  // No blocking gate: the shell (menu, header) renders immediately, even before the first API answer.
+  const fullName = user ? user.firstName + " " + user.lastName : "";
+  const roleLabel = (user && roleLabels[user.role]) || "Сотрудник университета";
   const curationItems: WorkspaceNavGroup['items'] = curation?.canCurate || curation?.canManage ? [{ href: '/curation', label: 'Кураторство', mobileLabel: 'Куратор', icon: 'users', keywords: ['куратор', 'назначения'] }] : [];
   const resolvedGroups = groups.map((group) => ({
     ...group,
-    items: [...group.items, ...(group.label === 'Работа' ? curationItems : [])].filter(item => item.href !== "/absences" || ["curator", "faculty_dean", "department_head", "university_admin", "superadmin"].includes(user.role) || (user.role === "teacher" && curation?.canCurate)).map((item) =>
+    items: [...group.items, ...(group.label === 'Работа' ? curationItems : [])].filter(item => item.href !== "/absences" || ["curator", "faculty_dean", "department_head", "university_admin", "superadmin"].includes(user?.role ?? "") || (user?.role === "teacher" && curation?.canCurate)).map((item) =>
       item.href === "/inbox" ? { ...item, badge: unread } : item,
     ),
   }));
@@ -237,9 +234,9 @@ export default function StaffLayout({ children }: { children: ReactNode }) {
       LinkComponent={AppLink}
       pathname={pathname}
       groups={resolvedGroups}
-      roleLabel={roleLabels[user.role] || "Сотрудник университета"}
+      roleLabel={roleLabel}
       homeHref="/today"
-      user={{ name: fullName, role: roleLabels[user.role] || "Сотрудник университета", id: user.id }}
+      user={user ? { name: fullName, role: roleLabel, id: user.id } : undefined}
       unreadCount={unread}
       commands={commands}
       notificationHref="/notifications"

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState, type ReactNode } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { WorkspaceShell, searchCommands, type WorkspaceSearchResponse, type NavigationLinkProps, type WorkspaceCommand, type WorkspaceNavGroup } from '@napare/ui/workspace-shell';
-import { apiFetch, getUnreadCount, getUser, isLoggedIn, logout, StudentUser } from '@/lib/api';
+import { apiFetch, getUnreadCount, getUser, isLoggedIn, logout, readUserCache, StudentUser } from '@/lib/api';
 import { useCurationContext } from '@napare/ui/curation';
 
 const groups: WorkspaceNavGroup[] = [
@@ -19,7 +19,8 @@ const searchWorkspace = async (query: string, signal: AbortSignal) => searchComm
 export default function StudentShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [user, setUser] = useState<StudentUser | null>(null);
+  // Paint instantly from the cached profile; the fresh /users/me response reconciles in the background.
+  const [user, setUser] = useState<StudentUser | null>(() => (isLoggedIn() ? readUserCache() : null));
   const [unread, setUnread] = useState(0);
   const curation = useCurationContext(apiFetch, Boolean(user));
 
@@ -36,9 +37,9 @@ export default function StudentShell({ children }: { children: ReactNode }) {
     { id: 'student:notifications', label: 'Открыть уведомления', description: unread ? unread + ' непрочитанных' : 'Всё прочитано', icon: 'bell', href: '/notifications' },
   ];
 
-  if (!user) return <div className="flex min-h-screen items-center justify-center bg-[var(--color-background)] text-sm text-[var(--color-text-secondary)]">Загрузка…</div>;
-  const name = user.firstName + ' ' + user.lastName;
+  // No blocking gate: the shell (menu, header) renders immediately, even before the first API answer.
+  const name = user ? user.firstName + ' ' + user.lastName : '';
   const curationItems: WorkspaceNavGroup['items'] = curation?.canCurate || curation?.canManage ? [{ href: '/curation', label: 'Кураторство', icon: 'users', keywords: ['куратор', 'назначения'] }] : [];
   const resolvedGroups = groups.map(group => ({ ...group, items: [...group.items, ...(group.label === 'Другие действия' ? curationItems : [])].map(item => item.href === '/notifications' ? { ...item, badge: unread } : item) }));
-  return <WorkspaceShell className="student-workspace-shell" LinkComponent={AppLink} pathname={pathname} groups={resolvedGroups} roleLabel="Студент" homeHref="/today" user={{ name, role: user.groupName || 'Студент', id: user.id }} unreadCount={unread} commands={commands} onSearch={searchWorkspace} searchPlaceholder="Предмет, преподаватель, материал или раздел…" mobileHrefs={['/today', '/week', '/pair-space', '/notifications']} onLogout={logout}>{children}</WorkspaceShell>;
+  return <WorkspaceShell className="student-workspace-shell" LinkComponent={AppLink} pathname={pathname} groups={resolvedGroups} roleLabel="Студент" homeHref="/today" user={user ? { name, role: user.groupName || 'Студент', id: user.id } : undefined} unreadCount={unread} commands={commands} onSearch={searchWorkspace} searchPlaceholder="Предмет, преподаватель, материал или раздел…" mobileHrefs={['/today', '/week', '/pair-space', '/notifications']} onLogout={logout}>{children}</WorkspaceShell>;
 }

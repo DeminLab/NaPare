@@ -1,5 +1,6 @@
 const API_BASE = "/api/v1";
 const LOGIN_PATH = "/deanery/login";
+const USER_CACHE_KEY = "napare:admin-user-cache";
 
 export function getToken(): string | null {
   if (typeof window === "undefined") return null;
@@ -9,11 +10,14 @@ export function getToken(): string | null {
 export function saveTokens(accessToken: string, refreshToken: string): void {
   window.localStorage.setItem("accessToken", accessToken);
   window.localStorage.setItem("refreshToken", refreshToken);
+  // A new session must never show the previous account's cached profile.
+  window.localStorage.removeItem(USER_CACHE_KEY);
 }
 
 export function clearTokens(): void {
   window.localStorage.removeItem("accessToken");
   window.localStorage.removeItem("refreshToken");
+  window.localStorage.removeItem(USER_CACHE_KEY);
 }
 
 let refreshPromise: Promise<boolean> | null = null;
@@ -206,6 +210,28 @@ export interface Me {
   universityId?: string;
 }
 
-export async function getUser(): Promise<Me> {
-  return apiFetch<Me>("/users/me");
+/** Last known profile so the workspace shell can paint before the network answers. */
+export function readUserCache(): Me | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(USER_CACHE_KEY);
+    return raw ? (JSON.parse(raw) as Me) : null;
+  } catch {
+    return null;
+  }
+}
+
+let userInflight: Promise<Me> | null = null;
+
+export function getUser(): Promise<Me> {
+  // Concurrent callers (shell + page) share one request; the result is cached for the next paint.
+  if (!userInflight) {
+    userInflight = apiFetch<Me>("/users/me").then((user) => {
+      try { window.localStorage.setItem(USER_CACHE_KEY, JSON.stringify(user)); } catch { /* Cache is optional */ }
+      return user;
+    });
+    const settle = () => { userInflight = null; };
+    userInflight.then(settle, settle);
+  }
+  return userInflight;
 }

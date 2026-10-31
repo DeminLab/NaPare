@@ -120,7 +120,6 @@ Redis присутствует в Compose, но backend client/queues не по�
 2. **Мультивузовость** — tenant и resource-scope checks в backend guards и сервисах; PostgreSQL RLS policies не настроены
 3. **OpenAPI как source of truth** — спецификация генерируется из кода
 4. **TypeScript в активных приложениях** — web + backend; MAX запускает существующий `web-portal`
-5. **AI-first** — документы ≤ 500 строк, чёткие заголовки, таблицы
 
 ### Архитектурные решения (ADR)
 

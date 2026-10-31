@@ -1,5 +1,6 @@
 const API_BASE = "/api/v1";
 const LOGIN_PATH = "/staff/login";
+const USER_CACHE_KEY = "napare:staff-user-cache";
 
 export function getToken(): string | null {
   if (typeof window === "undefined") return null;
@@ -14,11 +15,14 @@ export function getRefreshToken(): string | null {
 export function saveTokens(accessToken: string, refreshToken: string): void {
   window.localStorage.setItem("accessToken", accessToken);
   window.localStorage.setItem("refreshToken", refreshToken);
+  // A new session must never show the previous account's cached profile.
+  window.localStorage.removeItem(USER_CACHE_KEY);
 }
 
 export function clearTokens(): void {
   window.localStorage.removeItem("accessToken");
   window.localStorage.removeItem("refreshToken");
+  window.localStorage.removeItem(USER_CACHE_KEY);
 }
 
 let refreshPromise: Promise<boolean> | null = null;
@@ -27,7 +31,7 @@ export function isLoggedIn(): boolean {
   return !!getToken();
 }
 
-interface User {
+export interface User {
   id: string;
   email: string;
   firstName: string;
@@ -37,8 +41,30 @@ interface User {
   isActive: boolean;
 }
 
-export async function getUser(): Promise<User> {
-  return apiFetch<User>("/users/me");
+/** Last known profile so the workspace shell can paint before the network answers. */
+export function readUserCache(): User | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(USER_CACHE_KEY);
+    return raw ? (JSON.parse(raw) as User) : null;
+  } catch {
+    return null;
+  }
+}
+
+let userInflight: Promise<User> | null = null;
+
+export function getUser(): Promise<User> {
+  // Concurrent callers (shell + page) share one request; the result is cached for the next paint.
+  if (!userInflight) {
+    userInflight = apiFetch<User>("/users/me").then((user) => {
+      try { window.localStorage.setItem(USER_CACHE_KEY, JSON.stringify(user)); } catch { /* Cache is optional */ }
+      return user;
+    });
+    const settle = () => { userInflight = null; };
+    userInflight.then(settle, settle);
+  }
+  return userInflight;
 }
 
 export async function apiFetch<T>(

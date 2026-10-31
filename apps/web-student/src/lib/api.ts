@@ -1,5 +1,6 @@
 const API_BASE = '/api/v1';
 const LOGIN_PATH = '/student/login';
+const USER_CACHE_KEY = 'napare:student-user-cache';
 
 export class ApiError extends Error {
   constructor(message: string, public readonly status: number) {
@@ -21,11 +22,14 @@ export function getRefreshToken(): string | null {
 export function saveTokens(accessToken: string, refreshToken: string): void {
   window.localStorage.setItem('accessToken', accessToken);
   window.localStorage.setItem('refreshToken', refreshToken);
+  // A new session must never show the previous account's cached profile.
+  window.localStorage.removeItem(USER_CACHE_KEY);
 }
 
 export function clearTokens(): void {
   window.localStorage.removeItem('accessToken');
   window.localStorage.removeItem('refreshToken');
+  window.localStorage.removeItem(USER_CACHE_KEY);
   if ('serviceWorker' in navigator) navigator.serviceWorker.controller?.postMessage({ type: 'NAPARE_CLEAR_OFFLINE' });
   // CacheStorage is also cleared directly when this tab has not been claimed yet.
   if ('caches' in window) void window.caches.delete('napare-student-schedule-v1').catch(() => undefined);
@@ -47,8 +51,30 @@ export interface StudentUser {
   universityName?: string;
 }
 
-export async function getUser(): Promise<StudentUser> {
-  return apiFetch<StudentUser>('/users/me');
+/** Last known profile so the workspace shell can paint before the network answers. */
+export function readUserCache(): StudentUser | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(USER_CACHE_KEY);
+    return raw ? (JSON.parse(raw) as StudentUser) : null;
+  } catch {
+    return null;
+  }
+}
+
+let userInflight: Promise<StudentUser> | null = null;
+
+export function getUser(): Promise<StudentUser> {
+  // Concurrent callers (shell + page) share one request; the result is cached for the next paint.
+  if (!userInflight) {
+    userInflight = apiFetch<StudentUser>('/users/me').then((user) => {
+      try { window.localStorage.setItem(USER_CACHE_KEY, JSON.stringify(user)); } catch { /* Cache is optional */ }
+      return user;
+    });
+    const settle = () => { userInflight = null; };
+    userInflight.then(settle, settle);
+  }
+  return userInflight;
 }
 
 async function readApiResponse<T>(response: Response): Promise<T> {
