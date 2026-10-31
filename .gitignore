@@ -86,3 +86,10 @@ kubeconfig
 
 # PostHog
 .posthogrc
+
+# AI agent skills and tool artifacts (not project code)
+.agents/
+.codex/
+RTK.md
+docs/ai/
+docs/superpowers/

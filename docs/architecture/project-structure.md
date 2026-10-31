@@ -27,10 +27,10 @@ apps/web и apps/max-miniapp — legacy проекты, исключённые �
 
 ## Authoritative file maps
 
-The current backend directory is too large for a hand-maintained exhaustive tree. Use source control/search for the exact current files and the module pages/source cards for orientation:
+The current backend directory is too large for a hand-maintained exhaustive tree. Use source control/search for the exact current files and the module pages for orientation:
 
 - Backend: apps/backend/src and docs/architecture/backend-architecture.md
-- Apps and safe-change boundaries: docs/ai/project-map.md and root AGENTS.md
+- Apps and safe-change boundaries: root AGENTS.md
 - Build scripts: root package.json and workspace package.json files
 - Database schema: backend entities and apps/backend/src/migrations
 - Runtime/deployment: Compose files, Nginx configs and root docs/deployment/production.md

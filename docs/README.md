@@ -1,6 +1,6 @@
 # NaPare project documentation
 
-Project guides, reference material and historical records live under this directory. Keep app, infrastructure and deliverable folders for source files, configuration and output artifacts; link to those files from here. The repository entry files `AGENTS.md`, `AI_CONTEXT.md`, `README.md` and `RTK.md` stay at the root for their standard tooling roles.
+Project guides, reference material and historical records live under this directory. Keep app, infrastructure and deliverable folders for source files, configuration and output artifacts; link to those files from here. The repository entry files `AGENTS.md`, `AI_CONTEXT.md` and `README.md` stay at the root for their standard tooling roles.
 
 ## Sections
 
@@ -31,7 +31,6 @@ Project guides, reference material and historical records live under this direct
 
 - [Combined improvement verification](project-log/improvement-integration-2026-10-22.md) — integration branch, local test evidence and remaining requirements; no production changes.
 
-- [AI and repository workflow](ai/README.md) — project map, task reading order, change safety, source cards and documentation rules.
 - [API](api/README.md) — API usage and contracts.
 - [University schedule import](integrations/schedule-import.md) — CSV/ICS/XLSX/Moodle/SIBIT formats, durable queue and change journal.
 - [Notification delivery](integrations/notification-delivery.md) — gated RuStore/WebPush/MAX/Telegram delivery, Redis outbox and operational limits.
@@ -58,7 +57,7 @@ Project guides, reference material and historical records live under this direct
 - [T-Касса](integrations/tkassa.md) — оплата услуг платформы, настройка и границы проверки.
 
 - [Operations](ops/) and [Process](process/) — routine operations, verification and collaboration.
-- [Planning and history](project-log/) — dated project records; older or superseded material is labeled in [the archive](archive/) and [Superpowers plans](superpowers/).
+- [Planning and history](project-log/) — dated project records.
 - [Strategy](strategy/) — goals and product direction.
 - [Deliverables](deliverables/) — instructions and compliance notes for project submissions; binary files and generated artifacts remain in their delivery folders.
 
