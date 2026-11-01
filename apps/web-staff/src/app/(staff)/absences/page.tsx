@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { apiFetch, getUser } from '@/lib/api';
 import { Badge, Button, Card, EmptyState, RequestState, Skeleton } from '@/components/ui';
@@ -18,7 +18,17 @@ const reviewers = new Set(['curator', 'faculty_dean', 'department_head', 'univer
 const reasons: Record<string, string> = { sick: 'Болезнь', learning: 'Учебная причина', work: 'Работа', other_city: 'Другой город', other: 'Другая причина' };
 const dateLabel = (value: string) => new Date(value).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
 
+// Next.js requires useSearchParams() to sit under a Suspense boundary so the
+// route can be statically prerendered; the content streams in client-side.
 export default function AbsencesPage() {
+  return (
+    <Suspense fallback={<div aria-busy="true" className="mx-auto max-w-4xl space-y-5"><Skeleton className="h-32" /><Skeleton className="h-32" /></div>}>
+      <AbsencesContent />
+    </Suspense>
+  );
+}
+
+function AbsencesContent() {
   const params = useSearchParams();
   const requestedId = params.get('absence');
   const [items, setItems] = useState<Absence[]>([]);

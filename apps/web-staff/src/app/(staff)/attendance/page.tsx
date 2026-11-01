@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { apiFetch, apiFetchList } from '@/lib/api';
 import { Badge, Button, Card, EmptyState, RequestState, Skeleton } from '@/components/ui';
@@ -17,7 +17,16 @@ const todayKey = () => dateKey(new Date());
 const localDayRange = (value: string) => ({ startDate:value, endDate:value });
 const displayTime = (value?: string) => value?.includes('T') ? value.slice(11, 16) : value || '—';
 
+// Suspense wrapper is required for useSearchParams() during static prerender.
 export default function AttendancePage() {
+  return (
+    <Suspense fallback={<div aria-busy="true" className="mx-auto max-w-[1400px] space-y-6"><Skeleton className="h-32" /><Skeleton className="h-64" /></div>}>
+      <AttendanceContent />
+    </Suspense>
+  );
+}
+
+function AttendanceContent() {
   const pathname = usePathname();
   const params = useSearchParams();
   const searchParameters = params.toString();

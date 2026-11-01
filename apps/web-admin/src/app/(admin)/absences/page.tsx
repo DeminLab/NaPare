@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Badge, Button, Card, EmptyState, RequestState, Skeleton } from '@/components/ui';
 import { ListPagination } from '@/components/ListPagination';
@@ -10,7 +10,16 @@ interface Absence { id: string; type: string; startDate: string; endDate: string
 
 const typeLabels: Record<string, string> = { sick: 'Болезнь', learning: 'Учебная причина', work: 'Работа', other_city: 'Другой город', other: 'Другая причина' };
 
+// Suspense wrapper is required for useSearchParams() during static prerender.
 export default function UniversityAbsencesPage() {
+  return (
+    <Suspense fallback={<div aria-busy="true" className="mx-auto max-w-[1500px] space-y-6"><Skeleton className="h-64" /></div>}>
+      <UniversityAbsencesContent />
+    </Suspense>
+  );
+}
+
+function UniversityAbsencesContent() {
   const params = useSearchParams();
   const [items, setItems] = useState<Absence[]>([]); const [page, setPage] = useState(1); const [meta, setMeta] = useState<PaginatedResponse<Absence>['meta'] | null>(null); const [loading, setLoading] = useState(true); const [loadError, setLoadError] = useState(''); const [error, setError] = useState(''); const [deepLinkMessage, setDeepLinkMessage] = useState(''); const [savingId, setSavingId] = useState(''); const [reasons, setReasons] = useState<Record<string, string>>({}); const [success, setSuccess] = useState(''); const [invalidId, setInvalidId] = useState(''); const [selectedId, setSelectedId] = useState('');
   const pageSize = 50;

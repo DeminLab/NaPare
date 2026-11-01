@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { lessonTabFromSearch } from "@napare/ui/workspace-shell";
 import { apiFetch } from "@/lib/api";
@@ -77,7 +77,23 @@ function timeAgo(value: string) {
   return `${Math.floor(diff / 86400)} дн`;
 }
 
+// Suspense wrapper is required for useSearchParams() during static prerender.
 export default function PairSpacePage() {
+  return (
+    <Suspense
+      fallback={
+        <div aria-busy="true" className="mx-auto max-w-[1200px] space-y-6">
+          <Skeleton className="h-40" />
+          <Skeleton className="h-64" />
+        </div>
+      }
+    >
+      <PairSpaceContent />
+    </Suspense>
+  );
+}
+
+function PairSpaceContent() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
