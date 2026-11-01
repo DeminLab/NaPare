@@ -1,9 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
-import { FormEvent, useEffect, useRef, useState } from 'react';
+import { FormEvent, PointerEvent as ReactPointerEvent, useEffect, useRef, useState } from 'react';
+import { Icon } from '@napare/ui';
 import { MaxLaunchAuth } from '../../components/MaxLaunchAuth';
+import './login.css';
 
 type Workspace = 'student' | 'staff' | 'admin' | 'developer' | 'career';
 type LoginResponse = { accessToken: string; refreshToken: string; workspace: Workspace };
@@ -25,6 +26,7 @@ export default function LoginPage() {
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
   const [maxAvailable, setMaxAvailable] = useState(false);
+  const [succeeded, setSucceeded] = useState(false);
   const [studentRegistrationInfo, setStudentRegistrationInfo] = useState(false);
   const [sessionRestoreState, setSessionRestoreState] = useState<SessionRestoreState>('checking');
   const restoreControllerRef = useRef<AbortController | null>(null);
@@ -171,7 +173,9 @@ export default function LoginPage() {
       if (!data?.accessToken || !data.refreshToken || !Object.hasOwn(destinations, data.workspace)) throw new Error('Не удалось открыть кабинет. Повторите вход.');
       window.localStorage.setItem('accessToken', data.accessToken);
       window.localStorage.setItem('refreshToken', data.refreshToken);
-      window.location.assign(destinations[data.workspace]);
+      // Brief success state so the button confirms the login before the workspace opens.
+      setSucceeded(true);
+      window.setTimeout(() => window.location.assign(destinations[data.workspace]), 450);
     } catch (reason) {
       setError(reason instanceof TypeError ? 'Не удалось связаться с сервером. Проверьте интернет и повторите вход.' : reason instanceof Error ? reason.message : 'Не удалось выполнить вход');
     } finally {
@@ -185,18 +189,66 @@ export default function LoginPage() {
     setSessionRestoreState('manual');
   }
 
+  const previewRef = useRef<HTMLDivElement | null>(null);
+
+  // The floating schedule preview tilts gently toward the cursor.
+  function tiltPreview(event: ReactPointerEvent<HTMLDivElement>) {
+    const card = previewRef.current;
+    if (!card || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const rect = card.getBoundingClientRect();
+    const px = (event.clientX - rect.left) / rect.width - 0.5;
+    const py = (event.clientY - rect.top) / rect.height - 0.5;
+    card.style.setProperty('--preview-ry', `${(px * 7).toFixed(2)}deg`);
+    card.style.setProperty('--preview-rx', `${(-py * 7).toFixed(2)}deg`);
+  }
+
+  function resetPreviewTilt() {
+    const card = previewRef.current;
+    if (!card) return;
+    card.style.setProperty('--preview-rx', '0deg');
+    card.style.setProperty('--preview-ry', '0deg');
+  }
+
   return (
     <main className="login-layout login-focused">
       {sessionRestoreState === 'checking' && (
         <div className="login-restore-gate" aria-busy="true">
+          <span className="home-session-spinner" aria-hidden="true" />
           <div role="status" aria-live="polite">Проверяем сохранённый вход…</div>
           <button type="button" onClick={stopSessionRestoreForManualLogin}>Войти вручную</button>
         </div>
       )}
+      <section className="login-hero-aside">
+        {/* Plain img (asset is served unoptimized anyway): next/image with priority
+            injects a preload link that mismatches SSR DOM and triggers hydration rebuild. */}
+        <img src="/brand/campus-learning.png" alt="" aria-hidden="true" className="login-hero-background" />
+        <div className="login-hero-aurora" aria-hidden="true"><span className="login-orb login-orb--indigo" /><span className="login-orb login-orb--sky" /></div>
+        <div className="login-hero-inner">
+          <Link href="/" className="brand login-hero-brand"><img src="/brand/np-mark.png" alt="" width={34} height={34} />НаПаре</Link>
+          <div className="login-hero-body">
+            <div className="login-hero-copy">
+              <p className="eyebrow">Цифровая платформа университета</p>
+              <h2>Учебный день — <em>в одном месте</em></h2>
+              <p className="login-hero-lead">Расписание и изменения, материалы пары и связь с группой — без десятка чатов и вкладок.</p>
+              <ul className="login-hero-points">
+                <li><Icon name="check" size={16} /> Актуальное расписание на каждый день</li>
+                <li><Icon name="check" size={16} /> Уведомления об изменениях пар</li>
+                <li><Icon name="check" size={16} /> Пространство каждой пары</li>
+              </ul>
+            </div>
+            <div className="login-hero-preview" ref={previewRef} onPointerMove={tiltPreview} onPointerLeave={resetPreviewTilt}>
+              <div className="login-preview-head"><span className="login-preview-title">Сегодня · 3 пары</span><span className="login-preview-badge">1 изменение</span></div>
+              <div className="login-preview-lesson is-current"><time>09:00</time><span className="login-preview-mark" /><div className="login-preview-lesson-copy"><strong>Математический анализ</strong><small>Ауд. 301 · Открыто сейчас</small></div><span className="login-preview-status"><span className="login-preview-pulse" />Сейчас</span></div>
+              <div className="login-preview-lesson"><time>10:45</time><span className="login-preview-mark" /><div className="login-preview-lesson-copy"><strong>Программирование</strong><small>Ауд. 412 · аудитория изменилась</small></div></div>
+            </div>
+          </div>
+          <p className="login-hero-footnote">НаПаре · учебный день без лишних сервисов</p>
+        </div>
+      </section>
       <section className="login-panel">
         <div className="login-card">
           <MaxLaunchAuth captureOnly />
-          <Link href="/" className="brand login-brand"><Image src="/brand/np-mark.png" alt="" width={34} height={34} priority unoptimized />НаПаре</Link>
+          <Link href="/" className="brand login-brand"><img src="/brand/np-mark.png" alt="" width={34} height={34} />НаПаре</Link>
           <h1>С возвращением</h1>
 
           {studentRegistrationInfo && (
@@ -216,7 +268,7 @@ export default function LoginPage() {
           )}
 
           <form onSubmit={submit} className="login-form" noValidate aria-busy={loading}>
-            {error && <p className="error" role="alert">{error}</p>}
+            {error && <p className="error" role="alert" key={error}>{error}</p>}
             <label htmlFor="login-email">Email
               <input id="login-email" name="email" type="email" autoComplete="username" inputMode="email" autoCapitalize="none" spellCheck={false} value={email} onChange={(event) => { setEmail(event.target.value); setFieldErrors(previous => ({ ...previous, email: undefined })); }} aria-invalid={!!fieldErrors.email} aria-describedby={fieldErrors.email ? 'login-email-error' : undefined} required />
               {fieldErrors.email && <span id="login-email-error" className="login-field-error" role="alert">{fieldErrors.email}</span>}
@@ -229,7 +281,9 @@ export default function LoginPage() {
               </div>
               {fieldErrors.password && <span id="login-password-error" className="login-field-error" role="alert">{fieldErrors.password}</span>}
             </div>
-            <button type="submit" disabled={loading}>{loading ? 'Входим…' : 'Войти'}</button>
+            <button type="submit" disabled={loading || succeeded} className={succeeded ? 'is-success' : loading ? 'is-loading' : undefined}>
+              {succeeded ? <><span className="login-btn-check" aria-hidden="true"><Icon name="check" size={16} /></span>Входим в кабинет…</> : loading ? <><span className="login-btn-spinner" aria-hidden="true" />Входим…</> : 'Войти'}
+            </button>
           </form>
           <details className="login-alt-method" open={maxAvailable} onClickCapture={(event) => {
             if (event.target instanceof Element && event.target.closest('button')) stopSessionRestoreForManualLogin();

@@ -1,0 +1,465 @@
+/* ─────────────────────────────────────────────────────────────
+   Login · hero layout with motion
+   Mirrors the portal home: dark campus panel + light form side.
+   ───────────────────────────────────────────────────────── */
+
+/* Light canvas with soft color washes behind the card. */
+.login-layout.login-focused.login-focused {
+  position: relative;
+  background:
+    radial-gradient(900px 520px at 88% -12%, #e6eafb 0%, transparent 62%),
+    radial-gradient(700px 460px at -12% 108%, #e4edf9 0%, transparent 58%),
+    #f5f7fc;
+}
+
+/* Session-restore hint becomes a floating pill instead of a full-screen gate. */
+.login-layout.login-focused .login-restore-gate {
+  align-items: center;
+  background: rgb(255 255 255 / 0.92);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid #e3e8f2;
+  border-radius: 999px;
+  box-shadow: 0 10px 30px rgb(23 32 51 / 0.1);
+  flex-direction: row;
+  flex-wrap: wrap;
+  font-size: 14px;
+  gap: 12px;
+  inset: 16px auto auto 50%;
+  justify-content: center;
+  min-height: 0;
+  padding: 10px 12px 10px 18px;
+  text-align: left;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: calc(100% - 32px);
+  z-index: 20;
+}
+.login-layout.login-focused .login-restore-gate button {
+  background: var(--color-brand);
+  border: 0;
+  border-radius: 999px;
+  color: var(--color-on-brand);
+  font-size: 13px;
+  font-weight: 700;
+  min-height: 36px;
+  padding: 6px 14px;
+  transition: background 160ms ease, transform 160ms ease;
+}
+.login-layout.login-focused .login-restore-gate button:hover { background: var(--color-brand-strong); transform: translateY(-1px); }
+.login-layout.login-focused .login-restore-gate .home-session-spinner {
+  border-color: rgb(81 70 232 / 0.25);
+  border-top-color: var(--color-brand);
+  flex-shrink: 0;
+  height: 16px;
+  width: 16px;
+}
+
+/* ── Left hero panel ─────────────────────────────────────── */
+
+.login-hero-aside {
+  display: none;
+  position: relative;
+  overflow: hidden;
+}
+.login-hero-background {
+  height: 100%;
+  inset: 0;
+  object-fit: cover;
+  object-position: center 43%;
+  position: absolute;
+  width: 100%;
+}
+.login-hero-aside::before {
+  background:
+    linear-gradient(160deg, rgb(8 18 48 / 0.92) 0%, rgb(8 18 48 / 0.74) 46%, rgb(49 46 163 / 0.55) 100%),
+    linear-gradient(0deg, rgb(8 18 48 / 0.82) 0%, transparent 55%);
+  content: "";
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+  z-index: 1;
+}
+
+/* Slow drifting aurora orbs for a living background. */
+.login-hero-aurora {
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  position: absolute;
+  z-index: 1;
+}
+.login-orb {
+  border-radius: 50%;
+  filter: blur(70px);
+  opacity: 0.5;
+  position: absolute;
+  animation: login-orb-drift 14s ease-in-out infinite alternate;
+}
+.login-orb--indigo {
+  background: #6366f1;
+  height: 46vmin;
+  right: -8%;
+  top: -10%;
+  width: 46vmin;
+}
+.login-orb--sky {
+  animation-delay: -7s;
+  background: #38bdf8;
+  bottom: 4%;
+  height: 38vmin;
+  left: -10%;
+  width: 38vmin;
+}
+@keyframes login-orb-drift {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(4vmin, 6vmin, 0) scale(1.14); }
+}
+
+.login-hero-inner {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  justify-content: space-between;
+  max-width: 620px;
+  padding: clamp(36px, 4.5vw, 64px);
+  position: relative;
+  width: 100%;
+  z-index: 2;
+}
+.login-hero-brand {
+  align-self: flex-start;
+  color: #fff;
+  position: relative;
+  z-index: 2;
+}
+.login-hero-brand:focus-visible {
+  border-radius: 12px;
+  outline: 3px solid #93c5fd;
+  outline-offset: 3px;
+}
+.login-hero-body {
+  position: relative;
+  z-index: 2;
+}
+.login-hero-copy .eyebrow {
+  color: #7dd3fc;
+}
+.login-hero-copy h2 {
+  color: #fff;
+  font-size: clamp(30px, 3.2vw, 46px);
+  letter-spacing: -0.05em;
+  line-height: 1.04;
+  margin: 0;
+  text-wrap: balance;
+}
+.login-hero-copy h2 em {
+  color: #a5b4fc;
+  font-style: normal;
+}
+.login-hero-lead {
+  color: rgb(241 245 249 / 0.84);
+  font-size: 16px;
+  line-height: 1.62;
+  margin: 18px 0 0;
+  max-width: 46ch;
+}
+.login-hero-points {
+  color: rgb(241 245 249 / 0.9);
+  display: grid;
+  font-size: 14px;
+  font-weight: 600;
+  gap: 10px;
+  list-style: none;
+  margin: 22px 0 0;
+  padding: 0;
+}
+.login-hero-points li {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+}
+.login-hero-points svg {
+  color: #67e8f9;
+  flex-shrink: 0;
+}
+.login-hero-footnote {
+  color: rgb(199 210 254 / 0.75);
+  font-size: 12px;
+  margin: 28px 0 0;
+  position: relative;
+  z-index: 2;
+}
+
+/* Floating glass preview of the "Сегодня" screen. */
+/* Registered so the float can live inside `transform` together with the
+   pointer tilt; animating the standalone `translate` property hits the
+   same compositor raster bug as login-rise on some Chromium builds. */
+@property --preview-float {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+/* NOTE: no backdrop-filter here on purpose — this card sits in the hero
+   subtree where compositor-layer tricks have proven fragile; the
+   near-white translucency reads almost the same without the blur. */
+.login-hero-preview {
+  background: rgb(255 255 255 / 0.13);
+  border: 1px solid rgb(255 255 255 / 0.22);
+  border-radius: 18px;
+  box-shadow: 0 24px 60px rgb(2 6 23 / 0.35);
+  margin-top: 34px;
+  max-width: 430px;
+  padding: 18px;
+  transform: perspective(900px) rotateX(var(--preview-rx, 0deg)) rotateY(var(--preview-ry, 0deg)) translateY(var(--preview-float));
+  transition: transform 0.25s ease;
+  width: 100%;
+  animation: login-preview-float 7s ease-in-out infinite;
+}
+@keyframes login-preview-float {
+  0%, 100% { --preview-float: 0px; }
+  50% { --preview-float: -10px; }
+}
+.login-preview-head {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+.login-preview-title {
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.login-preview-badge {
+  background: rgb(165 180 252 / 0.22);
+  border: 1px solid rgb(165 180 252 / 0.3);
+  border-radius: 999px;
+  color: #c7d2fe;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+}
+.login-preview-lesson {
+  align-items: center;
+  background: rgb(255 255 255 / 0.06);
+  border: 1px solid rgb(255 255 255 / 0.08);
+  border-radius: 12px;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  margin-top: 8px;
+  padding: 10px 12px;
+}
+.login-preview-lesson.is-current {
+  background: rgb(165 180 252 / 0.16);
+  border-color: rgb(165 180 252 / 0.34);
+}
+.login-preview-lesson time {
+  color: rgb(241 245 249 / 0.7);
+  font-size: 12px;
+  font-weight: 700;
+}
+.login-preview-mark {
+  background: #94a3b8;
+  border-radius: 50%;
+  height: 8px;
+  width: 8px;
+}
+.login-preview-lesson.is-current .login-preview-mark {
+  background: #67e8f9;
+  box-shadow: 0 0 0 4px rgb(103 232 249 / 0.18);
+}
+.login-preview-lesson-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.login-preview-lesson-copy strong {
+  color: #fff;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.login-preview-lesson-copy small {
+  color: rgb(241 245 249 / 0.6);
+  font-size: 11px;
+}
+.login-preview-status {
+  align-items: center;
+  color: #6ee7b7;
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 700;
+  gap: 6px;
+}
+.login-preview-pulse {
+  animation: login-pulse 1.6s ease-out infinite;
+  background: #34d399;
+  border-radius: 50%;
+  display: inline-block;
+  height: 7px;
+  width: 7px;
+}
+@keyframes login-pulse {
+  0% { box-shadow: 0 0 0 0 rgb(52 211 153 / 0.55); }
+  70% { box-shadow: 0 0 0 8px rgb(52 211 153 / 0); }
+  100% { box-shadow: 0 0 0 0 rgb(52 211 153 / 0); }
+}
+
+/* Hide the floating preview on very short screens. */
+@media (max-height: 760px) {
+  .login-hero-preview { display: none; }
+}
+
+/* ── Desktop: two-column layout ──────────────────────────── */
+
+@media (min-width: 1024px) {
+  .login-layout.login-focused.login-focused {
+    display: grid;
+    grid-template-columns: minmax(0, 1.06fr) minmax(460px, 0.94fr);
+  }
+  .login-hero-aside {
+    display: flex;
+  }
+  .login-layout.login-focused .login-panel {
+    align-items: center;
+    min-width: 0;
+    padding: clamp(32px, 5vw, 64px) clamp(24px, 4vw, 56px);
+    width: 100%;
+  }
+  .login-layout.login-focused .login-card {
+    border-color: #e6eaf4;
+    border-radius: 24px;
+    box-shadow: 0 24px 70px rgb(23 32 51 / 0.1);
+    max-width: 430px;
+    padding: 40px;
+  }
+  /* Brand lives in the hero panel on desktop. */
+  .login-layout.login-focused .login-brand { display: none; }
+}
+
+/* ── Right panel: form micro-interactions ────────────────── */
+
+.login-layout.login-focused .login-panel {
+  flex-direction: column;
+}
+.login-layout.login-focused .login-privacy-link {
+  align-self: center;
+}
+
+.login-layout.login-focused .login-form input {
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+.login-layout.login-focused .login-form input:hover {
+  border-color: #b9c3d8;
+}
+.login-layout.login-focused .login-form input:focus {
+  border-color: var(--color-brand);
+  box-shadow: 0 0 0 4px rgb(81 70 232 / 0.12);
+}
+
+.login-layout.login-focused .login-form > button {
+  overflow: hidden;
+  position: relative;
+  transition: transform 150ms ease, box-shadow 200ms ease, background 200ms ease;
+}
+.login-layout.login-focused .login-form > button:hover:not(:disabled) {
+  background: #4338ca;
+  box-shadow: 0 12px 26px rgb(81 70 232 / 0.32);
+  transform: translateY(-1px);
+}
+.login-layout.login-focused .login-form > button:active:not(:disabled) {
+  box-shadow: none;
+  transform: translateY(0) scale(0.985);
+}
+.login-layout.login-focused .login-form > button::after {
+  background: linear-gradient(100deg, transparent, rgb(255 255 255 / 0.28), transparent);
+  content: "";
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+  transform: translateX(-120%);
+}
+.login-layout.login-focused .login-form > button:hover:not(:disabled)::after {
+  animation: login-sheen 0.9s ease;
+}
+@keyframes login-sheen {
+  to { transform: translateX(120%); }
+}
+.login-layout.login-focused .login-form > button.is-success,
+.login-layout.login-focused .login-form > button.is-success:hover:not(:disabled) {
+  background: #059669;
+  box-shadow: 0 12px 26px rgb(5 150 105 / 0.3);
+}
+.login-btn-spinner {
+  animation: home-session-spin 0.7s linear infinite;
+  border: 2px solid rgb(255 255 255 / 0.45);
+  border-radius: 50%;
+  border-top-color: #fff;
+  display: inline-block;
+  height: 15px;
+  width: 15px;
+}
+.login-btn-check {
+  animation: login-check-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  display: inline-flex;
+}
+@keyframes login-check-pop {
+  from { opacity: 0; transform: scale(0.4); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* Error message shakes once per new message (page sets a fresh key). */
+.login-layout.login-focused .login-form .error {
+  animation: login-shake 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+@keyframes login-shake {
+  10%, 90% { transform: translateX(-2px); }
+  20%, 80% { transform: translateX(4px); }
+  30%, 50%, 70% { transform: translateX(-6px); }
+  40%, 60% { transform: translateX(6px); }
+  100% { transform: none; }
+}
+
+/* ── Entrance choreography ───────────────────────────────── */
+
+/* Use transform (not the individual `translate` property): some Chromium
+   compositor versions fail to raster layers promoted by animated
+   `translate` + fill:both, leaving finished elements blank. */
+@keyframes login-rise {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Entrance choreography.
+   The card side staggers in. The hero copy intentionally has NO entrance
+   animation at all: on some Chromium builds the compositor never rasters
+   the layers that CSS entrance animations create for the hero subtree
+   (elements stay blank even after the animation finishes). The hero
+   still feels alive via the drifting orbs, the floating preview with
+   cursor tilt, and the card-side stagger. */
+
+.login-layout.login-focused .login-card > * {
+  animation: login-rise 0.6s cubic-bezier(0.22, 0.9, 0.3, 1) both;
+}
+.login-layout.login-focused .login-card > *:nth-child(1) { animation-delay: 0.05s; }
+.login-layout.login-focused .login-card > *:nth-child(2) { animation-delay: 0.1s; }
+.login-layout.login-focused .login-card > *:nth-child(3) { animation-delay: 0.15s; }
+.login-layout.login-focused .login-card > *:nth-child(4) { animation-delay: 0.2s; }
+.login-layout.login-focused .login-card > *:nth-child(5) { animation-delay: 0.25s; }
+.login-layout.login-focused .login-card > *:nth-child(6) { animation-delay: 0.3s; }
+.login-layout.login-focused .login-card > *:nth-child(7) { animation-delay: 0.35s; }
+.login-layout.login-focused .login-card > *:nth-child(n + 8) { animation-delay: 0.4s; }
+
+/* Respect users who prefer no motion. */
+@media (prefers-reduced-motion: reduce) {
+  .login-layout.login-focused *,
+  .login-layout.login-focused *::before,
+  .login-layout.login-focused *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
