@@ -1,0 +1,16 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+RUN apk add --no-cache python3 make g++
+
+COPY apps/backend/package.json ./package.json
+RUN npm_config_build_from_source=true npm install --include=dev --no-audit --no-fund
+
+COPY apps/backend/src ./src
+COPY apps/backend/nest-cli.json ./
+COPY apps/backend/tsconfig.json ./
+
+RUN npx nest build
+
+CMD ["node", "dist/main"]

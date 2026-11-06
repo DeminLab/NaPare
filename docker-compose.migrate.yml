@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: napare-postgres-migrate
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: napare
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [migrate]
+
+  backend:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile.migrate
+    container_name: napare-backend-migrate
+    restart: unless-stopped
+    command: node dist/main.js
+    environment:
+      NODE_ENV: development
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: napare
+      JWT_SECRET: supersecretjwtkey1234567890
+      JWT_REFRESH_SECRET: supersecretrefreshkey1234567890
+      JWT_ACCESS_EXPIRATION: 15m
+      JWT_REFRESH_EXPIRATION: 30d
+      REDIS_PASSWORD: redis123
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [migrate]
+
+volumes:
+  postgres_data:
+  node_modules:
+
+networks:
+  migrate:
+    driver: bridge
