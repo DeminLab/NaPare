@@ -2,7 +2,7 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-RUN apk add --no-cache python3 make g++
+RUN apk add --no-cache python3 make g++ && corepack enable && corepack prepare pnpm@9.15.4 --activate
 
 COPY apps/backend/package.json ./package.json
 RUN npm_config_build_from_source=true npm install --include=dev --no-audit --no-fund
