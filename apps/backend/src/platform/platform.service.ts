@@ -18,6 +18,7 @@ import { PlatformControl, PlatformGrant } from './platform.entity';
 import { PLATFORM_PERMISSIONS, PlatformAccountDto, PlatformCreateAccountDto, PlatformFacultyDto, PlatformGrantDto, PlatformGroupDto, PlatformJobDto, PlatformPermission, PlatformQueryDto, PlatformSettingsDto, PlatformUniversityDto, SERVICE_IDS } from './platform.dto';
 import { ControlAgentClient } from './control-agent.client';
 import { platformDatabaseGrants, PLATFORM_TENANT_TABLES } from '../common/tenant/tenant-database-platform';
+import { TelemetryService } from '../telemetry/telemetry.service';
 
 type AgentJob = { id: string; service: string; action: string; status: string; actorId: string; createdAt: string; log?: string };
 type PlatformAuditContext = { ip?: string; userAgent?: string };
@@ -25,7 +26,7 @@ const safeAccount = ({ id, email, firstName, lastName, role, universityId, group
 
 @Injectable()
 export class PlatformService {
-  constructor(private readonly db: DataSource, private readonly tenant: TenantContext, private readonly agent: ControlAgentClient, private readonly raspScraper: RaspScraperService) {}
+  constructor(private readonly db: DataSource, private readonly tenant: TenantContext, private readonly agent: ControlAgentClient, private readonly raspScraper: RaspScraperService, private readonly telemetry: TelemetryService) {}
   async access() {
     const actor = this.tenant.getUser();
     if (!actor || ![UserRole.DEVELOPER, UserRole.SUPERADMIN].includes(actor.role)) throw new ForbiddenException('Требуется доступ к управлению платформой.');
@@ -37,6 +38,7 @@ export class PlatformService {
       'accounts.read', 'accounts.write', 'student-data.read', 'personal-data.read', 'attendance-qr.read',
       'homework-data.read', 'notification-data.read', 'curation-data.read', 'pairspace-content.read',
       'academic-data.read', 'career-data.read', 'discussion-data.read', 'events-data.read', 'attachments-data.read',
+      'analytics.read', 'telemetry.read',
     ].some(permission => permissions.has(permission))) permissions.add('universities.read');
     if (permissions.has('identity-links.write')) permissions.add('identity-links.read');
     return { owner, ownerConfigured: !!control, permissions: [...permissions], serviceIds: owner ? [...SERVICE_IDS] : grant?.serviceIds ?? [], universityIds: owner ? null : grant?.universityIds ?? null, agentConfigured: this.agent.configured(), actorId: actor.id };
@@ -140,7 +142,8 @@ export class PlatformService {
     return { access, target };
   }
   async updateAccount(id: string, dto: PlatformAccountDto, auditContext: PlatformAuditContext = {}) {
-    return this.db.transaction(async manager => {
+    let invalidatedBy: string | null = null;
+    const result = await this.db.transaction(async manager => {
       const { access, target } = await this.manageable(id, manager);
       if (dto.role === UserRole.CURATOR && target.role !== UserRole.CURATOR) throw new BadRequestException('Кураторство назначается дополнительно в разделе кураторства.');
       if (!access.owner && dto.role && dto.role !== target.role && ([UserRole.DEVELOPER, UserRole.SUPERADMIN].includes(dto.role) || [UserRole.DEVELOPER, UserRole.SUPERADMIN].includes(target.role))) throw new ForbiddenException('Назначение и смена платформенной роли доступны только владельцу.');
@@ -186,12 +189,15 @@ export class PlatformService {
         newValues[key] = value as JsonObject[string];
       }
       const accessChanged = ['email', 'role', 'isActive', 'universityId', 'groupId'].some(key => key in changes);
+      if (accessChanged) invalidatedBy = access.actorId;
       // Only changes that affect login or authorization invalidate existing sessions.
       await manager.update(User, id, { ...changes, ...(accessChanged ? { sessionVersion: () => '"sessionVersion" + 1' } : {}) });
       if (dto.role && dto.role !== current.role) await manager.delete(PlatformGrant, { userId: id });
       await manager.save(AuditLog, { userId: access.actorId, action: 'platform.account.updated', entity: 'platform', entityId: id, oldValues, newValues: { ...newValues, targetUserId: id, universityId: nextUniversityId ?? null, reason: suppliedReason?.trim() || 'Изменение аккаунта через управление платформой', result: 'updated' }, ...(auditContext.ip ? { ip: auditContext.ip } : {}), ...(auditContext.userAgent ? { userAgent: auditContext.userAgent.slice(0, 512) } : {}) });
       return safeAccount(await manager.findOneByOrFail(User, { id }));
     });
+    if (invalidatedBy) await this.telemetry.revokeAllForUser(id, invalidatedBy, 'Изменение доступа к аккаунту');
+    return result;
   }
   async createAccount(dto: PlatformCreateAccountDto, auditContext: PlatformAuditContext = {}) {
     const access = await this.require('accounts.write');
@@ -223,18 +229,29 @@ export class PlatformService {
     await this.require('accounts.write');
     if (Buffer.byteLength(password) > 72) throw new BadRequestException('Пароль должен занимать не более 72 байт UTF-8.');
     const passwordHash = await bcrypt.hash(password, 12);
+    let actorId = '';
     await this.db.transaction(async manager => {
       const { access } = await this.manageable(id, manager);
+      actorId = access.actorId;
       await manager.update(User, id, { passwordHash, sessionVersion: () => '"sessionVersion" + 1' });
       await manager.save(AuditLog, { userId: access.actorId, action: 'platform.account.password_reset', entity: 'platform', entityId: id, newValues: { result: 'password_reset' }, ...(auditContext.ip ? { ip: auditContext.ip } : {}), ...(auditContext.userAgent ? { userAgent: auditContext.userAgent.slice(0, 512) } : {}) });
     });
+    await this.telemetry.revokeAllForUser(id, actorId, 'Сброс пароля через управление платформой');
     return { changed: true };
   }
   async revokeSessions(id: string, auditContext: PlatformAuditContext = {}) {
+    let actorId = '';
     await this.db.transaction(async manager => {
       const { access } = await this.manageable(id, manager);
+      actorId = access.actorId;
       await manager.increment(User, { id }, 'sessionVersion', 1);
       await manager.save(AuditLog, { userId: access.actorId, action: 'platform.account.sessions_revoked', entity: 'platform', entityId: id, newValues: { result: 'sessions_revoked' }, ...(auditContext.ip ? { ip: auditContext.ip } : {}), ...(auditContext.userAgent ? { userAgent: auditContext.userAgent.slice(0, 512) } : {}) });
+    });
+    await this.telemetry.revokeAllForUser(id, actorId, 'Принудительный выход через управление платформой');
+    await this.telemetry.recordEvent({
+      source: 'backend', category: 'admin', name: 'admin.sessions_revoked', severity: 'warning',
+      userId: actorId, ip: auditContext.ip ?? null, userAgent: auditContext.userAgent ?? null,
+      metadata: { targetUserId: id },
     });
     return { changed: true };
   }
@@ -310,7 +327,7 @@ export class PlatformService {
       'notification-data.read', 'notification-data.write', 'curation-data.read', 'curation-data.write',
       'pairspace-content.read', 'pairspace-content.write', 'attachments-data.read', 'attachments-data.write',
       'academic-data.read', 'academic-data.write', 'events-data.read', 'discussion-data.read', 'discussion-data.write',
-      'career-data.read', 'career-data.write',
+      'career-data.read', 'career-data.write', 'analytics.read', 'telemetry.read',
     ];
     if (dto.permissions.some(p => p.startsWith('services.') || p === 'logs.read')) {
       if (!dto.serviceIds.length) throw new BadRequestException('Выберите сервисы для выданных разрешений.');

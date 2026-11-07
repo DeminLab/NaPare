@@ -12,6 +12,8 @@ Project guides, reference material and historical records live under this direct
 
 - [Product analytics](modules/product-analytics.md) — ten defined own-university metrics, default-off daily activity, observed onboarding readiness and privacy lifecycle.
 
+- [Platform telemetry and analytics](modules/platform-telemetry.md) — real usage data, session management, event journal, monitored users and revocation; three DB tables, RLS, sanitization, retention.
+
 - [Career moderation](modules/career-moderation.md) — versioned manual review, student complaints, scoped decisions and current verification gaps.
 
 - [Company registry verification](integrations/company-registry.md) — company registration, persisted FNS result and owner recheck; public-search limitations and evidence.

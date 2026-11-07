@@ -104,6 +104,8 @@ pnpm --filter @napare/backend exec ts-node --transpile-only test/update-role-pol
 | `GET /api/v1/auth/telegram/status` | JwtAuthGuard | 200 | 403 | 403 | 403 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
 | `POST /api/v1/auth/max/link` | JwtAuthGuard | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
 | `POST /api/v1/auth/logout` | JwtAuthGuard | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
+| `POST /api/v1/auth/sessions/:id/revoke` | JwtAuthGuard | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
+| `GET /api/v1/auth/sessions` | JwtAuthGuard | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
 | `GET /api/v1/career/ai/status` | JwtAuthGuard | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
 | `POST /api/v1/career/tasks/:id/apply` | JwtAuthGuard | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
 | `POST /api/v1/career/tasks/:id/approve` | JwtAuthGuard | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
@@ -227,6 +229,14 @@ pnpm --filter @napare/backend exec ts-node --transpile-only test/update-role-pol
 | `GET /api/v1/platform-academic/lessons/:id` | JwtAuthGuard | 200 | 403 | 403 | 403 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
 | `GET /api/v1/platform-academic/lessons` | JwtAuthGuard | 200 | 403 | 403 | 403 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
 | `PATCH /api/v1/platform-academic/lessons/:id` | JwtAuthGuard | 200 | 403 | 403 | 403 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
+| `GET /api/v1/platform/events/facets` | JwtAuthGuard | 200 | 403 | 403 | 403 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
+| `GET /api/v1/platform/events` | JwtAuthGuard | 200 | 403 | 403 | 403 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
+| `GET /api/v1/platform/analytics/overview` | JwtAuthGuard | 200 | 403 | 403 | 403 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
+| `POST /api/v1/platform/sessions/:id/revoke` | JwtAuthGuard | 200 | 403 | 403 | 403 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
+| `POST /api/v1/platform/monitored-users/:id/revoke-sessions` | JwtAuthGuard | 200 | 403 | 403 | 403 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
+| `GET /api/v1/platform/sessions` | JwtAuthGuard | 200 | 403 | 403 | 403 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
+| `GET /api/v1/platform/monitored-users/:id/activity` | JwtAuthGuard | 200 | 403 | 403 | 403 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
+| `GET /api/v1/platform/monitored-users` | JwtAuthGuard | 200 | 403 | 403 | 403 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
 | `GET /api/v1/platform-attachments/:id` | JwtAuthGuard | 200 | 403 | 403 | 403 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
 | `GET /api/v1/platform-attachments` | JwtAuthGuard | 200 | 403 | 403 | 403 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
 | `PATCH /api/v1/platform-attachments/:id/restore` | JwtAuthGuard | 200 | 403 | 403 | 403 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
@@ -424,6 +434,7 @@ pnpm --filter @napare/backend exec ts-node --transpile-only test/update-role-pol
 | `POST /api/v1/career/payments/notification` | [apps/backend/src/career-billing/payment.controller.ts](../../apps/backend/src/career-billing/payment.controller.ts) |
 | `GET /api/v1/platform/public-settings` | [apps/backend/src/platform/platform.controller.ts](../../apps/backend/src/platform/platform.controller.ts) |
 | `POST /api/v1/integrations/telegram/webhook` | [apps/backend/src/auth/telegram-webhook.controller.ts](../../apps/backend/src/auth/telegram-webhook.controller.ts) |
+| `POST /api/v1/telemetry/events` | [apps/backend/src/telemetry/telemetry.controller.ts](../../apps/backend/src/telemetry/telemetry.controller.ts) |
 
 ## CI и границы проверки
 

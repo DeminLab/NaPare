@@ -4,6 +4,9 @@ import { UserRole } from '../../auth/interfaces/user-role';
 import { TenantContext } from '../tenant/tenant-context';
 import { AuthenticatedUser } from '../../auth/interfaces/authenticated-user.interface';
 
+/** Declared self-service session routes; real URLs carry a UUID instead of `:id`. */
+const SELF_SESSION_ROUTES = ['/api/v1/auth/sessions', '/api/v1/auth/sessions/:id/revoke'];
+
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') {
   constructor(private readonly tenantContext: TenantContext) {
@@ -33,7 +36,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
         this.tenantContext.setUser(actor);
         return user;
       }
-      if (!/^\/api\/v1\/career(?:\/|$)/.test(path) && !['/api/v1/users/me', '/api/v1/users/me/export', '/api/v1/users/me/deletion-preview', '/api/v1/devices/webpush'].includes(path) && !['/api/v1/auth/logout','/api/v1/auth/max/status','/api/v1/auth/max/link'].includes(path)) throw new ForbiddenException('Для этого раздела необходима привязка к вузу');
+      if (!/^\/api\/v1\/career(?:\/|$)/.test(path) && !['/api/v1/users/me', '/api/v1/users/me/export', '/api/v1/users/me/deletion-preview', '/api/v1/devices/webpush'].includes(path) && !['/api/v1/auth/logout','/api/v1/auth/max/status','/api/v1/auth/max/link'].includes(path) && !SELF_SESSION_ROUTES.includes(path) && !SELF_SESSION_ROUTES.includes(path.replace(/\/[0-9a-f-]{36}\/revoke$/i, '/:id/revoke'))) throw new ForbiddenException('Для этого раздела необходима привязка к вузу');
     }
     this.tenantContext.setUser(user);
     return user;

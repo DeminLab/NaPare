@@ -8,6 +8,7 @@ import { RequestModule } from './requests/request.module';
 import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { PlatformModule } from './platform/platform.module';
+import { PlatformAnalyticsModule } from './platform-analytics/platform-analytics.module';
 import { PlatformDataModule } from './platform-data/platform-data.module';
 import { PlatformRecordsModule } from './platform-records/platform-records.module';
 import { PlatformCareerModule } from './platform-career/platform-career.module';
@@ -53,6 +54,8 @@ import { CareerModeration1700000000040 } from './migrations/1700000000040-Career
 import { ProductAnalytics1700000000041 } from './migrations/1700000000041-ProductAnalytics';
 import { OfficeReports1700000000042 } from './migrations/1700000000042-OfficeReports';
 import { WebPushConsent1700000000043 } from './migrations/1700000000043-WebPushConsent';
+import { PlatformTelemetry1700000000044 } from './migrations/1700000000044-PlatformTelemetry';
+import { TelemetryModule } from './telemetry/telemetry.module';
 import { EventsModule } from './events/events.module';
 import { AcademicModule } from './academic/academic.module';
 import { SearchModule } from './search/search.module';
@@ -84,7 +87,7 @@ import { SearchModule } from './search/search.module';
           if (databaseOptions.synchronize) {
             await source.synchronize();
             const runner = source.createQueryRunner();
-            try { await new TenantRowSecurity1700000000029().up(runner); await new PersonalDataRead1700000000037().up(runner); await new AccountErasure1700000000038().up(runner); await new CareerModeration1700000000040().up(runner); await new ProductAnalytics1700000000041().up(runner); await new OfficeReports1700000000042().up(runner); await new WebPushConsent1700000000043().up(runner); }
+            try { await new TenantRowSecurity1700000000029().up(runner); await new PersonalDataRead1700000000037().up(runner); await new AccountErasure1700000000038().up(runner); await new CareerModeration1700000000040().up(runner); await new ProductAnalytics1700000000041().up(runner); await new OfficeReports1700000000042().up(runner); await new WebPushConsent1700000000043().up(runner); await new PlatformTelemetry1700000000044().up(runner); }
             finally { await runner.release(); }
           }
           await assertTenantDatabase(source);
@@ -135,6 +138,8 @@ import { SearchModule } from './search/search.module';
     CareerModule,
     PaymentModule,
     PlatformModule,
+    PlatformAnalyticsModule,
+    TelemetryModule,
     PlatformDataModule,
     PlatformRecordsModule,
     PlatformCareerModule,

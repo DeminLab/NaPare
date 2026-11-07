@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { NetworkStatus } from '@/components/ui';
 import { MaxBridgeNavigation } from './MaxBridgeNavigation';
+import { TelemetryProvider } from '@/components/TelemetryProvider';
 
 export const metadata: Metadata = {
   title: 'НаПаре — Преподаватель',
@@ -12,10 +13,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="ru">
       <body className="min-h-screen bg-[var(--color-background)] text-[var(--color-text)] antialiased">
-        {children}
+        <TelemetryProvider>{children}</TelemetryProvider>
         <NetworkStatus />
         <MaxBridgeNavigation />
       </body>
     </html>
   );
 }
+

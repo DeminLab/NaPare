@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from "@nestjs/common";
+import { Injectable, Optional, UnauthorizedException } from "@nestjs/common";
 import { PassportStrategy } from "@nestjs/passport";
 import { ExtractJwt, Strategy } from "passport-jwt";
 import { ConfigService } from "@nestjs/config";
@@ -8,6 +8,7 @@ import { JwtPayload } from "../interfaces/jwt-payload.interface";
 import { AppConfig } from "../../config/configuration";
 import { isUserRole } from "../interfaces/user-role";
 import { TenantContext } from '../../common/tenant/tenant-context';
+import { TelemetryService } from '../../telemetry/telemetry.service';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -16,6 +17,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       AppConfig & Record<string, unknown>
     >,
     private readonly usersService: UsersService,
+    @Optional() private readonly telemetry?: TelemetryService,
     private readonly tenant: TenantContext = new TenantContext(),
   ) {
     super({
@@ -41,6 +43,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException();
     }
 
+    if (payload.sid && this.telemetry && !await this.telemetry.isSessionActive(payload.sid, user.id)) {
+      throw new UnauthorizedException();
+    }
+
     return {
       id: user.id,
       email: user.email,
@@ -48,6 +54,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       universityId: user.universityId,
       groupId: user.groupId,
       sessionVersion: user.sessionVersion,
+      ...(payload.sid ? { sessionId: payload.sid } : {}),
     };
   }
 }

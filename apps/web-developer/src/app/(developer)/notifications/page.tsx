@@ -14,7 +14,7 @@ function safeDeveloperHref(value?: string | null): string | null {
     const url = new URL(value, 'https://napare.invalid');
     if (url.origin !== 'https://napare.invalid') return null;
     const pathname = url.pathname === '/developer' ? '/overview' : url.pathname.startsWith('/developer/') ? url.pathname.slice('/developer'.length) : url.pathname;
-    const routes = ['/overview', '/control', '/api', '/architecture', '/docs', '/notifications', '/session'];
+    const routes = ['/overview', '/control', '/api', '/architecture', '/docs', '/notifications', '/session', '/users', '/events', '/sessions'];
     if (!routes.some(route => pathname === route || pathname.startsWith(`${route}/`))) return null;
     return `${pathname}${url.search}${url.hash}`;
   } catch { return null; }

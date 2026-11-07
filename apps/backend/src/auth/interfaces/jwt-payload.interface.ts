@@ -7,4 +7,6 @@ export interface JwtPayload {
   universityId: string | null;
   groupId?: string | null;
   sessionVersion: number;
+  /** Server-side session id; absent on tokens issued before session tracking. */
+  sid?: string;
 }

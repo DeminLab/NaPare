@@ -24,6 +24,7 @@ const PRIVATE_ROWS: Record<string, string> = {
   notifications: 'userId', notification_deliveries: 'userId', notification_preferences: 'userId', inbox_items: 'userId',
   device_tokens: 'userId', telegram_link_challenges: 'userId', career_profile: 'studentId', career_availability: 'studentId',
   career_portfolio: 'studentId', career_notice: 'userId', career_ai_request: 'userId', platform_grants: 'userId',
+  user_sessions: 'userId', auth_events: 'userId', platform_events: 'userId',
 };
 const LINKED_ROWS: Record<string, string> = {
   career_membership: 'userId', career_admission: 'studentId', career_task_complaint: 'studentId', curator_assignments: 'userId', office_assignments: 'userId', groups: 'curatorId', faculties: 'deanUserId', attendance_qr_sessions: 'createdById',
@@ -76,7 +77,7 @@ export class AccountErasureService {
       try {
         await runner.connect();
         return { accountId: actor.id, archiveModel: 'pseudonymous', retained: ACCOUNT_RETENTION, blockers: await this.blockers(runner, false),
-          removed: ['ФИО и контакты профиля, пароль и вход во всех сессиях', 'MAX/Telegram/Moodle-привязки, push-токены и настройки доставки', 'Личные заметки, избранное, уведомления, карьерный профиль и опубликованное портфолио', 'Действующие личные назначения и права платформы'],
+          removed: ['ФИО и контакты профиля, пароль и вход во всех сессиях', 'MAX/Telegram/Moodle-привязки, push-токены и настройки доставки', 'Личные заметки, избранное, уведомления, карьерный профиль и опубликованное портфолио', 'История устройств, входов и технических событий аккаунта', 'Действующие личные назначения и права платформы'],
           downloadBeforeDeletion: '/api/v1/users/me/export' };
       } finally { await runner.release(); }
     });

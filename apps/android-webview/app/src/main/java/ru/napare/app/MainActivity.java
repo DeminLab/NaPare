@@ -37,6 +37,8 @@ import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import org.json.JSONObject;
+import ru.napare.app.TelemetryBeacon;
+
 
 /** Thin HTTPS client: authentication, permissions and role routing belong to the website. */
 public final class MainActivity extends Activity {
@@ -130,6 +132,7 @@ public final class MainActivity extends Activity {
             hasLoadedContent = true;
             loadingPanel.setVisibility(View.GONE);
             view.setVisibility(View.VISIBLE);
+            if (isSite(Uri.parse(url))) TelemetryBeacon.inject(view);
             if (isSite(Uri.parse(url)) && "/login".equals(Uri.parse(url).getPath())) view.clearHistory();
         }
         @Override public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
@@ -295,11 +298,13 @@ public final class MainActivity extends Activity {
     @Override public void onBackPressed() {
         if (web.canGoBack()) web.goBack(); else super.onBackPressed();
     }
-    @Override protected void onPause() { web.onPause(); CookieManager.getInstance().flush(); super.onPause(); }
+    @Override protected void onPause() { web.onPause(); TelemetryBeacon.flush(web); CookieManager.getInstance().flush(); super.onPause(); }
     @Override protected void onResume() { super.onResume(); if (web != null) web.onResume(); }
     @Override protected void onDestroy() {
         if (fileCallback != null) fileCallback.onReceiveValue(null);
+        TelemetryBeacon.flush(web);
         web.destroy();
         super.onDestroy();
     }
+
 }

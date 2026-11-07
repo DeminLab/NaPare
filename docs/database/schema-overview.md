@@ -15,6 +15,7 @@
 | Уведомления и аудит | `notifications`, `notification_preferences`, `inbox_items`, `device_tokens`, `event_records`, `audit_logs` | `apps/backend/src/notifications/`, `apps/backend/src/events/` |
 | Учебный контекст | `academic_courses`, `lesson_series`, `lesson_occurrences`, `course_spaces`, `lesson_spaces`, `academic_events`, `academic_schedule_changes` | `apps/backend/src/academic/` и миграция `1700000000004-AcademicContext.ts` |
 | Дополнительные функции | `personal_lesson_notes`, `homework_progress`, `favorites`, Telegram link tables | профильные entities и миграции `1700000000010`–`1700000000016` |
+| Телеметрия и сессии | `user_sessions`, `auth_events`, `platform_events` | `apps/backend/src/telemetry/`, миграция `1700000000044-PlatformTelemetry` |
 
 Точные столбцы, ограничения и индексы находятся в сущностях и миграциях. Этот обзор не заменяет их. Полный список миграций: `apps/backend/src/migrations/`.
 

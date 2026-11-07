@@ -128,6 +128,9 @@ function tenantRule(route) {
   if (route.controller === 'AuthController') return route.guards.includes('JwtAuthGuard')
     ? 'Verified JWT identity; self-only account operation'
     : 'Public/authentication boundary; credential/initData/refresh verification or public SIBIT catalog';
+  if (route.controller === 'TelemetryController') return route.guards.includes('OptionalJwtAuthGuard')
+    ? 'Anonymous beacon or verified JWT actor; university taken only from the verified actor, payload sanitized in service'
+    : 'Verified JWT identity; self-only telemetry operation';
   if (route.controller === 'UsersController' || route.controller === 'DevicesController' || route.controller === 'NotificationsController' || route.controller === 'FavoritesController') {
     return 'JWT user.id (self), universityId from verified actor; resource owner check in service';
   }

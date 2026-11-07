@@ -29,3 +29,20 @@ HTTP и mixed content запрещены; ошибки сертификатов 
 Пошаговая инструкция и оставшиеся препятствия модерации: [RuStore](../../docs/deployment/rustore-publication.md). Метаданные в `rustore/` относятся к версии 1.1.0 с офлайн-планом и требуют пересмотра перед подачей версии 1.1.2; пароли модераторских аккаунтов туда не сохранять.
 
 Документация платформы: [WebView](https://developer.android.com/develop/ui/views/layout/webapps/webview), [WebViewCompat](https://developer.android.com/reference/androidx/webkit/WebViewCompat).
+
+## Телеметрия
+
+Клиентская телеметрия реализована в `apps/android-webview/app/src/main/java/ru/napare/app/TelemetryBeacon.java` и в JS-коде web-приложения (`apps/web-student/src/lib/telemetry.ts`).
+
+`TelemetryBeacon.inject(WebView)` вызывается из `MainActivity.onPageFinished()` и инжектирует JS-скрипт, который:
+
+- генерирует или извлекает `installId` из `localStorage` (16 случайных байт);
+- отправляет `app.open` один раз за сессию через `sessionStorage`-флаг;
+- отправляет `page.view` при каждой навигации;
+- подписывается на `pagehide` и вызывает `flush` через `navigator.sendBeacon`.
+
+События POST-ятся на `POST /api/v1/telemetry/events` с телом `{ events, installId, app: 'android' }`. Сервер принимает пакет, отвечает `202`, ограничивает 120 запросов/мин на IP; данные проходят `sanitizeMetadata` (вырезает password/token/cookie/email/phone).
+
+JS-клиент web-приложения (запущенный внутри WebView) имеет собственный `TelemetryProvider`: буферизует `page.view` и `ui.action`, флашит каждые 3 секунды пачками по 10; при скрытии страницы использует `navigator.sendBeacon`.
+
+Важно: `TelemetryBeacon` не отправляет токены, email, пароли или содержимое страниц. Отправляются только `installId`, путь страницы, клиент `android` и базовые атрибуты (`os`, `api`, `model`).

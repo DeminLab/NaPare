@@ -12,12 +12,14 @@ import { UsersModule } from '../users/users.module';
 import { University } from '../users/entities/university.entity';
 import { AppConfig } from '../config/configuration';
 import { RaspModule } from '../rasp/rasp.module';
+import { TelemetryModule } from '../telemetry/telemetry.module';
 
 @Module({
   imports: [
     UsersModule,
     RaspModule,
     PassportModule,
+    TelemetryModule,
     TypeOrmModule.forFeature([University]),
     JwtModule.registerAsync({
       imports: [ConfigModule],

@@ -15,7 +15,22 @@ import type { HealthInfo, UserInfo } from "@/lib/api";
 const groups: WorkspaceNavGroup[] = [
   {
     label: "Обзор",
-    items: [{ href: "/overview", label: "Состояние системы", mobileLabel: "Система", icon: "home" }],
+    items: [{ href: "/overview", label: "Аналитика платформы", mobileLabel: "Аналитика", icon: "chart", keywords: ["дашборд", "метрики", "графики", "система"] }],
+  },
+  {
+    label: "Мониторинг",
+    items: [
+      { href: "/users", label: "Пользователи", icon: "users", keywords: ["аккаунты", "мониторинг", "активность", "сессии"] },
+      { href: "/events", label: "События и логи", mobileLabel: "События", icon: "list", keywords: ["логи", "logs", "ошибки", "запросы"] },
+      { href: "/sessions", label: "Сессии устройств", mobileLabel: "Сессии", icon: "lock", keywords: ["устройства", "ip", "выход"] },
+      {
+        href: "/notifications",
+        label: "Уведомления",
+        mobileLabel: "Увед.",
+        icon: "pulse",
+        keywords: ["events"],
+      },
+    ],
   },
   {
     label: "Платформа",
@@ -26,19 +41,6 @@ const groups: WorkspaceNavGroup[] = [
         label: "API",
         icon: "code",
         keywords: ["api explorer", "endpoints", "api"],
-      },
-      {
-        href: "/overview#events",
-        label: "События платформы",
-        icon: "list",
-        keywords: ["логи", "logs"],
-      },
-      {
-        href: "/notifications",
-        label: "Уведомления",
-        mobileLabel: "Увед.",
-        icon: "pulse",
-        keywords: ["events"],
       },
     ],
   },
@@ -65,9 +67,9 @@ const groups: WorkspaceNavGroup[] = [
     items: [
       {
         href: "/session",
-        label: "Сессии",
-        icon: "users",
-        keywords: ["sessions", "сессии"],
+        label: "Моя сессия",
+        icon: "user",
+        keywords: ["sessions", "токен", "выход"],
       },
       {
         href: "/connections",
@@ -123,6 +125,38 @@ export default function DeveloperLayout({ children }: { children: ReactNode }) {
   }, [router]);
   const commands: WorkspaceCommand[] = [
     {
+      id: "developer:analytics",
+      label: "Открыть аналитику платформы",
+      description: "Регистрации, входы, активность, устройства",
+      icon: "chart",
+      href: "/overview",
+      keywords: ["аналитика", "metrics", "dashboard"],
+    },
+    {
+      id: "developer:users",
+      label: "Открыть мониторинг пользователей",
+      description: "Аккаунты, история входов и активность",
+      icon: "users",
+      href: "/users",
+      keywords: ["пользователи", "users"],
+    },
+    {
+      id: "developer:events",
+      label: "Открыть журнал событий",
+      description: "Запросы, ошибки, авторизации, админ-действия",
+      icon: "list",
+      href: "/events",
+      keywords: ["логи", "logs", "events"],
+    },
+    {
+      id: "developer:sessions",
+      label: "Открыть сессии устройств",
+      description: "Устройства, IP и принудительный выход",
+      icon: "lock",
+      href: "/sessions",
+      keywords: ["сессии", "devices"],
+    },
+    {
       id: "developer:api",
       label: "Открыть API Explorer",
       description: "Эндпоинты и авторизация",
@@ -138,10 +172,10 @@ export default function DeveloperLayout({ children }: { children: ReactNode }) {
     },
     {
       id: "developer:session",
-      label: "Открыть активные сессии",
-      icon: "users",
+      label: "Открыть свою сессию",
+      icon: "user",
       href: "/session",
-      keywords: ["sessions", "jobs"],
+      keywords: ["my sessions", "токен"],
     },
   ];
   const name = user ? user.firstName + " " + user.lastName : "Разработчик";
@@ -165,7 +199,7 @@ export default function DeveloperLayout({ children }: { children: ReactNode }) {
         tone: apiAvailable ? "success" : "warning",
       }}
       commands={commands}
-      mobileHrefs={["/overview", "/api", "/notifications", "/docs"]}
+      mobileHrefs={["/overview", "/users", "/events", "/sessions", "/notifications"]}
       onLogout={logout}
     >
       <div className="role-content">{children}</div>
