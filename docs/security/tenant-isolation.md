@@ -85,7 +85,7 @@ ALTER DEFAULT PRIVILEGES FOR ROLE napare_migrator IN SCHEMA public
   GRANT USAGE, SELECT ON SEQUENCES TO napare_runtime;
 ```
 
-Миграции запускаются из корня репозитория до старта новой версии backend. CLI [database.config.ts](../../apps/backend/src/config/database.config.ts) использует `DB_*`; задайте host, port, database, username миграционной роли и её пароль через защищённое окружение процесса. Не вставляйте значения паролей в shell history:
+В production backend запускает ожидающие TypeORM-миграции при старте отдельным DataSource с `DB_MIGRATION_USERNAME` и `DB_MIGRATION_PASSWORD`. Основное соединение и проверки RLS используют `DB_USERNAME`/`DB_PASSWORD`, то есть runtime-роль. Обе роли должны иметь `NOSUPERUSER NOBYPASSRLS`; runtime-роль не должна владеть таблицами и иметь `CREATE` на `public`. Для CLI [database.config.ts](../../apps/backend/src/config/database.config.ts) задайте миграционные реквизиты в защищённом окружении процесса. Не вставляйте значения паролей в shell history:
 
 ```powershell
 pnpm --filter @napare/backend typeorm:migration:run

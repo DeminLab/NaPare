@@ -327,6 +327,7 @@ docker compose -f docker-compose.dev.yml down -v
 | `PORT` | Нет | Порт API; по умолчанию `3000` |
 | `DATABASE_URL` | Если используется вместо отдельных полей | Полный URL подключения PostgreSQL |
 | `DB_HOST`, `DB_PORT`, `DB_USERNAME`, `DB_PASSWORD`, `DB_NAME` | При отсутствии `DATABASE_URL` | Поля подключения PostgreSQL |
+| `DB_MIGRATION_USERNAME`, `DB_MIGRATION_PASSWORD` | Production | Отдельная ограниченная роль для запуска TypeORM-миграций; runtime-подключение использует `DB_USERNAME`/`DB_PASSWORD` |
 | `JWT_SECRET` | Да | Секрет для подписи access-токенов |
 | `JWT_REFRESH_SECRET` | Да | Секрет для подписи refresh-токенов |
 | `JWT_ACCESS_EXPIRATION` | Да | Время жизни access-токена (например, `15m`) |

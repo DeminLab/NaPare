@@ -81,7 +81,27 @@ import { SearchModule } from './search/search.module';
         try {
           await source.initialize();
           await assertTenantDatabaseRole(source);
-          if (databaseOptions.migrationsRun) await source.runMigrations({ transaction: databaseOptions.migrationsTransactionMode });
+          if (databaseOptions.migrationsRun) {
+            const migrationUsername = process.env.DB_MIGRATION_USERNAME;
+            const migrationPassword = process.env.DB_MIGRATION_PASSWORD;
+            if (!migrationUsername || !migrationPassword) {
+              throw new Error('DB_MIGRATION_USERNAME and DB_MIGRATION_PASSWORD are required to run production migrations');
+            }
+            const migrator = new DataSource({
+              ...databaseOptions,
+              username: migrationUsername,
+              password: migrationPassword,
+              synchronize: false,
+              migrationsRun: false,
+            } as DataSourceOptions);
+            try {
+              await migrator.initialize();
+              await assertTenantDatabaseRole(migrator);
+              await migrator.runMigrations({ transaction: databaseOptions.migrationsTransactionMode });
+            } finally {
+              if (migrator.isInitialized) await migrator.destroy();
+            }
+          }
           // Development schema synchronization does not run migrations. Apply
           // the same policies so development never silently disables isolation.
           if (databaseOptions.synchronize) {
