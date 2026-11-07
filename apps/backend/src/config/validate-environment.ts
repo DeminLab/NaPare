@@ -26,6 +26,17 @@ export function validateEnvironment(
     }
   }
 
+  if (nodeEnv === 'production') {
+    for (const name of ['DB_MIGRATION_USERNAME', 'DB_MIGRATION_PASSWORD']) {
+      if (typeof config[name] !== 'string' || config[name].trim().length === 0) {
+        errors.push(`${name} is required in production`);
+      }
+    }
+    if (typeof config.DB_USERNAME === 'string' && config.DB_USERNAME === config.DB_MIGRATION_USERNAME) {
+      errors.push('DB_MIGRATION_USERNAME must differ from DB_USERNAME in production');
+    }
+  }
+
   const telegramSecrets = ['TELEGRAM_BOT_TOKEN', 'TELEGRAM_BOT_USERNAME', 'TELEGRAM_WEBHOOK_SECRET'];
   const configuredTelegramSecrets = telegramSecrets.filter(name => typeof config[name] === 'string' && (config[name] as string).trim());
   if (configuredTelegramSecrets.length > 0 && configuredTelegramSecrets.length !== telegramSecrets.length) {

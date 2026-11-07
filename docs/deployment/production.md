@@ -43,7 +43,7 @@ After updating Compose, recreate the backend with `docker compose -f docker-comp
 
 ## Server deployment
 
-After the repository has been cloned and the private `.env` has been configured, update `main` and rebuild the production Compose stack from the repository root:
+After the repository has been cloned and the private `.env` has been configured, update `main` and rebuild the production Compose stack from the repository root. Configure `DB_USERNAME`/`DB_PASSWORD` for the restricted runtime role and `DB_MIGRATION_USERNAME`/`DB_MIGRATION_PASSWORD` for the separate schema migration role. Provision the roles and default object grants as described in [tenant isolation](../security/tenant-isolation.md); do not grant `CREATE` on `public` to the runtime role.
 
 ```bash
 git pull --ff-only origin main
@@ -60,7 +60,7 @@ curl -fsS http://127.0.0.1:3004/deanery/dashboard
 curl -fsS http://127.0.0.1:3005/developer/login
 ```
 
-In production the backend runs pending TypeORM migrations automatically when it starts (`migrationsRun: true`). No separate migration command is required for this Compose deployment. Review backend startup logs and confirm the migration table is current. Back up PostgreSQL before release; never run `docker compose down -v`.
+In production the backend runs pending TypeORM migrations automatically at startup using the migration credentials, then serves requests with runtime credentials. Review backend startup logs and confirm the migration table is current. Back up PostgreSQL before release; never run `docker compose down -v`.
 
 Do not use `docker compose down -v`, `docker system prune`, or any command that removes volumes. The Compose file keeps PostgreSQL and Redis on internal networks and binds the web ports to loopback only.
 
