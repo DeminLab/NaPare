@@ -16,7 +16,6 @@ import { PlatformDiscussionsModule } from './platform-discussions/platform-discu
 import { PlatformHomeworkModule } from './platform-homework/platform-homework.module';
 import { PlatformNotificationsModule } from './platform-notifications/platform-notifications.module';
 import { PlatformCurationModule } from './platform-curation/platform-curation.module';
-import { PlatformAttendanceQrModule } from './platform-attendance-qr/platform-attendance-qr.module';
 import { PlatformPairSpaceModule } from './platform-pair-space/platform-pair-space.module';
 import { PlatformAcademicModule } from './platform-academic/platform-academic.module';
 import { PlatformEventsModule } from './platform-events/platform-events.module';
@@ -167,7 +166,6 @@ import { SearchModule } from './search/search.module';
     PlatformHomeworkModule,
     PlatformNotificationsModule,
     PlatformCurationModule,
-    PlatformAttendanceQrModule,
     PlatformPairSpaceModule,
     PlatformAcademicModule,
     PlatformEventsModule,

@@ -133,15 +133,6 @@ WHERE demo_group.id = :'group_id'::uuid
       AND existing."externalId" = 'max-attendance-demo'
   );
 
-UPDATE "attendance_qr_sessions" AS qr
-SET "revokedAt" = CURRENT_TIMESTAMP
-FROM "lessons" AS lesson
-WHERE qr."lessonId" = lesson.id
-  AND lesson."universityId" = :'university_id'::uuid
-  AND lesson."groupId" = :'group_id'::uuid
-  AND lesson.source = 'hackathon-demo'
-  AND lesson."externalId" = 'max-attendance-demo'
-  AND qr."revokedAt" IS NULL;
 
 DELETE FROM "attendance_records" AS attendance
 USING "lessons" AS lesson, "users" AS student
@@ -163,4 +154,4 @@ echo 'MAX attendance demo accounts (deliver passwords only through a secure chan
 printf 'max-student@demo.napare  %s\n' "$student_password"
 printf 'max-teacher@demo.napare  %s\n' "$teacher_password"
 printf 'Group: %s (%s)\n' "$group_name" "$group_id"
-echo 'The lesson is marked source=hackathon-demo and is active for QR check-in now.'
+echo 'The lesson is marked source=hackathon-demo and is ready for the demo.'

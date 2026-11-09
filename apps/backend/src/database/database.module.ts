@@ -18,7 +18,6 @@ import { PersonalLessonNote } from '../pair-space/entities/personal-lesson-note.
 import { Absence } from '../absences/entities/absence.entity';
 import { AbsenceConfirmation } from '../absences/entities/absence-confirmation.entity';
 import { AttendanceRecord } from '../absences/entities/attendance-record.entity';
-import { AttendanceQrSession } from '../absences/entities/attendance-qr-session.entity';
 import { Notification } from '../notifications/entities/notification.entity';
 import { DeviceToken } from '../notifications/entities/device-token.entity';
 import { AuditLog } from '../common/entities/audit-log.entity';
@@ -53,7 +52,6 @@ const entities = [
   Absence,
   AbsenceConfirmation,
   AttendanceRecord,
-  AttendanceQrSession,
   Notification,
   DeviceToken,
   AuditLog,

@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /_next/
+Disallow: /static/
+Disallow: /next/image
+
+Sitemap: https://napare.sano.ru/sitemap-developer.xml
