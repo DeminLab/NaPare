@@ -93,6 +93,9 @@ export const PERSONAL_DATASETS: readonly PersonalDataset[] = [
   { ...entry('career_review', 'authorId', 'id workId rating body publishAllowed createdAt updatedAt'), name: 'received_career_reviews', owners: [], where: 'EXISTS (SELECT 1 FROM career_work p WHERE p.id = t."workId" AND p."studentId" = $1)' },
   { ...entry('career_payment_events', 'paymentId', 'id paymentId source providerStatus state createdAt'), name: 'own_payment_events', owners: [], where: 'EXISTS (SELECT 1 FROM career_payments p WHERE p.id = t."paymentId" AND p."createdBy" = $1)' },
   { ...entry('event_records', 'id', 'id type timestamp universityId priority'), name: 'event_activity', owners: [], where: 't.actor->>\'id\' = $1 OR t.recipients @> jsonb_build_array($1::text)' },
+  { ...entry('user_sessions', 'userId', 'id universityId client device os browser ip userAgent createdAt lastSeenAt expiresAt revokedAt revokeReason'), name: 'own_user_sessions', owners: [], where: 't."userId"::text = $1' },
+  { ...entry('auth_events', 'userId', 'id universityId type sessionId client ip userAgent createdAt'), name: 'own_auth_events', owners: [], where: 't."userId"::text = $1' },
+  { ...entry('platform_events', 'userId', 'id source category name severity sessionId method path statusCode durationMs createdAt'), name: 'own_platform_events', owners: [], where: 't."userId"::text = $1' },
 ];
 
 export const PERSONAL_EXPORT_LIMITATIONS = [

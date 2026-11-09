@@ -54,3 +54,33 @@ PostgreSQL RLS policies отсутствуют. Tenant isolation выполня�
 Полный доступ новой панели привязан к UUID владельца, назначенного офлайн. Ни developer, ни superadmin не становятся владельцами автоматически. Остальные получают явные разрешения и ограничения по сервисам; старые полномочия superadmin не отменяются. [Реализация](../product/platform-control.md).
 
 Профиль DevOps включает все оперативные разрешения и сервисы, управление университетами и пользователями, в том числе другими техническими аккаунтами. Владелец сохраняет исключительное управление «Контуром доверия»: назначение полномочий и экстренный отзыв всех платформенных назначений с завершением технических сессий. Владельца нельзя заблокировать или сбросить ему пароль через делегированное управление аккаунтами.
+
+## Платформенные права
+
+Помимо `UserRole`, платформенные аккаунты получают набор `permissions.*` в `PlatformGrant`. Права задаются в `apps/backend/src/platform/platform.dto.ts` (`PLATFORM_PERMISSIONS`) и проверяются в сервисе через `PlatformService.require(...)` — это отдельный от `@Roles` слой.
+
+| Право | Назначение |
+|---|---|
+| `services.read` / `services.restart` / `services.rebuild` | Чтение и управление сервисами Compose |
+| `logs.read` | Логи агента |
+| `accounts.read` / `accounts.write` | Чтение/изменение аккаунтов, блокировка, **отзыв сессий** |
+| `identity-links.read` / `identity-links.write` | MAX/Telegram привязки |
+| `universities.read` / `universities.write` | Университеты |
+| `student-data.read` / `student-data.write` | Отсутствия и посещаемость |
+| `attendance-qr.read` / `attendance-qr.revoke` | QR-сессии |
+| `personal-data.read` / `personal-data.write` | Личные настройки, избранное, заметки, прогресс ДЗ |
+| `homework-data.read` / `homework-data.write` | Сдачи ДЗ |
+| `notification-data.read` / `notification-data.write` | Уведомления, inbox, push-устройства |
+| `curation-data.read` / `curation-data.write` | Кураторские назначения |
+| `academic-data.read` / `academic-data.write` | Академические курсы и серии |
+| `career-data.read` / `career-data.write` | Карьерные задачи, портфолио, тесты |
+| `discussion-data.read` / `discussion-data.write` | Обсуждения |
+| `pairspace-content.read` / `pairspace-content.write` | Пространства пар и объявления |
+| `events-data.read` | Системные события |
+| `attachments-data.read` / `attachments-data.write` | Вложения PairSpace |
+| `settings.read` / `settings.write` | Настройки платформы |
+| `audit.read` | Аудит |
+| `analytics.read` | **Витрина загрузки платформы** (`/platform/analytics/overview`) |
+| `telemetry.read` | **Журнал событий, наблюдаемые пользователи, журнал сессий** (`/platform/events`, `/platform/monitored-users`, `/platform/sessions`) |
+
+Права `analytics.read` и `telemetry.read` открывают доступ к [платформенной телеметрии и аналитике](../modules/platform-telemetry.md). Bootstrap-аккаунт Developer получает полный набор прав при инициализации; университетные операторы эти права не получают.

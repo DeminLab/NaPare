@@ -5,6 +5,7 @@ import {
   BadRequestException,
   ConflictException,
   ServiceUnavailableException,
+  Optional,
 } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { ConfigService } from "@nestjs/config";
@@ -22,6 +23,7 @@ import { User } from "../users/entities/user.entity";
 import { validateMaxInitData } from "./max-init-data";
 import { TenantContext } from '../common/tenant/tenant-context';
 import { deliveryEnabled } from '../notifications/delivery/delivery-config';
+import { TelemetryRequestContext, TelemetryService } from '../telemetry/telemetry.service';
 
 export type PortalWorkspace = "student" | "staff" | "admin" | "developer" | "career";
 
@@ -35,15 +37,18 @@ export class AuthService {
       AppConfig & Record<string, unknown>
     >,
     private readonly tenant: TenantContext = new TenantContext(),
+    @Optional() private readonly telemetry?: TelemetryService,
   ) {}
 
-  async login(loginDto: LoginDto): Promise<AuthResponse> {
+  async login(loginDto: LoginDto, context: TelemetryRequestContext = {}): Promise<AuthResponse> {
+    const email = loginDto.email.trim();
     const user = await this.tenant.runWithDatabaseAccess(
-      { authentication: { email: loginDto.email.trim() } },
-      () => this.usersService.findByEmail(loginDto.email.trim()),
+      { authentication: { email } },
+      () => this.usersService.findByEmail(email),
     );
 
     if (!user || !user.isActive) {
+      await this.recordFailedLogin(email, context, user?.id ? "inactive" : "unknown_account");
       throw new UnauthorizedException("Invalid credentials");
     }
 
@@ -53,16 +58,18 @@ export class AuthService {
     );
 
     if (!isPasswordValid) {
+      await this.recordFailedLogin(email, context, "invalid_password");
       throw new UnauthorizedException("Invalid credentials");
     }
 
-    return this.generateTokens(user);
+    return this.completeLogin(user, context, { method: "password" });
   }
 
   async portalLogin(
     loginDto: LoginDto,
+    context: TelemetryRequestContext = {},
   ): Promise<AuthResponse & { workspace: PortalWorkspace }> {
-    const response = await this.login(loginDto);
+    const response = await this.login(loginDto, context);
     const workspace = this.getPortalWorkspace(response.user.role);
 
     if (!workspace) {
@@ -74,7 +81,7 @@ export class AuthService {
     return { ...response, workspace };
   }
 
-  async maxAuth(maxAuthDto: MaxAuthDto): Promise<AuthResponse> {
+  async maxAuth(maxAuthDto: MaxAuthDto, context: TelemetryRequestContext = {}): Promise<AuthResponse> {
     const botToken = this.configService.get<string>("max.botToken") ?? "";
     if (!botToken) {
       throw new ServiceUnavailableException({
@@ -96,6 +103,7 @@ export class AuthService {
       maxAgeSeconds,
     });
     if (!payload) {
+      await this.telemetry?.recordAuth({ type: "login_failed", ...context, metadata: { method: "max", reason: "invalid_init_data" } });
       throw new UnauthorizedException({
         code: "MAX_INVALID_INIT_DATA",
         message: "Данные входа MAX недействительны или устарели",
@@ -109,6 +117,7 @@ export class AuthService {
 
     if (!user) {
       if (!maxAuthDto.email || !maxAuthDto.password) {
+        await this.telemetry?.recordAuth({ type: "login_failed", ...context, metadata: { method: "max", reason: "account_not_linked" } });
         throw new UnauthorizedException({
           code: "MAX_ACCOUNT_NOT_LINKED",
           message:
@@ -122,6 +131,7 @@ export class AuthService {
         maxAuthDto.password,
       );
       if (!user) {
+        await this.recordFailedLogin(maxAuthDto.email, context, "invalid_password", { method: "max" });
         throw new UnauthorizedException({
           code: "MAX_INVALID_CREDENTIALS",
           message: "Неверный email или пароль",
@@ -130,13 +140,14 @@ export class AuthService {
     }
 
     if (!user.isActive) {
+      await this.telemetry?.recordAuth({ type: "login_failed", userId: user.id, universityId: user.universityId, ...context, metadata: { method: "max", reason: "inactive" } });
       throw new ForbiddenException("Аккаунт деактивирован");
     }
 
-    return this.generateTokens(user);
+    return this.completeLogin(user, context, { method: "max" });
   }
 
-  async linkMaxToAuthenticatedUser(initData: string, userId: string): Promise<AuthResponse> {
+  async linkMaxToAuthenticatedUser(initData: string, userId: string, context: TelemetryRequestContext = {}): Promise<AuthResponse> {
     const botToken = this.configService.get<string>("max.botToken") ?? "";
     if (!botToken) {
       throw new ServiceUnavailableException({
@@ -170,7 +181,7 @@ export class AuthService {
 
     try {
       const linkedUser = await this.usersService.bindMaxUserIdIfUnlinked(userId, payload.maxUserId);
-      return this.generateTokens(linkedUser);
+      return this.completeLogin(linkedUser, context, { method: "max_link" });
     } catch (error) {
       const driverCode = (error as { driverError?: { code?: string } })?.driverError?.code;
       if (driverCode === "23505") {
@@ -208,14 +219,37 @@ export class AuthService {
         throw new UnauthorizedException("User not found");
       }
 
-      return this.generateTokens(user);
+      if (payload.sid && this.telemetry) {
+        if (!await this.telemetry.isSessionActive(payload.sid, user.id)) {
+          throw new UnauthorizedException("Session revoked");
+        }
+        void this.telemetry.touchSession(payload.sid);
+      }
+
+      return this.generateTokens(user, payload.sid);
     } catch {
       throw new UnauthorizedException("Invalid refresh token");
     }
   }
 
-  async logout(userId: string): Promise<void> {
+  async logout(userId: string, context: TelemetryRequestContext = {}): Promise<void> {
     await this.usersService.invalidateSessions(userId);
+    await this.telemetry?.revokeAllForUser(userId, userId, "Выход из аккаунта");
+    await this.telemetry?.recordAuth({ type: "logout_all", userId, ...context, metadata: { scope: "all_devices" } });
+  }
+
+  async logoutSession(userId: string, sessionId: string, context: TelemetryRequestContext = {}, reason?: string): Promise<boolean> {
+    const revoked = await this.telemetry?.revokeOwnSession(sessionId, userId, reason) ?? false;
+    if (revoked) await this.telemetry?.recordAuth({ type: "logout", userId, sessionId, ...context, metadata: { scope: "current_device" } });
+    return revoked;
+  }
+
+  async sessions(userId: string) {
+    return this.telemetry?.listOwnSessions(userId) ?? [];
+  }
+
+  async revokeOwnSession(userId: string, sessionId: string, context: TelemetryRequestContext = {}, reason?: string): Promise<boolean> {
+    return this.logoutSession(userId, sessionId, context, reason);
   }
 
   async createTelegramLink(userId: string): Promise<{ botLink: string; expiresAt: string }> {
@@ -329,7 +363,35 @@ export class AuthService {
     }
   }
 
-  private generateTokens(user: User): AuthResponse {
+  private async completeLogin(user: User, context: TelemetryRequestContext, metadata: Record<string, unknown>): Promise<AuthResponse> {
+    const sessionId = await this.telemetry?.createSession(user, context) ?? undefined;
+    try {
+      await this.usersService.updateLastLogin(user.id);
+    } catch {
+      // A successful authentication must not fail because the profile timestamp could not be refreshed.
+    }
+    await this.telemetry?.recordAuth({
+      type: "login_success",
+      userId: user.id,
+      universityId: user.universityId,
+      sessionId: sessionId ?? null,
+      ...context,
+      metadata,
+    });
+    return this.generateTokens(user, sessionId);
+  }
+
+  private async recordFailedLogin(email: string, context: TelemetryRequestContext, reason: string, metadata: Record<string, unknown> = {}): Promise<void> {
+    if (!this.telemetry) return;
+    await this.telemetry.recordAuth({
+      type: "login_failed",
+      emailHash: this.telemetry.fingerprint(email),
+      ...context,
+      metadata: { ...metadata, reason },
+    });
+  }
+
+  private generateTokens(user: User, sessionId?: string): AuthResponse {
     const payload: JwtPayload = {
       sub: user.id,
       email: user.email,
@@ -337,6 +399,7 @@ export class AuthService {
       universityId: user.universityId,
       groupId: user.groupId,
       sessionVersion: user.sessionVersion ?? 0,
+      ...(sessionId ? { sid: sessionId } : {}),
     };
 
     const accessToken = this.jwtService.sign(payload);

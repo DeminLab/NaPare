@@ -1,208 +1,186 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import Button from "@/components/ui/Button";
-import Card from "@/components/ui/Card";
-import { ConfirmDialog } from "@/components/ui";
-import { getToken, logout } from "@/lib/api";
+import { useCallback, useEffect, useState } from 'react';
+import {
+  Badge,
+  Button,
+  Card,
+  Dialog,
+  EmptyState,
+  Icon,
+  Input,
+  PageHeader,
+  Skeleton,
+} from '@/components/ui';
+import { apiFetch, logout } from '@/lib/api';
+import type { UserSession } from '@/lib/analytics';
+import { clientLabels, formatNumber, relativeTime } from '@/lib/analytics';
 
-type SessionStatus = "Active" | "Expired" | "Unknown";
-
-interface SessionRecord {
-  device: string;
-  created: string;
-  expiresAt: string;
-  status: SessionStatus;
+function sessionState(session: UserSession): 'active' | 'revoked' | 'expired' {
+  if (session.revokedAt) return 'revoked';
+  if (Date.parse(session.expiresAt) <= Date.now()) return 'expired';
+  return 'active';
 }
 
-interface JwtTimestampClaims {
-  exp?: number;
-  iat?: number;
-}
-
-function formatTimestamp(timestamp?: number) {
-  if (!timestamp || !Number.isFinite(timestamp)) return "Недоступно";
-
-  return new Date(timestamp * 1000).toLocaleString("ru-RU", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
-}
-
-function readLocalSession(token: string): SessionRecord {
-  const device = /Mobile|Android|iPhone|iPad/i.test(navigator.userAgent)
-    ? "Мобильный браузер"
-    : "Браузер на компьютере";
-
-  try {
-    const encodedPayload = token.split(".")[1];
-    if (!encodedPayload) throw new Error("JWT payload is missing");
-
-    const normalizedPayload = encodedPayload
-      .replace(/-/g, "+")
-      .replace(/_/g, "/");
-    const claims = JSON.parse(atob(normalizedPayload)) as JwtTimestampClaims;
-    const expired =
-      typeof claims.exp === "number" && claims.exp * 1000 <= Date.now();
-
-    return {
-      device,
-      created: formatTimestamp(claims.iat),
-      expiresAt: formatTimestamp(claims.exp),
-      status: typeof claims.exp !== "number" ? "Unknown" : expired ? "Expired" : "Active",
-    };
-  } catch {
-    return {
-      device,
-      created: "Недоступно",
-      expiresAt: "Недоступно",
-      status: "Unknown",
-    };
-  }
-}
-
-function StatusBadge({ status }: { status: SessionStatus }) {
-  const tone =
-    status === "Active"
-      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-      : status === "Expired"
-        ? "border-amber-200 bg-amber-50 text-amber-800"
-        : "border-slate-200 bg-slate-100 text-slate-600";
-
-  return (
-    <span
-      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${tone}`}
-    >
-      <span className="h-1.5 w-1.5 rounded-full bg-current" />
-      {status === "Active" ? "Срок не истёк" : status === "Expired" ? "Срок истёк" : "Не удалось прочитать"}
-    </span>
-  );
-}
-
-export default function SessionPage() {
-  const [session, setSession] = useState<SessionRecord | null>(null);
+export default function MySessionsPage() {
+  const [sessions, setSessions] = useState<UserSession[]>([]);
+  const [currentId, setCurrentId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [notice, setNotice] = useState('');
+  const [actionError, setActionError] = useState('');
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [target, setTarget] = useState<UserSession | null>(null);
+  const [reason, setReason] = useState('');
+  const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    const refresh = () => { const token = getToken(); setSession(token ? readLocalSession(token) : null); };
-    refresh(); const timer = window.setInterval(refresh, 30_000);
-    return () => window.clearInterval(timer);
+  const load = useCallback(async () => {
+    try {
+      const result = await apiFetch<{ data: UserSession[]; currentSessionId: string | null }>('/auth/sessions');
+      setSessions(result.data);
+      setCurrentId(result.currentSessionId);
+      setLoadError('');
+    } catch (cause) {
+      setLoadError(cause instanceof Error ? cause.message : 'Не удалось загрузить сессии.');
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const sessionStatus = session?.status;
-  const sessionStatusTone =
-    sessionStatus === "Active"
-      ? "text-emerald-700"
-      : sessionStatus === "Expired"
-        ? "text-amber-700"
-        : "text-slate-600";
+  useEffect(() => {
+    void load();
+    const timer = window.setInterval(load, 30_000);
+    return () => window.clearInterval(timer);
+  }, [load]);
+
+  const revoke = async () => {
+    if (!target) return;
+    setBusy(true); setActionError(''); setNotice('');
+    try {
+      const result = await apiFetch<{ changed: boolean }>(`/auth/sessions/${target.id}/revoke`, { method: 'POST', body: JSON.stringify({ reason: reason.trim() || 'Выход с устройства' }) });
+      setNotice(result.changed ? 'Сессия завершена — на этом устройстве нужно войти заново.' : 'Сессия уже была завершена.');
+      setTarget(null); setReason('');
+      await load();
+    } catch (cause) {
+      setActionError(cause instanceof Error ? cause.message : 'Не удалось завершить сессию.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const activeCount = sessions.filter(session => sessionState(session) === 'active').length;
 
   return (
-    <div className="min-h-full px-4 py-6 text-[var(--color-text)] sm:px-6 lg:px-8 lg:py-8">
-      <div className="mx-auto max-w-5xl space-y-7">
-        <div className="flex items-center gap-2 text-xs text-[var(--color-text-secondary)]">
-          Разработчик <span>/</span>{" "}
-          <span className="font-semibold text-[var(--color-text)]">Сессия</span>
-        </div>
+    <div className="p-4 sm:p-6 lg:p-8">
+      <div className="mx-auto max-w-5xl space-y-6">
+        <PageHeader
+          eyebrow="Доступ · ваш аккаунт"
+          title="Мои сессии"
+          description="Серверные сессии вашего аккаунта: устройства, IP и последняя активность. Данные приходят из таблицы user_sessions, а не из локального токена."
+          actions={<Button variant="secondary" onClick={load} loading={loading}><Icon name="refresh" size={16} /> Обновить</Button>}
+        />
 
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-            Текущая сессия
-          </h1>
-          <p className="mt-1 max-w-2xl text-sm leading-6 text-[var(--color-text-secondary)]">
-            Здесь показаны локальные сроки токена в этом браузере. Его наличие не подтверждает доступ на сервере. Глобальный выход действует на все устройства.
-          </p>
-        </div>
+        {loadError && <p role="alert" className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">{loadError}</p>}
+        {notice && <p role="status" className="rounded-lg border border-[var(--color-border)] bg-[var(--color-brand-soft)] p-3 text-sm text-[var(--color-brand-strong)]">{notice}</p>}
+        {actionError && <p role="alert" className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">{actionError}</p>}
 
-        <section
-          className="grid grid-cols-1 gap-3 sm:grid-cols-3"
-          aria-label="Статус сессии"
-        >
-          <Card>
-            <p className="text-sm text-[var(--color-text-secondary)]">Сессия на устройстве</p>
-            <p className="mt-2 text-2xl font-bold text-[var(--color-text)]">
-              {session ? "1" : "0"}
-            </p>
-            <span className="mt-1 block text-sm text-[var(--color-text-secondary)]">
-              {session ? "локальный токен найден" : "токен не найден"}
-            </span>
+        <section aria-label="Состояние сессий" className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <Card className="border-[var(--color-border)] bg-white p-5">
+            <p className="text-xs uppercase tracking-[0.1em] text-[var(--color-text-secondary)]">Активные сессии</p>
+            <p className="mt-2 text-2xl font-bold tabular-nums text-[var(--color-text)]">{loading ? '—' : formatNumber(activeCount)}</p>
+            <span className="mt-1 block text-sm text-[var(--color-text-secondary)]">на всех устройствах</span>
           </Card>
-          <Card>
-            <p className="text-sm text-[var(--color-text-secondary)]">Статус</p>
-            <p className={`mt-2 text-2xl font-bold ${sessionStatusTone}`}>
-              {session?.status === "Expired" ? "Истекла" : session?.status === "Unknown" ? "Не удалось прочитать" : session ? "Срок не истёк" : "Нет токена"}
-            </p>
-            <span className="mt-1 block text-sm text-[var(--color-text-secondary)]">
-              проверяется по данным JWT
-            </span>
+          <Card className="border-[var(--color-border)] bg-white p-5">
+            <p className="text-xs uppercase tracking-[0.1em] text-[var(--color-text-secondary)]">Это устройство</p>
+            <p className="mt-2 text-lg font-semibold text-[var(--color-text)]">{currentId ? 'Сессия найдена' : 'Сессия не определена'}</p>
+            <span className="mt-1 block text-sm text-[var(--color-text-secondary)]">определяется по серверной записи</span>
           </Card>
-          <Card>
-            <p className="text-sm text-[var(--color-text-secondary)]">Отзыв токенов</p>
-            <p className="mt-2 text-2xl font-bold text-emerald-700">Включён</p>
-            <span className="mt-1 block text-sm text-[var(--color-text-secondary)]">
-              для всех устройств аккаунта
-            </span>
+          <Card className="border-[var(--color-border)] bg-white p-5">
+            <p className="text-xs uppercase tracking-[0.1em] text-[var(--color-text-secondary)]">Отзыв токенов</p>
+            <p className="mt-2 text-lg font-semibold text-[var(--color-success)]">Работает на сервере</p>
+            <span className="mt-1 block text-sm text-[var(--color-text-secondary)]">выход завершает все сессии аккаунта</span>
           </Card>
         </section>
 
-        {session ? (
-          <section className="rounded-2xl border border-[var(--color-border)] bg-white p-5 shadow-sm sm:p-6">
-            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
-              <div>
-                <p className="text-xs uppercase tracking-wider text-[var(--color-text-secondary)]">
-                  Это устройство
-                </p>
-                <h2 className="mt-1 text-lg font-semibold">{session.device}</h2>
-              </div>
-              <StatusBadge status={session.status} />
-            </div>
+        <Card className="border-[var(--color-border)] bg-white p-5 sm:p-6">
+          <h2 className="text-sm font-semibold text-[var(--color-text)]">История сессий аккаунта</h2>
+          <p className="mt-1 text-xs text-[var(--color-text-secondary)]">Показаны последние 50 сессий. Отозванная сессия не сможет продлить доступ даже с валидным refresh-токеном.</p>
+          <div className="mt-4">
+            {loading ? (
+              <Skeleton lines={5} />
+            ) : sessions.length ? (
+              <ul className="divide-y divide-[var(--color-border)]">
+                {sessions.map(session => {
+                  const state = sessionState(session);
+                  const isCurrent = session.id === currentId;
+                  return (
+                    <li key={session.id} className="flex flex-col justify-between gap-3 py-4 first:pt-0 last:pb-0 sm:flex-row sm:items-center">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-sm font-semibold text-[var(--color-text)]">{session.device} · {session.os}</span>
+                          {isCurrent && <Badge variant="info">Это устройство</Badge>}
+                          <Badge variant={state === 'active' ? 'success' : state === 'expired' ? 'warning' : 'danger'}>
+                            {state === 'active' ? 'Активна' : state === 'expired' ? 'Истекла' : 'Отозвана'}
+                          </Badge>
+                        </div>
+                        <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
+                          {clientLabels[session.client] ?? session.client} · {session.browser} · IP {session.ip || 'не записан'} · активность {relativeTime(session.lastSeenAt)}
+                        </p>
+                        {session.revokeReason && <p className="mt-1 text-xs text-[var(--color-text-muted)]">{session.revokeReason}</p>}
+                      </div>
+                      {state === 'active' && !isCurrent && (
+                        <Button variant="secondary" size="sm" onClick={() => { setTarget(session); setReason('Выход с устройства'); setActionError(''); }}>
+                          Завершить
+                        </Button>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <EmptyState
+                title="Серверных сессий пока нет"
+                description="Сессии создаются при входе после подключения телеметрии. Если вы вошли раньше, чем начался сбор, история появится со следующего входа."
+              />
+            )}
+          </div>
+        </Card>
 
-            <dl className="mt-6 grid gap-4 border-y border-[var(--color-border)] py-5 text-sm sm:grid-cols-2">
-              <div>
-              <dt className="text-sm text-[var(--color-text-secondary)]">Создана</dt>
-                <dd className="mt-1 font-medium">{session.created}</dd>
-              </div>
-              <div>
-              <dt className="text-sm text-[var(--color-text-secondary)]">Истекает</dt>
-                <dd className="mt-1 font-medium">{session.expiresAt}</dd>
-              </div>
-            </dl>
-
-            <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="max-w-xl text-sm leading-6 text-[var(--color-text-secondary)]">
-                Сервер отзовёт access- и refresh-токены на всех устройствах,
-                затем текущий браузер вернётся на страницу входа.
+        <Card className="border-[var(--color-border)] bg-white p-5 sm:p-6">
+          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+            <div>
+              <h2 className="text-sm font-semibold text-[var(--color-text)]">Выход на всех устройствах</h2>
+              <p className="mt-1 max-w-xl text-sm leading-6 text-[var(--color-text-secondary)]">
+                Сервер отзовёт access- и refresh-токены на всех устройствах, затем текущий браузер вернётся на страницу входа.
               </p>
-              <Button variant="danger" onClick={() => setConfirmOpen(true)}>
-                Выйти на всех устройствах
-              </Button>
             </div>
-          </section>
-        ) : (
-          <section className="rounded-2xl border border-[var(--color-border)] bg-white p-5 shadow-sm sm:p-6">
-            <h2 className="text-lg font-semibold">
-              Активная локальная сессия не найдена
-            </h2>
-            <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
-              Войдите в кабинет разработчика, чтобы увидеть данные текущего
-              токена.
-            </p>
-          </section>
-        )}
+            <Button variant="danger" onClick={() => setConfirmOpen(true)}><Icon name="lock" size={16} /> Выйти на всех устройствах</Button>
+          </div>
+        </Card>
 
-        <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5 sm:p-6">
-          <h2 className="text-base font-semibold text-amber-900">
-            Что пока недоступно
-          </h2>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-amber-800">
-            Сервер не хранит список устройств, поэтому здесь нельзя показать
-            каждую отдельную сессию и отозвать только одну из них. Сейчас
-            доступен безопасный глобальный выход: он инвалидирует все ранее
-            выданные токены аккаунта.
-          </p>
-        </section>
-        <ConfirmDialog open={confirmOpen} onClose={() => setConfirmOpen(false)} title="Выйти на всех устройствах?" description="Все ранее выданные токены аккаунта будут отозваны. Вы и другие устройства должны будете войти заново." confirmLabel="Выйти везде" loading={loggingOut} onConfirm={() => { setLoggingOut(true); void logout().finally(() => setLoggingOut(false)); }} />
+        <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)} title="Выйти на всех устройствах?">
+          <p className="text-sm leading-6 text-[var(--color-text-secondary)]">Все ранее выданные токены аккаунта будут отозваны. Вы и другие устройства должны будете войти заново.</p>
+          <div className="mt-6 flex justify-end gap-3">
+            <Button variant="secondary" onClick={() => setConfirmOpen(false)} disabled={loggingOut}>Отмена</Button>
+            <Button variant="danger" loading={loggingOut} onClick={() => { setLoggingOut(true); void logout().finally(() => setLoggingOut(false)); }}>Выйти везде</Button>
+          </div>
+        </Dialog>
+
+        <Dialog open={!!target} onClose={() => { setTarget(null); setReason(''); }} title="Завершить эту сессию?">
+          {target && (
+            <div className="space-y-4">
+              <p className="text-sm leading-6 text-[var(--color-text-secondary)]">
+                {target.device} · {target.os} · {target.browser}{target.ip ? ` · IP ${target.ip}` : ''}. Последняя активность: {relativeTime(target.lastSeenAt)}.
+              </p>
+              <Input label="Комментарий для истории" value={reason} onChange={event => setReason(event.target.value)} maxLength={200} hint="Комментарий сохраняется в серверной записи сессии." />
+              <div className="flex justify-end gap-3">
+                <Button variant="secondary" onClick={() => { setTarget(null); setReason(''); }} disabled={busy}>Отмена</Button>
+                <Button variant="danger" loading={busy} onClick={revoke}>Завершить сессию</Button>
+              </div>
+            </div>
+          )}
+        </Dialog>
       </div>
     </div>
   );

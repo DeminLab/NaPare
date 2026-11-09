@@ -11,5 +11,6 @@ import { PlatformService } from './platform.service';
 import { ControlAgentClient } from './control-agent.client';
 import { PlatformController, PlatformPublicController } from './platform.controller';
 import { RaspModule } from '../rasp/rasp.module';
-@Module({ imports: [TypeOrmModule.forFeature([PlatformControl, PlatformGrant, User, University, Faculty, Group, CuratorAssignment, AuditLog]), RaspModule], controllers: [PlatformController, PlatformPublicController], providers: [PlatformService, ControlAgentClient], exports: [PlatformService] })
+import { TelemetryModule } from '../telemetry/telemetry.module';
+@Module({ imports: [TypeOrmModule.forFeature([PlatformControl, PlatformGrant, User, University, Faculty, Group, CuratorAssignment, AuditLog]), RaspModule, TelemetryModule], controllers: [PlatformController, PlatformPublicController], providers: [PlatformService, ControlAgentClient], exports: [PlatformService] })
 export class PlatformModule {}

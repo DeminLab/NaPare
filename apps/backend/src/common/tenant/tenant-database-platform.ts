@@ -22,9 +22,11 @@ const readTables: Partial<Record<PlatformPermission, string[]>> = {
   'pairspace-content.read': [...pairSpace, ...academic, 'lessons', 'groups', 'users'],
   'events-data.read': ['event_records'],
   'attachments-data.read': ['pair_spaces', 'lessons', 'groups', 'users'],
+  'analytics.read': ['users', 'user_sessions', 'auth_events', 'platform_events'],
+  'telemetry.read': ['users', 'user_sessions', 'auth_events', 'platform_events'],
 };
 const writeTables: Partial<Record<PlatformPermission, string[]>> = {
-  'accounts.write': ['users'],
+  'accounts.write': ['users', 'user_sessions'],
   'identity-links.write': ['users'],
   'universities.write': ['faculties', 'groups'],
   'student-data.write': ['absences', 'attendance_records'],

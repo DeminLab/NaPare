@@ -2063,6 +2063,54 @@
       }
     },
     {
+      "id": "AuthController.revokeSession POST /api/v1/auth/sessions/:id/revoke",
+      "source": "apps/backend/src/auth/auth.controller.ts",
+      "method": "POST",
+      "path": "/api/v1/auth/sessions/:id/revoke",
+      "guards": [
+        "JwtAuthGuard"
+      ],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 200,
+        "career_staff": 200,
+        "career_admin": 200,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
+      "id": "AuthController.sessions GET /api/v1/auth/sessions",
+      "source": "apps/backend/src/auth/auth.controller.ts",
+      "method": "GET",
+      "path": "/api/v1/auth/sessions",
+      "guards": [
+        "JwtAuthGuard"
+      ],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 200,
+        "career_staff": 200,
+        "career_admin": 200,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
       "id": "CareerAccountsController.publicPortfolio GET /api/v1/career/accounts/portfolio/:studentId",
       "source": "apps/backend/src/career/career.controller.ts",
       "method": "GET",
@@ -5155,6 +5203,198 @@
       "source": "apps/backend/src/platform-academic/platform-academic-legacy.controller.ts",
       "method": "PATCH",
       "path": "/api/v1/platform-academic/lessons/:id",
+      "guards": [
+        "JwtAuthGuard"
+      ],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 403,
+        "career_staff": 403,
+        "career_admin": 403,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
+      "id": "PlatformAnalyticsController.eventFacets GET /api/v1/platform/events/facets",
+      "source": "apps/backend/src/platform-analytics/platform-analytics.controller.ts",
+      "method": "GET",
+      "path": "/api/v1/platform/events/facets",
+      "guards": [
+        "JwtAuthGuard"
+      ],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 403,
+        "career_staff": 403,
+        "career_admin": 403,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
+      "id": "PlatformAnalyticsController.events GET /api/v1/platform/events",
+      "source": "apps/backend/src/platform-analytics/platform-analytics.controller.ts",
+      "method": "GET",
+      "path": "/api/v1/platform/events",
+      "guards": [
+        "JwtAuthGuard"
+      ],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 403,
+        "career_staff": 403,
+        "career_admin": 403,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
+      "id": "PlatformAnalyticsController.overview GET /api/v1/platform/analytics/overview",
+      "source": "apps/backend/src/platform-analytics/platform-analytics.controller.ts",
+      "method": "GET",
+      "path": "/api/v1/platform/analytics/overview",
+      "guards": [
+        "JwtAuthGuard"
+      ],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 403,
+        "career_staff": 403,
+        "career_admin": 403,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
+      "id": "PlatformAnalyticsController.revokeSession POST /api/v1/platform/sessions/:id/revoke",
+      "source": "apps/backend/src/platform-analytics/platform-analytics.controller.ts",
+      "method": "POST",
+      "path": "/api/v1/platform/sessions/:id/revoke",
+      "guards": [
+        "JwtAuthGuard"
+      ],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 403,
+        "career_staff": 403,
+        "career_admin": 403,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
+      "id": "PlatformAnalyticsController.revokeUserSessions POST /api/v1/platform/monitored-users/:id/revoke-sessions",
+      "source": "apps/backend/src/platform-analytics/platform-analytics.controller.ts",
+      "method": "POST",
+      "path": "/api/v1/platform/monitored-users/:id/revoke-sessions",
+      "guards": [
+        "JwtAuthGuard"
+      ],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 403,
+        "career_staff": 403,
+        "career_admin": 403,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
+      "id": "PlatformAnalyticsController.sessions GET /api/v1/platform/sessions",
+      "source": "apps/backend/src/platform-analytics/platform-analytics.controller.ts",
+      "method": "GET",
+      "path": "/api/v1/platform/sessions",
+      "guards": [
+        "JwtAuthGuard"
+      ],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 403,
+        "career_staff": 403,
+        "career_admin": 403,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
+      "id": "PlatformAnalyticsController.userActivity GET /api/v1/platform/monitored-users/:id/activity",
+      "source": "apps/backend/src/platform-analytics/platform-analytics.controller.ts",
+      "method": "GET",
+      "path": "/api/v1/platform/monitored-users/:id/activity",
+      "guards": [
+        "JwtAuthGuard"
+      ],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 403,
+        "career_staff": 403,
+        "career_admin": 403,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
+      "id": "PlatformAnalyticsController.users GET /api/v1/platform/monitored-users",
+      "source": "apps/backend/src/platform-analytics/platform-analytics.controller.ts",
+      "method": "GET",
+      "path": "/api/v1/platform/monitored-users",
       "guards": [
         "JwtAuthGuard"
       ],
@@ -9231,6 +9471,30 @@
       "method": "POST",
       "path": "/api/v1/integrations/telegram/webhook",
       "guards": [],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 200,
+        "career_staff": 200,
+        "career_admin": 200,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
+      "id": "TelemetryController.events POST /api/v1/telemetry/events",
+      "source": "apps/backend/src/telemetry/telemetry.controller.ts",
+      "method": "POST",
+      "path": "/api/v1/telemetry/events",
+      "guards": [
+        "OptionalJwtAuthGuard"
+      ],
       "roles": null,
       "permissions": null,
       "statuses": {

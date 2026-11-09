@@ -17,6 +17,19 @@
 - Обновлены точки входа, модель данных, схема, руководство администратора, мобильный клиент, проверки и source cards; [отчёт сверки](project-log/2026-10-16-repository-sync.md).
 - Браузерные логи, локальные снимки и Python-кэш исключены из Git; их удаление заблокировано политикой среды, файлы остаются локально. История, legacy-исходники и материалы проверок сохранены.
 
+### Платформенная телеметрия и аналитика
+- Миграция `1700000000044-PlatformTelemetry`: три таблицы (`user_sessions`, `auth_events`, `platform_events`) с FK, индексами, RLS-политиками и триггером `napare_active_writer`. Откат (`down`) намеренно запрещён.
+- Сервис `TelemetryService`: создание сессий, запись auth-событий (`login_success`/`login_failed`/`logout`/`logout_all`), буферизация и флаш платформенных событий, `purgeExpired` (180/400/400 дней).
+- `TelemetryInterceptor` (APP_INTERCEPTOR): автоматическая запись HTTP-событий (method, path, statusCode, durationMs, ip, UA); исключает health/docs/telemetry/platform.analytics|events|sessions.
+- `TelemetryController`: `POST /telemetry/events` — пакет клиентских событий, ответ `202`, throttle 120/мин на IP; принимает JWT или заголовок `x-napare-client`.
+- `PlatformAnalyticsService`: витрина Developer — `overview` (KPI, series, breakdowns, funnel, retention), `events` (журнал с фильтрами), `eventFacets`, `monitored-users`, `monitored-users/:id/activity`, `sessions`, `sessions/:id/revoke` (accounts.write), `monitored-users/:id/revoke-sessions`.
+- Auth-интеграция: `sid` в JWT, `JwtStrategy` проверяет активность сессии; `GET /auth/sessions` и `POST /auth/sessions/:id/revoke` (SELF_SESSION_ROUTES — доступно аккаунту без вуза).
+- Sanitization: `sanitizeMetadata` вырезает password/token/secret/cookie/email/phone; `normalizePath` заменяет UUID на `:id`, числа на `:n`.
+- Web-клиенты: `TelemetryProvider.tsx` (page.view, visibility flush, installId через localStorage) добавлен во все web-* приложения.
+- Android: `TelemetryBeacon.java` — инжект JS в WebView (app.open раз в сессию, page.view, flush по pagehide).
+- Frontend: страницы `overview`, `events`, `sessions`, `users`, `users/[id]` в web-developer; SVG-график без библиотек; честная `availability`/`limitations`.
+- Обновлены docs: `api/README.md` (новые группы), `database/schema-overview.md` (область телеметрии), `security/tenant-isolation.md` (RLS на 3 таблицах), `privacy/data-map.md` (класс "Техническая телеметрия", self export/delete), `modules/auth.md` (UserSession, сессии-эндпоинты), `architecture/roles-and-permissions.md` (`analytics.read`/`telemetry.read`), `CHANGELOG.md`.
+
 ## Изменения до 2026-09-30
 
 ### MAX

@@ -10,6 +10,8 @@ import {
   Query,
   ForbiddenException,
   GoneException,
+  Param,
+  ParseUUIDPipe,
 } from "@nestjs/common";
 import {
   ApiTags,
@@ -26,9 +28,22 @@ import { LoginDto } from "./dto/login.dto";
 import { MaxAuthDto } from "./dto/max-auth.dto";
 import { MaxLinkDto } from "./dto/max-link.dto";
 import { RefreshTokenDto } from "./dto/refresh-token.dto";
+import { RevokeOwnSessionDto } from "./dto/revoke-session.dto";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
 import { University } from "../users/entities/university.entity";
 import { RaspScraperService, SIBIT_UNIVERSITY } from "./rasp-scraper.service";
+import { clientFromHeader } from "../telemetry/user-agent";
+
+type AuthRequest = { user: { id: string; sessionId?: string }; ip?: string; get?(name: string): string | undefined };
+
+function requestContext(request: AuthRequest) {
+  const userAgent = request.get?.("user-agent") ?? null;
+  return {
+    ip: request.ip ?? null,
+    userAgent,
+    client: clientFromHeader(request.get?.("x-napare-client"), userAgent),
+  };
+}
 
 @ApiTags("auth")
 @Controller("auth")
@@ -46,8 +61,8 @@ export class AuthController {
   @ApiOperation({ summary: "Вход в систему" })
   @ApiResponse({ status: 200, description: "Успешный вход" })
   @ApiResponse({ status: 401, description: "Неверные учетные данные" })
-  async login(@Body() loginDto: LoginDto) {
-    return this.authService.login(loginDto);
+  async login(@Body() loginDto: LoginDto, @Request() req: AuthRequest) {
+    return this.authService.login(loginDto, requestContext(req));
   }
 
   @Post("max")
@@ -70,8 +85,8 @@ export class AuthController {
     status: 503,
     description: "MAX не настроен (нет MAX_BOT_TOKEN)",
   })
-  async maxAuth(@Body() maxAuthDto: MaxAuthDto) {
-    return this.authService.maxAuth(maxAuthDto);
+  async maxAuth(@Body() maxAuthDto: MaxAuthDto, @Request() req: AuthRequest) {
+    return this.authService.maxAuth(maxAuthDto, requestContext(req));
   }
 
   @Post("max/link")
@@ -80,8 +95,8 @@ export class AuthController {
   @Throttle({ default: { ttl: 60_000, limit: 10 } })
   @ApiBearerAuth()
   @ApiOperation({ summary: "Привязать MAX к аккаунту текущей сессии" })
-  async linkMaxToCurrentUser(@Body() dto: MaxLinkDto, @Request() req) {
-    return this.authService.linkMaxToAuthenticatedUser(dto.initData, req.user.id);
+  async linkMaxToCurrentUser(@Body() dto: MaxLinkDto, @Request() req: AuthRequest) {
+    return this.authService.linkMaxToAuthenticatedUser(dto.initData, req.user.id, requestContext(req));
   }
 
   @Get("max/status")
@@ -120,8 +135,8 @@ export class AuthController {
   })
   @ApiResponse({ status: 401, description: "Неверные учетные данные" })
   @ApiResponse({ status: 403, description: "Для роли не настроен кабинет" })
-  async portalLogin(@Body() loginDto: LoginDto) {
-    return this.authService.portalLogin(loginDto);
+  async portalLogin(@Body() loginDto: LoginDto, @Request() req: AuthRequest) {
+    return this.authService.portalLogin(loginDto, requestContext(req));
   }
 
   @Post("register")
@@ -197,8 +212,27 @@ export class AuthController {
   @ApiBearerAuth()
   @ApiOperation({ summary: "Выход из системы" })
   @ApiResponse({ status: 200, description: "Успешный выход" })
-  async logout(@Request() req) {
-    await this.authService.logout(req.user.id);
+  async logout(@Request() req: AuthRequest) {
+    await this.authService.logout(req.user.id, requestContext(req));
     return { success: true };
+  }
+
+  @Get("sessions")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Сессии текущего аккаунта на устройствах" })
+  async sessions(@Request() req: AuthRequest) {
+    const data = await this.authService.sessions(req.user.id);
+    return { data, currentSessionId: req.user.sessionId ?? null };
+  }
+
+  @Post("sessions/:id/revoke")
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Завершить выбранную сессию текущего аккаунта" })
+  async revokeSession(@Param("id", ParseUUIDPipe) id: string, @Body() dto: RevokeOwnSessionDto, @Request() req: AuthRequest) {
+    const changed = await this.authService.revokeOwnSession(req.user.id, id, requestContext(req), dto.reason);
+    return { changed, current: id === req.user.sessionId };
   }
 }

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './portal.css';
+import { TelemetryProvider } from '../components/TelemetryProvider';
 
 export const metadata: Metadata = {
   title: 'НаПаре',
@@ -11,5 +12,12 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="ru"><body>{children}</body></html>;
+  return (
+    <html lang="ru">
+      <body>
+        <TelemetryProvider>{children}</TelemetryProvider>
+      </body>
+    </html>
+  );
 }
+

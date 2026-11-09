@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { NetworkStatus } from '@/components/ui';
+import { TelemetryProvider } from '@/components/TelemetryProvider';
 
 export const metadata: Metadata = {
   title: { default: 'НаПаре — учебный день', template: '%s — НаПаре' },
@@ -12,9 +13,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="ru">
       <body className="min-h-screen bg-slate-50 text-slate-900 antialiased">
-        {children}
+        <TelemetryProvider>{children}</TelemetryProvider>
         <NetworkStatus />
       </body>
     </html>
   );
 }
+

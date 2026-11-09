@@ -13,6 +13,7 @@ import { JwtStrategy } from '../src/auth/strategies/jwt.strategy';
 import { USER_ROLES, UserRole } from '../src/auth/interfaces/user-role';
 import { UsersService } from '../src/users/users.service';
 import { JwtAuthGuard } from '../src/common/guards/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from '../src/telemetry/optional-jwt-auth.guard';
 import { RolesGuard } from '../src/common/guards/roles.guard';
 import { PermissionsGuard } from '../src/common/authorization/permissions.guard';
 import { TenantContext } from '../src/common/tenant/tenant-context';
@@ -32,7 +33,7 @@ const users = new Map(USER_ROLES.map(role => [role, {
 /** Only the HTTP probe is synthetic. Guards inspect the original controller/handler metadata. */
 @Injectable()
 class RoleProbeGuard implements CanActivate {
-  constructor(private jwt: JwtAuthGuard, private roles: RolesGuard, private permissions: PermissionsGuard) {}
+  constructor(private jwt: JwtAuthGuard, private optionalJwt: OptionalJwtAuthGuard, private roles: RolesGuard, private permissions: PermissionsGuard) {}
 
   async canActivate(context: ExecutionContext) {
     const req = context.switchToHttp().getRequest();
@@ -40,7 +41,7 @@ class RoleProbeGuard implements CanActivate {
     req.originalUrl = route.path;
     const original = new ExecutionContextHost(context.getArgs(), route.controller, route.handler);
     original.setType('http');
-    const instances = new Map<Type<CanActivate>, CanActivate>([[JwtAuthGuard, this.jwt], [RolesGuard, this.roles], [PermissionsGuard, this.permissions]]);
+    const instances = new Map<Type<CanActivate>, CanActivate>([[JwtAuthGuard, this.jwt], [OptionalJwtAuthGuard, this.optionalJwt], [RolesGuard, this.roles], [PermissionsGuard, this.permissions]]);
     for (const guard of route.guards) {
       const instance = instances.get(guard);
       if (!instance) throw new Error(`Uncovered guard ${guard.name} on ${route.id}`);
@@ -66,7 +67,7 @@ describe('Every declared protected route × every role (real HTTP/JWT/guards, sy
     const module = await Test.createTestingModule({
       imports: [PassportModule.register({ defaultStrategy: 'jwt' }), JwtModule.register({ secret })],
       controllers: [ProbeController],
-      providers: [RoleProbeGuard, JwtAuthGuard, RolesGuard, PermissionsGuard, TenantContext, JwtStrategy,
+      providers: [RoleProbeGuard, JwtAuthGuard, OptionalJwtAuthGuard, RolesGuard, PermissionsGuard, TenantContext, JwtStrategy,
         { provide: ConfigService, useValue: new ConfigService({ auth: { jwt: { secret } } }) },
         { provide: UsersService, useValue: { findById: async (id: UserRole) => users.get(id) } },
       ],
@@ -88,7 +89,7 @@ describe('Every declared protected route × every role (real HTTP/JWT/guards, sy
     for (const route of routes) {
       if (route.roles) expect(route.guards).toContain(RolesGuard);
       if (route.permissions) expect(route.guards).toContain(PermissionsGuard);
-      for (const guard of route.guards) expect([JwtAuthGuard, RolesGuard, PermissionsGuard]).toContain(guard);
+      for (const guard of route.guards) expect([JwtAuthGuard, OptionalJwtAuthGuard, RolesGuard, PermissionsGuard]).toContain(guard);
     }
   });
 
@@ -113,7 +114,7 @@ describe('Every declared protected route × every role (real HTTP/JWT/guards, sy
     try {
       for (const [index, route] of protectedRoutes.entries()) {
         const platform = /^\/api\/v1\/platform(?:\/|$)/.test(route.path);
-        const account = /^\/api\/v1\/career(?:\/|$)/.test(route.path) || ['/api/v1/users/me', '/api/v1/users/me/export', '/api/v1/users/me/deletion-preview', '/api/v1/devices/webpush'].includes(route.path) || ['/api/v1/auth/logout', '/api/v1/auth/max/status', '/api/v1/auth/max/link'].includes(route.path);
+        const account = /^\/api\/v1\/career(?:\/|$)/.test(route.path) || ['/api/v1/users/me', '/api/v1/users/me/export', '/api/v1/users/me/deletion-preview', '/api/v1/devices/webpush'].includes(route.path) || ['/api/v1/auth/logout', '/api/v1/auth/max/status', '/api/v1/auth/max/link'].includes(route.path) || route.path === '/api/v1/auth/sessions' || route.path === '/api/v1/auth/sessions/:id/revoke';
         const baselineStatus = baseline.routes.find(item => item.id === route.id)!.statuses[role];
         await request(app.getHttpServer()).get(`/role-policy-probe/${index}`).auth(tokens.get(role)!, { type: 'bearer' }).expect(platform || account ? baselineStatus : 403);
       }
