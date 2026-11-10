@@ -136,7 +136,9 @@ export class PlatformAnalyticsService {
         SELECT 'browser', browser, count(*)::int, count(DISTINCT "userId")::int
         FROM user_sessions WHERE "createdAt">=$1 AND "createdAt"<$2${uniFilter} GROUP BY browser
         ORDER BY dimension, sessions DESC`, base),
-      this.db.query(`SELECT role AS key, count(*)::int AS users FROM users WHERE true${uniFilter} GROUP BY role ORDER BY users DESC`, base),
+      // Roles are a whole-population distribution: only the university scope is
+      // a bind parameter, the date range has no placeholder in this query.
+      this.db.query(`SELECT role AS key, count(*)::int AS users FROM users WHERE true${uni ? ' AND "universityId"=$1' : ''} GROUP BY role ORDER BY users DESC`, uni ? [uni] : []),
       this.db.query(`
         SELECT u.id, u.name, u.city, count(DISTINCT s."userId")::int AS users, count(s.id)::int AS sessions,
           max(s."lastSeenAt") AS "lastSeenAt"

@@ -83,33 +83,6 @@
   },
   "routes": [
     {
-      "id": "AbsencesController.checkInWithAttendanceQr POST /api/v1/absences/attendance/qr-check-in",
-      "source": "apps/backend/src/absences/absences.controller.ts",
-      "method": "POST",
-      "path": "/api/v1/absences/attendance/qr-check-in",
-      "guards": [
-        "JwtAuthGuard",
-        "RolesGuard"
-      ],
-      "roles": [
-        "student"
-      ],
-      "permissions": null,
-      "statuses": {
-        "student": 200,
-        "employer": 403,
-        "career_staff": 403,
-        "career_admin": 403,
-        "teacher": 403,
-        "curator": 403,
-        "faculty_dean": 403,
-        "department_head": 403,
-        "university_admin": 403,
-        "superadmin": 403,
-        "developer": 403
-      }
-    },
-    {
       "id": "AbsencesController.confirm POST /api/v1/absences/:id/confirm",
       "source": "apps/backend/src/absences/absences.controller.ts",
       "method": "POST",
@@ -165,38 +138,6 @@
         "department_head": 403,
         "university_admin": 403,
         "superadmin": 403,
-        "developer": 403
-      }
-    },
-    {
-      "id": "AbsencesController.createAttendanceQrSession POST /api/v1/absences/attendance/qr-sessions",
-      "source": "apps/backend/src/absences/absences.controller.ts",
-      "method": "POST",
-      "path": "/api/v1/absences/attendance/qr-sessions",
-      "guards": [
-        "JwtAuthGuard",
-        "RolesGuard"
-      ],
-      "roles": [
-        "teacher",
-        "curator",
-        "department_head",
-        "faculty_dean",
-        "university_admin",
-        "superadmin"
-      ],
-      "permissions": null,
-      "statuses": {
-        "student": 403,
-        "employer": 403,
-        "career_staff": 403,
-        "career_admin": 403,
-        "teacher": 200,
-        "curator": 200,
-        "faculty_dean": 200,
-        "department_head": 200,
-        "university_admin": 200,
-        "superadmin": 200,
         "developer": 403
       }
     },
@@ -5491,54 +5432,6 @@
       "source": "apps/backend/src/platform-attachments/platform-attachments.controller.ts",
       "method": "PATCH",
       "path": "/api/v1/platform-attachments/:id/revoke",
-      "guards": [
-        "JwtAuthGuard"
-      ],
-      "roles": null,
-      "permissions": null,
-      "statuses": {
-        "student": 200,
-        "employer": 403,
-        "career_staff": 403,
-        "career_admin": 403,
-        "teacher": 200,
-        "curator": 200,
-        "faculty_dean": 200,
-        "department_head": 200,
-        "university_admin": 200,
-        "superadmin": 200,
-        "developer": 200
-      }
-    },
-    {
-      "id": "PlatformAttendanceQrController.list GET /api/v1/platform-attendance-qr/sessions",
-      "source": "apps/backend/src/platform-attendance-qr/platform-attendance-qr.controller.ts",
-      "method": "GET",
-      "path": "/api/v1/platform-attendance-qr/sessions",
-      "guards": [
-        "JwtAuthGuard"
-      ],
-      "roles": null,
-      "permissions": null,
-      "statuses": {
-        "student": 200,
-        "employer": 403,
-        "career_staff": 403,
-        "career_admin": 403,
-        "teacher": 200,
-        "curator": 200,
-        "faculty_dean": 200,
-        "department_head": 200,
-        "university_admin": 200,
-        "superadmin": 200,
-        "developer": 200
-      }
-    },
-    {
-      "id": "PlatformAttendanceQrController.revoke PATCH /api/v1/platform-attendance-qr/sessions/:id/revoke",
-      "source": "apps/backend/src/platform-attendance-qr/platform-attendance-qr.controller.ts",
-      "method": "PATCH",
-      "path": "/api/v1/platform-attendance-qr/sessions/:id/revoke",
       "guards": [
         "JwtAuthGuard"
       ],

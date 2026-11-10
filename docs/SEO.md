@@ -1,0 +1,319 @@
+# SEO документация NaPare
+
+## Обзор
+
+NaPare имеет полноценную систему SEO для всех страниц приложения, включая:
+- Мета-теги на всех страницах
+- Карта сайта (sitemap)
+- Robots.txt для всех приложений
+- Schema.org структурированные данные
+- Open Graph и Twitter Card метки
+- Логотипы и иконки для всех платформ
+
+## Структура SEO
+
+### 1. Корневая страница (portal)
+
+**Файлы:**
+- `apps/web-portal/src/app/page.tsx` - главная страница
+- `apps/web-portal/src/app/layout.tsx` - корневой layout с мета-тегами
+- `apps/web-portal/src/components/SEO.tsx` - компонент SEO
+- `apps/web-portal/src/components/HomeSEO.tsx` - SEO для главной страницы
+
+**SEO метки:**
+```typescript
+title: 'NaPare — Операционная система учебного дня студента'
+description: 'B2B2C SaaS платформа, объединяющая все аспекты учебного дня студента'
+keywords: 'NaPare, расписание, учеба, студенты, пара, уроки, домашние задания, преподаватели, университет, образование'
+```
+
+### 2. Страница владельца
+
+**Файл:**
+- `apps/web-portal/src/app/owner/page.tsx`
+
+**SEO метки:**
+```typescript
+title: 'Данила Алексеевич — ИП, Разработчик NaPare'
+description: 'Данила Алексеевич — индивидуальный предприниматель, разработчик платформы NaPare. Операционная система учебного дня студента.'
+keywords: 'Данила Алексеевич, ИП, разработчик, NaPare, операционная система, учеба, студенты, B2B2C, SaaS'
+```
+
+### 3. Страница о проекте
+
+**Файл:**
+- `apps/web-portal/src/app/about/page.tsx`
+
+**SEO метки:**
+```typescript
+title: 'О проекте NaPare — Операционная система учебного дня студента'
+description: 'О NaPare: B2B2C SaaS платформа для управления учебным процессом студентов, преподавателей и администрации вузов'
+keywords: 'о NaPare, проект, разработчик, Данила Алексеевич, учебный процесс, студенты, преподаватели, вузы'
+```
+
+### 4. Страница возможностей
+
+**Файл:**
+- `apps/web-portal/src/app/features/page.tsx`
+
+**SEO метки:**
+```typescript
+title: 'Возможности NaPare — Операционная система учебного дня студента'
+description: 'Все возможности NaPare: управление расписанием, домашними заданиями, материалами, обсуждениями и учётом отсутствий'
+keywords: 'возможности NaPare, функции, расписание, ДЗ, материалы, обсуждения, отсутствия'
+```
+
+### 5. Приложения
+
+#### Student (Студенты)
+**Файлы:**
+- `apps/web-portal/src/app/student/layout.tsx`
+- `apps/web-portal/public/robots.txt`
+
+**SEO метки:**
+```typescript
+title: 'NaPare для студентов — Расписание, пары, ДЗ'
+description: 'Ваше пространство учебного дня: расписание, объявления, домашние задания, файлы и обсуждения по каждой паре'
+```
+
+#### Staff (Преподаватели)
+**Файлы:**
+- `apps/web-portal/src/app/staff/layout.tsx`
+- `apps/web-portal/public/robots.txt`
+
+**SEO метки:**
+```typescript
+title: 'NaPare для преподавателей и персонала'
+description: 'Управление расписанием, отметки посещаемости, объявления и домашние задания для преподавателей'
+```
+
+#### Admin (Администрация)
+**Файлы:**
+- `apps/web-portal/src/app/admin/layout.tsx`
+- `apps/web-portal/public/robots.txt`
+
+**SEO метки:**
+```typescript
+title: 'NaPare для администрации вуза'
+description: 'Управление университетом, группами, пользователями и настройками платформы'
+```
+
+#### Developer (Разработчики)
+**Файлы:**
+- `apps/web-portal/src/app/developer/layout.tsx`
+- `apps/web-portal/public/robots.txt`
+
+**SEO метки:**
+```typescript
+title: 'NaPare для разработчиков — API и документация'
+description: 'Документация API, GitHub репозиторий, техническая документация и разработка платформы'
+```
+
+## Карта сайта (Sitemap)
+
+### Файлы:
+- `public/sitemap.xml` - главная карта сайта
+- `public/sitemap-student.xml` - карта для студентов
+- `public/sitemap-staff.xml` - карта для преподавателей
+- `public/sitemap-admin.xml` - карта для администрации
+- `public/sitemap-developer.xml` - карта для разработчиков
+
+### Формат:
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://napare.sano.ru/student</loc>
+    <lastmod>2026-11-09</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+</urlset>
+```
+
+## Robots.txt
+
+### Файлы:
+- `public/robots.txt` - корневой файл
+- `apps/web-portal/public/robots.txt` - для portal
+- `apps/web-student/public/robots.txt` - для student
+- `apps/web-staff/public/robots.txt` - для staff
+- `apps/web-admin/public/robots.txt` - для admin
+- `apps/web-developer/public/robots.txt` - для developer
+
+### Содержимое:
+```
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /_next/
+Disallow: /static/
+Disallow: /next/image
+
+Sitemap: https://napare.sano.ru/sitemap.xml
+Sitemap: https://napare.sano.ru/sitemap-student.xml
+Sitemap: https://napare.sano.ru/sitemap-staff.xml
+Sitemap: https://napare.sano.ru/sitemap-admin.xml
+Sitemap: https://napare.sano.ru/sitemap-developer.xml
+Sitemap: https://napare.sano.ru/owner
+```
+
+## Структурированные данные (Schema.org)
+
+### Типы данных:
+- `WebSite` - для главной страницы
+- `Organization` - для организации
+- `Person` - для владельца проекта (Данила Алексеевич)
+- `SoftwareApplication` - для приложения
+- `BreadcrumbList` - для навигации
+
+### Пример для владельца:
+```json
+{
+  "@context": "https://schema.org",
+  "@type": "Person",
+  "name": "Данила Алексеевич",
+  "jobTitle": "ИП, Разработчик",
+  "url": "https://napare.sano.ru/owner",
+  "sameAs": [
+    "https://github.com/DeminLab/NaPare",
+    "https://t.me/napare_bot"
+  ]
+}
+```
+
+## Open Graph и Twitter Card
+
+### Метки:
+- `og:title` - заголовок страницы
+- `og:description` - описание страницы
+- `og:image` - изображение для соцсетей
+- `og:url` - URL страницы
+- `og:type` - тип страницы
+- `og:locale` - локаль
+- `twitter:card` - тип карточки Twitter
+- `twitter:title` - заголовок Twitter
+- `twitter:description` - описание Twitter
+- `twitter:image` - изображение Twitter
+
+## Логотипы и иконки
+
+### Файлы:
+- `public/favicon.ico` - иконка браузера
+- `public/apple-touch-icon.png` - иконка для iOS
+- `public/mstile-150x150.png` - иконка для Windows
+- `public/manifest.json` - PWA манифест
+- `apps/web-portal/public/brand/np-mark.png` - логотип NaPare
+- `apps/web-portal/public/brand/napare-brand-board.jpg` - бренд-борд
+
+### Манифест:
+```json
+{
+  "name": "NaPare — Операционная система учебного дня студента",
+  "short_name": "NaPare",
+  "description": "B2B2C SaaS платформа, объединяющая все аспекты учебного дня студента",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#4F46E5",
+  "icons": [
+    {
+      "src": "/brand/np-mark.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}
+```
+
+## Google Search Console
+
+### Проверка:
+1. Зарегистрируйте сайт в Google Search Console
+2. Добавьте `https://napare.sano.ru/` как сайт
+3. Разместите `public/owner-verification.txt` в корне
+4. Проверьте карту сайта в `public/sitemap.xml`
+5. Проверьте robots.txt
+
+## Яндекс.Вебмастер
+
+### Проверка:
+1. Зарегистрируйте сайт в Яндекс.Вебмастер
+2. Добавьте `https://napare.sano.ru/` как сайт
+3. Разместите `public/robots.txt`
+4. Проверьте карту сайта в `public/sitemap.xml`
+
+## Яндекс.Метрика и Яндекс.Цель
+
+### Настройка:
+1. Добавьте код Яндекс.Метрики на все страницы
+2. Настройте цели для:
+   - Регистрации
+   - Входа в кабинет
+   - Просмотра страницы владельца
+   - Просмотра страницы о проекте
+
+## Яндекс.Справка
+
+### Настройка:
+1. Добавьте сайт в Яндекс.Справку
+2. Заполните информацию о проекте:
+   - Название: NaPare
+   - Описание: Операционная система учебного дня студента
+   - Владелец: Данила Алексеевич
+   - Разработчик: Данила Алексеевич
+
+## Постановка на учет в Роскомнадзор
+
+### Инструкция:
+1. Зарегистрируйте домен `napare.sano.ru`
+2. Добавьте сайт в Яндекс.Вебмастер
+3. Разместите контактную информацию на сайте
+4. Добавьте ссылку на политику конфиденциальности
+5. Зарегистрируйте сайт в Роскомнадзор через e-gov
+
+## Мониторинг SEO
+
+### Инструменты:
+- Google Search Console
+- Яндекс.Вебмастер
+- Яндекс.Метрика
+- Яндекс.Цель
+- Google Analytics
+- Google PageSpeed Insights
+- Lighthouse
+
+## Частые вопросы
+
+### Q: Как изменить владельца проекта?
+A: Отредактируйте мета-теги в `apps/web-portal/src/app/layout.tsx` и добавьте информацию о владельце на страницу `/owner`.
+
+### Q: Как добавить новые страницы в карту сайта?
+A: Добавьте URL в соответствующий файл `sitemap-*.xml`.
+
+### Q: Как изменить логотип?
+A: Замените файлы в `public/brand/` и обновите ссылки в мета-тегах.
+
+### Q: Как добавить новые ключевые слова?
+A: Добавьте их в мета-теги keywords на соответствующей странице.
+
+## Следующие шаги
+
+1. ✅ Создать SEO для всех страниц
+2. ✅ Добавить карту сайта
+3. ✅ Добавить robots.txt
+4. ✅ Добавить Schema.org данные
+5. ✅ Добавить Open Graph и Twitter Card
+6. ⏳ Создать robots.txt для всех приложений
+7. ⏳ Настроить Google Search Console
+8. ⏳ Настроить Яндекс.Вебмастер
+9. ⏳ Настроить Яндекс.Метрика и Яндекс.Цель
+10. ⏳ Настроить Яндекс.Справка
+11. ⏳ Постановка на учет в Роскомнадзор
+
+## Контакты
+
+- Email: support@napare.ru
+- Telegram: @napare_bot
+- GitHub: https://github.com/DeminLab/NaPare

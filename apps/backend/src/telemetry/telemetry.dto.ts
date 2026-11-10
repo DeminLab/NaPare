@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { ArrayMaxSize, ArrayMinSize, IsArray, IsIn, IsObject, IsOptional, IsString, IsUUID, Matches, MaxLength, ValidateNested } from 'class-validator';
+import { ArrayMaxSize, ArrayMinSize, IsArray, IsIn, IsObject, IsOptional, IsString, Matches, MaxLength, ValidateNested } from 'class-validator';
 
 export const CLIENT_APPS = ['portal', 'student', 'staff', 'admin', 'developer', 'android', 'max'] as const;
 
@@ -28,6 +28,9 @@ export class ClientTelemetryBatchDto {
   app?: string;
 
   @ApiPropertyOptional({ description: 'Локальный идентификатор установки приложения; не является идентификатором пользователя' })
-  @IsOptional() @IsUUID()
+  @IsOptional()
+  @Matches(/^(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|[0-9a-f]{32})$/i, {
+    message: 'installId должен быть UUID или 32-символьным hex-идентификатором',
+  })
   installId?: string;
 }

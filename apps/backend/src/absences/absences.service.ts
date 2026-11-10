@@ -3,16 +3,13 @@ import { CurationService } from '../curation/curation.service';
 import { CurationQueryDto } from '../curation/curation-query.dto';
 import {
   BadRequestException,
-  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
   Optional,
-  UnauthorizedException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository, Between, ArrayContains, In, IsNull, LessThan, MoreThan } from "typeorm";
-import { createHash, randomBytes } from "node:crypto";
+import { Repository, Between, ArrayContains, In } from "typeorm";
 
 import { Absence } from "./entities/absence.entity";
 import { CreateAbsenceDto } from "./dto/create-absence.dto";
@@ -30,7 +27,6 @@ import { MarkAttendanceDto } from "./dto/mark-attendance.dto";
 import { Lesson } from "../schedule/entities/lesson.entity";
 import { User } from "../users/entities/user.entity";
 import { Group } from "../users/entities/group.entity";
-import { AttendanceQrSession } from "./entities/attendance-qr-session.entity";
 
 export const ABSENCE_STAFF_ROLES: UserRole[] = [
   UserRole.TEACHER,
@@ -52,8 +48,6 @@ export class AbsencesService {
     private readonly absenceRepository: Repository<Absence>,
     @InjectRepository(AttendanceRecord)
     private readonly attendanceRepository: Repository<AttendanceRecord>,
-    @InjectRepository(AttendanceQrSession)
-    private readonly attendanceQrSessionRepository: Repository<AttendanceQrSession>,
     @InjectRepository(Lesson)
     private readonly lessonRepository: Repository<Lesson>,
     @InjectRepository(User)
@@ -381,109 +375,6 @@ export class AbsencesService {
       take: pagination.limit,
     });
     return toPaginatedResponse(data, total, pagination);
-  }
-
-  async createAttendanceQrSession(
-    universityId: string,
-    createdById: string,
-    lessonId: string,
-  ): Promise<{ token: string; expiresAt: Date; lessonId: string }> {
-    if (this.tenantContext.getUser()?.role === UserRole.CURATOR) throw new ForbiddenException('Кураторство не даёт права отмечать посещаемость.');
-    this.assertStaffAccess(universityId);
-    const lesson = await this.lessonRepository.findOne({ where: { id: lessonId, universityId } });
-    if (!lesson) throw new NotFoundException("Занятие не найдено в текущем ВУЗе.");
-    await this.assertTeacherOwnsLesson(lesson);
-
-    const now = new Date();
-    const startsAt = new Date(lesson.startDate).getTime();
-    const endsAt = new Date(lesson.endDate).getTime();
-    if (Number.isFinite(startsAt) && Number.isFinite(endsAt)
-      && (now.getTime() < startsAt - 15 * 60_000 || now.getTime() > endsAt + 15 * 60_000)) {
-      throw new BadRequestException("QR-отметка доступна рядом со временем занятия.");
-    }
-
-    await this.attendanceQrSessionRepository.delete({ universityId, expiresAt: LessThan(now) });
-    await this.attendanceQrSessionRepository.update(
-      { universityId, lessonId, revokedAt: IsNull() },
-      { revokedAt: now },
-    );
-    const token = randomBytes(32).toString("base64url");
-    const expiresAt = new Date(now.getTime() + 90_000);
-    const session = this.attendanceQrSessionRepository.create({
-      universityId,
-      lessonId,
-      createdById,
-      tokenHash: createHash("sha256").update(token).digest("hex"),
-      expiresAt,
-      revokedAt: null,
-    });
-    await this.attendanceQrSessionRepository.save(session);
-    return { token, expiresAt, lessonId };
-  }
-
-  async checkInWithAttendanceQr(token: string): Promise<{ lessonId: string; status: "present"; alreadyMarked: boolean }> {
-    const user = this.tenantContext.getUser();
-    if (!user || user.role !== UserRole.STUDENT) {
-      throw new ForbiddenException("Только студент может отметиться по QR-коду.");
-    }
-    const session = await this.attendanceQrSessionRepository.findOne({
-      where: {
-        tokenHash: createHash("sha256").update(token).digest("hex"),
-        universityId: requireUniversityId(user),
-        revokedAt: IsNull(),
-        expiresAt: MoreThan(new Date()),
-      },
-    });
-    if (!session) throw new UnauthorizedException("QR-код истёк или уже отключён.");
-
-    const [lesson, student] = await Promise.all([
-      this.lessonRepository.findOne({ where: { id: session.lessonId, universityId: session.universityId } }),
-      this.userRepository.findOne({ where: { id: user.id, universityId: requireUniversityId(user), role: UserRole.STUDENT } }),
-    ]);
-    if (!lesson || !student?.groupId) throw new ForbiddenException("Студент или занятие недоступны.");
-    const studentGroupId = await this.resolveStudentGroupId(requireUniversityId(user), student.groupId);
-    if (studentGroupId !== lesson.groupId) throw new ForbiddenException("Этот QR-код предназначен для другой учебной группы.");
-
-    const existing = await this.attendanceRepository.findOne({
-      where: { universityId: requireUniversityId(user), lessonId: lesson.id, studentId: user.id },
-    });
-    if (existing) {
-      if (existing.status === "present") return { lessonId: lesson.id, status: "present", alreadyMarked: true };
-      throw new ConflictException("Посещаемость для вас уже отметил преподаватель.");
-    }
-
-    try {
-      await this.attendanceRepository.save(this.attendanceRepository.create({
-        universityId: requireUniversityId(user),
-        lessonId: lesson.id,
-        studentId: user.id,
-        status: "present",
-        comment: null,
-        markedById: session.createdById,
-      }));
-    } catch (error) {
-      if ((error as { driverError?: { code?: string } })?.driverError?.code === "23505") {
-        const concurrentRecord = await this.attendanceRepository.findOne({
-          where: { universityId: requireUniversityId(user), lessonId: lesson.id, studentId: user.id },
-        });
-        if (concurrentRecord?.status === "present") {
-          return { lessonId: lesson.id, status: "present", alreadyMarked: true };
-        }
-        throw new ConflictException("Посещаемость для вас уже отмечена.");
-      }
-      throw error;
-    }
-
-    await this.eventBus?.publish({
-      type: "attendance.updated",
-      universityId: requireUniversityId(user),
-      actor: { id: user.id, type: "user", role: user.role },
-      target: { type: "lesson", id: lesson.id },
-      payload: { lessonId: lesson.id, records: 1, source: "qr" },
-      priority: "normal",
-      recipients: [user.id],
-    });
-    return { lessonId: lesson.id, status: "present", alreadyMarked: false };
   }
 
   async markAttendance(

@@ -42,7 +42,7 @@ suite('First-party product analytics with real JWT/HTTP/PostgreSQL',()=>{
     await disabled.recordActivity(f.users.student);
     expect(await f.db.getRepository(ProductActivityDay).count()).toBe(0);
     const report=await disabled.report(f.users.admin,{weekStart:'2026-10-12',semesterStart:'2026-08-01',semesterEnd:'2026-09-30'});
-    expect(report.enabled).toBe(false);expect(report.metrics).toHaveLength(10);expect(report.metrics.every(item=>item.value===null)).toBe(true);
+    expect(report.enabled).toBe(false);expect(report.metrics).toHaveLength(9);expect(report.metrics.every(item=>item.value===null)).toBe(true);
     expect((await get('outsider').expect(200)).body).toMatchObject({enabled:false,coverage:null});
   });
   it('protects both analytics tables with FORCE RLS and four restrictive policies',async()=>{
@@ -68,13 +68,13 @@ suite('First-party product analytics with real JWT/HTTP/PostgreSQL',()=>{
     await http().post('/api/v1/analytics/onboarding-observation').auth(tokens.admin,{type:'bearer'}).send({startDate:'2026-10-12T00:00:00Z',endDate:'2026-10-12T00:00:00Z'}).expect(400);
     await http().post('/api/v1/analytics/onboarding-observation').auth(tokens.student,{type:'bearer'}).send({startDate:'2026-10-12',endDate:'2026-10-18'}).expect(403);
   });
-  it('computes ten scoped metrics, real retention cohorts and explicit unknown QR coverage',async()=>{
+  it('computes nine scoped metrics and real retention cohorts',async()=>{
     await f.db.getRepository(ProductAnalyticsState).save({universityId:ids[0],collectionStartedAt:new Date('2026-07-01T00:00:00Z')});
     for(const [actor,day] of [['student','2026-08-02'],['peer','2026-08-03'],['student','2026-09-28'],['student','2026-10-12'],['peer','2026-10-13'],['teacher','2026-10-14'],['outsider','2026-10-14']])await f.db.getRepository(ProductActivityDay).save({universityId:actor==='outsider'?ids[1]:ids[0],userId:f.users[actor].id,day,role:actor==='teacher'?'teacher':'student'});
     const at=new Date('2026-10-14T12:00:00Z');
-    for(const [source,records] of [['qr',2],['manual',6],['unknown',9]] as const)await f.db.getRepository(EventRecord).save({id:randomUUID(),universityId:ids[0],type:'attendance.updated',timestamp:at,actor:{type:'user',id:f.users.teacher.id},target:{type:'lesson',id:f.lesson.id},payload:{source,records,privateText:'NEVER_RETURN_EVENT_PAYLOAD'},priority:'normal'});
+    for(const records of [2,6])await f.db.getRepository(EventRecord).save({id:randomUUID(),universityId:ids[0],type:'attendance.updated',timestamp:at,actor:{type:'user',id:f.users.teacher.id},target:{type:'lesson',id:f.lesson.id},payload:{source:'manual',records,privateText:'NEVER_RETURN_EVENT_PAYLOAD'},priority:'normal'});
     for(let i=0;i<2;i++)await f.db.getRepository(EventRecord).save({id:randomUUID(),universityId:ids[0],type:'homework.created',timestamp:at,actor:{type:'system'},target:{type:'homework',id:randomUUID()},payload:{},priority:'normal'});
-    await f.db.getRepository(EventRecord).save({id:randomUUID(),universityId:ids[1],type:'attendance.updated',timestamp:at,actor:{type:'system'},target:{type:'lesson',id:f.lesson.id},payload:{source:'qr',records:1000},priority:'normal'});
+    await f.db.getRepository(EventRecord).save({id:randomUUID(),universityId:ids[1],type:'attendance.updated',timestamp:at,actor:{type:'system'},target:{type:'lesson',id:f.lesson.id},payload:{source:'manual',records:1000},priority:'normal'});
     for(const status of ['completed','completed','failed','queued'] as const){const job=await f.db.getRepository(ScheduleImportJob).save({universityId:ids[0],actorId:f.users.admin.id,idempotencyKey:randomUUID(),payloadHash:randomUUID(),status});await f.db.query('UPDATE schedule_import_jobs SET "updatedAt"=$1 WHERE id=$2',[at,job.id]);}
     for(const dueAt of [new Date('2026-10-15T00:00:00Z'),new Date('2026-10-13T00:00:00Z')])await f.db.getRepository(StudentRequest).save({universityId:ids[0],studentId:f.users.student.id,groupId:f.groups[0].id,facultyId:f.groups[0].facultyId,type:'absence',status:'closed',title:'Синтетическое заявление',description:'НЕ ВОЗВРАЩАТЬ ТЕКСТ ЗАЯВЛЕНИЯ',createdBy:f.users.student.id,createKey:randomUUID(),createHash:'synthetic',dueAt,closedAt:at});
     const company=await f.db.getRepository(CareerCompany).save({name:'Синтетическая компания',createdBy:f.users.admin.id});
@@ -82,12 +82,11 @@ suite('First-party product analytics with real JWT/HTTP/PostgreSQL',()=>{
     for(const [index,state] of ['accepted','in_progress'].entries()){const workTask=index?await f.db.getRepository(CareerTask).save({...task,id:randomUUID()}):task;const work=await f.db.getRepository(CareerWork).save({taskId:workTask.id,studentId:index?f.users.peer.id:f.users.student.id,state});await f.db.query('UPDATE career_work SET "createdAt"=$1 WHERE id=$2',[at,work.id]);}
     await f.db.getRepository(Lesson).save({...f.lesson,id:randomUUID(),startDate:at,endDate:new Date(at.getTime()+3600000)});
     const response=await get().expect(200),body=response.body;
-    expect(response.headers['cache-control']).toBe('no-store, private');expect(body.metrics).toHaveLength(10);
+    expect(response.headers['cache-control']).toBe('no-store, private');expect(body.metrics).toHaveLength(9);
     expect(metric(body,'semester_retention')).toMatchObject({value:50,numerator:1,denominator:2});
     expect(metric(body,'weekly_active_users').value).toBe(3);
     expect(metric(body,'weekly_active_students_share').numerator).toBe(2);
     expect(metric(body,'onboarding_hours')).toMatchObject({value:null,reason:'readiness_not_observed'});
-    expect(metric(body,'qr_mark_share')).toMatchObject({value:25,numerator:2,denominator:8,partial:true});expect(body.coverage.qrUnknownRecords).toBe(9);
     expect(metric(body,'homework_publications').value).toBe(2);
     expect(metric(body,'schedule_import_success')).toMatchObject({value:66.67,numerator:2,denominator:3});
     expect(metric(body,'office_on_time_closure').value).toBe(50);

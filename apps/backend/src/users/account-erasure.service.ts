@@ -27,7 +27,7 @@ const PRIVATE_ROWS: Record<string, string> = {
   user_sessions: 'userId', auth_events: 'userId', platform_events: 'userId',
 };
 const LINKED_ROWS: Record<string, string> = {
-  career_membership: 'userId', career_admission: 'studentId', career_task_complaint: 'studentId', curator_assignments: 'userId', office_assignments: 'userId', groups: 'curatorId', faculties: 'deanUserId', attendance_qr_sessions: 'createdById',
+  career_membership: 'userId', career_admission: 'studentId', career_task_complaint: 'studentId', curator_assignments: 'userId', office_assignments: 'userId', groups: 'curatorId', faculties: 'deanUserId',
 };
 type Blocker = { code: string; message: string };
 
@@ -122,7 +122,6 @@ export class AccountErasureService {
           }
           await runner.query('UPDATE groups SET "curatorId"=NULL WHERE "curatorId"=$1', [actor.id]);
           await runner.query('UPDATE faculties SET "deanUserId"=NULL WHERE "deanUserId"=$1', [actor.id]);
-          await runner.query('UPDATE attendance_qr_sessions SET "revokedAt"=COALESCE("revokedAt",CURRENT_TIMESTAMP) WHERE "createdById"=$1', [actor.id]);
           await runner.query('UPDATE career_application SET message=\'\' WHERE "studentId"=$1', [actor.id]);
           await runner.query('UPDATE career_task_complaint SET details=\'[Текст жалобы удалён пользователем]\' WHERE "studentId"=$1', [actor.id]);
           await runner.query('UPDATE career_admission SET evidence=\'\',reason=\'\' WHERE "studentId"=$1', [actor.id]);

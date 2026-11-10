@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /_next/
+Disallow: /static/
+Disallow: /next/image
+
+Sitemap: https://napare.sano.ru/sitemap.xml
+Sitemap: https://napare.sano.ru/sitemap-student.xml
+Sitemap: https://napare.sano.ru/sitemap-staff.xml
+Sitemap: https://napare.sano.ru/sitemap-admin.xml
+Sitemap: https://napare.sano.ru/sitemap-developer.xml
+Sitemap: https://napare.sano.ru/owner

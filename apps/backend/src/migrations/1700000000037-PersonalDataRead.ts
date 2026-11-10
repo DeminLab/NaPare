@@ -10,7 +10,7 @@ export class PersonalDataRead1700000000037 implements MigrationInterface {
         WHERE cap->'personalData'->>'userId' = NULLIF(current_setting('app.actor_id', true), ''))
       $fn$`);
     const direct: Record<string, string[]> = {
-      absences: ['studentId'], attendance_records: ['studentId', 'markedById'], attendance_qr_sessions: ['createdById'],
+      absences: ['studentId'], attendance_records: ['studentId', 'markedById'],
       academic_events: ['actorId', 'hiddenBy'], academic_schedule_changes: ['actorId'],
       career_membership: ['userId', 'revokedBy'], career_profile: ['studentId'], career_admission: ['studentId'], career_availability: ['studentId'],
       curator_assignments: ['userId', 'grantedBy', 'revokedBy'], user_favorites: ['userId'], inbox_items: ['userId'],

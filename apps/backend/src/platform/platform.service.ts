@@ -35,7 +35,7 @@ export class PlatformService {
     const grant = control && !owner ? await this.db.getRepository(PlatformGrant).findOneBy({ userId: actor.id }) : null;
     const permissions = new Set(owner ? [...PLATFORM_PERMISSIONS] : grant?.permissions ?? []);
     if ([
-      'accounts.read', 'accounts.write', 'student-data.read', 'personal-data.read', 'attendance-qr.read',
+      'accounts.read', 'accounts.write', 'student-data.read', 'personal-data.read',
       'homework-data.read', 'notification-data.read', 'curation-data.read', 'pairspace-content.read',
       'academic-data.read', 'career-data.read', 'discussion-data.read', 'events-data.read', 'attachments-data.read',
       'analytics.read', 'telemetry.read',
@@ -323,7 +323,7 @@ export class PlatformService {
     const universityScopedPermissions = [
       'accounts.read', 'accounts.write', 'universities.read',
       'student-data.read', 'student-data.write', 'personal-data.read', 'personal-data.write',
-      'attendance-qr.read', 'attendance-qr.revoke', 'homework-data.read', 'homework-data.write',
+      'homework-data.read', 'homework-data.write',
       'notification-data.read', 'notification-data.write', 'curation-data.read', 'curation-data.write',
       'pairspace-content.read', 'pairspace-content.write', 'attachments-data.read', 'attachments-data.write',
       'academic-data.read', 'academic-data.write', 'events-data.read', 'discussion-data.read', 'discussion-data.write',
@@ -333,7 +333,7 @@ export class PlatformService {
       if (!dto.serviceIds.length) throw new BadRequestException('Выберите сервисы для выданных разрешений.');
       permissions.add('services.read');
     }
-    for (const [write, read] of [['accounts.write','accounts.read'], ['identity-links.write','identity-links.read'], ['universities.write','universities.read'], ['student-data.write','student-data.read'], ['attendance-qr.revoke','attendance-qr.read'], ['personal-data.write','personal-data.read'], ['homework-data.write','homework-data.read'], ['notification-data.write','notification-data.read'], ['curation-data.write','curation-data.read'], ['academic-data.write','academic-data.read'], ['career-data.write','career-data.read'], ['discussion-data.write','discussion-data.read'], ['pairspace-content.write','pairspace-content.read'], ['attachments-data.write','attachments-data.read'], ['settings.write','settings.read']] as const) if (permissions.has(write)) permissions.add(read);
+    for (const [write, read] of [['accounts.write','accounts.read'], ['identity-links.write','identity-links.read'], ['universities.write','universities.read'], ['student-data.write','student-data.read'], ['personal-data.write','personal-data.read'], ['homework-data.write','homework-data.read'], ['notification-data.write','notification-data.read'], ['curation-data.write','curation-data.read'], ['academic-data.write','academic-data.read'], ['career-data.write','career-data.read'], ['discussion-data.write','discussion-data.read'], ['pairspace-content.write','pairspace-content.read'], ['attachments-data.write','attachments-data.read'], ['settings.write','settings.read']] as const) if (permissions.has(write)) permissions.add(read);
     await this.db.transaction(async manager => {
       await manager.query('SELECT pg_advisory_xact_lock(707247126)');
       const user = await manager.findOne(User, { where: { id }, lock: { mode: 'pessimistic_write' } });
@@ -517,9 +517,6 @@ export class PlatformService {
         }
         if (access.owner || access.permissions.includes('curation-data.read')) {
           scope.orWhere("audit.entity IN ('curator_assignment', 'curator_assignment_search') OR (audit.entity = 'group' AND audit.action IN ('curation.granted', 'curation.revoked'))");
-        }
-        if (access.owner || access.permissions.includes('attendance-qr.read')) {
-          scope.orWhere("audit.entity = 'attendance_qr_session'");
         }
         if (access.owner || access.permissions.includes('pairspace-content.read')) {
           scope.orWhere("audit.entity IN ('pair_space_announcement', 'pair_space_announcement_search', 'pair_space', 'pair_space_search')");

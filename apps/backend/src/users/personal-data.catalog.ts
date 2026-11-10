@@ -23,7 +23,6 @@ export const PERSONAL_DATASETS: readonly PersonalDataset[] = [
   entry('absences', 'studentId', 'id universityId type startDate endDate comment isSensitive confirmationRequired affectedLessonIds affectedLessonsCount source lastSyncedAt sourceVersion syncStatus createdAt updatedAt'),
   entry('attendance_records', 'studentId', 'id universityId lessonId status comment createdAt updatedAt'),
   activity('attendance_records', 'markedById', 'id universityId lessonId status createdAt updatedAt'),
-  activity('attendance_qr_sessions', 'createdById', 'id universityId lessonId expiresAt revokedAt createdAt'),
   activity('academic_events', 'actorId hiddenBy', 'id universityId type courseId groupId occurrenceId startsAt endsAt priority hiddenAt createdAt'),
   activity('academic_schedule_changes', 'actorId', 'id universityId occurrenceId legacyLessonId timestamp createdAt'),
   activity('career_company', 'createdBy', 'id createdAt updatedAt'),

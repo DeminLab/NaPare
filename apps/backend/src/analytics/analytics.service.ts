@@ -13,7 +13,6 @@ export const PRODUCT_METRICS = [
   ['weekly_active_users','Активные аккаунты за неделю','count','Уникальные учебные и карьерные аккаунты с успешным запросом в измеряемых разделах за 7 дней UTC.'],
   ['weekly_active_students_share','Доля активных студентов','percent','Зафиксированные активные студенты недели среди текущих действующих студентов своего вуза. Исторический состав не восстанавливается.'],
   ['onboarding_hours','Наблюдаемое время подключения','hours','От создания вуза до первой успешной серверной проверки готовности. Не время непрерывной работы администратора.'],
-  ['qr_mark_share','Доля операций отметок через QR','percent','Число отметок в QR-операциях среди отметок с известным способом ввода: QR или вручную. Повторное ручное сохранение считается новой операцией.'],
   ['homework_publications','Опубликовано заданий за неделю','count','Число зарегистрированных событий публикации задания за выбранную неделю, без текста заданий.'],
   ['schedule_import_success','Успешные импорты расписания','percent','Успешные импорты среди завершённых успешно или с ошибкой, по дате обновления статуса за неделю. Ожидающая очередь не входит в расчёт.'],
   ['office_on_time_closure','Заявления закрыты в срок','percent','Заявления, закрытые за неделю не позже назначенного срока, среди закрытых заявлений с известным сроком.'],
@@ -103,12 +102,7 @@ export class ProductAnalyticsService implements OnModuleInit,OnModuleDestroy {
       values.semester_retention={value:retentionReason?null:percentage(activity.returned,activity.cohort),numerator:activity.returned,denominator:activity.cohort,reason:retentionReason};
       const [onboarding]=await manager.query('SELECT "createdAt" FROM universities WHERE id=$1',[universityId]);
       values.onboarding_hours={value:tracking?.onboardingReadyAt&&onboarding?Math.max(0,Math.round((new Date(tracking.onboardingReadyAt).getTime()-new Date(onboarding.createdAt).getTime())/36000)/100):null,reason:tracking?.onboardingReadyAt?undefined:'readiness_not_observed'};
-      const [events]=await manager.query(`WITH marks AS (SELECT payload->>'source' AS source,CASE WHEN payload->>'records' ~ '^\\d{1,6}$' THEN (payload->>'records')::int ELSE 0 END AS records
-        FROM event_records WHERE "universityId"=$1 AND type='attendance.updated' AND timestamp >= $2 AND timestamp < $3)
-        SELECT COALESCE(sum(records) FILTER(WHERE source='qr'),0)::int AS qr,COALESCE(sum(records) FILTER(WHERE source IN ('qr','manual')),0)::int AS known,
-        COALESCE(sum(records) FILTER(WHERE source IS NULL OR source NOT IN ('qr','manual')),0)::int AS unknown,
-        (SELECT count(*) FROM event_records WHERE "universityId"=$1 AND type='homework.created' AND timestamp >= $2 AND timestamp < $3)::int AS homework FROM marks`,[universityId,period.weekStart,period.weekEnd]);
-      values.qr_mark_share={value:percentage(events.qr,events.known),numerator:events.qr,denominator:events.known,partial:events.unknown>0||period.weekEnd>now};
+      const [events]=await manager.query(`SELECT (SELECT count(*) FROM event_records WHERE "universityId"=$1 AND type='homework.created' AND timestamp >= $2 AND timestamp < $3)::int AS homework`,[universityId,period.weekStart,period.weekEnd]);
       values.homework_publications={value:events.homework,partial:period.weekEnd>now};
       const [imports]=await manager.query(`SELECT count(*) FILTER(WHERE status='completed')::int AS succeeded,count(*)::int AS total FROM schedule_import_jobs WHERE "universityId"=$1 AND status IN ('completed','failed') AND "updatedAt">=$2 AND "updatedAt"<$3`,[universityId,period.weekStart,period.weekEnd]);
       values.schedule_import_success={value:percentage(imports.succeeded,imports.total),numerator:imports.succeeded,denominator:imports.total,partial:period.weekEnd>now};
@@ -118,7 +112,7 @@ export class ProductAnalyticsService implements OnModuleInit,OnModuleDestroy {
       values.career_accepted_work_share={value:percentage(career.accepted,career.total),numerator:career.accepted,denominator:career.total,partial:period.weekEnd>now};
       const [schedule]=await manager.query(`SELECT count(*)::int AS total,count(*) FILTER(WHERE EXISTS(SELECT 1 FROM lessons l WHERE l."universityId"=$1 AND l."groupId"=g.id AND l."deletedAt" IS NULL AND l."startDate">=$2 AND l."startDate"<$3))::int AS covered FROM groups g WHERE g."universityId"=$1`,[universityId,period.weekStart,period.weekEnd]);
       values.schedule_group_coverage={value:percentage(schedule.covered,schedule.total),numerator:schedule.covered,denominator:schedule.total};
-      return result({collectionStartedAt:tracking?.collectionStartedAt||null,retentionDays:ANALYTICS_RETENTION_DAYS,qrUnknownRecords:events.unknown,continuousCollectionProven:false});
+      return result({collectionStartedAt:tracking?.collectionStartedAt||null,retentionDays:ANALYTICS_RETENTION_DAYS,continuousCollectionProven:false});
     });
   }
 }
