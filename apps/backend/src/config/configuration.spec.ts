@@ -12,6 +12,8 @@ const jwtEnvironment = {
   JWT_REFRESH_EXPIRATION: '30d',
   RATE_LIMIT_WINDOW_MS: '60000',
   RATE_LIMIT_MAX: '100',
+  DB_MIGRATION_USERNAME: 'napare_migration',
+  DB_MIGRATION_PASSWORD: 'migration-secret-for-tests',
 };
 
 describe('environment configuration', () => {
