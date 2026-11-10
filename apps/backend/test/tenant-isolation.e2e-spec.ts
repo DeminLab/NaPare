@@ -80,7 +80,10 @@ suite('Tenant isolation: real HTTP, JWT, services and PostgreSQL', () => {
     await new Promise<void>(resolve => setImmediate(resolve));
     while (eventWork.length) await Promise.all(eventWork.splice(0));
     const state: Record<string, unknown> = {};
-    for (const entity of fixture.db.entityMetadatas.filter(entity => entity.columns.some(column => column.databaseName === 'universityId'))) {
+    // Telemetry tables are written by global interceptors on every request, so they
+    // legitimately change during the probe and cannot serve as isolation evidence.
+    const interceptorWritableTables = new Set(['platform_events', 'auth_events', 'user_sessions']);
+    for (const entity of fixture.db.entityMetadatas.filter(entity => !interceptorWritableTables.has(entity.tableName) && entity.columns.some(column => column.databaseName === 'universityId'))) {
       state[entity.tableName] = await fixture.db.query(`SELECT to_jsonb(t) AS row FROM "${entity.tableName}" t WHERE "universityId" = $1 ORDER BY to_jsonb(t)::text`, [universityId]);
     }
     for (const table of ['announcements', 'homeworks', 'file_attachments', 'discussion_messages']) {
