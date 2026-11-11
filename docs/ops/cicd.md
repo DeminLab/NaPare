@@ -15,20 +15,11 @@ Test output, coverage, and audit JSON are uploaded as GitHub Actions artifacts e
 
 The audit job fails on `high` or `critical` production advisories; current pins include `follow-redirects@1.16.3` and `qs@6.16.2`. Backend E2E runs against ephemeral PostgreSQL/Redis and requires the `DB_MIGRATION_*` variables when production-style environment validation is exercised.
 
-After a successful push to `main`, `Build images and deploy staging` builds immutable GHCR images tagged with the commit SHA, deploys them to the protected `staging` environment, then checks `/api/v1/health`.
+After a successful push to `main`, `Build and publish images` builds immutable GHCR images tagged with the commit SHA for the backend and all five web applications.
 
-## Required staging secrets
+There is no automated deploy job. The host runs the Compose stack and is updated manually following [docs/deployment/production.md](../deployment/production.md). The workflow therefore requires no staging secrets and creates no GitHub deployment records.
 
-Configure these as **GitHub Environment secrets** for `staging`, never as committed `.env` files:
-
-- `STAGING_HOST`
-- `STAGING_USER`
-- `STAGING_SSH_KEY`
-- `STAGING_KNOWN_HOSTS`
-- `STAGING_DEPLOY_COMMAND`
-- `STAGING_URL`
-
-`STAGING_DEPLOY_COMMAND` runs on the staging host with `NAPARE_IMAGE_PREFIX` and `NAPARE_IMAGE_TAG` set to the immutable images built by CI. It must pull those exact image tags and perform the host-specific rollout. The workflow fails clearly if any required secret is missing.
+If automated rollout is reintroduced later, it must pull the exact `NAPARE_IMAGE_PREFIX`/`NAPARE_IMAGE_TAG` pair built by the workflow, run behind a protected `staging` Environment, and be gated on `/api/v1/health` plus `scripts/verify-max-deployment.sh`.
 
 ## Production safety
 

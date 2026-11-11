@@ -5,12 +5,10 @@ The current production topology and the operator runbook are maintained in the r
 ## Current delivery flow
 
 1. A pull request to `main` runs the `CI` workflow: lint, typecheck, unit coverage, backend E2E, production build and dependency audit.
-2. A successful push to `main` triggers `Build images and deploy staging`.
-3. That workflow builds commit-SHA-tagged images in GHCR for the backend and all four web applications.
-4. The protected GitHub `staging` Environment supplies connection secrets and executes the deployment command on the staging host.
-5. The workflow checks `GET /api/v1/health` after deployment.
+2. A successful push to `main` triggers `Build and publish images`.
+3. That workflow builds commit-SHA-tagged images in GHCR for the backend and all five web applications.
 
-See [CI/CD](cicd.md) for the exact required GitHub Environment secrets.
+The workflow deliberately has no deploy job: the running host is updated manually by the operator, and automated rollout scripts are not configured in this repository. See [CI/CD](cicd.md) for details.
 
 ## Local infrastructure
 

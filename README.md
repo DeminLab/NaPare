@@ -399,7 +399,7 @@ Notification / DeviceToken / AuditLog
 | Среда | URL |
 |-------|-----|
 | Local | `http://localhost:3000/api/v1/docs` |
-| Staging | GitHub Environment secret `STAGING_URL` + `/api/v1/docs` |
+| Staging | URL staging-хоста (задаётся на сервере, в репозитории не хранится) |
 | Production | `https://napare.sano.ru/api/v1/docs` |
 
 ### Ключевые группы endpoints
@@ -769,7 +769,7 @@ docs/
 |--------|-----|
 | OpenAPI (локально) | `http://localhost:3000/api/v1/docs` |
 | OpenAPI (production) | `https://napare.sano.ru/api/v1/docs` |
-| OpenAPI (staging) | `STAGING_URL` из GitHub Environment |
+| OpenAPI (staging) | URL staging-хоста (задаётся на сервере) |
 | GitHub | `https://github.com/DeminLab/NaPare` |
 
 ---

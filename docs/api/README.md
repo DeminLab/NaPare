@@ -13,7 +13,7 @@ OpenAPI-спецификация **генерируется из кода** (Nes
 | Среда      | URL                                     |
 | ---------- | --------------------------------------- |
 | Local      | `http://localhost:3000/api/v1/docs`     |
-| Staging    | URL, настроенный в GitHub Environment secret `STAGING_URL` |
+| Staging    | URL staging-хоста, задаётся на сервере и в репозитории не хранится |
 | Production | `https://napare.sano.ru/api/v1/docs` |
 
 Hostname staging не зафиксирован в репозитории и зависит от настроек окружения.

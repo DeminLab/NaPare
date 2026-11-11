@@ -403,6 +403,8 @@ jobs:
             docker system prune -f
 ```
 
+> Note: the snippet above is an illustrative reference. The real `.github/workflows/staging.yml` in this repository contains only the image build/publish jobs (`image-prefix`, `build-images`); it has no `deploy-staging` or `deploy-production` job, and the host is updated manually.
+
 ## .env.example
 
 ```env

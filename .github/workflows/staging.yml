@@ -1,4 +1,4 @@
-name: Build images and deploy staging
+name: Build and publish images
 
 on:
   workflow_run:
@@ -80,56 +80,3 @@ jobs:
             PACKAGE_NAME=${{ matrix.package_name }}
           push: true
           tags: ${{ needs.image-prefix.outputs.prefix }}-${{ matrix.image }}:${{ github.event.workflow_run.head_sha }}
-
-  deploy-staging:
-    name: Deploy staging
-    needs: [image-prefix, build-images]
-    runs-on: ubuntu-latest
-    environment: staging
-    env:
-      STAGING_HOST: ${{ secrets.STAGING_HOST }}
-      STAGING_USER: ${{ secrets.STAGING_USER }}
-      STAGING_SSH_KEY: ${{ secrets.STAGING_SSH_KEY }}
-      STAGING_KNOWN_HOSTS: ${{ secrets.STAGING_KNOWN_HOSTS }}
-      STAGING_DEPLOY_COMMAND: ${{ secrets.STAGING_DEPLOY_COMMAND }}
-    steps:
-      - name: Validate staging deployment secrets
-        shell: bash
-        run: |
-          : "${STAGING_HOST:?Set STAGING_HOST}"
-          : "${STAGING_USER:?Set STAGING_USER}"
-          : "${STAGING_SSH_KEY:?Set STAGING_SSH_KEY}"
-          : "${STAGING_KNOWN_HOSTS:?Set STAGING_KNOWN_HOSTS}"
-          : "${STAGING_DEPLOY_COMMAND:?Set STAGING_DEPLOY_COMMAND}"
-      - name: Configure SSH
-        shell: bash
-        run: |
-          install -m 700 -d ~/.ssh
-          printf '%s\n' "$STAGING_SSH_KEY" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          printf '%s\n' "$STAGING_KNOWN_HOSTS" > ~/.ssh/known_hosts
-      - name: Deploy immutable image set
-        shell: bash
-        run: |
-          ssh -i ~/.ssh/id_ed25519 "$STAGING_USER@$STAGING_HOST" \
-            "export NAPARE_IMAGE_PREFIX='${{ needs.image-prefix.outputs.prefix }}' NAPARE_IMAGE_TAG='${{ github.event.workflow_run.head_sha }}'; $STAGING_DEPLOY_COMMAND"
-
-  smoke-tests:
-    name: Staging smoke tests
-    needs: deploy-staging
-    runs-on: ubuntu-latest
-    environment: staging
-    env:
-      STAGING_URL: ${{ secrets.STAGING_URL }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.workflow_run.head_sha }}
-      - name: Validate staging URL
-        run: ': "${STAGING_URL:?Set STAGING_URL}"'
-      - name: Check API health
-        run: curl --fail --show-error --silent --retry 5 --retry-delay 5 "$STAGING_URL/api/v1/health"
-      - name: Check shared website and MAX portal
-        env:
-          MAX_PUBLIC_URL: ${{ secrets.STAGING_URL }}
-        run: bash scripts/verify-max-deployment.sh
