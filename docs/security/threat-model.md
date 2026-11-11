@@ -17,9 +17,9 @@
 
 ## Controls that are not provided by this repository
 
-- PostgreSQL Row Level Security policies are not enabled in migrations. Tenant isolation depends on application code and requires endpoint-level authorization review.
-- Redis is present in Compose, but backend Redis integration/queues are not connected.
-- S3 file adapter, FCM/APNs delivery, client-side Sentry, PostHog, Grafana, WAF/CDN, and Kubernetes controls are not configured here.
+- PostgreSQL Row Level Security is enabled and forced for tables that carry `universityId`/`university_id` (`1700000000029-TenantRowSecurity`), using the context set by `TenantDatabase`. It only works when the database role is `NOSUPERUSER NOBYPASSRLS`, so tenant isolation still requires the application-level checks and endpoint-level authorization review.
+- Redis and BullMQ are wired for notification outbox delivery; external delivery channels stay disabled until their flags and credentials are configured and verified. Absence of flags is not evidence that a message was delivered.
+- S3 file adapter, client-side Sentry, PostHog, Grafana, WAF/CDN, and Kubernetes controls are not configured here.
 - Production TLS certificates, host firewall, SSH policy, database backup encryption/retention, monitoring alerts, and disaster recovery are operator responsibilities and have not been verified by this repository review.
 - `docs/legal/` contains policy/terms templates with unfilled operator/date fields. Do not publish them until the service owner/legal reviewer completes them.
 

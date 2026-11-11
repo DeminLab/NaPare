@@ -13,7 +13,7 @@
 
 Test output, coverage, and audit JSON are uploaded as GitHub Actions artifacts even when a job fails. pnpm's store and Turbo outputs are cached per lockfile.
 
-The audit job fails on `high` or `critical` production advisories; current pins include `follow-redirects@1.16.2` and `qs@6.16.1`. Backend E2E runs against ephemeral PostgreSQL/Redis and requires the `DB_MIGRATION_*` variables when production-style environment validation is exercised.
+The audit job fails on `high` or `critical` production advisories; current pins include `follow-redirects@1.16.3` and `qs@6.16.2`. Backend E2E runs against ephemeral PostgreSQL/Redis and requires the `DB_MIGRATION_*` variables when production-style environment validation is exercised.
 
 After a successful push to `main`, `Build images and deploy staging` builds immutable GHCR images tagged with the commit SHA, deploys them to the protected `staging` environment, then checks `/api/v1/health`.
 

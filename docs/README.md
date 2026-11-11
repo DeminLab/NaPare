@@ -13,7 +13,7 @@ Project guides, reference material and historical records live under this direct
 
 - [HTTP parser security patch, 24 October](security/request-parser-patch-2026-10-24.md) — body-parser/multer pins, isolated crash regressions and audit boundaries.
 
-- [Product analytics](modules/product-analytics.md) — ten defined own-university metrics, default-off daily activity, observed onboarding readiness and privacy lifecycle.
+- [Product analytics](modules/product-analytics.md) — nine defined own-university metrics, default-off daily activity, observed onboarding readiness and privacy lifecycle.
 
 - [Platform telemetry and analytics](modules/platform-telemetry.md) — real usage data, session management, event journal, monitored users and revocation; three DB tables, RLS, sanitization, retention.
 
@@ -35,6 +35,8 @@ Project guides, reference material and historical records live under this direct
 
 
 - [Combined improvement verification](project-log/improvement-integration-2026-10-22.md) — integration branch, local test evidence and remaining requirements; no production changes.
+
+- [Repository baseline audit](audit/BASELINE.md) и [разрывы с ТЗ v1.1](audit/TZ-1.1-GAP-ANALYSIS.md) — датированный снимок состояния репозитория, расхождения с требованиями и риски; не подтверждение готовности к production.
 
 - [API](api/README.md) — API usage and contracts.
 - [University schedule import](integrations/schedule-import.md) — CSV/ICS/XLSX/Moodle/SIBIT formats, durable queue and change journal.

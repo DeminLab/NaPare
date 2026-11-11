@@ -113,12 +113,12 @@ web-admin ───┤
 web-developer┘
 ```
 
-Redis присутствует в Compose, но backend client/queues не подключены. S3-adapter нет; PostgreSQL — прикладное хранилище данных.
+Redis и BullMQ подключены для outbox-доставки уведомлений (RuStore/WebPush/MAX/Telegram), но внешние каналы выключены по умолчанию и включаются флагами окружения. S3-adapter нет; PostgreSQL — прикладное хранилище данных.
 
 ### Архитектурные принципы
 
 1. **Модульный монолит** — единый NestJS-процесс с чёткими границами модулей
-2. **Мультивузовость** — tenant и resource-scope checks в backend guards и сервисах; PostgreSQL RLS policies не настроены
+2. **Мультивузовость** — tenant и resource-scope checks в backend guards и сервисах, плюс обязательный PostgreSQL RLS (`FORCE ROW LEVEL SECURITY`, миграция `1700000000029-TenantRowSecurity`)
 3. **OpenAPI как source of truth** — спецификация генерируется из кода
 4. **TypeScript в активных приложениях** — web + backend; MAX запускает существующий `web-portal`
 
@@ -192,9 +192,9 @@ napare/
 | **Backend** | NestJS | 10+ | Модульный монолит, OpenAPI из коробки |
 | **ORM** | TypeORM | 0.3+ | Миграции, декораторы, интеграция с NestJS |
 | **БД** | PostgreSQL | 16 | Основное хранилище; TypeORM tenant/resource checks в приложении |
-| **Redis** | Redis | 7 | Есть локальный/production контейнер; backend Redis client/queue пока не подключён |
+| **Redis** | Redis | 7 | Очередь BullMQ для outbox-доставки уведомлений; каналы выключены по умолчанию |
 | **Файлы** | S3/MinIO | — | Переменные-заготовки есть; фактический storage adapter не подключён |
-| **Push** | FCM/APNs | — | Отправка не реализована; device token endpoint не означает доставку push |
+| **Push** | WebPush/RuStore/MAX/Telegram | — | Серверная доставка реализована и выключена по умолчанию; включение требует флагов и проверки на устройстве |
 | **Auth** | JWT (access + refresh) | — | Stateless авторизация |
 | **API Docs** | OpenAPI 3 (Swagger) | — | Генерируется из кода = source of truth |
 | **Аналитика** | PostHog | — | Не подключён |
@@ -295,7 +295,7 @@ Development Compose файл (`docker-compose.dev.yml`) включает:
 | Сервис | Порт | Описание |
 |--------|------|----------|
 | PostgreSQL 16 | 5432 | Основная база данных |
-| Redis 7 | 6379 | Development container; backend client/queues не подключены |
+| Redis 7 | 6379 | Development container для очереди уведомлений; доставка выключена по умолчанию |
 | MinIO | 9000/9001 | S3-compatible dev service; backend storage adapter не подключён |
 
 ### Запуск инфраструктуры
@@ -335,7 +335,7 @@ docker compose -f docker-compose.dev.yml down -v
 | `JWT_REFRESH_SECRET` | Да | Секрет для подписи refresh-токенов |
 | `JWT_ACCESS_EXPIRATION` | Да | Время жизни access-токена (например, `15m`) |
 | `JWT_REFRESH_EXPIRATION` | Да | Время жизни refresh-токена (например, `30d`) |
-| `REDIS_HOST`, `REDIS_PORT` | Заготовки локальной конфигурации | Backend Redis client не подключён; не считать variables активной интеграцией |
+| `REDIS_HOST`, `REDIS_PORT` | Для очереди уведомлений | Подключение BullMQ; без флагов доставки очередь не отправляет внешние сообщения. Полный список флагов — в [справочнике доставки](docs/integrations/notification-delivery.md) |
 | `CORS_ORIGIN` | Production | Разрешённый web-оригин |
 | `MAX_BOT_TOKEN` | Для входа в сайт из MAX WebApp | Токен бота MAX; без него `POST /api/v1/auth/max` отвечает 503 |
 | `MAX_INIT_DATA_TTL_SECONDS` | Нет | Срок действия `initData` MAX; по умолчанию `900` |
@@ -465,8 +465,11 @@ GET /api/v1/schedule/my?page=1&limit=20&sort=startTime&order=asc
 | Админ вуза | `university_admin` | Управление вузом, роли, расписание |
 | Суперадмин | `superadmin` | Управление платформой |
 | Разработчик | `developer` | Технические ресурсы; доступ определяется backend policy |
+| Работодатель | `employer` | Карьерный модуль: задачи, отклики, профиль компании |
+| Сотрудник карьерного центра | `career_staff` | Проверка компаний и модерация карьерных задач |
+| Администратор карьерного центра | `career_admin` | Управление карьерным контуром своего вуза |
 
-Текущая модель хранит одну роль в `users.role`. Проверяйте действие и resource scope по [реальным backend policies](docs/architecture/roles-and-permissions.md); краткая матрица здесь намеренно не дублируется, чтобы не расходиться с route permissions.
+Это полный enum `UserRole` из `apps/backend/src/auth/interfaces/user-role.ts` (11 значений). Текущая модель хранит одну роль в `users.role`. Проверяйте действие и resource scope по [реальным backend policies](docs/architecture/roles-and-permissions.md); краткая матрица здесь намеренно не дублируется, чтобы не расходиться с route permissions.
 
 ### Разграничение данных по ролям
 
@@ -589,7 +592,7 @@ docker compose --env-file <secure-env-file> -f docker-compose.prod.yml up -d
 
 - Role-based access control (RBAC) — 11 ролей; [матрица разрешений и маршрутов](docs/security/role-matrix.md)
 - Tenant и role/resource scope проверяются backend guards и сервисами
-- PostgreSQL RLS policies в миграциях не настроены
+- PostgreSQL RLS включён и форсирован для tenant-таблиц (`1700000000029-TenantRowSecurity.ts`); запросы tenant-данных идут через `TenantDatabase` с установленным контекстом вуза
 
 ### Шифрование
 
@@ -619,8 +622,10 @@ docker compose --env-file <secure-env-file> -f docker-compose.prod.yml up -d
 | **PairSpace** | Объявления, ДЗ, файлы, обсуждение | [docs/modules/pair-space.md](docs/modules/pair-space.md) |
 | **Absences** | Статусы отсутствий, подтверждения куратора | [docs/modules/absences.md](docs/modules/absences.md) |
 | **MyDay** | Агрегация данных для главного экрана | [docs/modules/my-day.md](docs/modules/my-day.md) |
-| **Notifications** | In-app события, inbox и preferences; системная push-доставка не подключена | [docs/modules/notifications.md](docs/modules/notifications.md) |
+| **Notifications** | In-app события, inbox и preferences; push-доставка реализована и по умолчанию выключена | [docs/modules/notifications.md](docs/modules/notifications.md) |
 | **Admin** | Управление вузом, ролями, расписанием | [docs/modules/admin.md](docs/modules/admin.md) |
+
+Кроме перечисленных, в backend работают модули `users`, `favorites`, `academic`, `semester`, `events`, `search`, `telemetry`, `analytics`, `career`/`career-billing`, `curation`, `requests`, `moodle`, `rasp` и слой `platform-*` (администрирование платформы, аналитика, данные, записи, карьера, обсуждения, домашние задания, уведомления, кураторство). Полный список групп API и их префиксов — в [docs/api/README.md](docs/api/README.md); границы модулей — в [docs/architecture/system-overview.md](docs/architecture/system-overview.md).
 
 ### Коннекторы расписания
 

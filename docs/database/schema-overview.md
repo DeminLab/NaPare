@@ -21,7 +21,7 @@
 
 ## Изоляция по университету
 
-Доступ к данным ограничивается backend-контекстом университета, guards и проверками области доступа в сервисах. В миграциях проекта нет включённых PostgreSQL Row Level Security policies; не полагайтесь на RLS как на дополнительный барьер. Для новых запросов проверяйте одновременно tenant и роль/resource scope.
+Доступ к данным ограничивается backend-контекстом университета, guards и проверками области доступа в сервисах. Дополнительный барьер — PostgreSQL Row Level Security: миграция `1700000000029-TenantRowSecurity` включает `ENABLE`/`FORCE ROW LEVEL SECURITY` и restrictive-политики для таблиц с `universityId`/`university_id`. Политики читают контекст из `app.university_id`, `app.actor_id` и `app.tenant_access`, который выставляет `TenantDatabase`; роль БД должна быть `NOSUPERUSER NOBYPASSRLS`, иначе барьер не действует. Для новых запросов проверяйте одновременно tenant и роль/resource scope и не заменяйте RLS прикладной проверкой.
 
 ## Создание и применение миграций
 

@@ -9,7 +9,7 @@ B2B2C SaaS для вузов: расписание, задания, матери
 
 ## Быстрый старт
 
-Состояние репозитория и проверки от 16 октября: [сводка изменений](project-log/2026-10-16-repository-sync.md). Новые возможности: [кураторство](product/account-curatorship.md), [управление платформой](product/platform-control.md), [установка агента](deployment/platform-control.md), [Android и RuStore](deployment/rustore-publication.md). Публичный сайт: [SEO](SEO.md), [владелец](OWNER.md). QR-посещаемость удалена; актуальна ручная отметка преподавателем. Отправка кода в GitHub не подтверждает развёртывание этих возможностей.
+Состояние репозитория и проверки от 16 октября: [сводка изменений](project-log/2026-10-16-repository-sync.md). Текущий снимок от 11 ноября: [baseline-аудит](audit/BASELINE.md) и [разрывы с ТЗ v1.1](audit/TZ-1.1-GAP-ANALYSIS.md). Новые возможности: [кураторство](product/account-curatorship.md), [управление платформой](product/platform-control.md), [установка агента](deployment/platform-control.md), [Android и RuStore](deployment/rustore-publication.md). Публичный сайт: [SEO](SEO.md), [владелец](OWNER.md). QR-посещаемость удалена; актуальна ручная отметка преподавателем. Отправка кода в GitHub не подтверждает развёртывание этих возможностей.
 
 | Я | Мне нужно | Куда идти |
 |---|-----------|-----------|

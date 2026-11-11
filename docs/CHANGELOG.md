@@ -14,10 +14,15 @@
 - Текущая посещаемость — ручная отметка преподавателем в `/staff/attendance`: статусы `present`/`absent`/`late` через `POST /absences/attendance` и чтение `GET /absences/attendance/lesson/:lessonId`.
 - Документация модулей, API, схемы, ролей, приватности и исторические материалы кейса помечены соответственно.
 
+### Документация и сверка с кодом
+- README приведён к фактическому коду: включённый RLS, Redis/BullMQ и push-доставка по флагам, 11 ролей `UserRole`, полный список модулей.
+- `docs/security/threat-model.md` и `docs/database/schema-overview.md` исправлены по RLS; `docs/ops/testing.md`, `docs/ops/cicd.md` и другие активные документы больше не ссылаются на удалённый `scripts/verify-ai-documentation.cjs`.
+- Добавлены [baseline-аудит](audit/BASELINE.md) и [разрывы с ТЗ v1.1](audit/TZ-1.1-GAP-ANALYSIS.md) со ссылками из индекса документации.
+
 ### CI и зависимости
 - В `production`-конфигурации тестов добавлены обязательные `DB_MIGRATION_USERNAME`/`DB_MIGRATION_PASSWORD`.
 - Перегенерирован инвентарь tenant-маршрутов (382 маршрута в 46 контроллерах).
-- Обновлены `follow-redirects` до `1.16.2` и `qs` до `6.16.1` для закрытия high/moderate advisory.
+- Обновлены `follow-redirects` до `1.16.3` и `qs` до `6.16.2` для закрытия high/moderate advisory.
 - Tenant-isolation E2E больше не сравнивает таблицы `platform_events`, `auth_events` и `user_sessions`, которые пишет глобальный телеметрический интерсептор.
 
 ## [Unreleased] — 2026-10-16

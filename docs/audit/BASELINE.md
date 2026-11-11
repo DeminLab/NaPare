@@ -181,6 +181,8 @@ Error: EPERM: operation not permitted, symlink
 | D-5 | README «Модули системы» (7 модулей) | ~25 модулей с API, включая `career-*`, `requests`, `platform-*` |
 | D-6 | README «Роли» / `packages/shared/src/constants/roles.ts` (8 ролей) | enum backend — 11 ролей; расхождение между shared-константой и backend-enum |
 
+**Дополнение 2026-11-11:** после снимка D-1, D-2, D-5 и D-6 исправлены в README и справочных документах. D-3 (спека OpenAPI не хранится в репозитории) и расхождение `packages/shared` с backend-enum остаются; D-4 закрыт перегенерацией `tenant-isolation.md` (382/46). Снимок ниже по тексту не переписывался.
+
 ## Расхождения с ТЗ 1.1
 
 Полная матрица — в [TZ-1.1-GAP-ANALYSIS.md](./TZ-1.1-GAP-ANALYSIS.md). Краткая сводка блокеров:
