@@ -34,9 +34,9 @@ keywords: 'NaPare, расписание, учеба, студенты, пара,
 
 **SEO метки:**
 ```typescript
-title: 'Данила Алексеевич — ИП, Разработчик NaPare'
-description: 'Данила Алексеевич — индивидуальный предприниматель, разработчик платформы NaPare. Операционная система учебного дня студента.'
-keywords: 'Данила Алексеевич, ИП, разработчик, NaPare, операционная система, учеба, студенты, B2B2C, SaaS'
+title: 'Демин Данила Алексеевич — ИП, Разработчик NaPare'
+description: 'Демин Данила Алексеевич — индивидуальный предприниматель, разработчик платформы NaPare. Операционная система учебного дня студента.'
+keywords: 'Демин Данила Алексеевич, ИП, разработчик, NaPare, операционная система, учеба, студенты, B2B2C, SaaS'
 ```
 
 ### 3. Страница о проекте
@@ -48,7 +48,7 @@ keywords: 'Данила Алексеевич, ИП, разработчик, NaPa
 ```typescript
 title: 'О проекте NaPare — Операционная система учебного дня студента'
 description: 'О NaPare: B2B2C SaaS платформа для управления учебным процессом студентов, преподавателей и администрации вузов'
-keywords: 'о NaPare, проект, разработчик, Данила Алексеевич, учебный процесс, студенты, преподаватели, вузы'
+keywords: 'о NaPare, проект, разработчик, Демин Данила Алексеевич, учебный процесс, студенты, преподаватели, вузы'
 ```
 
 ### 4. Страница возможностей
@@ -112,11 +112,13 @@ description: 'Документация API, GitHub репозиторий, те�
 ## Карта сайта (Sitemap)
 
 ### Файлы:
-- `public/sitemap.xml` - главная карта сайта
-- `public/sitemap-student.xml` - карта для студентов
-- `public/sitemap-staff.xml` - карта для преподавателей
-- `public/sitemap-admin.xml` - карта для администрации
-- `public/sitemap-developer.xml` - карта для разработчиков
+- `apps/web-portal/public/sitemap.xml` - главная карта сайта
+- `apps/web-portal/public/sitemap-student.xml` - карта для студентов
+- `apps/web-portal/public/sitemap-staff.xml` - карта для преподавателей
+- `apps/web-portal/public/sitemap-admin.xml` - карта для администрации
+- `apps/web-portal/public/sitemap-developer.xml` - карта для разработчиков
+
+Копии также лежат в корневом `public/`; web-контейнеры отдают только `apps/*/public`, поэтому рабочий источник для portal — `apps/web-portal/public/`. Все пять файлов обслуживаются одним portal-контейнером по путям из `robots.txt`.
 
 ### Формат:
 ```xml
@@ -164,7 +166,7 @@ Sitemap: https://napare.sano.ru/owner
 ### Типы данных:
 - `WebSite` - для главной страницы
 - `Organization` - для организации
-- `Person` - для владельца проекта (Данила Алексеевич)
+- `Person` - для владельца проекта; во всех мета-тегах и Schema.org используется юридическое имя «ИП Демин Данила Алексеевич»
 - `SoftwareApplication` - для приложения
 - `BreadcrumbList` - для навигации
 
@@ -173,7 +175,7 @@ Sitemap: https://napare.sano.ru/owner
 {
   "@context": "https://schema.org",
   "@type": "Person",
-  "name": "Данила Алексеевич",
+  "name": "Демин Данила Алексеевич",
   "jobTitle": "ИП, Разработчик",
   "url": "https://napare.sano.ru/owner",
   "sameAs": [
@@ -200,10 +202,10 @@ Sitemap: https://napare.sano.ru/owner
 ## Логотипы и иконки
 
 ### Файлы:
-- `public/favicon.ico` - иконка браузера
-- `public/apple-touch-icon.png` - иконка для iOS
-- `public/mstile-150x150.png` - иконка для Windows
-- `public/manifest.json` - PWA манифест
+- `apps/web-portal/src/app/favicon.ico/route.ts` - иконка браузера для всего домена (SVG-ответ)
+- `apps/web-portal/public/apple-touch-icon.png` - иконка для iOS
+- `apps/web-portal/public/mstile-150x150.png` - иконка для Windows
+- `apps/web-portal/public/manifest.json` - PWA манифест
 - `apps/web-portal/public/brand/np-mark.png` - логотип NaPare
 - `apps/web-portal/public/brand/napare-brand-board.jpg` - бренд-борд
 
@@ -232,17 +234,17 @@ Sitemap: https://napare.sano.ru/owner
 ### Проверка:
 1. Зарегистрируйте сайт в Google Search Console
 2. Добавьте `https://napare.sano.ru/` как сайт
-3. Разместите `public/owner-verification.txt` в корне
-4. Проверьте карту сайта в `public/sitemap.xml`
-5. Проверьте robots.txt
+3. Разместите `apps/web-portal/public/owner-verification.txt` в корне (после сборки доступен как `/owner-verification.txt`)
+4. Проверьте карту сайта `apps/web-portal/public/sitemap.xml`
+5. Проверьте `apps/web-portal/public/robots.txt`
 
 ## Яндекс.Вебмастер
 
 ### Проверка:
 1. Зарегистрируйте сайт в Яндекс.Вебмастер
 2. Добавьте `https://napare.sano.ru/` как сайт
-3. Разместите `public/robots.txt`
-4. Проверьте карту сайта в `public/sitemap.xml`
+3. Разместите `apps/web-portal/public/robots.txt`
+4. Проверьте карту сайта `apps/web-portal/public/sitemap.xml`
 
 ## Яндекс.Метрика и Яндекс.Цель
 
@@ -261,8 +263,8 @@ Sitemap: https://napare.sano.ru/owner
 2. Заполните информацию о проекте:
    - Название: NaPare
    - Описание: Операционная система учебного дня студента
-   - Владелец: Данила Алексеевич
-   - Разработчик: Данила Алексеевич
+   - Владелец: ИП Демин Данила Алексеевич
+   - Разработчик: ИП Демин Данила Алексеевич
 
 ## Постановка на учет в Роскомнадзор
 

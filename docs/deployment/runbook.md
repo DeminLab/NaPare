@@ -116,7 +116,6 @@ node /srv/NaPare/scripts/postgres-recovery.cjs restore
 node --test scripts/test-postgres-recovery.cjs
 pnpm --filter @napare/backend exec jest src/health.controller.spec.ts src/common/filters/http-exception.filter.spec.ts --runInBand
 pnpm --filter @napare/backend exec tsc --noEmit
-node scripts/verify-ai-documentation.cjs
 node scripts/verify-role-workspace-boundaries.cjs
 pnpm lint
 pnpm lint:docs

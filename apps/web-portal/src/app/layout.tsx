@@ -7,8 +7,8 @@ export const metadata: Metadata = {
   title: 'NaPare — Операционная система учебного дня студента',
   description: 'B2B2C SaaS платформа, объединяющая все аспекты учебного дня студента: расписание, изменения, задания, материалы, обсуждения и учёт отсутствий',
   keywords: 'NaPare, расписание, учеба, студенты, пара, уроки, домашние задания, преподаватели, университет, образование',
-  authors: [{ name: 'Данила Алексеевич — ИП, Разработчик' }],
-  creator: 'Данила Алексеевич',
+  authors: [{ name: 'Демин Данила Алексеевич — ИП, Разработчик' }],
+  creator: 'Демин Данила Алексеевич',
   publisher: 'NaPare',
   metadataBase: new URL('https://napare.sano.ru'),
   alternates: {
@@ -59,7 +59,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           url="https://napare.sano.ru"
           logo="https://napare.sano.ru/brand/napare-brand-board.jpg"
           founder={{
-            name: 'Данила Алексеевич',
+            name: 'Демин Данила Алексеевич',
             jobTitle: 'ИП, Разработчик',
           }}
         />

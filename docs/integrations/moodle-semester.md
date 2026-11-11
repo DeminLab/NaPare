@@ -78,7 +78,6 @@ pnpm --filter @napare/backend exec jest --runInBand
 pnpm --filter @napare/backend exec tsc --noEmit
 pnpm test:e2e
 node scripts/security-route-inventory.cjs --check
-node scripts/verify-ai-documentation.cjs
 node scripts/verify-role-workspace-boundaries.cjs
 pnpm lint
 pnpm lint:docs

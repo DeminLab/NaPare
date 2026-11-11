@@ -144,11 +144,13 @@
 ## Изменение карты сайта
 
 1. Отредактируйте соответствующий файл sitemap:
-   - `public/sitemap.xml` - главная карта
-   - `public/sitemap-student.xml` - студенты
-   - `public/sitemap-staff.xml` - преподаватели
-   - `public/sitemap-admin.xml` - администрация
-   - `public/sitemap-developer.xml` - разработчики
+   - `apps/web-portal/public/sitemap.xml` - главная карта
+   - `apps/web-portal/public/sitemap-student.xml` - студенты
+   - `apps/web-portal/public/sitemap-staff.xml` - преподаватели
+   - `apps/web-portal/public/sitemap-admin.xml` - администрация
+   - `apps/web-portal/public/sitemap-developer.xml` - разработчики
+
+   Копии в корневом `public/` не отдаются контейнерами; после правки синхронизируйте оба места.
 
 2. Добавьте новые URL в нужный файл
 
@@ -205,4 +207,4 @@
 
 **Версия:** 1.0
 **Дата:** 2026-11-09
-**Автор:** Данила Алексеевич
+**Автор:** ИП Демин Данила Алексеевич

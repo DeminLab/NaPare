@@ -118,7 +118,6 @@ npx @openapitools/openapi-generator-cli generate \
 | Platform homework | `/api/v1/platform-homework`                | Глобальный поиск сдач и исправления статуса, времени, ссылки и комментария; отдельные `homework-data.read/write`, просмотр и изменения аудируются, правка требует причины; оценок нет |
 | Platform notifications | `/api/v1/platform-notifications`                | Поиск/исправление уведомлений и inbox-записей, просмотр/отзыв push-устройств без токенов; `notification-data.read/write`, действия аудируются, изменения требуют причины |
 | Platform curation | `/api/v1/platform-curation` | Глобальный поиск назначений, выдача и мягкий отзыв кураторства по `curation-data.read/write`; область проверяется по вузу, история и действия аудируются |
-| Platform attendance QR | `/api/v1/platform-attendance-qr` | Поиск метаданных QR-сессий без секрета и отзыв действующей сессии; `attendance-qr.read/revoke`, аудит и обязательная причина |
 | Platform PairSpace | `/api/v1/platform-pair-space` | Глобальный поиск/проверка пространств пар и объявлений; исправление активности пространства, текста/закрепления объявления; `pairspace-content.read/write`, tenant-проверки и аудит |
 | Platform academic | `/api/v1/platform-academic` | Поиск occurrences, legacy-занятий, доменных событий, курсов и серий; reasoned correction, история и обратимое скрытие AcademicEvent; `academic-data.read/write` |
 | Platform events | `/api/v1/platform-events` | Поиск и просмотр системных событий с очищенными полями; `events-data.read`, просмотр пишется в аудит |

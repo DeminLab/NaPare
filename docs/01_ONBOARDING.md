@@ -9,7 +9,8 @@
 3. [Project map](ai/project-map.md) — приложения и границы runtime.
 4. [Architecture overview](architecture/README.md) и документ нужного модуля.
 5. [API guide](api/README.md), если задача меняет API.
-6. [Contributing](process/contributing.md) и [definition of done](process/definition-of-done.md) перед отправкой изменений.
+6. [SEO](SEO.md) и [владелец](OWNER.md), если задача меняет публичный сайт, мета-теги или юридические контакты.
+7. [Contributing](process/contributing.md) и [definition of done](process/definition-of-done.md) перед отправкой изменений.
 
 ## Настройка рабочего дерева
 

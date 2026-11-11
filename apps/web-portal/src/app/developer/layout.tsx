@@ -5,8 +5,8 @@ export const metadata: Metadata = {
   title: 'NaPare для разработчиков — API и документация',
   description: 'Документация API, GitHub репозиторий, техническая документация и разработка платформы',
   keywords: 'NaPare API, документация, разработка, GitHub, NestJS, Next.js, TypeScript',
-  authors: [{ name: 'Данила Алексеевич — ИП, Разработчик' }],
-  creator: 'Данила Алексеевич',
+  authors: [{ name: 'Демин Данила Алексеевич — ИП, Разработчик' }],
+  creator: 'Демин Данила Алексеевич',
   openGraph: {
     type: 'website',
     locale: 'ru_RU',
@@ -41,7 +41,7 @@ export default function DeveloperLayout({ children }: { children: React.ReactNod
           url="https://napare.sano.ru/developer"
           logo="https://napare.sano.ru/brand/napare-brand-board.jpg"
           founder={{
-            name: 'Данила Алексеевич',
+            name: 'Демин Данила Алексеевич',
             jobTitle: 'ИП, Разработчик',
           }}
         />

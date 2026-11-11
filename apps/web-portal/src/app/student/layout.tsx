@@ -5,8 +5,8 @@ export const metadata: Metadata = {
   title: 'NaPare для студентов — Расписание, пары, ДЗ',
   description: 'Ваше пространство учебного дня: расписание, объявления, домашние задания, файлы и обсуждения по каждой паре',
   keywords: 'расписание студентов, пара, уроки, домашние задания, материалы, обсуждения, студенты, университет',
-  authors: [{ name: 'Данила Алексеевич — ИП, Разработчик' }],
-  creator: 'Данила Алексеевич',
+  authors: [{ name: 'Демин Данила Алексеевич — ИП, Разработчик' }],
+  creator: 'Демин Данила Алексеевич',
   openGraph: {
     type: 'website',
     locale: 'ru_RU',
@@ -41,7 +41,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
           url="https://napare.sano.ru/student"
           logo="https://napare.sano.ru/brand/napare-brand-board.jpg"
           founder={{
-            name: 'Данила Алексеевич',
+            name: 'Демин Данила Алексеевич',
             jobTitle: 'ИП, Разработчик',
           }}
         />

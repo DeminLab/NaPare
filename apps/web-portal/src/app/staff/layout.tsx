@@ -5,8 +5,8 @@ export const metadata: Metadata = {
   title: 'NaPare для преподавателей и персонала',
   description: 'Управление расписанием, отметки посещаемости, объявления и домашние задания для преподавателей',
   keywords: 'расписание преподавателей, отметки, посещаемость, преподаватели, персонал, университет',
-  authors: [{ name: 'Данила Алексеевич — ИП, Разработчик' }],
-  creator: 'Данила Алексеевич',
+  authors: [{ name: 'Демин Данила Алексеевич — ИП, Разработчик' }],
+  creator: 'Демин Данила Алексеевич',
   openGraph: {
     type: 'website',
     locale: 'ru_RU',
@@ -41,7 +41,7 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
           url="https://napare.sano.ru/staff"
           logo="https://napare.sano.ru/brand/napare-brand-board.jpg"
           founder={{
-            name: 'Данила Алексеевич',
+            name: 'Демин Данила Алексеевич',
             jobTitle: 'ИП, Разработчик',
           }}
         />

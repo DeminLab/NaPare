@@ -37,7 +37,7 @@ export default function SEOMeta({
       <title>{fullTitle}</title>
       <meta name="description" content={fullDescription} />
       <meta name="keywords" content={keywords} />
-      <meta name="author" content="Данила Алексеевич — ИП, Разработчик" />
+      <meta name="author" content="Демин Данила Алексеевич — ИП, Разработчик" />
       <meta name="robots" content="index, follow" />
       <meta name="googlebot" content="index, follow" />
       <meta name="google-site-verification" content="napare-verification" />
@@ -73,7 +73,7 @@ export default function SEOMeta({
             description: description,
             author: {
               '@type': 'Person',
-              name: 'Данила Алексеевич',
+              name: 'Демин Данила Алексеевич',
               jobTitle: 'ИП, Разработчик',
             },
             publisher: {

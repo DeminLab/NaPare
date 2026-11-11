@@ -67,7 +67,6 @@ PostgreSQL RLS policies отсутствуют. Tenant isolation выполня�
 | `identity-links.read` / `identity-links.write` | MAX/Telegram привязки |
 | `universities.read` / `universities.write` | Университеты |
 | `student-data.read` / `student-data.write` | Отсутствия и посещаемость |
-| `attendance-qr.read` / `attendance-qr.revoke` | QR-сессии |
 | `personal-data.read` / `personal-data.write` | Личные настройки, избранное, заметки, прогресс ДЗ |
 | `homework-data.read` / `homework-data.write` | Сдачи ДЗ |
 | `notification-data.read` / `notification-data.write` | Уведомления, inbox, push-устройства |

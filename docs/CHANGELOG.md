@@ -2,6 +2,24 @@
 
 > Entries below preserve the original change history and may mention paths/components that were subsequently renamed, removed, or never implemented. Treat them as historical notes, not as a current file index. Current behavior is described by code/configuration and the docs linked from [00_START_HERE](00_START_HERE.md).
 
+## [Unreleased] — 2026-11-10
+
+### SEO и публичный сайт
+- Добавлены мета-теги, Open Graph/Twitter Card, Schema.org (`Organization`, `Person`, `WebSite`) и страницы `/owner`, `/about`, `/features` в `web-portal`.
+- Добавлены `sitemap.xml`, `robots.txt` и манифесты/иконки для portal и ролевых приложений.
+- Владелец и разработчик указан как **ИП Демин Данила Алексеевич**; добавлены [docs/OWNER.md](OWNER.md), [docs/SEO.md](SEO.md), [docs/SEO_REGISTRATION.md](SEO_REGISTRATION.md), [docs/SEO_ICONS.md](SEO_ICONS.md) и [docs/SEO_QUICK_START.md](SEO_QUICK_START.md).
+
+### Удаление QR-посещаемости
+- Удалены `AttendanceQrSession`, DTO, сервисные методы, контроллеры и платформенные QR-маршруты; миграция `1700000000045-RemoveAttendanceQrSessions` удаляет таблицу `attendance_qr_sessions`.
+- Текущая посещаемость — ручная отметка преподавателем в `/staff/attendance`: статусы `present`/`absent`/`late` через `POST /absences/attendance` и чтение `GET /absences/attendance/lesson/:lessonId`.
+- Документация модулей, API, схемы, ролей, приватности и исторические материалы кейса помечены соответственно.
+
+### CI и зависимости
+- В `production`-конфигурации тестов добавлены обязательные `DB_MIGRATION_USERNAME`/`DB_MIGRATION_PASSWORD`.
+- Перегенерирован инвентарь tenant-маршрутов (382 маршрута в 46 контроллерах).
+- Обновлены `follow-redirects` до `1.16.2` и `qs` до `6.16.1` для закрытия high/moderate advisory.
+- Tenant-isolation E2E больше не сравнивает таблицы `platform_events`, `auth_events` и `user_sessions`, которые пишет глобальный телеметрический интерсептор.
+
 ## [Unreleased] — 2026-10-16
 
 ### Кураторство и управление платформой

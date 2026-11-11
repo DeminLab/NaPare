@@ -5,8 +5,8 @@ export const metadata: Metadata = {
   title: 'NaPare для администрации вуза',
   description: 'Управление университетом, группами, пользователями и настройками платформы',
   keywords: 'администрация вуза, управление группами, пользователи, настройки, университет, администрирование',
-  authors: [{ name: 'Данила Алексеевич — ИП, Разработчик' }],
-  creator: 'Данила Алексеевич',
+  authors: [{ name: 'Демин Данила Алексеевич — ИП, Разработчик' }],
+  creator: 'Демин Данила Алексеевич',
   openGraph: {
     type: 'website',
     locale: 'ru_RU',
@@ -41,7 +41,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           url="https://napare.sano.ru/admin"
           logo="https://napare.sano.ru/brand/napare-brand-board.jpg"
           founder={{
-            name: 'Данила Алексеевич',
+            name: 'Демин Данила Алексеевич',
             jobTitle: 'ИП, Разработчик',
           }}
         />

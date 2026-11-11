@@ -4,6 +4,9 @@ Project guides, reference material and historical records live under this direct
 
 ## Sections
 
+- [Проект и владелец](OWNER.md) — ИП Демин Данила Алексеевич, контакты, Schema.org и регистрация в поисковых системах.
+- [SEO](SEO.md), [быстрый старт](SEO_QUICK_START.md), [регистрация](SEO_REGISTRATION.md) и [иконки](SEO_ICONS.md) — мета-теги, sitemap, robots.txt и публичные страницы portal.
+
 - [WebPush browser setup](clients/webpush.md) — explicit opt-in, own worker scope, revocation/session lifecycle and device-test limits.
 
 - [Academic office reports](modules/academic-office-reports.md) — current-account contingent, confirmed group debt snapshots, scope and history.

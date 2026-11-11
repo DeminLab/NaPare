@@ -1,6 +1,6 @@
 # Обзор схемы базы данных
 
-**Сверено с исходниками 2026-10-16.** PostgreSQL — основное хранилище backend. Источник схемы — TypeORM entities и миграции в `apps/backend/src`; Prisma-схемы в проекте нет. Изменения схемы оформляются новой миграцией, а не редактированием уже выпущенной. Эта сверка не подтверждает применение миграций на production.
+**Сверено с исходниками 2026-11-10.** PostgreSQL — основное хранилище backend. Источник схемы — TypeORM entities и миграции в `apps/backend/src`; Prisma-схемы в проекте нет. Изменения схемы оформляются новой миграцией, а не редактированием уже выпущенной. Эта сверка не подтверждает применение миграций на production.
 
 ## Основные области данных
 
@@ -9,7 +9,7 @@
 | Учётные записи и организация | `universities`, `faculties`, `groups`, `teachers`, `users` | `apps/backend/src/users/entities/`, начальная миграция |
 | Расписание | `lessons`, `lesson_changes` | `apps/backend/src/schedule/entities/` |
 | Пространство пары | `pair_spaces`, `announcements`, `homeworks`, `homework_submissions`, `file_attachments`, `discussion_messages` | `apps/backend/src/pair-space/entities/` |
-| Учёт отсутствий | `absences`, `absence_confirmations`, `attendance_records`, `attendance_qr_sessions` | `apps/backend/src/absences/` |
+| Учёт отсутствий | `absences`, `absence_confirmations`, `attendance_records` | `apps/backend/src/absences/`; таблица `attendance_qr_sessions` удалена миграцией `1700000000045-RemoveAttendanceQrSessions` |
 | Кураторство | `curator_assignments` | `apps/backend/src/curation/`, миграция `1700000000020-CuratorAssignments.ts` |
 | Управление платформой | `platform_control`, `platform_grants` | `apps/backend/src/platform/`, миграция `1700000000021-PlatformControl.ts` |
 | Уведомления и аудит | `notifications`, `notification_preferences`, `inbox_items`, `device_tokens`, `event_records`, `audit_logs` | `apps/backend/src/notifications/`, `apps/backend/src/events/` |

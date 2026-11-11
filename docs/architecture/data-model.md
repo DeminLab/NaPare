@@ -19,10 +19,9 @@ erDiagram
     Homework ||--o{ HomeworkSubmission : submission
     Homework ||--o{ HomeworkProgress : personal_progress
     User ||--o{ Favorite : saves
-    Lesson ||--o{ AttendanceQrSession : attendance
 ```
 
-The normalized academic model adds `Course`, `LessonSeries`, concrete `LessonOccurrence`, `CourseSpace`, `LessonSpace`, `AcademicEvent` and `ScheduleChange` records while existing `Lesson`/`PairSpace` routes remain available.
+The normalized academic model adds `Course`, `LessonSeries`, concrete `LessonOccurrence`, `CourseSpace`, `LessonSpace`, `AcademicEvent` and `ScheduleChange` records while existing `Lesson`/`PairSpace` routes remain available. Platform telemetry adds `user_sessions`, `auth_events` and `platform_events`; attendance uses `AttendanceRecord`, while `attendance_qr_sessions` is removed by migration `1700000000045`.
 
 ## Persistence and tenant boundaries
 
@@ -35,7 +34,7 @@ University ownership is represented on relevant domain records and enforced by b
 3. Update the related [module documentation](../modules/) and [schema overview](../database/schema-overview.md).
 4. Production backend executes pending migrations at startup; operators must take a backup and review logs.
 
-The current migration inventory is `apps/backend/src/migrations/`; the latest additions are `1700000000020-CuratorAssignments.ts` and `1700000000021-PlatformControl.ts` (reviewed 2026-10-16). TypeORM is the ORM; no Prisma schema exists.
+The current migration inventory is `apps/backend/src/migrations/`; recent additions include `1700000000020-CuratorAssignments.ts`, `1700000000021-PlatformControl.ts`, `1700000000044-PlatformTelemetry.ts` and `1700000000045-RemoveAttendanceQrSessions.ts` (reviewed 2026-11-10). TypeORM is the ORM; no Prisma schema exists.
 
 `curator_assignments` records active and revoked user/group assignments without replacing the primary role. `Group.curatorId` is a compatibility pointer, not an authorization source. `platform_control` stores the immutable owner UUID and platform settings; `platform_grants` stores delegated capabilities. See [curatorship](../product/account-curatorship.md) and [platform control](../product/platform-control.md).
 

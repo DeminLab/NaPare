@@ -10,13 +10,13 @@
 pnpm test:unit
 pnpm typecheck
 node scripts/verify-role-workspace-boundaries.cjs
-node scripts/verify-ai-documentation.cjs
 pnpm lint
+pnpm lint:docs
 node --test infrastructure/control/agent.test.mjs
 git diff --check
 ```
 
-`typecheck` охватывает backend, portal и четыре действующих role-приложения. Legacy `apps/web`, `apps/max-miniapp` и Android Gradle в эту команду не входят. Валидатор документации проверяет пути source cards и обязательные точки входа; актуальность текста и Markdown-ссылки проверяются отдельно.
+`typecheck` охватывает backend, portal и четыре действующих role-приложения. Legacy `apps/web`, `apps/max-miniapp` и Android Gradle в эту команду не входят. `lint:docs` проверяет Markdown-разметку; актуальность текста и корректность ссылок он не подтверждает, их проверяйте вручную. Скрипт `verify-ai-documentation.cjs` из репозитория удалён, упоминания в старых отчётах — история.
 
 ## Интеграционные проверки PostgreSQL
 
@@ -24,7 +24,11 @@ git diff --check
 pnpm test:e2e
 ```
 
-Для `curation.e2e-spec.ts` задайте `CURATION_TEST_DATABASE_URL`, для `platform.e2e-spec.ts` — `PLATFORM_TEST_DATABASE_URL`. Используйте только новые отдельные локальные базы с разрешённым fixture-префиксом `curation_test_*`; fixture пересоздаёт схему. Не используйте рабочую БД и не публикуйте URL с паролем. Без переменной соответствующий набор пропускается: skip не означает успешный интеграционный тест.
+Для `curation.e2e-spec.ts` задайте `CURATION_TEST_DATABASE_URL`, для `platform.e2e-spec.ts` — `PLATFORM_TEST_DATABASE_URL`, для `tenant-isolation.e2e-spec.ts` — `TENANT_TEST_DATABASE_URL`. Используйте только новые отдельные локальные базы с разрешённым fixture-префиксом `curation_test_*`; fixture пересоздаёт схему. Не используйте рабочую БД и не публикуйте URL с паролем. Без переменной соответствующий набор пропускается: skip не означает успешный интеграционный тест.
+
+В `NODE_ENV=production` валидация окружения требует `DB_MIGRATION_USERNAME` и `DB_MIGRATION_PASSWORD` — отдельную роль для миграций. Тесты, поднимающие production-конфигурацию, должны задавать эти переменные, иначе падает `configuration.spec.ts`.
+
+Tenant-isolation снимок намеренно исключает `platform_events`, `auth_events` и `user_sessions`: их пишет глобальный телеметрический интерсептор на каждый HTTP-запрос, поэтому они не являются доказательством изменения бизнес-данных.
 
 Проверяются настоящие Nest HTTP, JWT и PostgreSQL. В platform fixture выполнение Docker заменено тестовым исполнителем; для реальных рестартов нужен установленный агент и проверка контейнеров по [операционной инструкции](../deployment/platform-control.md).
 

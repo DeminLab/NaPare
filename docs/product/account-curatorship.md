@@ -65,7 +65,6 @@ pnpm --filter @napare/web-staff exec tsc --noEmit
 pnpm --filter @napare/web-admin exec tsc --noEmit
 pnpm --filter @napare/backend exec jest --runInBand
 node scripts/verify-role-workspace-boundaries.cjs
-node scripts/verify-ai-documentation.cjs
 pnpm lint
 ```
 

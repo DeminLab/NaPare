@@ -25,7 +25,6 @@ Service worker требует HTTPS, localhost допускается для р�
 pnpm --filter @napare/web-student test:offline
 pnpm --filter @napare/web-student exec tsc --noEmit
 node scripts/verify-role-workspace-boundaries.cjs
-node scripts/verify-ai-documentation.cjs
 pnpm lint
 pnpm lint:docs
 ```

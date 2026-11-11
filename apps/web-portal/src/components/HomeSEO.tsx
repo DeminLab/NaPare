@@ -28,7 +28,7 @@ export default function HomeSEO() {
             description: 'B2B2C SaaS платформа, объединяющая все аспекты учебного дня студента: расписание, изменения, задания, материалы, обсуждения и учёт отсутствий',
             author: {
               '@type': 'Person',
-              name: 'Данила Алексеевич',
+              name: 'Демин Данила Алексеевич',
               jobTitle: 'ИП, Разработчик',
             },
             creator: {
@@ -52,7 +52,7 @@ export default function HomeSEO() {
           __html: JSON.stringify({
             '@context': 'https://schema.org',
             '@type': 'Person',
-            name: 'Данила Алексеевич',
+            name: 'Демин Данила Алексеевич',
             jobTitle: 'ИП, Разработчик',
             url: 'https://napare.sano.ru/owner',
             sameAs: [

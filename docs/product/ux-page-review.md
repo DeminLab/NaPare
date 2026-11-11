@@ -1,5 +1,7 @@
 # Постраничная проверка интерфейса NaPare
 
+> **Исторический отчёт (обновлено 2026-11-10).** Проверки QR-ссылки и QR-сессии относятся к удалённому сценарию. Текущая посещаемость отмечается преподавателем вручную.
+
 Дата проверки: 11–12 октября 2026 года. Статус: **локальная проверка завершена с перечисленными ограничениями**.
 
 ## Среда и материалы
@@ -43,7 +45,7 @@
 | web-student | `/student` | REDIRECT | [Компьютер](http://localhost:18080/ux-fixtures/ui-review/student-root-after-desktop.jpg) / [Телефон](http://localhost:18080/ux-fixtures/ui-review/student-root-after-mobile.jpg) | Перенаправление в общий вход или основной экран кабинета; самостоятельного нового экрана нет. |
 | web-staff | `/staff/login` | REDIRECT | [Компьютер](http://localhost:18080/ux-fixtures/ui-review/staff-login-after-desktop.jpg) / [Телефон](http://localhost:18080/ux-fixtures/ui-review/staff-login-after-mobile.jpg) | Перенаправление в общий вход или основной экран кабинета; самостоятельного нового экрана нет. |
 | web-staff | `/staff/assignments` | CHECKED | [Компьютер](http://localhost:18080/ux-fixtures/ui-review/staff-preparation-after-desktop.jpg) / [Телефон](http://localhost:18080/ux-fixtures/ui-review/staff-preparation-after-mobile.jpg) | Подготовка и сроки из реальных данных; сохранение срока больше не завершается 500. |
-| web-staff | `/staff/attendance` | CHECKED | [Компьютер](http://localhost:18080/ux-fixtures/ui-review/staff-attendance-after-desktop.jpg) / [Телефон](http://localhost:18080/ux-fixtures/ui-review/staff-attendance-after-mobile.jpg) | Сохраняются только явно выбранные отметки; второй студент остаётся «Не отмечен». QR-сессия проверена. |
+| web-staff | `/staff/attendance` | CHECKED | [Компьютер](http://localhost:18080/ux-fixtures/ui-review/staff-attendance-after-desktop.jpg) / [Телефон](http://localhost:18080/ux-fixtures/ui-review/staff-attendance-after-mobile.jpg) | Сохраняются только явно выбранные отметки; второй студент остаётся «Не отмечен». QR-сессия проверялась до удаления сценария. |
 | web-staff | `/staff/groups` | CHECKED | [Компьютер](http://localhost:18080/ux-fixtures/ui-review/staff-groups-after-desktop.jpg) / [Телефон](http://localhost:18080/ux-fixtures/ui-review/staff-groups-after-mobile.jpg) | Использован существующий разрешённый endpoint; нет 403 и вложенных интерактивных элементов. |
 | web-staff | `/staff/inbox` | CHECKED | [Компьютер](http://localhost:18080/ux-fixtures/ui-review/staff-inbox-after-desktop.jpg) / [Телефон](http://localhost:18080/ux-fixtures/ui-review/staff-inbox-after-mobile.jpg) | Состояния в URL, сохранение complete и просмотр «Разобраны»; действие не заменяет решение по обращению. |
 | web-staff | `/staff/notifications` | CHECKED | [Компьютер](http://localhost:18080/ux-fixtures/ui-review/staff-notifications-after-desktop.jpg) / [Телефон](http://localhost:18080/ux-fixtures/ui-review/staff-notifications-after-mobile.jpg) | Общая навигация, поиск по разделам, помощь и мобильный доступ. Существующая структура страницы сохранена. |

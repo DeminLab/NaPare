@@ -6,7 +6,7 @@ export default function AboutPage() {
       <SEOMeta
         title="О проекте NaPare — Операционная система учебного дня студента"
         description="О NaPare: B2B2C SaaS платформа для управления учебным процессом студентов, преподавателей и администрации вузов"
-        keywords="о NaPare, проект, разработчик, Данила Алексеевич, учебный процесс, студенты, преподаватели, вузы"
+        keywords="о NaPare, проект, разработчик, Демин Данила Алексеевич, учебный процесс, студенты, преподаватели, вузы"
       />
       <div className="container mx-auto px-4 py-16">
         <div className="max-w-4xl mx-auto">
