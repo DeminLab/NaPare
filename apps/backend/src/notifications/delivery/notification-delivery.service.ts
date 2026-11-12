@@ -16,7 +16,7 @@ import { deliveryEnabled, queueEnabled } from './delivery-config';
 const TABLES = ['notification_deliveries', 'notifications', 'device_tokens', 'notification_preferences', 'users'];
 const ATTEMPTS = 5;
 export const NOTIFICATION_QUEUE = 'notification-delivery';
-export interface DeliveryJob { deliveryId: string; universityId: string }
+export interface DeliveryJob { deliveryId: string; organizationId: string }
 
 @Injectable()
 export class NotificationDeliveryService implements OnModuleInit, OnModuleDestroy {
@@ -69,31 +69,31 @@ export class NotificationDeliveryService implements OnModuleInit, OnModuleDestro
     this.workerRedis?.disconnect();
   }
 
-  private scoped<T>(universityIds: string[] | null, tables: string[], write: boolean, callback: (manager: EntityManager) => Promise<T>): Promise<T> {
-    const execute = () => this.tenant.runWithDatabaseAccess({ tables, universityIds, write, replaceActor: true },
+  private scoped<T>(organizationIds: string[] | null, tables: string[], write: boolean, callback: (manager: EntityManager) => Promise<T>): Promise<T> {
+    const execute = () => this.tenant.runWithDatabaseAccess({ tables, organizationIds, write, replaceActor: true },
       () => this.db.transaction(callback));
     // Private-row writes check the recipient tombstone. Allow that SELECT in
     // the same tenant without granting mutations of user records.
     return write && !tables.includes('users')
-      ? this.tenant.runWithDatabaseAccess({ tables: ['users'], universityIds, write: false, replaceActor: true }, execute)
+      ? this.tenant.runWithDatabaseAccess({ tables: ['users'], organizationIds, write: false, replaceActor: true }, execute)
       : execute();
   }
 
   async persist(dto: Partial<Notification>): Promise<Notification> {
-    if (!dto.universityId || !dto.userId) throw new Error('Notification tenant and recipient required');
-    this.tenant.assertAccess(dto.universityId);
-    return this.scoped([dto.universityId], TABLES, true, async manager => {
-      const user = await manager.findOne(User, { where: { id: dto.userId, universityId: dto.universityId, isActive: true } });
+    if (!dto.organizationId || !dto.userId) throw new Error('Notification tenant and recipient required');
+    this.tenant.assertAccess(dto.organizationId);
+    return this.scoped([dto.organizationId], TABLES, true, async manager => {
+      const user = await manager.findOne(User, { where: { id: dto.userId, organizationId: dto.organizationId, isActive: true } });
       if (!user) throw new Error('Notification recipient is outside tenant or inactive');
       if (dto.eventId) {
         // Serialize concurrent handlers of the same event before reading the unique key.
         await manager.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))', [`notification:${dto.eventId}:${dto.userId}`]);
-        const existing = await manager.findOne(Notification, { where: { eventId: dto.eventId, userId: dto.userId, universityId: dto.universityId } });
+        const existing = await manager.findOne(Notification, { where: { eventId: dto.eventId, userId: dto.userId, organizationId: dto.organizationId } });
         if (existing) return existing;
       }
       const notification = await manager.save(Notification, manager.create(Notification, dto));
       const devices = await manager.find(DeviceToken, { where: { userId: user.id, isActive: true } });
-      const preferences = await manager.findOne(NotificationPreference, { where: { userId: user.id, universityId: dto.universityId } });
+      const preferences = await manager.findOne(NotificationPreference, { where: { userId: user.id, organizationId: dto.organizationId } });
       const targets: Array<{ channel: DeliveryChannel; targetId: string }> = devices
         .filter(device => device.provider === 'rustore' || device.provider === 'webpush' && hasWebPushConsent(device))
         .map(device => ({ channel: device.provider as DeliveryChannel, targetId: device.id }));
@@ -103,7 +103,7 @@ export class NotificationDeliveryService implements OnModuleInit, OnModuleDestro
         const enabled = deliveryEnabled(this.config) && this.providers.supports(target.channel);
         const status = enabled ? 'pending' : 'suppressed';
         await manager.save(NotificationDelivery, manager.create(NotificationDelivery, {
-          notificationId: notification.id, userId: user.id, universityId: dto.universityId, ...target,
+          notificationId: notification.id, userId: user.id, organizationId: dto.organizationId, ...target,
           status, lastError: enabled ? null : 'delivery_disabled', attempts: 0,
           history: [{ at: new Date().toISOString(), status, attempt: 0 }],
         }));
@@ -118,7 +118,7 @@ export class NotificationDeliveryService implements OnModuleInit, OnModuleDestro
     try {
       // Polling reads only delivery IDs and explicit tenant IDs; payload/tokens stay in PostgreSQL.
       const rows: DeliveryJob[] = await this.scoped(null, ['notification_deliveries'], false, manager => manager.query(
-        `SELECT id AS "deliveryId", "universityId" FROM notification_deliveries
+        `SELECT id AS "deliveryId", "organizationId" FROM notification_deliveries
          WHERE status = 'pending' OR (status IN ('queued','sending') AND "updatedAt" < now() - interval '60 seconds')
          ORDER BY "updatedAt" LIMIT 100`));
       for (const row of rows) {
@@ -128,15 +128,15 @@ export class NotificationDeliveryService implements OnModuleInit, OnModuleDestro
           continue;
         }
         await this.queue.add('deliver', row, { jobId: row.deliveryId });
-        await this.scoped([row.universityId], ['notification_deliveries'], true, manager => manager.query(
-          `UPDATE notification_deliveries SET status='queued', "updatedAt"=now() WHERE id=$1 AND "universityId"=$2 AND status='pending'`, [row.deliveryId, row.universityId]));
+        await this.scoped([row.organizationId], ['notification_deliveries'], true, manager => manager.query(
+          `UPDATE notification_deliveries SET status='queued', "updatedAt"=now() WHERE id=$1 AND "organizationId"=$2 AND status='pending'`, [row.deliveryId, row.organizationId]));
       }
     } finally { this.dispatching = false; }
   }
 
   async transition(data: DeliveryJob, status: DeliveryStatus, error?: string, increment = false, revokeDevice = false): Promise<NotificationDelivery | null> {
-    return this.scoped([data.universityId], revokeDevice ? ['notification_deliveries', 'device_tokens'] : ['notification_deliveries'], true, async manager => {
-      const row = await manager.findOne(NotificationDelivery, { where: { id: data.deliveryId, universityId: data.universityId }, lock: { mode: 'pessimistic_write' } });
+    return this.scoped([data.organizationId], revokeDevice ? ['notification_deliveries', 'device_tokens'] : ['notification_deliveries'], true, async manager => {
+      const row = await manager.findOne(NotificationDelivery, { where: { id: data.deliveryId, organizationId: data.organizationId }, lock: { mode: 'pessimistic_write' } });
       if (!row || ['delivered', 'dead', 'suppressed'].includes(row.status)) return null;
       // A terminal rejection and device revocation must become visible together.
       // Otherwise a crash after saving "dead" leaves a rejected token active forever.
@@ -163,12 +163,12 @@ export class NotificationDeliveryService implements OnModuleInit, OnModuleDestro
     if (current.status === 'dead') throw new UnrecoverableError('queue_attempts_exhausted');
     if (!deliveryEnabled(this.config)) { await this.transition(data, 'suppressed', 'delivery_disabled'); return; }
     try {
-      const resolved = await this.scoped([data.universityId], TABLES, false, async manager => {
-        const notification = await manager.findOne(Notification, { where: { id: current.notificationId, universityId: data.universityId, userId: current.userId } });
-        const user = await manager.findOne(User, { where: { id: current.userId, universityId: data.universityId, isActive: true } });
+      const resolved = await this.scoped([data.organizationId], TABLES, false, async manager => {
+        const notification = await manager.findOne(Notification, { where: { id: current.notificationId, organizationId: data.organizationId, userId: current.userId } });
+        const user = await manager.findOne(User, { where: { id: current.userId, organizationId: data.organizationId, isActive: true } });
         if (!notification || !user) throw new DeliveryError('recipient_unavailable', true);
         if (Date.now() - notification.createdAt.getTime() > 86400000) throw new DeliveryError('notification_expired', true);
-        const preference = await manager.findOne(NotificationPreference, { where: { userId: user.id, universityId: data.universityId } });
+        const preference = await manager.findOne(NotificationPreference, { where: { userId: user.id, organizationId: data.organizationId } });
         let token: string | null | undefined;
         if (current.channel === 'telegram') token = preference?.telegramEnabled ? user.telegramUserId : null;
         else if (current.channel === 'max') token = user.maxUserId;

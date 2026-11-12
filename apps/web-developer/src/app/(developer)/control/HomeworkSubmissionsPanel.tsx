@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api';
 import { type Access, type Page, Button, Notice, Pager, errorText, inputClass, panelClass, useResource, useTargetUserId } from './control-ui';
 
-interface Submission { id: string; studentId: string; studentName: string; studentEmail: string; universityId: string; universityName: string; homeworkId: string; homeworkTitle: string; subject: string; date: string; pairNumber: number; status: 'not_submitted' | 'submitted'; submittedAt: string | null; updatedAt: string; fileUrl?: string | null; comment?: string | null; createdAt?: string }
+interface Submission { id: string; studentId: string; studentName: string; studentEmail: string; organizationId: string; universityName: string; homeworkId: string; homeworkTitle: string; subject: string; date: string; pairNumber: number; status: 'not_submitted' | 'submitted'; submittedAt: string | null; updatedAt: string; fileUrl?: string | null; comment?: string | null; createdAt?: string }
 const submissionLabels: Record<Submission['status'], string> = { not_submitted: 'Не сдано', submitted: 'Сдано' };
 const localDateTime = (value: string) => { const date = new Date(value); date.setMinutes(date.getMinutes() - date.getTimezoneOffset()); return date.toISOString().slice(0, 16); };
 

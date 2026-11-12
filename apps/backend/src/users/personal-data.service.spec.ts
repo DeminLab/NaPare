@@ -26,7 +26,7 @@ describe('Personal export connection lifecycle', () => {
       destroy: jest.fn(() => { response.destroyed = true; emitter.emit('close'); }),
     });
     const run = <T>(fn: () => T) => tenant.runInRequest(() => {
-      tenant.setUser({ id: 'self', email: 'self@example.test', role: UserRole.STUDENT, universityId: 'uni' });
+      tenant.setUser({ id: 'self', email: 'self@example.test', role: UserRole.STUDENT, organizationId: 'uni' });
       return fn();
     });
     return { runner, service, response, run };

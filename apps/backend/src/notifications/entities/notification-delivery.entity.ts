@@ -8,7 +8,7 @@ export type DeliveryStatus = 'pending' | 'queued' | 'sending' | 'delivered' | 's
 @Index('IDX_notification_delivery_dispatch', ['status', 'updatedAt'])
 export class NotificationDelivery {
   @PrimaryGeneratedColumn('uuid') id: string;
-  @Column({ type: 'uuid' }) universityId: string;
+  @Column({ type: 'uuid' }) organizationId: string;
   @Column({ type: 'uuid' }) notificationId: string;
   @Column({ type: 'uuid' }) userId: string;
   @Column({ type: 'varchar', length: 16 }) channel: DeliveryChannel;

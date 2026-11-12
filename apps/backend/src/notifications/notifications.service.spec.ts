@@ -16,7 +16,7 @@ describe("NotificationsService", () => {
     find: jest.fn().mockResolvedValue([]),
     findOne: jest
       .fn()
-      .mockResolvedValue({ id: "notif-1", universityId: "uni-1" }),
+      .mockResolvedValue({ id: "notif-1", organizationId: "uni-1" }),
     count: jest.fn().mockResolvedValue(0),
     create: jest.fn().mockImplementation((dto) => ({ id: "1", ...dto })),
     save: jest.fn().mockImplementation((entity) => Promise.resolve(entity)),
@@ -92,13 +92,13 @@ describe("NotificationsService", () => {
       mockTenantContext.getUser.mockReturnValue({
         id: "user-1",
         role: "teacher",
-        universityId: "uni-1",
+        organizationId: "uni-1",
       });
 
       await service.findInbox("user-1", "open", 200.8, -4);
 
       expect(mockInboxRepo.find).toHaveBeenCalledWith({
-        where: { userId: "user-1", status: "open", universityId: "uni-1" },
+        where: { userId: "user-1", status: "open", organizationId: "uni-1" },
         order: { createdAt: "DESC", id: "DESC" },
         skip: 0,
         take: 100,
@@ -120,11 +120,11 @@ describe("NotificationsService", () => {
       mockNotificationRepo.findOne.mockResolvedValue({
         id: "notif-1",
         userId: "user-1",
-        universityId: "uni-1",
+        organizationId: "uni-1",
       });
       mockTenantContext.getUser.mockReturnValue({
         id: "user-1",
-        universityId: "uni-1",
+        organizationId: "uni-1",
       });
       await service.markAsRead("notif-1", "user-1");
       expect(mockNotificationRepo.update).toHaveBeenCalledWith("notif-1", {
@@ -137,11 +137,11 @@ describe("NotificationsService", () => {
       mockNotificationRepo.findOne.mockResolvedValue({
         id: "notif-2",
         userId: "user-2",
-        universityId: "uni-1",
+        organizationId: "uni-1",
       });
       mockTenantContext.getUser.mockReturnValue({
         id: "user-1",
-        universityId: "uni-1",
+        organizationId: "uni-1",
       });
 
       await expect(service.markAsRead("notif-2", "user-1")).rejects.toThrow(
@@ -211,7 +211,7 @@ describe("NotificationsService", () => {
       jest.useFakeTimers().setSystemTime(new Date("2026-09-28T08:00:00.000Z"));
       mockPreferenceRepo.findOne.mockResolvedValue({
         userId: "user-1",
-        universityId: "uni-1",
+        organizationId: "uni-1",
         deadlines: true,
         quietHoursEnabled: true,
         quietHoursStart: "13:00",

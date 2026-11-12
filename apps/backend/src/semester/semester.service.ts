@@ -2,7 +2,7 @@ import { BadGatewayException, BadRequestException, ConflictException, ForbiddenE
 import { DataSource } from 'typeorm';
 import { UserRole } from '../auth/interfaces/user-role';
 import { TenantContext } from '../common/tenant/tenant-context';
-import { requireUniversityId } from '../common/tenant/require-university';
+import { requireOrganizationId } from '../common/tenant/require-university';
 import { toPaginatedResponse } from '../common/dto/pagination-query.dto';
 import { AuditLog } from '../common/entities/audit-log.entity';
 import { User } from '../users/entities/user.entity';
@@ -18,7 +18,7 @@ export class SemesterService {
   private actor(role: UserRole) {
     const actor = this.tenant.getUser();
     if (!actor || actor.role !== role) throw new ForbiddenException('Это действие недоступно вашей роли.');
-    return { ...actor, universityId: requireUniversityId(actor) };
+    return { ...actor, organizationId: requireOrganizationId(actor) };
   }
   private connection(university: University): MoodleConnectionConfig | null {
     if (university.connectorType !== 'moodle') return null;
@@ -33,26 +33,26 @@ export class SemesterService {
     if (!university) throw new NotFoundException('Вуз недоступен.');
     return university;
   }
-  private async student(id: string, universityId: string, manager = this.db.manager) {
-    if (!await manager.existsBy(User, { id, universityId, role: UserRole.STUDENT, isActive: true })) throw new NotFoundException('Студент своего вуза не найден.');
+  private async student(id: string, organizationId: string, manager = this.db.manager) {
+    if (!await manager.existsBy(User, { id, organizationId, role: UserRole.STUDENT, isActive: true })) throw new NotFoundException('Студент своего вуза не найден.');
   }
   async identity(studentId: string) {
     const actor = this.actor(UserRole.UNIVERSITY_ADMIN);
-    await this.student(studentId, actor.universityId);
-    return this.db.manager.findOneBy(AcademicIdentity, { universityId: actor.universityId, userId: studentId });
+    await this.student(studentId, actor.organizationId);
+    return this.db.manager.findOneBy(AcademicIdentity, { organizationId: actor.organizationId, userId: studentId });
   }
   async link(studentId: string, dto: MoodleIdentityDto) {
     const actor = this.actor(UserRole.UNIVERSITY_ADMIN);
     if (!dto.confirmed || dto.reason.trim().length < 3) throw new BadRequestException('Подтвердите личность в источнике и укажите основание.');
     try {
       return await this.db.transaction(async manager => {
-        await manager.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [`semester:${actor.universityId}`]);
-        await this.student(studentId, actor.universityId, manager);
-        const connection = this.connection(await this.university(actor.universityId, manager));
+        await manager.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [`semester:${actor.organizationId}`]);
+        await this.student(studentId, actor.organizationId, manager);
+        const connection = this.connection(await this.university(actor.organizationId, manager));
         if (!connection) throw new BadRequestException('Сначала настройте Moodle своего вуза.');
-        const old = await manager.findOneBy(AcademicIdentity, { universityId: actor.universityId, userId: studentId });
-        const identity = await manager.save(AcademicIdentity, manager.create(AcademicIdentity, { ...(old ? { id: old.id } : {}), universityId: actor.universityId, userId: studentId, sourceBaseUrl: connection.baseUrl, externalUserId: dto.externalUserId, linkedBy: actor.id }));
-        await manager.save(AuditLog, manager.create(AuditLog, { userId: actor.id, action: 'academic.identity.linked', entity: 'academic_identity', entityId: identity.id, newValues: { universityId: actor.universityId, studentId, provider: 'moodle', reason: dto.reason.trim() } }));
+        const old = await manager.findOneBy(AcademicIdentity, { organizationId: actor.organizationId, userId: studentId });
+        const identity = await manager.save(AcademicIdentity, manager.create(AcademicIdentity, { ...(old ? { id: old.id } : {}), organizationId: actor.organizationId, userId: studentId, sourceBaseUrl: connection.baseUrl, externalUserId: dto.externalUserId, linkedBy: actor.id }));
+        await manager.save(AuditLog, manager.create(AuditLog, { userId: actor.id, action: 'academic.identity.linked', entity: 'academic_identity', entityId: identity.id, newValues: { organizationId: actor.organizationId, studentId, provider: 'moodle', reason: dto.reason.trim() } }));
         return identity;
       });
     } catch (error) {
@@ -63,30 +63,30 @@ export class SemesterService {
   async unlink(studentId: string) {
     const actor = this.actor(UserRole.UNIVERSITY_ADMIN);
     return this.db.transaction(async manager => {
-      await manager.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [`semester:${actor.universityId}`]);
-      await this.student(studentId, actor.universityId, manager);
-      const identity = await manager.findOneBy(AcademicIdentity, { universityId: actor.universityId, userId: studentId });
+      await manager.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [`semester:${actor.organizationId}`]);
+      await this.student(studentId, actor.organizationId, manager);
+      const identity = await manager.findOneBy(AcademicIdentity, { organizationId: actor.organizationId, userId: studentId });
       if (identity) {
         await manager.delete(AcademicIdentity, identity.id);
-        await manager.save(AuditLog, manager.create(AuditLog, { userId: actor.id, action: 'academic.identity.unlinked', entity: 'academic_identity', entityId: identity.id, newValues: { universityId: actor.universityId, studentId, provider: 'moodle' } }));
+        await manager.save(AuditLog, manager.create(AuditLog, { userId: actor.id, action: 'academic.identity.unlinked', entity: 'academic_identity', entityId: identity.id, newValues: { organizationId: actor.organizationId, studentId, provider: 'moodle' } }));
       }
       return { unlinked: true };
     });
   }
   async periods() {
-    const actor = this.actor(UserRole.STUDENT), university = await this.university(actor.universityId);
+    const actor = this.actor(UserRole.STUDENT), university = await this.university(actor.organizationId);
     const connection = this.connection(university);
     return { available: !!connection, source: connection ? { provider: 'moodle', baseUrl: connection.baseUrl } : null, periods: connection ? semesterPeriods(university.connectorConfig?.semesterPeriods).map(({ id, label }) => ({ id, label })) : [] };
   }
   async overview(query: SemesterQueryDto) {
-    const actor = this.actor(UserRole.STUDENT), university = await this.university(actor.universityId);
+    const actor = this.actor(UserRole.STUDENT), university = await this.university(actor.organizationId);
     const connection = this.connection(university);
     const debtSource = { available: false, source: null, records: [], message: 'Стандартный отчёт Moodle не является реестром академических задолженностей. Подтверждённый реестр не подключён.' };
     const unavailable = (reason: string, message: string) => ({ ...toPaginatedResponse([], 0, query), available: false, source: null, period: query.period, reason, message, debtSource });
     if (!connection) return unavailable('source_unavailable', 'Вуз не подключил действующий источник оценок Moodle.');
     const period = semesterPeriods(university.connectorConfig?.semesterPeriods).find(row => row.id === query.period);
     if (!period) return unavailable('period_unconfigured', 'Вуз не настроил курсы этого семестра.');
-    const identity = await this.db.manager.findOneBy(AcademicIdentity, { universityId: actor.universityId, userId: actor.id, sourceBaseUrl: connection.baseUrl });
+    const identity = await this.db.manager.findOneBy(AcademicIdentity, { organizationId: actor.organizationId, userId: actor.id, sourceBaseUrl: connection.baseUrl });
     if (!identity) return unavailable('identity_unlinked', 'Администратор ещё не связал ваш аккаунт с проверенным числовым ID Moodle этого источника.');
     try {
       const courses = await this.moodle.getUserCourses(connection, Number(identity.externalUserId));

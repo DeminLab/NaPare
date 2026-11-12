@@ -8,12 +8,12 @@ export type PlatformPermission = typeof PLATFORM_PERMISSIONS[number];
 export const SERVICE_IDS = ['backend', 'web-portal', 'web-student', 'web-staff', 'web-admin', 'web-developer', 'nginx', 'postgres', 'redis'] as const;
 export class PlatformQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(100) q?: string;
-  @ApiPropertyOptional() @IsOptional() @IsUUID() universityId?: string;
+  @ApiPropertyOptional() @IsOptional() @IsUUID() organizationId?: string;
 }
 export class PlatformGrantDto {
   @ApiProperty({ enum: PLATFORM_PERMISSIONS, isArray: true }) @IsArray() @ArrayUnique() @IsIn(PLATFORM_PERMISSIONS, { each: true }) permissions: PlatformPermission[];
   @ApiProperty({ enum: SERVICE_IDS, isArray: true }) @IsArray() @ArrayUnique() @IsIn(SERVICE_IDS, { each: true }) serviceIds: string[];
-  @ApiPropertyOptional({ type: [String], nullable: true, description: 'NULL — глобальная область; пустой список — без вузов; иначе список доступных вузов' }) @IsOptional() @IsArray() @ArrayUnique() @IsUUID(undefined, { each: true }) universityIds?: string[] | null;
+  @ApiPropertyOptional({ type: [String], nullable: true, description: 'NULL — глобальная область; пустой список — без вузов; иначе список доступных вузов' }) @IsOptional() @IsArray() @ArrayUnique() @IsUUID(undefined, { each: true }) organizationIds?: string[] | null;
 }
 export class PlatformJobDto {
   @ApiProperty({ enum: SERVICE_IDS }) @IsIn(SERVICE_IDS) service: string;
@@ -29,14 +29,14 @@ export class PlatformAccountDto {
   @ApiPropertyOptional() @IsOptional() @IsBoolean() isActive?: boolean;
   @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsString() @MaxLength(40) phone?: string | null;
   @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsUrl({ protocols: ['http', 'https'], require_protocol: true }) @MaxLength(1000) avatarUrl?: string | null;
-  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsUUID() universityId?: string | null;
+  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsUUID() organizationId?: string | null;
   @ApiPropertyOptional({ nullable: true, description: 'ID внутренней группы либо внешний ID группы расписания' }) @IsOptional() @IsString() @MaxLength(64) groupId?: string | null;
   @ApiPropertyOptional({ description: 'Причина изменения; обязательна в интерфейсе и сохраняется в аудите' }) @IsOptional() @IsString() @MinLength(3) @MaxLength(500) reason?: string;
 }
 export class PlatformCreateAccountDto extends PlatformAccountDto {
   @ApiProperty() @IsEmail() email: string;
   @ApiProperty() @IsString() @MinLength(12) @MaxLength(72) password: string;
-  @ApiPropertyOptional() @IsOptional() @IsUUID() universityId?: string;
+  @ApiPropertyOptional() @IsOptional() @IsUUID() organizationId?: string;
   @ApiPropertyOptional({ description: 'Внешний числовой ID группы SIBIT из расписания rasp.sano.ru' }) @IsOptional() @IsString() @MaxLength(32) groupId?: string;
 }
 export class PlatformPasswordDto {
@@ -66,7 +66,7 @@ export class PlatformFacultyDto {
   @ApiProperty({ description: 'Причина изменения для журнала действий' }) @IsString() @MinLength(3) @MaxLength(500) reason: string;
 }
 export class PlatformGroupDto {
-  @ApiPropertyOptional() @IsOptional() @IsUUID() universityId?: string;
+  @ApiPropertyOptional() @IsOptional() @IsUUID() organizationId?: string;
   @ApiProperty() @IsUUID() facultyId: string;
   @ApiProperty() @IsString() @MinLength(1) @MaxLength(120) name: string;
   @ApiProperty() @IsInt() @Min(1) @Max(12) curriculumYear: number;

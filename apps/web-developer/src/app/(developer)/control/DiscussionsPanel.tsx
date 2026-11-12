@@ -3,14 +3,14 @@ import { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api';
 import { type Access, type Page, Button, Notice, Pager, errorText, inputClass, panelClass, useResource, useTargetUserId } from './control-ui';
 
-interface Discussion { id: string; pairSpaceId: string; lessonId: string; universityId: string; universityName: string; subject: string; lessonDate: string; pairNumber: number; groupId: string; authorId: string; authorName: string; authorEmail: string; textPreview: string; parentId: string | null; moderationState: 'visible' | 'hidden'; createdAt: string; updatedAt: string; text?: string; moderationReason?: string | null }
+interface Discussion { id: string; pairSpaceId: string; lessonId: string; organizationId: string; universityName: string; subject: string; lessonDate: string; pairNumber: number; groupId: string; authorId: string; authorName: string; authorEmail: string; textPreview: string; parentId: string | null; moderationState: 'visible' | 'hidden'; createdAt: string; updatedAt: string; text?: string; moderationReason?: string | null }
 
 export default function DiscussionsPanel({ access }: { access: Access }) {
   const targetUserId = useTargetUserId();
   const [query, setQuery] = useState('');
   useEffect(() => { if (targetUserId) setQuery(targetUserId); }, [targetUserId]);
   const [state, setState] = useState('');
-  const [universityId, setUniversityId] = useState('');
+  const [organizationId, setOrganizationId] = useState('');
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Discussion | null>(null);
   const [text, setText] = useState('');
@@ -23,7 +23,7 @@ export default function DiscussionsPanel({ access }: { access: Access }) {
   const params = new URLSearchParams({ page: String(page), limit: '20' });
   if (query.trim()) params.set('q', query.trim());
   if (state) params.set('state', state);
-  if (universityId) params.set('universityId', universityId);
+  if (organizationId) params.set('organizationId', organizationId);
   const list = useResource<Page<Discussion>>(`/platform-discussions/messages?${params.toString()}`);
   const refresh = () => list.refresh();
 
@@ -51,7 +51,7 @@ export default function DiscussionsPanel({ access }: { access: Access }) {
     <div><h2 className="text-lg font-semibold">Обсуждения Pair Space</h2><p className="mt-1 text-sm text-slate-400">Поиск сообщений по автору, вузу, занятию и тексту. Полный текст открывается с записью просмотра в аудит; скрытие обратимо.</p></div>
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       <label className="block text-sm">Поиск сообщения или автора<input className={inputClass} type="search" maxLength={100} value={query} onChange={event => { setQuery(event.target.value); setPage(1); }} placeholder="Текст, ФИО, email, ID, предмет" /></label>
-      {universityOptions.data && <label className="block text-sm">Университет<select className={inputClass} value={universityId} onChange={event => { setUniversityId(event.target.value); setPage(1); }}><option value="">Все университеты</option>{universityOptions.data.data.map(university => <option key={university.id} value={university.id}>{university.name} · {university.city}</option>)}</select></label>}
+      {universityOptions.data && <label className="block text-sm">Университет<select className={inputClass} value={organizationId} onChange={event => { setOrganizationId(event.target.value); setPage(1); }}><option value="">Все университеты</option>{universityOptions.data.data.map(university => <option key={university.id} value={university.id}>{university.name} · {university.city}</option>)}</select></label>}
       <label className="block text-sm">Состояние<select className={inputClass} value={state} onChange={event => { setState(event.target.value); setPage(1); }}><option value="">Все</option><option value="visible">Видимые</option><option value="hidden">Скрытые</option></select></label>
     </div>
     {(error || list.error || universityOptions.error) && <Notice error>{error || list.error || universityOptions.error}</Notice>}{notice && <Notice>{notice}</Notice>}

@@ -1,7 +1,7 @@
 import { Column, Entity, Index, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 
 @Entity('notification_preferences')
-@Index('UQ_notification_preferences_user_university', ['userId', 'universityId'], { unique: true })
+@Index('UQ_notification_preferences_user_university', ['userId', 'organizationId'], { unique: true })
 export class NotificationPreference {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -10,7 +10,7 @@ export class NotificationPreference {
   userId: string;
 
   @Column({ type: 'uuid' })
-  universityId: string;
+  organizationId: string;
 
   @Column({ default: true })
   scheduleChanges: boolean;

@@ -5,8 +5,8 @@ import { type Access, type Page, Button, Notice, Pager, errorText, inputClass, p
 
 type CareerTab = 'profiles' | 'admissions';
 interface UniversityOption { id: string; name: string; city: string }
-interface Profile { id: string; studentId: string; studentName: string; studentEmail: string; universityId: string; universityName: string; headline: string; about?: string; skills: string[]; verification: 'pending' | 'verified' | 'rejected'; createdAt: string; updatedAt: string }
-interface Admission { id: string; studentId: string; studentName: string; studentEmail: string; universityId: string; universityName: string; skill: string; evidence?: string; state: 'pending' | 'approved' | 'rejected'; reason?: string; basis: string; createdAt: string; updatedAt: string }
+interface Profile { id: string; studentId: string; studentName: string; studentEmail: string; organizationId: string; universityName: string; headline: string; about?: string; skills: string[]; verification: 'pending' | 'verified' | 'rejected'; createdAt: string; updatedAt: string }
+interface Admission { id: string; studentId: string; studentName: string; studentEmail: string; organizationId: string; universityName: string; skill: string; evidence?: string; state: 'pending' | 'approved' | 'rejected'; reason?: string; basis: string; createdAt: string; updatedAt: string }
 type Selected = { kind: 'profile'; item: Profile } | { kind: 'admission'; item: Admission };
 const profileStates = { pending: 'Ожидает проверки', verified: 'Проверен', rejected: 'Отклонён' };
 const admissionStates = { pending: 'Ожидает решения', approved: 'Допущен', rejected: 'Отклонён' };
@@ -17,7 +17,7 @@ export default function CareerDataPanel({ access }: { access: Access }) {
   const [query, setQuery] = useState('');
   useEffect(() => { if (targetUserId) setQuery(targetUserId); }, [targetUserId]);
   const [state, setState] = useState('');
-  const [universityId, setUniversityId] = useState('');
+  const [organizationId, setOrganizationId] = useState('');
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Selected | null>(null);
   const [draft, setDraft] = useState<Record<string, string>>({});
@@ -30,7 +30,7 @@ export default function CareerDataPanel({ access }: { access: Access }) {
   const filters = new URLSearchParams({ page: String(page), limit: '20' });
   if (query.trim()) filters.set('q', query.trim());
   if (state) filters.set(tab === 'profiles' ? 'verification' : 'state', state);
-  if (universityId) filters.set('universityId', universityId);
+  if (organizationId) filters.set('organizationId', organizationId);
   const list = useResource<Page<Profile | Admission>>(`/platform-career/${tab}?${filters.toString()}`);
   const refresh = () => list.refresh();
 
@@ -75,7 +75,7 @@ export default function CareerDataPanel({ access }: { access: Access }) {
     <div className="flex flex-wrap gap-2" role="group" aria-label="Тип карьерных записей"><Button aria-pressed={tab === 'profiles'} onClick={() => { setTab('profiles'); setState(''); setPage(1); close(); }} className={tab === 'profiles' ? '!border-cyan-400 !bg-cyan-400/10' : ''}>Профили</Button><Button aria-pressed={tab === 'admissions'} onClick={() => { setTab('admissions'); setState(''); setPage(1); close(); }} className={tab === 'admissions' ? '!border-cyan-400 !bg-cyan-400/10' : ''}>Допуски</Button></div>
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       <label className="block text-sm">Поиск по пользователю и записи<input className={inputClass} type="search" maxLength={100} value={query} onChange={event => { setQuery(event.target.value); setPage(1); }} placeholder="ФИО, email, ID, текст" /></label>
-      {universityOptions.data && <label className="block text-sm">Университет<select className={inputClass} value={universityId} onChange={event => { setUniversityId(event.target.value); setPage(1); }}><option value="">Все университеты</option>{universityOptions.data.data.map(university => <option key={university.id} value={university.id}>{university.name} · {university.city}</option>)}</select></label>}
+      {universityOptions.data && <label className="block text-sm">Университет<select className={inputClass} value={organizationId} onChange={event => { setOrganizationId(event.target.value); setPage(1); }}><option value="">Все университеты</option>{universityOptions.data.data.map(university => <option key={university.id} value={university.id}>{university.name} · {university.city}</option>)}</select></label>}
       <label className="block text-sm">Статус<select className={inputClass} value={state} onChange={event => { setState(event.target.value); setPage(1); }}><option value="">Любой статус</option>{Object.entries(tab === 'profiles' ? profileStates : admissionStates).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
     </div>
     {(error || list.error || universityOptions.error) && <Notice error>{error || list.error || universityOptions.error}</Notice>}{notice && <Notice>{notice}</Notice>}

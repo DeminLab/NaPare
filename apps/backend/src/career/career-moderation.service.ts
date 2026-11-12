@@ -4,7 +4,7 @@ import { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interfa
 import { UserRole } from '../auth/interfaces/user-role';
 import { AuditLog } from '../common/entities/audit-log.entity';
 import { JsonObject } from '../common/types/json-value.type';
-import { requireUniversityId } from '../common/tenant/require-university';
+import { requireOrganizationId } from '../common/tenant/require-university';
 import { CareerApplication, CareerCompany, CareerMembership, CareerPartnership, CareerTask, CareerTaskComplaint, CareerWork } from './career.entities';
 import { CareerService } from './career.service';
 import { assessCareerTaskRisk, CAREER_RISK_LABELS, CAREER_RISK_POLICY_VERSION } from './career-risk-policy';
@@ -24,21 +24,21 @@ export class CareerModerationService {
     if (!member) throw new ForbiddenException('Нет действующего назначения в компанию');
   }
   private async moderator(manager: EntityManager, actor: AuthenticatedUser, task: CareerTask) {
-    if (requireUniversityId(actor) !== task.universityId) throw new ForbiddenException('Другой вуз');
+    if (requireOrganizationId(actor) !== task.organizationId) throw new ForbiddenException('Другой вуз');
     await this.career.assertCenterAccess(actor);
     if (![UserRole.CAREER_STAFF,UserRole.CAREER_ADMIN,UserRole.UNIVERSITY_ADMIN].includes(actor.role)) {
-      const member = await manager.findOne(CareerMembership, { where: { userId: actor.id, universityId: task.universityId, role: In(['career_staff','career_admin']), revokedAt: IsNull() }, lock: { mode: 'pessimistic_read' } });
+      const member = await manager.findOne(CareerMembership, { where: { userId: actor.id, organizationId: task.organizationId, role: In(['career_staff','career_admin']), revokedAt: IsNull() }, lock: { mode: 'pessimistic_read' } });
       if (!member) throw new ForbiddenException('Назначение карьерного центра отозвано');
     }
     if (await manager.getRepository(CareerMembership).existsBy({ userId: actor.id, companyId: task.companyId, revokedAt: IsNull() })) throw new ForbiddenException('Нельзя модерировать собственную компанию');
   }
   private async partnership(manager: EntityManager, task: CareerTask) {
-    if (!await manager.findOne(CareerPartnership, { where: { companyId: task.companyId, universityId: task.universityId, state: 'verified' }, lock: { mode: 'pessimistic_read' } })) throw new ForbiddenException('Партнёрство компании и вуза не подтверждено');
+    if (!await manager.findOne(CareerPartnership, { where: { companyId: task.companyId, organizationId: task.organizationId, state: 'verified' }, lock: { mode: 'pessimistic_read' } })) throw new ForbiddenException('Партнёрство компании и вуза не подтверждено');
   }
   private before(task: CareerTask): JsonObject { return { state: task.state, moderationStatus: task.moderationStatus, contentVersion: task.moderationContentVersion }; }
   private async audit(manager: EntityManager, actor: AuthenticatedUser, task: CareerTask, action: string, previous: JsonObject, extra: JsonObject = {}) {
     await manager.save(AuditLog, { userId: actor.id, action, entity: 'career_task', entityId: task.id, oldValues: previous,
-      newValues: { universityId: task.universityId, state: task.state, moderationStatus: task.moderationStatus, contentVersion: task.moderationContentVersion,
+      newValues: { organizationId: task.organizationId, state: task.state, moderationStatus: task.moderationStatus, contentVersion: task.moderationContentVersion,
         flags: task.moderationFlags || [], reason: task.moderationReason || '', ...extra } });
   }
   async publish(actor: AuthenticatedUser, id: string) {
@@ -58,7 +58,7 @@ export class CareerModerationService {
       if (task.state !== 'review' && task.moderationStatus !== 'suspended') throw new ConflictException('Задача не ожидает решения');
       if (expectedVersion !== undefined && expectedVersion !== task.moderationContentVersion) throw new ConflictException('Содержимое изменилось. Обновите задачу');
       const flags = assessCareerTaskRisk(task);
-      if (await manager.getRepository(CareerTaskComplaint).existsBy({ taskId: id, universityId: task.universityId, state: 'open' })) flags.push('open_complaints');
+      if (await manager.getRepository(CareerTaskComplaint).existsBy({ taskId: id, organizationId: task.organizationId, state: 'open' })) flags.push('open_complaints');
       if (expectedVersion === undefined && (flags.length || task.moderationContentVersion > 1)) throw new ConflictException('Используйте экран модерации с актуальной версией и причиной решения');
       if ((decision === 'reject' || flags.length) && reason.trim().length < 10) throw new BadRequestException('Укажите причину решения не короче 10 символов');
       const previous = this.before(task);
@@ -95,21 +95,21 @@ export class CareerModerationService {
     });
   }
   async tasks(actor: AuthenticatedUser, page: CareerModerationPageDto) {
-    const universityId = await this.career.assertCenterAccess(actor);
-    const [items,total] = await this.db.getRepository(CareerTask).createQueryBuilder('task').where('task.universityId=:universityId',{universityId})
+    const organizationId = await this.career.assertCenterAccess(actor);
+    const [items,total] = await this.db.getRepository(CareerTask).createQueryBuilder('task').where('task.organizationId=:organizationId',{organizationId})
       .andWhere('(task.state=:review OR task.moderationStatus=:suspended)',{review:'review',suspended:'suspended'})
       .orderBy('task.updatedAt','ASC').addOrderBy('task.id','ASC').skip(page.offset).take(page.limit).getManyAndCount();
     return {items,total,offset:page.offset,limit:page.limit,hasMore:page.offset+items.length<total,policy:{version:CAREER_RISK_POLICY_VERSION,labels:CAREER_RISK_LABELS}};
   }
   async complain(actor: AuthenticatedUser, id: string, dto: CareerComplaintDto) {
     if (actor.role !== UserRole.STUDENT) throw new ForbiddenException('Жалобу отправляет студент');
-    const universityId = requireUniversityId(actor);
+    const organizationId = requireOrganizationId(actor);
     if (dto.details.trim().length < 10) throw new BadRequestException('Опишите жалобу не короче 10 символов');
     try { return await this.db.transaction(async manager => {
       const task = await this.task(manager, id);
-      if (task.universityId !== universityId || task.state !== 'open' && !await manager.getRepository(CareerApplication).existsBy({ taskId: id, studentId: actor.id })) throw new ForbiddenException('Задача недоступна студенту');
+      if (task.organizationId !== organizationId || task.state !== 'open' && !await manager.getRepository(CareerApplication).existsBy({ taskId: id, studentId: actor.id })) throw new ForbiddenException('Задача недоступна студенту');
       const taskSnapshot = {title:task.title,description:task.description,criteria:task.criteria,requirements:task.requirements,rewardKopecks:task.rewardKopecks,hours:task.hours,deadline:task.deadline,profiled:task.profiled,skill:task.skill,contentVersion:task.moderationContentVersion};
-      const complaint = await manager.save(CareerTaskComplaint, { universityId, taskId: id, studentId: actor.id, category: dto.category, details: dto.details.trim(),taskSnapshot });
+      const complaint = await manager.save(CareerTaskComplaint, { organizationId, taskId: id, studentId: actor.id, category: dto.category, details: dto.details.trim(),taskSnapshot });
       await this.audit(manager, actor, task, 'career.complaint.create', {}, { complaintId: complaint.id, category: complaint.category });
       return complaint;
     }); } catch (error) {
@@ -118,11 +118,11 @@ export class CareerModerationService {
     }
   }
   async complaints(actor: AuthenticatedUser, page: CareerModerationPageDto & {taskId?:string}, own = false) {
-    const universityId = own ? requireUniversityId(actor) : await this.career.assertCenterAccess(actor);
+    const organizationId = own ? requireOrganizationId(actor) : await this.career.assertCenterAccess(actor);
     if (own && actor.role !== UserRole.STUDENT) throw new ForbiddenException('Список доступен студенту');
-    const where = own ? { studentId: actor.id, ...(page.taskId ? {taskId:page.taskId} : {}) } : { universityId, state: 'open' };
+    const where = own ? { studentId: actor.id, ...(page.taskId ? {taskId:page.taskId} : {}) } : { organizationId, state: 'open' };
     const [items,total] = await this.db.getRepository(CareerTaskComplaint).findAndCount({where,order:{createdAt:'ASC',id:'ASC'},skip:page.offset,take:page.limit});
-    const tasks = !own && items.length ? await this.db.getRepository(CareerTask).find({where:{id:In(items.map(item=>item.taskId)),universityId},select:{id:true,title:true,description:true,criteria:true,rewardKopecks:true,hours:true,companyId:true}}) : [];
+    const tasks = !own && items.length ? await this.db.getRepository(CareerTask).find({where:{id:In(items.map(item=>item.taskId)),organizationId},select:{id:true,title:true,description:true,criteria:true,rewardKopecks:true,hours:true,companyId:true}}) : [];
     const companies = tasks.length ? await this.db.getRepository(CareerCompany).find({where:{id:In([...new Set(tasks.map(task=>task.companyId))])},select:{id:true,name:true}}) : [];
     const rows = own ? items : items.map(item=>{const task=tasks.find(row=>row.id===item.taskId);return {...item,task:task?{...task,companyName:companies.find(company=>company.id===task.companyId)?.name||''}:null};});
     return {items:rows,total,offset:page.offset,limit:page.limit,hasMore:page.offset+items.length<total};
@@ -134,7 +134,7 @@ export class CareerModerationService {
     if (!initial) throw new NotFoundException('Жалоба не найдена');
     return this.db.transaction(async manager => {
       const task = await this.task(manager, initial.taskId); await this.moderator(manager, actor, task);
-      const complaint = await manager.findOne(CareerTaskComplaint,{where:{id,taskId:task.id,universityId:task.universityId},lock:{mode:'pessimistic_write'}});
+      const complaint = await manager.findOne(CareerTaskComplaint,{where:{id,taskId:task.id,organizationId:task.organizationId},lock:{mode:'pessimistic_write'}});
       if (!complaint) throw new NotFoundException('Жалоба не найдена');
       if (complaint.state !== 'open') throw new ConflictException('Жалоба уже рассмотрена');
       const previous = this.before(task);

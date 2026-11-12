@@ -19,7 +19,7 @@ export class PlatformAcademicCatalogController {
   @Get('options')
   @ApiOperation({ summary: 'Получить безопасные справочники академического каталога одного вуза' })
   options(@Query() query: PlatformAcademicCatalogOptionsDto) {
-    return this.service.options(query.universityId);
+    return this.service.options(query.organizationId);
   }
 
   @Get('courses')

@@ -4,13 +4,13 @@ import { JsonObject } from '../../common/types/json-value.type';
 
 @Entity('academic_schedule_changes')
 @Index('IDX_academic_schedule_changes_occurrence_timestamp', ['occurrenceId', 'timestamp'])
-@Index('IDX_academic_schedule_changes_university_timestamp', ['universityId', 'timestamp'])
+@Index('IDX_academic_schedule_changes_university_timestamp', ['organizationId', 'timestamp'])
 export class ScheduleChange {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
   @Column({ type: 'uuid' })
-  universityId: string;
+  organizationId: string;
 
   @Column({ type: 'uuid', nullable: true })
   occurrenceId: string | null;

@@ -5,26 +5,27 @@ import { Column, DataSource, Entity, PrimaryColumn, Repository } from 'typeorm';
 import { TenantContext } from '../src/common/tenant/tenant-context';
 import { assertTenantDatabase, installTenantDatabase } from '../src/common/tenant/tenant-database';
 import { TenantRowSecurity1700000000029 } from '../src/migrations/1700000000029-TenantRowSecurity';
+import { TenantOrganizationAlias1700000000046 } from '../src/migrations/1700000000046-TenantOrganizationAlias';
 import { UserRole } from '../src/auth/interfaces/user-role';
 import { CareerCompany, CareerMembership, CareerPartnership, CareerTask, CareerProfile, CareerAdmission, CareerApplication } from '../src/career/career.entities';
 
 @Entity('tenant_fixture_camel')
 class TenantRow {
   @PrimaryColumn('text') id: string;
-  @Column('uuid') universityId: string;
+  @Column('uuid') organizationId: string;
   @Column('text') label: string;
 }
 
 @Entity('tenant_fixture_snake')
 class SnakeRow {
   @PrimaryColumn('text') id: string;
-  @Column('uuid', { name: 'university_id' }) universityId: string;
+  @Column('uuid', { name: 'organization_id' }) organizationId: string;
 }
 
 @Entity('users')
 class AuthRow {
   @PrimaryColumn('uuid') id: string;
-  @Column('uuid', { nullable: true }) universityId: string | null;
+  @Column('uuid', { nullable: true }) organizationId: string | null;
   @Column('text') email: string;
   @Column('text', { nullable: true }) maxUserId: string | null;
 }
@@ -34,7 +35,7 @@ const integration = adminUrl ? describe : describe.skip;
 const A = '00000000-0000-4000-8000-000000000001';
 const B = '00000000-0000-4000-8000-000000000002';
 const C = '00000000-0000-4000-8000-000000000003';
-const actorA = { id: A, universityId: A, role: UserRole.STUDENT, email: 'a@tenant.test' };
+const actorA = { id: A, organizationId: A, role: UserRole.STUDENT, email: 'a@tenant.test' };
 
 integration('PostgreSQL tenant RLS with a non-superuser table owner', () => {
   const suffix = `${process.pid}_${Date.now()}`;
@@ -58,17 +59,23 @@ integration('PostgreSQL tenant RLS with a non-superuser table owner', () => {
     url.password = rolePassword;
     url.pathname = `/${databaseName}`;
     database = await new DataSource({ type: 'postgres', url: url.toString(), entities: [TenantRow, SnakeRow, AuthRow, CareerCompany, CareerMembership, CareerPartnership, CareerTask, CareerProfile, CareerAdmission, CareerApplication], synchronize: true, extra: { max: 2 } }).initialize();
-    await database.getRepository(TenantRow).save([{ id: 'a', universityId: A, label: 'A' }, { id: 'b', universityId: B, label: 'B' }]);
-    await database.getRepository(SnakeRow).save([{ id: 'a', universityId: A }, { id: 'b', universityId: B }]);
-    await database.getRepository(AuthRow).save([{ id: A, universityId: A, email: 'a@tenant.test', maxUserId: 'max-a' }, { id: B, universityId: B, email: 'b@tenant.test', maxUserId: 'max-b' }]);
+    await database.getRepository(TenantRow).save([{ id: 'a', organizationId: A, label: 'A' }, { id: 'b', organizationId: B, label: 'B' }]);
+    await database.getRepository(SnakeRow).save([{ id: 'a', organizationId: A }, { id: 'b', organizationId: B }]);
+    await database.getRepository(AuthRow).save([{ id: A, organizationId: A, email: 'a@tenant.test', maxUserId: 'max-a' }, { id: B, organizationId: B, email: 'b@tenant.test', maxUserId: 'max-b' }]);
     companyId = (await database.getRepository(CareerCompany).save({ name: 'Scoped company', createdBy: C })).id;
-    await database.getRepository(CareerMembership).save({ userId: C, companyId, universityId: null, role: 'company_owner' });
-    await database.getRepository(CareerPartnership).save({ companyId, universityId: B, state: 'verified' });
-    taskId = (await database.getRepository(CareerTask).save({ companyId, universityId: B, title: 'Task B', description: 'Scope fixture', criteria: 'Criteria', rewardKopecks: 0, hours: 1, deadline: '2099-01-01' })).id;
+    await database.getRepository(CareerMembership).save({ userId: C, companyId, organizationId: null, role: 'company_owner' });
+    await database.getRepository(CareerPartnership).save({ companyId, organizationId: B, state: 'verified' });
+    taskId = (await database.getRepository(CareerTask).save({ companyId, organizationId: B, title: 'Task B', description: 'Scope fixture', criteria: 'Criteria', rewardKopecks: 0, hours: 1, deadline: '2099-01-01' })).id;
     await database.getRepository(CareerApplication).save({ taskId, studentId: B, message: 'Application' });
-    await database.getRepository(CareerProfile).save({ studentId: B, universityId: B, headline: 'Candidate B' });
+    await database.getRepository(CareerProfile).save({ studentId: B, organizationId: B, headline: 'Candidate B' });
     const runner = database.createQueryRunner();
-    try { await new TenantRowSecurity1700000000029().up(runner); }
+    // ADR-0008: alias both ways around migration 29 so it finds tenant columns
+    // and its legacy function/policy text is canonicalized afterwards.
+    try {
+      await new TenantOrganizationAlias1700000000046().up(runner);
+      await new TenantRowSecurity1700000000029().up(runner);
+      await new TenantOrganizationAlias1700000000046().up(runner);
+    }
     finally { await runner.release(); }
     installTenantDatabase(database, context);
     // This repository is held across requests, as @InjectRepository does.
@@ -111,51 +118,51 @@ integration('PostgreSQL tenant RLS with a non-superuser table owner', () => {
   }));
 
   it('blocks foreign inserts, updates, deletes and moving an owned row to B', async () => asA(async () => {
-    await expect(repository.insert({ id: 'foreign', universityId: B, label: 'escape' })).rejects.toThrow(/row-level security/);
+    await expect(repository.insert({ id: 'foreign', organizationId: B, label: 'escape' })).rejects.toThrow(/row-level security/);
     expect((await repository.update('b', { label: 'escape' })).affected).toBe(0);
     expect((await repository.delete('b')).affected).toBe(0);
-    await expect(repository.update('a', { universityId: B })).rejects.toThrow(/row-level security/);
-    await expect(database.getRepository(AuthRow).update(A, { universityId: null })).rejects.toThrow(/row-level security/);
-    expect((await repository.findOneByOrFail({ id: 'a' })).universityId).toBe(A);
+    await expect(repository.update('a', { organizationId: B })).rejects.toThrow(/row-level security/);
+    await expect(database.getRepository(AuthRow).update(A, { organizationId: null })).rejects.toThrow(/row-level security/);
+    expect((await repository.findOneByOrFail({ id: 'a' })).organizationId).toBe(A);
   }));
 
   it('propagates scope into DataSource transactions and rolls back forbidden writes', async () => {
     await expect(asA(() => database.transaction(async manager => {
       await manager.update(TenantRow, 'a', { label: 'rolled back' });
       expect(await manager.findOneBy(TenantRow, { id: 'b' })).toBeNull();
-      await manager.insert(TenantRow, { id: 'forbidden-tx', universityId: B, label: 'escape' });
+      await manager.insert(TenantRow, { id: 'forbidden-tx', organizationId: B, label: 'escape' });
     }))).rejects.toThrow(/row-level security/);
     await asA(async () => expect((await repository.findOneByOrFail({ id: 'a' })).label).toBe('A'));
   });
 
   it('isolates concurrent pooled connections and clears context after failures', async () => {
     await Promise.all(Array.from({ length: 20 }, (_, index) => context.runInRequest(async () => {
-      const universityId = index % 2 ? A : B;
-      context.setUser({ ...actorA, id: universityId, universityId });
+      const organizationId = index % 2 ? A : B;
+      context.setUser({ ...actorA, id: organizationId, organizationId });
       const rows = await repository.find();
       expect(rows).toHaveLength(1);
-      expect(rows[0].universityId).toBe(universityId);
+      expect(rows[0].organizationId).toBe(organizationId);
     })));
     expect(await repository.find()).toEqual([]);
-    const [settings] = await database.query("SELECT current_setting('app.university_id', true) AS university, current_setting('app.actor_id', true) AS actor");
+    const [settings] = await database.query("SELECT current_setting('app.organization_id', true) AS university, current_setting('app.actor_id', true) AS actor");
     expect(settings).toEqual({ university: '', actor: '' });
   });
 
   it('limits explicit grants by table, university and read/write capability', async () => {
-    await context.runWithDatabaseAccess({ tables: ['tenant_fixture_camel'], universityIds: [B] }, async () => {
+    await context.runWithDatabaseAccess({ tables: ['tenant_fixture_camel'], organizationIds: [B] }, async () => {
       expect((await repository.find()).map(row => row.id)).toEqual(['b']);
       expect(await database.getRepository(SnakeRow).find()).toEqual([]);
       await expect(repository.update('b', { label: 'escape' })).rejects.toThrow(/row-level security/);
       expect(await database.transaction(manager => manager.findOne(TenantRow, { where: { id: 'b' }, lock: { mode: 'pessimistic_read' } }))).not.toBeNull();
     });
-    await context.runWithDatabaseAccess({ tables: ['tenant_fixture_camel'], universityIds: [] }, async () => expect(await repository.find()).toEqual([]));
+    await context.runWithDatabaseAccess({ tables: ['tenant_fixture_camel'], organizationIds: [] }, async () => expect(await repository.find()).toEqual([]));
     expect(await repository.find()).toEqual([]);
   });
 
   it('detects missing coverage and cannot be weakened by another permissive policy', async () => {
     await database.query('CREATE POLICY tenant_fixture_external_allow ON tenant_fixture_camel FOR ALL USING (true) WITH CHECK (true)');
     expect(await repository.find()).toEqual([]);
-    await database.query('CREATE TABLE tenant_fixture_new (id text, "universityId" uuid)');
+    await database.query('CREATE TABLE tenant_fixture_new (id text, "organizationId" uuid)');
     try { await expect(assertTenantDatabase(database)).rejects.toThrow('tenant_fixture_new'); }
     finally { await database.query('DROP TABLE tenant_fixture_new'); }
   });
@@ -182,7 +189,7 @@ integration('PostgreSQL tenant RLS with a non-superuser table owner', () => {
 
   it('limits university-less employer access to persisted company membership and candidates', async () => {
     await context.runInRequest(async () => {
-      context.setUser({ ...actorA, id: C, universityId: null, role: UserRole.EMPLOYER });
+      context.setUser({ ...actorA, id: C, organizationId: null, role: UserRole.EMPLOYER });
       expect((await database.getRepository(CareerMembership).find()).map(row => row.userId)).toEqual([C]);
       expect((await database.getRepository(CareerTask).find()).map(row => row.id)).toEqual([taskId]);
       expect((await database.getRepository(CareerPartnership).find()).map(row => row.companyId)).toEqual([companyId]);
@@ -191,7 +198,7 @@ integration('PostgreSQL tenant RLS with a non-superuser table owner', () => {
       expect(await repository.find()).toEqual([]);
     });
     await context.runInRequest(async () => {
-      context.setUser({ ...actorA, id: '00000000-0000-4000-8000-000000000004', universityId: null, role: UserRole.EMPLOYER });
+      context.setUser({ ...actorA, id: '00000000-0000-4000-8000-000000000004', organizationId: null, role: UserRole.EMPLOYER });
       expect(await database.getRepository(CareerMembership).find()).toEqual([]);
       expect(await database.getRepository(CareerTask).find()).toEqual([]);
       expect(await database.getRepository(CareerProfile).find()).toEqual([]);

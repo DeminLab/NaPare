@@ -4,13 +4,13 @@ import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 
 export class PlatformCurationQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(100) q?: string;
-  @ApiPropertyOptional() @IsOptional() @IsUUID() universityId?: string;
+  @ApiPropertyOptional() @IsOptional() @IsUUID() organizationId?: string;
   @ApiPropertyOptional() @IsOptional() @IsUUID() userId?: string;
   @ApiPropertyOptional({ enum: ['active', 'revoked', 'all'] }) @IsOptional() @IsIn(['active', 'revoked', 'all']) status?: 'active' | 'revoked' | 'all';
 }
 
 export class PlatformCurationResourceQueryDto extends PaginationQueryDto {
-  @ApiProperty() @IsUUID() universityId: string;
+  @ApiProperty() @IsUUID() organizationId: string;
   @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(100) q?: string;
 }
 

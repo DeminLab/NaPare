@@ -20,12 +20,12 @@ export class CareerCompany {
 
 @Entity('career_membership')
 @Index(['userId', 'companyId'], { unique: true })
-@Index(['userId', 'universityId'], { unique: true })
+@Index(['userId', 'organizationId'], { unique: true })
 export class CareerMembership {
   @PrimaryGeneratedColumn('uuid') id: string;
   @Column({type: 'uuid'}) userId: string;
   @Column({type: 'uuid', nullable: true}) companyId: string | null;
-  @Column({type: 'uuid', nullable: true}) universityId: string | null;
+  @Column({type: 'uuid', nullable: true}) organizationId: string | null;
   @Column({type: 'varchar'}) role: string;
   @Column({type: 'timestamptz', nullable: true}) revokedAt: Date | null;
   @Column({type: 'uuid', nullable: true}) revokedBy: string | null;
@@ -34,11 +34,11 @@ export class CareerMembership {
 }
 
 @Entity('career_partnership')
-@Index(['companyId', 'universityId'], { unique: true })
+@Index(['companyId', 'organizationId'], { unique: true })
 export class CareerPartnership {
   @PrimaryGeneratedColumn('uuid') id: string;
   @Column({type: 'uuid'}) companyId: string;
-  @Column({type: 'uuid'}) universityId: string;
+  @Column({type: 'uuid'}) organizationId: string;
   @Column({type: 'varchar', default: 'pending'}) state: string;
   @CreateDateColumn() createdAt: Date;
   @UpdateDateColumn() updatedAt: Date;
@@ -49,7 +49,7 @@ export class CareerPartnership {
 export class CareerProfile {
   @PrimaryGeneratedColumn('uuid') id: string;
   @Column({type: 'uuid'}) studentId: string;
-  @Column({type: 'uuid'}) universityId: string;
+  @Column({type: 'uuid'}) organizationId: string;
   @Column({type: 'varchar'}) headline: string;
   @Column({type: 'text', default: ''}) about: string;
   @Column({type: 'jsonb', default: []}) skills: string[];
@@ -64,7 +64,7 @@ export class CareerAdmission {
   @Column({default: 'unspecified'}) basis: string;
   @PrimaryGeneratedColumn('uuid') id: string;
   @Column({type: 'uuid'}) studentId: string;
-  @Column({type: 'uuid'}) universityId: string;
+  @Column({type: 'uuid'}) organizationId: string;
   @Column({type: 'varchar'}) skill: string;
   @Column({type: 'text'}) evidence: string;
   @Column({type: 'varchar', default: 'pending'}) state: string;
@@ -87,7 +87,7 @@ export class CareerTask {
   @Column({type: 'text', default: ''}) requirements: string;
   @PrimaryGeneratedColumn('uuid') id: string;
   @Column({type: 'uuid'}) companyId: string;
-  @Column({type: 'uuid'}) universityId: string;
+  @Column({type: 'uuid'}) organizationId: string;
   @Column({type: 'varchar'}) title: string;
   @Column({type: 'text'}) description: string;
   @Column({type: 'text'}) criteria: string;
@@ -105,7 +105,7 @@ export class CareerTask {
 @Index('IDX_career_task_complaint_open', ['taskId', 'studentId'], { unique: true, where: "state = 'open'" })
 export class CareerTaskComplaint {
   @PrimaryGeneratedColumn('uuid') id: string;
-  @Column({type:'uuid'}) universityId: string;
+  @Column({type:'uuid'}) organizationId: string;
   @Column({type:'uuid'}) taskId: string;
   @Column({type:'uuid'}) studentId: string;
   @Column({type:'varchar'}) category: string;
@@ -171,10 +171,10 @@ export class CareerPortfolio {
 }
 
 @Entity('career_test')
-@Index(['universityId','skill'], {unique:true})
+@Index(['organizationId','skill'], {unique:true})
 export class CareerTest {
   @PrimaryGeneratedColumn('uuid') id:string;
-  @Column({type:'uuid'}) universityId:string;
+  @Column({type:'uuid'}) organizationId:string;
   @Column() skill:string;
   @Column() title:string;
   @Column({type:'integer',default:70}) passingPercent:number;
@@ -218,7 +218,7 @@ export class CareerAiRequest {
 @Entity('career_availability')
 export class CareerAvailability {
   @PrimaryColumn({type:'uuid'}) studentId:string;
-  @Column({type:'uuid'}) universityId:string;
+  @Column({type:'uuid'}) organizationId:string;
   @Column({type:'integer'}) weeklyHours:number;
   @Column() timeZone:string;
   @Column({type:'jsonb'}) windows:Array<{day:number;start:string;end:string}>;

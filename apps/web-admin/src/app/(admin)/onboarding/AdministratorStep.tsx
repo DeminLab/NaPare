@@ -5,14 +5,14 @@ import { apiFetch } from '@/lib/api';
 import { Button, Card } from '@/components/ui';
 import { errorMessage, fieldClass, type Account } from './types';
 
-export default function AdministratorStep({ universityId, owner, users, reload }: { universityId: string; owner: boolean; users: Account[]; reload: () => Promise<void> }) {
+export default function AdministratorStep({ organizationId, owner, users, reload }: { organizationId: string; owner: boolean; users: Account[]; reload: () => Promise<void> }) {
   const [form, setForm] = useState({ firstName: '', lastName: '', email: '', password: '' });
   const [busy, setBusy] = useState(false), [error, setError] = useState(''), [success, setSuccess] = useState('');
   const admins = users.filter(user => user.role === 'university_admin' && user.isActive);
   async function create(event: FormEvent) {
     event.preventDefault(); setBusy(true); setError(''); setSuccess('');
     try {
-      await apiFetch(owner ? '/platform/accounts' : '/admin/users', { method: 'POST', body: JSON.stringify({ ...form, role: 'university_admin', ...(owner ? { universityId } : {}) }) });
+      await apiFetch(owner ? '/platform/accounts' : '/admin/users', { method: 'POST', body: JSON.stringify({ ...form, role: 'university_admin', ...(owner ? { organizationId } : {}) }) });
       setForm({ firstName: '', lastName: '', email: '', password: '' });
       setSuccess('Администратор создан. Пароль передайте ему защищённым способом; письмо автоматически не отправляется.');
       await reload();

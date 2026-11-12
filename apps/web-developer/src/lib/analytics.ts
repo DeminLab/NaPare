@@ -56,7 +56,7 @@ export interface AnalyticsOverview {
   };
   availability: Array<{ key: string; available: boolean; reason: string | null }>;
   limitations: string[];
-  scope: { universityIds: string[] | null };
+  scope: { organizationIds: string[] | null };
 }
 
 export interface TelemetryEvent {
@@ -66,7 +66,7 @@ export interface TelemetryEvent {
   name: string;
   severity: string;
   userId: string | null;
-  universityId: string | null;
+  organizationId: string | null;
   sessionId: string | null;
   method: string | null;
   path: string | null;
@@ -98,7 +98,7 @@ export interface MonitoredUser {
   lastName: string;
   phone: string | null;
   role: string;
-  universityId: string | null;
+  organizationId: string | null;
   isActive: boolean;
   lastLoginAt: string | null;
   createdAt: string;
@@ -145,7 +145,7 @@ export interface UserActivity {
     lastName: string;
     phone: string | null;
     role: string;
-    universityId: string | null;
+    organizationId: string | null;
     isActive: boolean;
     lastLoginAt: string | null;
     createdAt: string;
@@ -236,7 +236,7 @@ export function formatDuration(value?: number | null): string {
   return `${(value / 1000).toLocaleString('ru-RU', { maximumFractionDigits: 1 })} с`;
 }
 
-export function overviewPath(days: number, granularity: Granularity, universityId?: string): string {
+export function overviewPath(days: number, granularity: Granularity, organizationId?: string): string {
   const to = new Date();
   const from = new Date(to.getTime() - (days - 1) * 86_400_000);
   const params = new URLSearchParams({
@@ -244,7 +244,7 @@ export function overviewPath(days: number, granularity: Granularity, universityI
     to: to.toISOString(),
     granularity,
   });
-  if (universityId) params.set('universityId', universityId);
+  if (organizationId) params.set('organizationId', organizationId);
   return `/platform/analytics/overview?${params.toString()}`;
 }
 
@@ -256,13 +256,13 @@ export function eventPath(filters: {
   source?: string;
   severity?: string;
   userId?: string;
-  universityId?: string;
+  organizationId?: string;
   days?: number;
 }): string {
   const params = new URLSearchParams();
   if (filters.page) params.set('page', String(filters.page));
   params.set('limit', String(filters.limit ?? 25));
-  for (const key of ['q', 'category', 'source', 'severity', 'userId', 'universityId'] as const) {
+  for (const key of ['q', 'category', 'source', 'severity', 'userId', 'organizationId'] as const) {
     const value = filters[key];
     if (value) params.set(key, value);
   }

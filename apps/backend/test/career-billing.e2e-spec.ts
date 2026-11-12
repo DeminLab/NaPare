@@ -63,7 +63,7 @@ suite('Career platform billing: HTTP + PostgreSQL + mocked bank transport', () =
       return new Response(JSON.stringify({ Success: true, TerminalKey: 'synthetic-terminal', ...result }), { status: 200 });
     });
     fixture = await createCurationFixture(process.env.PAYMENT_TEST_DATABASE_URL!);
-    const owner = await fixture.db.getRepository(User).save({ email: 'billing-owner@example.test', firstName: 'Тест', lastName: 'Владелец', role: UserRole.DEVELOPER, universityId: null, passwordHash: fixture.users.student.passwordHash });
+    const owner = await fixture.db.getRepository(User).save({ email: 'billing-owner@example.test', firstName: 'Тест', lastName: 'Владелец', role: UserRole.DEVELOPER, organizationId: null, passwordHash: fixture.users.student.passwordHash });
     await bindPlatformOwner(fixture.db, owner.email);
     const company = await fixture.db.getRepository(CareerCompany).save({ name: 'Own company', createdBy: fixture.users.admin.id });
     const foreign = await fixture.db.getRepository(CareerCompany).save({ name: 'Foreign company', createdBy: fixture.users.outsider.id });

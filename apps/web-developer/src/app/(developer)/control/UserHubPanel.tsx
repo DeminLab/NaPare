@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { type Access, type Page, Button, Notice, Pager, inputClass, panelClass, roles, useResource, useTargetUserId } from './control-ui';
 
-interface UserSummary { id: string; email: string; firstName: string; lastName: string; role: string; universityId: string | null; universityName?: string | null; groupId?: string | null; isActive: boolean; university?: { name: string; city: string } | null }
+interface UserSummary { id: string; email: string; firstName: string; lastName: string; role: string; organizationId: string | null; universityName?: string | null; groupId?: string | null; isActive: boolean; university?: { name: string; city: string } | null }
 interface AccountRow extends UserSummary { university?: { name: string; city: string } | null }
 type Navigate = (tab: string, userId: string) => void;
 

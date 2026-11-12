@@ -33,7 +33,7 @@ export class AcademicController {
   @ApiOperation({ summary: 'Получить курсы в доступном resource scope' })
   @ApiOkResponse({ type: PaginatedResponseDto })
   async findCourses(@Request() req, @Query() query: PaginationQueryDto) {
-    return this.academicService.findCourses(req.user.universityId, query);
+    return this.academicService.findCourses(req.user.organizationId, query);
   }
 
   @Post('courses')
@@ -41,7 +41,7 @@ export class AcademicController {
   @ApiOperation({ summary: 'Создать постоянную сущность курса' })
   @ApiResponse({ status: 201, type: Course })
   async createCourse(@Request() req, @Body() dto: CreateCourseDto) {
-    return this.academicService.createCourse(req.user.universityId, dto);
+    return this.academicService.createCourse(req.user.organizationId, dto);
   }
 
   @Get('courses/:id')
@@ -89,7 +89,7 @@ export class AcademicController {
   @ApiOperation({ summary: 'Получить конкретные занятия в доступном scope' })
   @ApiOkResponse({ type: PaginatedResponseDto })
   async findOccurrences(@Request() req, @Query() query: AcademicEventQueryDto) {
-    return this.academicService.findOccurrences(req.user.universityId, query);
+    return this.academicService.findOccurrences(req.user.organizationId, query);
   }
 
   @Get('occurrences/:id/context')
@@ -135,7 +135,7 @@ export class AcademicController {
   @ApiOperation({ summary: 'Получить Academic Events в доступном scope' })
   @ApiOkResponse({ type: PaginatedResponseDto })
   async findAcademicEvents(@Request() req, @Query() query: AcademicEventQueryDto) {
-    return this.academicService.findAcademicEvents(req.user.universityId, query);
+    return this.academicService.findAcademicEvents(req.user.organizationId, query);
   }
 
   @Post('events')
@@ -143,6 +143,6 @@ export class AcademicController {
   @ApiOperation({ summary: 'Создать Academic Event в resource scope' })
   @ApiResponse({ status: 201, type: AcademicEvent })
   async createAcademicEvent(@Request() req, @Body() dto: CreateAcademicEventDto) {
-    return this.academicService.createAcademicEvent(req.user.universityId, dto);
+    return this.academicService.createAcademicEvent(req.user.organizationId, dto);
   }
 }

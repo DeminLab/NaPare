@@ -17,7 +17,7 @@ describe("JwtStrategy", () => {
       id: "u1",
       email: "user@example.com",
       role: UserRole.TEACHER,
-      universityId: "uni-1",
+      organizationId: "uni-1",
       isActive: true,
       sessionVersion: 0,
     });
@@ -27,7 +27,7 @@ describe("JwtStrategy", () => {
         sub: "u1",
         email: "user@example.com",
         role: UserRole.TEACHER,
-        universityId: "uni-1",
+        organizationId: "uni-1",
         sessionVersion: 0,
       }),
     ).resolves.toMatchObject({ id: "u1", role: UserRole.TEACHER, sessionVersion: 0 });
@@ -46,7 +46,7 @@ describe("JwtStrategy", () => {
         sub: "u1",
         email: "user@example.com",
         role: UserRole.SUPERADMIN,
-        universityId: "uni-1",
+        organizationId: "uni-1",
         sessionVersion: 0,
       }),
     ).rejects.toThrow();
@@ -56,7 +56,7 @@ describe("JwtStrategy", () => {
     usersService.findById.mockResolvedValue({
       id: "u1",
       role: UserRole.TEACHER,
-      universityId: "uni-1",
+      organizationId: "uni-1",
       isActive: true,
       sessionVersion: 1,
     });
@@ -66,7 +66,7 @@ describe("JwtStrategy", () => {
         sub: "u1",
         email: "user@example.com",
         role: UserRole.TEACHER,
-        universityId: "uni-1",
+        organizationId: "uni-1",
         sessionVersion: 0,
       }),
     ).rejects.toThrow();
@@ -74,7 +74,7 @@ describe("JwtStrategy", () => {
     usersService.findById.mockResolvedValue({
       id: "u1",
       role: UserRole.TEACHER,
-      universityId: "uni-1",
+      organizationId: "uni-1",
       isActive: false,
       sessionVersion: 0,
     });
@@ -84,7 +84,7 @@ describe("JwtStrategy", () => {
         sub: "u1",
         email: "user@example.com",
         role: UserRole.TEACHER,
-        universityId: "uni-1",
+        organizationId: "uni-1",
         sessionVersion: 0,
       }),
     ).rejects.toThrow();

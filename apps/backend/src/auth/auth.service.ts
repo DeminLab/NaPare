@@ -140,7 +140,7 @@ export class AuthService {
     }
 
     if (!user.isActive) {
-      await this.telemetry?.recordAuth({ type: "login_failed", userId: user.id, universityId: user.universityId, ...context, metadata: { method: "max", reason: "inactive" } });
+      await this.telemetry?.recordAuth({ type: "login_failed", userId: user.id, organizationId: user.organizationId, ...context, metadata: { method: "max", reason: "inactive" } });
       throw new ForbiddenException("Аккаунт деактивирован");
     }
 
@@ -373,7 +373,7 @@ export class AuthService {
     await this.telemetry?.recordAuth({
       type: "login_success",
       userId: user.id,
-      universityId: user.universityId,
+      organizationId: user.organizationId,
       sessionId: sessionId ?? null,
       ...context,
       metadata,
@@ -396,7 +396,7 @@ export class AuthService {
       sub: user.id,
       email: user.email,
       role: user.role,
-      universityId: user.universityId,
+      organizationId: user.organizationId,
       groupId: user.groupId,
       sessionVersion: user.sessionVersion ?? 0,
       ...(sessionId ? { sid: sessionId } : {}),

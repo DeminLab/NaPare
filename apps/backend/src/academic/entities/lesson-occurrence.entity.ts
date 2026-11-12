@@ -4,15 +4,15 @@ import { LessonOccurrenceStatus, ProvenanceSyncStatus } from '../academic.types'
 
 @Entity('lesson_occurrences')
 @Index('UQ_lesson_occurrences_series_starts_at', ['seriesId', 'startsAt'], { unique: true })
-@Index('IDX_lesson_occurrences_university_starts_at', ['universityId', 'startsAt'])
-@Index('IDX_lesson_occurrences_university_group_starts_at', ['universityId', 'groupId', 'startsAt'])
-@Index('IDX_lesson_occurrences_university_course_starts_at', ['universityId', 'courseId', 'startsAt'])
+@Index('IDX_lesson_occurrences_university_starts_at', ['organizationId', 'startsAt'])
+@Index('IDX_lesson_occurrences_university_group_starts_at', ['organizationId', 'groupId', 'startsAt'])
+@Index('IDX_lesson_occurrences_university_course_starts_at', ['organizationId', 'courseId', 'startsAt'])
 export class LessonOccurrence {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
   @Column({ type: 'uuid' })
-  universityId: string;
+  organizationId: string;
 
   @Column({ type: 'uuid' })
   seriesId: string;

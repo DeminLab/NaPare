@@ -27,10 +27,10 @@ describe('HomeworkDeadlineReminderService', () => {
     const deadline = new Date('2026-09-28T12:00:00.000Z');
     homeworkRepository.find.mockResolvedValue([{
       id: 'homework-1', title: 'Подготовить доклад', deadline, isCompleted: false,
-      pairSpace: { id: 'pair-space-1', isActive: true, lessonId: 'lesson-1', universityId: 'university-1', subject: 'История' },
+      pairSpace: { id: 'pair-space-1', isActive: true, lessonId: 'lesson-1', organizationId: 'university-1', subject: 'История' },
     } as Homework]);
     lessonRepository.find.mockResolvedValue([{
-      id: 'lesson-1', universityId: 'university-1', groupId: 'group-1', groupName: 'ИС-21', teacherId: 'teacher-1',
+      id: 'lesson-1', organizationId: 'university-1', groupId: 'group-1', groupName: 'ИС-21', teacherId: 'teacher-1',
     } as Lesson]);
 
     await service.checkDueDeadlines(now);
@@ -40,7 +40,7 @@ describe('HomeworkDeadlineReminderService', () => {
     expect(eventBus.publish).toHaveBeenNthCalledWith(1, expect.objectContaining({
       type: 'homework.deadline_soon',
       idempotencyKey: `homework-deadline:homework-1:${deadline.toISOString()}`,
-      universityId: 'university-1',
+      organizationId: 'university-1',
       priority: 'high',
       payload: expect.objectContaining({
         groupId: 'group-1', teacherId: 'teacher-1', homeworkTitle: 'Подготовить доклад',
@@ -51,11 +51,11 @@ describe('HomeworkDeadlineReminderService', () => {
 
   it('skips inactive spaces and lessons from another university', async () => {
     homeworkRepository.find.mockResolvedValue([
-      { id: 'homework-inactive', deadline: new Date('2026-09-28T08:00:00Z'), pairSpace: { id: 'pair-inactive', isActive: false, lessonId: 'lesson-1', universityId: 'university-1' } },
-      { id: 'homework-foreign', deadline: new Date('2026-09-28T08:00:00Z'), pairSpace: { id: 'pair-active', isActive: true, lessonId: 'lesson-2', universityId: 'university-1' } },
+      { id: 'homework-inactive', deadline: new Date('2026-09-28T08:00:00Z'), pairSpace: { id: 'pair-inactive', isActive: false, lessonId: 'lesson-1', organizationId: 'university-1' } },
+      { id: 'homework-foreign', deadline: new Date('2026-09-28T08:00:00Z'), pairSpace: { id: 'pair-active', isActive: true, lessonId: 'lesson-2', organizationId: 'university-1' } },
     ] as Homework[]);
     lessonRepository.find.mockResolvedValue([
-      { id: 'lesson-2', universityId: 'university-2', groupId: 'group-2' },
+      { id: 'lesson-2', organizationId: 'university-2', groupId: 'group-2' },
     ] as Lesson[]);
 
     await service.checkDueDeadlines(new Date('2026-09-28T06:00:00Z'));
@@ -67,9 +67,9 @@ describe('HomeworkDeadlineReminderService', () => {
     const deadline = new Date('2026-09-28T18:00:00Z');
     homeworkRepository.find.mockResolvedValue(['homework-1', 'homework-2'].map((id) => ({
       id, title: id, deadline, isCompleted: false,
-      pairSpace: { id: `pair-${id}`, isActive: true, lessonId: 'lesson-1', universityId: 'university-1', subject: 'История' },
+      pairSpace: { id: `pair-${id}`, isActive: true, lessonId: 'lesson-1', organizationId: 'university-1', subject: 'История' },
     } as Homework)));
-    lessonRepository.find.mockResolvedValue([{ id: 'lesson-1', universityId: 'university-1', groupId: 'group-1' } as Lesson]);
+    lessonRepository.find.mockResolvedValue([{ id: 'lesson-1', organizationId: 'university-1', groupId: 'group-1' } as Lesson]);
     eventBus.publish.mockRejectedValueOnce(new Error('database unavailable')).mockResolvedValueOnce({} as never);
 
     await service.checkDueDeadlines(new Date('2026-09-28T06:00:00Z'));

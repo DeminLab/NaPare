@@ -1,4 +1,4 @@
-import { requireUniversityId } from '../common/tenant/require-university';
+import { requireOrganizationId } from '../common/tenant/require-university';
 import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -47,7 +47,7 @@ export class NotificationsService {
     const currentUser = this.tenantContext.getUser();
     const [data, total] = await this.notificationRepository.findAndCount({
       where: currentUser && currentUser.role !== UserRole.SUPERADMIN
-        ? { userId, universityId: requireUniversityId(currentUser) }
+        ? { userId, organizationId: requireOrganizationId(currentUser) }
         : { userId },
       order: { createdAt: 'DESC' },
       skip: (pagination.page - 1) * pagination.limit,
@@ -60,13 +60,13 @@ export class NotificationsService {
     const currentUser = this.tenantContext.getUser();
     return this.notificationRepository.count({
       where: currentUser && currentUser.role !== UserRole.SUPERADMIN
-        ? { userId, universityId: requireUniversityId(currentUser), isRead: false }
+        ? { userId, organizationId: requireOrganizationId(currentUser), isRead: false }
         : { userId, isRead: false },
     });
   }
 
   async create(createNotificationDto: CreateNotificationDto): Promise<Notification> {
-    this.tenantContext.assertAccess(createNotificationDto.universityId);
+    this.tenantContext.assertAccess(createNotificationDto.organizationId);
     const notification = this.notificationRepository.create(createNotificationDto);
     return this.delivery ? this.delivery.persist(createNotificationDto) : this.notificationRepository.save(notification);
   }
@@ -89,7 +89,7 @@ export class NotificationsService {
 
       const notificationData = {
           userId,
-          universityId: event.university.id,
+          organizationId: event.university.id,
           type: mapped.type,
           category: mapped.category,
           priority: event.priority,
@@ -110,7 +110,7 @@ export class NotificationsService {
           await this.inboxRepository.save(this.inboxRepository.create({
             eventId: event.id,
             userId,
-            universityId: event.university.id,
+            organizationId: event.university.id,
             type: event.type,
             title: mapped.inbox.title,
             description: mapped.inbox.description,
@@ -127,22 +127,22 @@ export class NotificationsService {
     }
   }
 
-  async getPreferences(userId: string, universityId: string): Promise<NotificationPreference> {
-    const existing = await this.preferenceRepository.findOne({ where: { userId, universityId } });
+  async getPreferences(userId: string, organizationId: string): Promise<NotificationPreference> {
+    const existing = await this.preferenceRepository.findOne({ where: { userId, organizationId } });
     if (existing) return existing;
-    return this.preferenceRepository.save(this.preferenceRepository.create({ userId, universityId }));
+    return this.preferenceRepository.save(this.preferenceRepository.create({ userId, organizationId }));
   }
 
   async updatePreferences(
     userId: string,
-    universityId: string,
+    organizationId: string,
     update: UpdateNotificationPreferenceDto,
   ): Promise<NotificationPreference> {
-    this.tenantContext.assertAccess(universityId);
+    this.tenantContext.assertAccess(organizationId);
     if (update.timeZone && !isValidTimeZone(update.timeZone)) {
       throw new BadRequestException('timeZone must be a valid IANA timezone');
     }
-    const preferences = await this.getPreferences(userId, universityId);
+    const preferences = await this.getPreferences(userId, organizationId);
     Object.assign(preferences, update);
     return this.preferenceRepository.save(preferences);
   }
@@ -156,7 +156,7 @@ export class NotificationsService {
         userId,
         ...(status ? { status } : {}),
         ...(currentUser && currentUser.role !== UserRole.SUPERADMIN
-          ? { universityId: requireUniversityId(currentUser) }
+          ? { organizationId: requireOrganizationId(currentUser) }
           : {}),
       },
       order: { createdAt: 'DESC', id: 'DESC' },
@@ -168,14 +168,14 @@ export class NotificationsService {
   async completeInboxItem(userId: string, id: string): Promise<void> {
     const item = await this.inboxRepository.findOne({ where: { id, userId } });
     if (!item) throw new NotFoundException(`Inbox item with id ${id} not found`);
-    this.tenantContext.assertAccess(item.universityId);
+    this.tenantContext.assertAccess(item.organizationId);
     await this.inboxRepository.update(item.id, { status: 'done', completedAt: new Date() });
   }
 
   async snoozeInboxItem(userId: string, id: string, until: Date): Promise<void> {
     const item = await this.inboxRepository.findOne({ where: { id, userId } });
     if (!item) throw new NotFoundException(`Inbox item with id ${id} not found`);
-    this.tenantContext.assertAccess(item.universityId);
+    this.tenantContext.assertAccess(item.organizationId);
     await this.inboxRepository.update(item.id, { status: 'snoozed', dueAt: until });
   }
 
@@ -188,7 +188,7 @@ export class NotificationsService {
     if (!currentUser || currentUser.id !== userId || notification.userId !== userId) {
       throw new ForbiddenException('Cannot mark another user\'s notification as read');
     }
-    this.tenantContext.assertAccess(notification.universityId);
+    this.tenantContext.assertAccess(notification.organizationId);
     await this.notificationRepository.update(notification.id, {
       isRead: true,
       readAt: new Date(),
@@ -199,7 +199,7 @@ export class NotificationsService {
     const currentUser = this.tenantContext.getUser();
     await this.notificationRepository.update(
       currentUser && currentUser.role !== UserRole.SUPERADMIN
-        ? { userId, universityId: requireUniversityId(currentUser), isRead: false }
+        ? { userId, organizationId: requireOrganizationId(currentUser), isRead: false }
         : { userId, isRead: false },
       { isRead: true, readAt: new Date() },
     );

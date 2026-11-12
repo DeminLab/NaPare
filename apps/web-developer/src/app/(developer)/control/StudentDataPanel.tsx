@@ -10,7 +10,7 @@ interface AbsenceRecord {
   studentId: string;
   studentName: string;
   studentEmail: string;
-  universityId: string;
+  organizationId: string;
   universityName: string;
   type: string;
   startDate: string;
@@ -28,7 +28,7 @@ interface AttendanceRecord {
   studentId: string;
   studentName: string;
   studentEmail: string;
-  universityId: string;
+  organizationId: string;
   universityName: string;
   lessonId: string;
   lessonSubject: string;
@@ -45,7 +45,7 @@ interface AbsenceConfirmation {
   studentId: string;
   studentName: string;
   studentEmail: string;
-  universityId: string;
+  organizationId: string;
   universityName: string;
   curatorId: string;
   curatorName: string | null;
@@ -72,7 +72,7 @@ export default function StudentDataPanel({ access }: { access: Access }) {
   const [tab, setTab] = useState<DataTab>('absences');
   const [query, setQuery] = useState('');
   useEffect(() => { if (targetUserId) setQuery(targetUserId); }, [targetUserId]);
-  const [universityId, setUniversityId] = useState('');
+  const [organizationId, setOrganizationId] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [absenceType, setAbsenceType] = useState('');
@@ -92,7 +92,7 @@ export default function StudentDataPanel({ access }: { access: Access }) {
   const [confirmationForm, setConfirmationForm] = useState<{ status: ConfirmationStatus; comment: string; confirmedAt: string } | null>(null);
   const universityOptions = useResource<Page<UniversityOption>>(access.permissions.includes('universities.read') ? '/platform/universities?limit=100' : null);
   const filters = new URLSearchParams({ q: query, page: String(page), limit: '20' });
-  if (universityId) filters.set('universityId', universityId);
+  if (organizationId) filters.set('organizationId', organizationId);
   if (tab !== 'absence-confirmations' && startDate) filters.set('startDate', new Date(`${startDate}T00:00:00`).toISOString());
   if (tab !== 'absence-confirmations' && endDate) filters.set('endDate', new Date(`${endDate}T23:59:59.999`).toISOString());
   if (tab === 'absences' && absenceType) filters.set('type', absenceType);
@@ -113,7 +113,7 @@ export default function StudentDataPanel({ access }: { access: Access }) {
     setSelected(null); setDetailLoading(false); setDetailReady(false); setReason(''); setAbsenceForm(null); setAttendanceForm(null); setConfirmationForm(null);
   };
   const selectTab = (next: DataTab) => { closeSelection(); setTab(next); setPage(1); setError(''); setNotice(''); };
-  const clearFilters = () => { setQuery(''); setUniversityId(''); setStartDate(''); setEndDate(''); setAbsenceType(''); setConfirmationRequired(''); setAttendanceStatus(''); setConfirmationStatus(''); setPage(1); };
+  const clearFilters = () => { setQuery(''); setOrganizationId(''); setStartDate(''); setEndDate(''); setAbsenceType(''); setConfirmationRequired(''); setAttendanceStatus(''); setConfirmationStatus(''); setPage(1); };
   const edit = (record: AbsenceRecord | AttendanceRecord | AbsenceConfirmation) => {
     const requestId = ++selectionRequest.current;
     setSelected(record);
@@ -175,7 +175,7 @@ export default function StudentDataPanel({ access }: { access: Access }) {
       </div>
       <label className="block text-sm">{tab === 'absence-confirmations' ? 'Поиск по студенту, куратору, email или ID' : 'Поиск по студенту, email, ID или занятию'}<input className={inputClass} type="search" maxLength={100} value={query} onChange={event => { setQuery(event.target.value); setPage(1); }} /></label>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {universityOptions.data && <label className="block text-sm">Университет<select className={inputClass} value={universityId} onChange={event => { setUniversityId(event.target.value); setPage(1); }}><option value="">Все университеты</option>{universityOptions.data.data.map(university => <option key={university.id} value={university.id}>{university.name} · {university.city}</option>)}</select></label>}
+        {universityOptions.data && <label className="block text-sm">Университет<select className={inputClass} value={organizationId} onChange={event => { setOrganizationId(event.target.value); setPage(1); }}><option value="">Все университеты</option>{universityOptions.data.data.map(university => <option key={university.id} value={university.id}>{university.name} · {university.city}</option>)}</select></label>}
         {tab !== 'absence-confirmations' && <>
           <label className="block text-sm">С даты<input className={inputClass} type="date" value={startDate} onChange={event => { setStartDate(event.target.value); setPage(1); }} /></label>
           <label className="block text-sm">По дату<input className={inputClass} type="date" value={endDate} onChange={event => { setEndDate(event.target.value); setPage(1); }} /></label>

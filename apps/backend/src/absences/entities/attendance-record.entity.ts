@@ -11,13 +11,13 @@ export type AttendanceStatus = 'present' | 'absent' | 'late';
 
 @Entity('attendance_records')
 @Index('UQ_attendance_records_lesson_student', ['lessonId', 'studentId'], { unique: true })
-@Index('IDX_attendance_records_university_lesson', ['universityId', 'lessonId'])
+@Index('IDX_attendance_records_university_lesson', ['organizationId', 'lessonId'])
 export class AttendanceRecord {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
   @Column({ type: 'uuid' })
-  universityId: string;
+  organizationId: string;
 
   @Column({ type: 'uuid' })
   lessonId: string;

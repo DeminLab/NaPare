@@ -14,12 +14,13 @@ import { Lesson } from '../src/schedule/entities/lesson.entity';
 import { CuratorAssignments1700000000020 } from '../src/migrations/1700000000020-CuratorAssignments';
 import { TenantRowSecurity1700000000029 } from '../src/migrations/1700000000029-TenantRowSecurity';
 import { OfficeReports1700000000042 } from '../src/migrations/1700000000042-OfficeReports';
+import { TenantOrganizationAlias1700000000046 } from '../src/migrations/1700000000046-TenantOrganizationAlias';
 import { TenantContext } from '../src/common/tenant/tenant-context';
 import { fixtureDatabase } from './tenant-database.fixture';
 import { installHttpRouteEvidence } from './http-route-evidence';
 
 /** Destructive setup is allowed ONLY in a new disposable curation_test_* database. */
-export async function createCurationFixture(url: string, options: { universityIds?: [string,string] } = {}) {
+export async function createCurationFixture(url: string, options: { organizationIds?: [string,string] } = {}) {
   const target = new URL(url);
   if (!['localhost', '127.0.0.1'].includes(target.hostname) || !/^\/curation_test_[a-z0-9_]+$/.test(target.pathname)) throw new Error('A local disposable curation_test_* database is required');
   Object.assign(process.env, { DATABASE_URL: url, NODE_ENV: 'test', JWT_SECRET: randomBytes(32).toString('hex'), JWT_REFRESH_SECRET: randomBytes(32).toString('hex'), JWT_ACCESS_EXPIRATION: '15m', JWT_REFRESH_EXPIRATION: '30d', TELEGRAM_BOT_TOKEN: '', TELEGRAM_BOT_USERNAME: '', TELEGRAM_WEBHOOK_SECRET: '', MAX_BOT_TOKEN: '', SENTRY_DSN: '', RATE_LIMIT_MAX: '10000' });
@@ -36,16 +37,16 @@ export async function createCurationFixture(url: string, options: { universityId
   await app.init();
   const db = fixtureDatabase(app.get(DataSource), app.get(TenantContext));
   if (await db.getRepository(User).count()) { await app.close(); throw new Error('Fixture database must contain no existing users'); }
-  const uni = await db.getRepository(University).save({ ...(options.universityIds?{id:options.universityIds[0]}:{}), name: 'Кураторство — тест', city: 'Омск', status: 'active' });
-  const otherUni = await db.getRepository(University).save({ ...(options.universityIds?{id:options.universityIds[1]}:{}), name: 'Другой вуз — тест', city: 'Омск', status: 'active' });
+  const uni = await db.getRepository(University).save({ ...(options.organizationIds?{id:options.organizationIds[0]}:{}), name: 'Кураторство — тест', city: 'Омск', status: 'active' });
+  const otherUni = await db.getRepository(University).save({ ...(options.organizationIds?{id:options.organizationIds[1]}:{}), name: 'Другой вуз — тест', city: 'Омск', status: 'active' });
   evidenceUniversities = [uni.id, otherUni.id];
-  const faculty = await db.getRepository(Faculty).save({ universityId: uni.id, name: 'Информатика', code: 'ИН' });
-  const otherFaculty = await db.getRepository(Faculty).save({ universityId: otherUni.id, name: 'Другой факультет', code: 'ДР' });
+  const faculty = await db.getRepository(Faculty).save({ organizationId: uni.id, name: 'Информатика', code: 'ИН' });
+  const otherFaculty = await db.getRepository(Faculty).save({ organizationId: otherUni.id, name: 'Другой факультет', code: 'ДР' });
   const groups = await db.getRepository(Group).save([
-    { universityId: uni.id, facultyId: faculty.id, name: 'ИН-25', curriculumYear: 2, externalId: '101' },
-    { universityId: uni.id, facultyId: faculty.id, name: 'ИН-34', curriculumYear: 3, externalId: '102' },
-    { universityId: uni.id, facultyId: faculty.id, name: 'ИН-43', curriculumYear: 4, externalId: '103' },
-    { universityId: otherUni.id, facultyId: otherFaculty.id, name: 'Чужая группа', curriculumYear: 2 },
+    { organizationId: uni.id, facultyId: faculty.id, name: 'ИН-25', curriculumYear: 2, externalId: '101' },
+    { organizationId: uni.id, facultyId: faculty.id, name: 'ИН-34', curriculumYear: 3, externalId: '102' },
+    { organizationId: uni.id, facultyId: faculty.id, name: 'ИН-43', curriculumYear: 4, externalId: '103' },
+    { organizationId: otherUni.id, facultyId: otherFaculty.id, name: 'Чужая группа', curriculumYear: 2 },
   ]);
   const password = randomBytes(16).toString('hex');
   const passwordHash = await bcrypt.hash(password, 4);
@@ -61,7 +62,7 @@ export async function createCurationFixture(url: string, options: { universityId
     ['blocked', UserRole.STUDENT, uni.id, groups[0].id, false, 'Пётр', 'Волков'],
   ] as const;
   const users: Record<string, User> = {};
-  for (const [key, role, universityId, groupId, isActive, firstName, lastName] of definitions) users[key] = await db.getRepository(User).save({ email: `${key}@curation.example.test`, firstName, lastName, role, universityId, groupId: groupId ?? undefined, isActive, passwordHash });
+  for (const [key, role, organizationId, groupId, isActive, firstName, lastName] of definitions) users[key] = await db.getRepository(User).save({ email: `${key}@curation.example.test`, firstName, lastName, role, organizationId, groupId: groupId ?? undefined, isActive, passwordHash });
   await db.getRepository(Group).update(groups[1].id, { curatorId: users.legacy.id });
   await db.getRepository(Group).update(groups[2].id, { curatorId: users.outsider.id });
   // Exercise the real migration, including rejection of a cross-university legacy pointer.
@@ -69,12 +70,16 @@ export async function createCurationFixture(url: string, options: { universityId
   const runner = db.createQueryRunner();
   await runner.connect();
   try {
+    // ADR-0008 expand around the historic tail: alias first so migrations 20/29/42
+    // see their legacy column names, canonicalize after they recreate legacy text.
+    await new TenantOrganizationAlias1700000000046().up(runner);
     await new CuratorAssignments1700000000020().up(runner);
     await new TenantRowSecurity1700000000029().up(runner);
     await new OfficeReports1700000000042().up(runner);
+    await new TenantOrganizationAlias1700000000046().up(runner);
   } finally { await runner.release(); }
   const now = new Date(); now.setHours(8, 30, 0, 0);
-  const lesson = await db.getRepository(Lesson).save({ universityId: uni.id, groupId: groups[0].id, teacherId: users.teacher.id, subject: 'Технологии программирования', teacherName: 'Соколова М.', groupName: groups[0].name, startDate: now, endDate: new Date(now.getTime() + 5400000), startTime: '08:30', endTime: '10:00', dayOfWeek: now.getDay(), pairNumber: 1, room: '416' });
-  const makeAbsence = async (student = users.peer) => db.getRepository(Absence).save({ universityId: student.universityId!, studentId: student.id, type: 'sick', startDate: now, endDate: new Date(now.getTime() + 86400000), comment: 'По болезни', confirmationRequired: true });
+  const lesson = await db.getRepository(Lesson).save({ organizationId: uni.id, groupId: groups[0].id, teacherId: users.teacher.id, subject: 'Технологии программирования', teacherName: 'Соколова М.', groupName: groups[0].name, startDate: now, endDate: new Date(now.getTime() + 5400000), startTime: '08:30', endTime: '10:00', dayOfWeek: now.getDay(), pairNumber: 1, room: '416' });
+  const makeAbsence = async (student = users.peer) => db.getRepository(Absence).save({ organizationId: student.organizationId!, studentId: student.id, type: 'sick', startDate: now, endDate: new Date(now.getTime() + 86400000), comment: 'По болезни', confirmationRequired: true });
   return { app, db, uni, otherUni, groups, users, password, lesson, makeAbsence };
 }

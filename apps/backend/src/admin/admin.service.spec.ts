@@ -23,7 +23,7 @@ describe("AdminService", () => {
   let module: TestingModule;
 
   const mockUsersService = {
-    findByUniversityId: jest.fn().mockResolvedValue([]),
+    findByOrganizationId: jest.fn().mockResolvedValue([]),
     findByGroupId: jest.fn().mockResolvedValue({ data: [], meta: {} }),
     findById: jest.fn().mockResolvedValue(null),
     findByEmail: jest.fn().mockResolvedValue(null),
@@ -142,13 +142,13 @@ describe("AdminService", () => {
       });
 
       expect(mockUserRepository.findOne).toHaveBeenCalledWith({
-        where: { id: "dean-1", universityId: "uni-1", role: UserRole.FACULTY_DEAN, isActive: true },
+        where: { id: "dean-1", organizationId: "uni-1", role: UserRole.FACULTY_DEAN, isActive: true },
         select: { id: true },
       });
       expect(facultyRepository.save).toHaveBeenCalledWith(expect.objectContaining({
         name: "Информатика",
         deanUserId: "dean-1",
-        universityId: "uni-1",
+        organizationId: "uni-1",
       }));
     });
 
@@ -167,7 +167,7 @@ describe("AdminService", () => {
 
     it("allows clearing an existing dean without requiring a replacement", async () => {
       const facultyRepository = module.get(getRepositoryToken(Faculty));
-      const existing = { id: "faculty-1", universityId: "uni-1", deanUserId: "dean-1" };
+      const existing = { id: "faculty-1", organizationId: "uni-1", deanUserId: "dean-1" };
       facultyRepository.findOne.mockResolvedValue(existing);
 
       await expect(service.updateFaculty("faculty-1", { deanUserId: null }))
@@ -193,7 +193,7 @@ describe("AdminService", () => {
         createdAt: new Date("2026-10-18T00:00:00.000Z"),
       } as AuditLog;
       mockAuditQueryBuilder.getManyAndCount.mockResolvedValue([[event], 51]);
-      mockUsersService.findByUniversityId.mockClear();
+      mockUsersService.findByOrganizationId.mockClear();
 
       const result = await service.getAuditLog("uni-1", { page: 2, limit: 25 });
 
@@ -203,12 +203,12 @@ describe("AdminService", () => {
         "auditUser.id = auditLog.userId",
       );
       expect(mockAuditQueryBuilder.where).toHaveBeenCalledWith(
-        "auditUser.universityId = :universityId",
-        { universityId: "uni-1" },
+        "auditUser.organizationId = :organizationId",
+        { organizationId: "uni-1" },
       );
       expect(mockAuditQueryBuilder.skip).toHaveBeenCalledWith(25);
       expect(mockAuditQueryBuilder.take).toHaveBeenCalledWith(25);
-      expect(mockUsersService.findByUniversityId).not.toHaveBeenCalled();
+      expect(mockUsersService.findByOrganizationId).not.toHaveBeenCalled();
       expect(result.data).toEqual([{ ...event, source: "user action" }]);
       expect(result.meta.total).toBe(51);
     });
@@ -218,7 +218,7 @@ describe("AdminService", () => {
     it("does not allow university admins to assign the developer role", async () => {
       mockUsersService.findById.mockResolvedValue({
         id: "u1",
-        universityId: "uni-1",
+        organizationId: "uni-1",
       });
       await expect(
         service.updateUserRole(
@@ -233,7 +233,7 @@ describe("AdminService", () => {
     it("should throw ForbiddenException if requester cannot assign role", async () => {
       mockUsersService.findById.mockResolvedValue({
         id: "u1",
-        universityId: "uni-1",
+        organizationId: "uni-1",
       });
       await expect(
         service.updateUserRole(
@@ -248,7 +248,7 @@ describe("AdminService", () => {
     it("should update role if requester has permission", async () => {
       mockUsersService.findById.mockResolvedValue({
         id: "u1",
-        universityId: "uni-1",
+        organizationId: "uni-1",
       });
       mockUsersService.update.mockResolvedValue({
         id: "u1",
@@ -281,7 +281,7 @@ describe("AdminService", () => {
 
       expect(result).toEqual(
         expect.objectContaining({
-          universityId: "uni-1",
+          organizationId: "uni-1",
           email: "student@university.ru",
           passwordHash: expect.any(String),
         }),
@@ -330,7 +330,7 @@ describe("AdminService", () => {
     it("replaces a managed user password with a hash", async () => {
       mockUsersService.findById.mockResolvedValue({
         id: "student-1",
-        universityId: "uni-1",
+        organizationId: "uni-1",
         role: UserRole.STUDENT,
       });
       mockUsersService.update.mockImplementation((id, data) =>
@@ -354,7 +354,7 @@ describe("AdminService", () => {
     it("does not reset a password for a platform role", async () => {
       mockUsersService.findById.mockResolvedValue({
         id: "developer-1",
-        universityId: "uni-1",
+        organizationId: "uni-1",
         role: UserRole.DEVELOPER,
       });
 
@@ -379,7 +379,7 @@ describe("AdminService", () => {
         UserRole.UNIVERSITY_ADMIN,
       );
 
-      expect(mockUsersService.findByUniversityId).toHaveBeenCalledWith(
+      expect(mockUsersService.findByOrganizationId).toHaveBeenCalledWith(
         "uni-1",
         pagination,
         expect.not.arrayContaining([UserRole.DEVELOPER, UserRole.SUPERADMIN]),
@@ -413,10 +413,10 @@ describe("AdminService", () => {
         activeToday: 47,
       });
       expect(userRepository.count).toHaveBeenCalledWith({
-        where: { universityId: "uni-1" },
+        where: { organizationId: "uni-1" },
       });
       expect(lessonRepository.count).toHaveBeenCalledWith({
-        where: { universityId: "uni-1" },
+        where: { organizationId: "uni-1" },
       });
     });
   });
@@ -455,7 +455,7 @@ describe("AdminService", () => {
       expect(result.data).toEqual([{ id: "group-1", name: "ПИ-21" }]);
       expect(groupRepository.findAndCount).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { universityId: "uni-1", id: expect.anything() },
+          where: { organizationId: "uni-1", id: expect.anything() },
         }),
       );
     });
@@ -592,12 +592,12 @@ describe("AdminService", () => {
         connectorConfig: {},
       });
       facultyRepository.find.mockResolvedValue([
-        { id: "faculty-1", universityId: "uni-1", name: "ДОО" },
+        { id: "faculty-1", organizationId: "uni-1", name: "ДОО" },
       ]);
       groupRepository.find.mockResolvedValue([
         {
           id: "group-1",
-          universityId: "uni-1",
+          organizationId: "uni-1",
           facultyId: "faculty-1",
           name: "ГМУ-25",
           externalId: "12136",
@@ -607,7 +607,7 @@ describe("AdminService", () => {
       lessonRepository.find.mockResolvedValue([
         {
           id: "lesson-1",
-          universityId: "uni-1",
+          organizationId: "uni-1",
           groupId: "group-1",
           teacherId: undefined,
           sourceTeacherId: null,
@@ -679,7 +679,7 @@ describe("AdminService", () => {
       lessonRepository.find.mockResolvedValue([
         {
           id: "lesson-1",
-          universityId: "uni-1",
+          organizationId: "uni-1",
           groupId: "group-1",
           source: "sibit",
           externalId: "5632268",

@@ -2,11 +2,11 @@ import { Column, CreateDateColumn, Entity, Index, PrimaryGeneratedColumn, Update
 import { ScheduleImportPayload, ScheduleImportSummary } from './schedule-connector';
 
 @Entity('schedule_import_jobs')
-@Index('UQ_schedule_import_jobs_tenant_key', ['universityId', 'idempotencyKey'], { unique: true })
+@Index('UQ_schedule_import_jobs_tenant_key', ['organizationId', 'idempotencyKey'], { unique: true })
 @Index('IDX_schedule_import_jobs_poll', ['status', 'nextAttemptAt'])
 export class ScheduleImportJob {
   @PrimaryGeneratedColumn('uuid') id: string;
-  @Column({ type: 'uuid' }) universityId: string;
+  @Column({ type: 'uuid' }) organizationId: string;
   @Column({ type: 'uuid' }) actorId: string;
   @Column({ type: 'uuid' }) idempotencyKey: string;
   @Column({ type: 'varchar' }) payloadHash: string;

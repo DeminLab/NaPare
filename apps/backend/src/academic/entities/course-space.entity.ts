@@ -7,7 +7,7 @@ export class CourseSpace {
   id: string;
 
   @Column({ type: 'uuid' })
-  universityId: string;
+  organizationId: string;
 
   @Column({ type: 'uuid' })
   courseId: string;

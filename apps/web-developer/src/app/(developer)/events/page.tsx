@@ -46,15 +46,15 @@ export default function EventJournalPage() {
   const [selected, setSelected] = useState<TelemetryEvent | null>(null);
   const access = useResource<Access>('/platform/access');
   const universities = useResource<Page<{ id: string; name: string; city: string }>>('/platform/universities?limit=100');
-  const [universityId, setUniversityId] = useState('');
+  const [organizationId, setOrganizationId] = useState('');
 
   useEffect(() => {
     const timer = window.setTimeout(() => { setSearch(query.trim()); setPage(1); }, 300);
     return () => window.clearTimeout(timer);
   }, [query]);
 
-  const path = useMemo(() => eventPath({ page, limit: 25, q: search, category, source, severity, days, universityId }), [page, search, category, source, severity, days, universityId]);
-  const facetsPath = useMemo(() => eventPath({ limit: 1, days, universityId }).replace('/platform/events?', '/platform/events/facets?'), [days, universityId]);
+  const path = useMemo(() => eventPath({ page, limit: 25, q: search, category, source, severity, days, organizationId }), [page, search, category, source, severity, days, organizationId]);
+  const facetsPath = useMemo(() => eventPath({ limit: 1, days, organizationId }).replace('/platform/events?', '/platform/events/facets?'), [days, organizationId]);
   const events = useResource<EventPage>(path, 30_000);
   const facets = useResource<EventFacets>(facetsPath, 60_000);
   const forbidden = events.error.toLowerCase().includes('доступ') || events.error.toLowerCase().includes('разреш');
@@ -128,7 +128,7 @@ export default function EventJournalPage() {
               <option value="">Все уровни</option>
               {(facets.data?.severities ?? []).map(item => <option key={item.key} value={item.key}>{severityLabels[item.key] ?? item.key} · {item.count}</option>)}
             </Select>
-            {!!universities.data?.data.length && <Select label="Университет" value={universityId} onChange={event => { setUniversityId(event.target.value); setPage(1); }}><option value="">Все доступные</option>{universities.data.data.map(university => <option key={university.id} value={university.id}>{university.name}</option>)}</Select>}
+            {!!universities.data?.data.length && <Select label="Университет" value={organizationId} onChange={event => { setOrganizationId(event.target.value); setPage(1); }}><option value="">Все доступные</option>{universities.data.data.map(university => <option key={university.id} value={university.id}>{university.name}</option>)}</Select>}
           </div>
         </div>
 

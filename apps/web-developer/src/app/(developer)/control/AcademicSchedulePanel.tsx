@@ -7,7 +7,7 @@ import AcademicEventsPanel from './AcademicEventsPanel';
 import AcademicCatalogPanel from './AcademicCatalogPanel';
 
 interface Occurrence {
-  id: string; universityId: string; universityName: string; courseId: string; courseName: string; seriesId: string;
+  id: string; organizationId: string; universityName: string; courseId: string; courseName: string; seriesId: string;
   groupId: string; groupName: string; teacherId: string | null; teacherName: string | null;
   startsAt: string; endsAt: string; room: string | null; building: string | null; status: string;
   source: string | null; syncStatus: string; changeReason: string | null;
@@ -23,7 +23,7 @@ const toIso = (value: string) => new Date(value).toISOString();
 
 function OccurrenceSchedulePanel({ access }: { access: Access }) {
   const [query, setQuery] = useState('');
-  const [universityId, setUniversityId] = useState('');
+  const [organizationId, setOrganizationId] = useState('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [status, setStatus] = useState<StatusFilter>('all');
@@ -42,11 +42,11 @@ function OccurrenceSchedulePanel({ access }: { access: Access }) {
   const universities = useResource<Page<University>>(access.permissions.includes('universities.read') ? '/platform/universities?page=1&limit=100' : null);
   const filters = useMemo(() => {
     const params = new URLSearchParams({ q: query.slice(0, 100), status, page: String(page), limit: '20' });
-    if (universityId) params.set('universityId', universityId);
+    if (organizationId) params.set('organizationId', organizationId);
     if (from) params.set('from', new Date(`${from}T00:00:00`).toISOString());
     if (to) { const exclusiveEnd = new Date(`${to}T00:00:00`); exclusiveEnd.setDate(exclusiveEnd.getDate() + 1); params.set('to', exclusiveEnd.toISOString()); }
     return params.toString();
-  }, [query, universityId, from, to, status, page]);
+  }, [query, organizationId, from, to, status, page]);
   const list = useResource<Page<Occurrence>>(`/platform-academic/occurrences?${filters}`);
   const detail = useResource<OccurrenceDetail>(selectedId ? `/platform-academic/occurrences/${selectedId}` : null);
   const selected = detail.data?.id === selectedId ? detail.data : null;
@@ -75,7 +75,7 @@ function OccurrenceSchedulePanel({ access }: { access: Access }) {
     {(error || list.error || detail.error || universities.error) && <Notice error>{error || list.error || detail.error || universities.error}</Notice>}{notice && <Notice>{notice}</Notice>}
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       <label className="block text-sm">Поиск<input className={inputClass} type="search" maxLength={100} value={query} onChange={event => filterChanged(() => setQuery(event.target.value))} placeholder="Предмет, группа, преподаватель или ID" /></label>
-      <label className="block text-sm">Университет<select className={inputClass} value={universityId} onChange={event => filterChanged(() => setUniversityId(event.target.value))}><option value="">Все университеты</option>{(universities.data?.data ?? []).map(university => <option key={university.id} value={university.id}>{university.name} · {university.city}</option>)}</select></label>
+      <label className="block text-sm">Университет<select className={inputClass} value={organizationId} onChange={event => filterChanged(() => setOrganizationId(event.target.value))}><option value="">Все университеты</option>{(universities.data?.data ?? []).map(university => <option key={university.id} value={university.id}>{university.name} · {university.city}</option>)}</select></label>
       <label className="block text-sm">Состояние<select className={inputClass} value={status} onChange={event => filterChanged(() => setStatus(event.target.value as StatusFilter))}>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
       <label className="block text-sm">С даты<input className={inputClass} type="date" value={from} onChange={event => filterChanged(() => setFrom(event.target.value))} /></label>
       <label className="block text-sm">По дату<input className={inputClass} type="date" value={to} onChange={event => filterChanged(() => setTo(event.target.value))} /></label>

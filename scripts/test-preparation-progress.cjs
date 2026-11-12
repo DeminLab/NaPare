@@ -10,7 +10,7 @@ function fixture() {
   const navigator = { onLine: false };
   const exports = {};
   const scope = 'napare:preparation-progress:test-university:test-student';
-  storage.set('accessToken', 'test.' + Buffer.from(JSON.stringify({ sub: 'test-student', universityId: 'test-university' })).toString('base64url') + '.test');
+  storage.set('accessToken', 'test.' + Buffer.from(JSON.stringify({ sub: 'test-student', organizationId: 'test-university' })).toString('base64url') + '.test');
   const source = readFileSync('apps/web-student/src/app/(student)/preparation-progress-api.ts', 'utf8');
   const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
   new Script(compiled).runInNewContext({ exports, require: () => ({ apiFetch: async (url, options) => requests.push({ url, patch: JSON.parse(options.body) }) }), navigator, TextDecoder, Uint8Array, CustomEvent: class { constructor(type, options) { this.type = type; this.detail = options.detail; } }, window: { atob: value => Buffer.from(value, 'base64').toString('binary'), localStorage: { getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value) }, addEventListener() {}, dispatchEvent() {} } });
@@ -41,6 +41,6 @@ test('repeated offline edits preserve the latest state and subtasks', async () =
 test('a different account does not display the previous personal progress', async () => {
   const f = fixture();
   await f.api.saveStudentPreparationProgress('homework-1', { state: 'done' });
-  f.storage.set('accessToken', 'test.' + Buffer.from(JSON.stringify({ sub: 'other-student', universityId: 'test-university' })).toString('base64url') + '.test');
+  f.storage.set('accessToken', 'test.' + Buffer.from(JSON.stringify({ sub: 'other-student', organizationId: 'test-university' })).toString('base64url') + '.test');
   assert.equal(f.api.readStudentPreparationProgress('homework-1', 'todo'), 'todo');
 });

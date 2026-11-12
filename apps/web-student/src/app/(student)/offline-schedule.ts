@@ -7,9 +7,9 @@ export function offlineOwner(token: string | null): string | null {
     const encoded = token?.split('.')[1];
     if (!encoded) return null;
     const claims = JSON.parse(atob(encoded.replace(/-/g, '+').replace(/_/g, '/')));
-    if (typeof claims.sub !== 'string' || typeof claims.universityId !== 'string' || claims.role !== 'student') return null;
-    if (!/^[\w-]{1,80}$/.test(claims.sub) || !/^[\w-]{1,80}$/.test(claims.universityId)) return null;
-    return `${claims.universityId}/${claims.sub}`;
+    if (typeof claims.sub !== 'string' || typeof claims.organizationId !== 'string' || claims.role !== 'student') return null;
+    if (!/^[\w-]{1,80}$/.test(claims.sub) || !/^[\w-]{1,80}$/.test(claims.organizationId)) return null;
+    return `${claims.organizationId}/${claims.sub}`;
   } catch { return null; }
 }
 

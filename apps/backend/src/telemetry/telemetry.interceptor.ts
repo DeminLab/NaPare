@@ -44,7 +44,7 @@ export class TelemetryInterceptor implements NestInterceptor {
           name: statusCode >= 500 ? 'http.error' : 'http.request',
           severity: statusCode >= 500 ? 'error' : failed ? 'warning' : 'info',
           userId: user?.id ?? null,
-          universityId: user?.universityId ?? null,
+          organizationId: user?.organizationId ?? null,
           sessionId: user?.sessionId ?? null,
           method: request.method,
           path,

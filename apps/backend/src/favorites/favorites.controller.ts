@@ -18,20 +18,20 @@ export class FavoritesController {
   @Get()
   @ApiOperation({ summary: 'Получить избранные группы и преподавателей текущего студента' })
   list(@Request() req) {
-    return this.favorites.list(req.user.id, req.user.universityId);
+    return this.favorites.list(req.user.id, req.user.organizationId);
   }
 
   @Post()
   @ApiOperation({ summary: 'Добавить или обновить избранную группу/преподавателя' })
   async add(@Request() req, @Body() dto: FavoriteDto) {
-    await this.favorites.add(req.user.id, req.user.universityId, dto.kind, dto.externalId, dto.label);
+    await this.favorites.add(req.user.id, req.user.organizationId, dto.kind, dto.externalId, dto.label);
     return { success: true };
   }
 
   @Delete()
   @ApiOperation({ summary: 'Убрать группу/преподавателя из избранного' })
   async remove(@Request() req, @Body() dto: RemoveFavoriteDto) {
-    await this.favorites.remove(req.user.id, req.user.universityId, dto.kind, dto.externalId);
+    await this.favorites.remove(req.user.id, req.user.organizationId, dto.kind, dto.externalId);
     return { success: true };
   }
 }

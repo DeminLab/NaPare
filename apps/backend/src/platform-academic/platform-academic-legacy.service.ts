@@ -42,20 +42,20 @@ export class PlatformAcademicLegacyService {
     const access = await this.platform.require('academic-data.read');
     if (query.from && query.to && new Date(query.from) >= new Date(query.to)) throw new BadRequestException('Дата начала фильтра должна предшествовать дате окончания.');
     const qb = this.lessons.createQueryBuilder('l')
-      .leftJoin(University, 'u', 'u.id = l.universityId')
-      .leftJoin(Group, 'g', 'g.id = l.groupId AND g.universityId = l.universityId')
-      .leftJoin(User, 't', 't.id = l.teacherId AND t.universityId = l.universityId')
+      .leftJoin(University, 'u', 'u.id = l.organizationId')
+      .leftJoin(Group, 'g', 'g.id = l.groupId AND g.organizationId = l.organizationId')
+      .leftJoin(User, 't', 't.id = l.teacherId AND t.organizationId = l.organizationId')
       .addSelect('u.name', 'platform_university_name')
       .addSelect('g.name', 'platform_group_name')
       .addSelect("concat_ws(' ', t.firstName, t.lastName)", 'platform_teacher_name')
       .where('l.occurrenceId IS NULL');
-    if (query.universityId) {
-      this.platform.assertUniversityScope(access, query.universityId);
-      qb.andWhere('l.universityId = :universityId', { universityId: query.universityId });
+    if (query.organizationId) {
+      this.platform.assertUniversityScope(access, query.organizationId);
+      qb.andWhere('l.organizationId = :organizationId', { organizationId: query.organizationId });
     }
-    if (!access.owner && access.universityIds !== null) {
-      if (!access.universityIds.length) qb.andWhere('1 = 0');
-      else qb.andWhere('l.universityId IN (:...allowedUniversityIds)', { allowedUniversityIds: access.universityIds });
+    if (!access.owner && access.organizationIds !== null) {
+      if (!access.organizationIds.length) qb.andWhere('1 = 0');
+      else qb.andWhere('l.organizationId IN (:...allowedOrganizationIds)', { allowedOrganizationIds: access.organizationIds });
     }
     if (query.from) qb.andWhere('l.startDate >= :from', { from: new Date(query.from) });
     if (query.to) qb.andWhere('l.startDate < :to', { to: new Date(query.to) });
@@ -69,7 +69,7 @@ export class PlatformAcademicLegacyService {
     const data = rows.entities.map((lesson, index) => this.toListItem(lesson, rows.raw[index]));
     await this.audits.save({
       userId: access.actorId, action: 'platform.academic_lesson.search', entity: 'academic_lesson_search', entityId: 'search',
-      newValues: { queryEntered: Boolean(query.q?.trim()), universityId: query.universityId ?? null, from: query.from ?? null, to: query.to ?? null, page: query.page, limit: query.limit, resultCount: data.length, total, resultLessonIds: data.map(item => item.id) },
+      newValues: { queryEntered: Boolean(query.q?.trim()), organizationId: query.organizationId ?? null, from: query.from ?? null, to: query.to ?? null, page: query.page, limit: query.limit, resultCount: data.length, total, resultLessonIds: data.map(item => item.id) },
       ...this.auditContext(auditContext),
     });
     return toPaginatedResponse(data, total, query);
@@ -78,7 +78,7 @@ export class PlatformAcademicLegacyService {
   async detail(id: string, auditContext: AuditContext = {}) {
     const access = await this.platform.require('academic-data.read');
     const context = await this.getContext(this.lessons, id);
-    this.platform.assertUniversityScope(access, context.lesson.universityId);
+    this.platform.assertUniversityScope(access, context.lesson.organizationId);
     const history = await this.changes.find({ where: { lessonId: id }, order: { createdAt: 'DESC' }, take: 20 });
     await this.audits.save({ userId: access.actorId, action: 'platform.academic_lesson.viewed', entity: 'academic_lesson', entityId: id, newValues: this.auditScope(context), ...this.auditContext(auditContext) });
     return { ...this.toListItem(context.lesson, context), changes: history.map(change => ({ id: change.id, changeType: change.changeType, oldValues: change.oldValues, newValues: change.newValues, reason: change.reason, actorId: change.changedBy, timestamp: change.changedAt })) };
@@ -97,7 +97,7 @@ export class PlatformAcademicLegacyService {
       const lessonRepo = manager.getRepository(Lesson);
       const lesson = await lessonRepo.createQueryBuilder('l').setLock('pessimistic_write').where('l.id = :id', { id }).getOne();
       if (!lesson || lesson.occurrenceId !== null) throw new NotFoundException('Legacy-занятие без LessonOccurrence не найдено.');
-      this.platform.assertUniversityScope(access, lesson.universityId);
+      this.platform.assertUniversityScope(access, lesson.organizationId);
       if (lesson.source !== 'manual') throw new BadRequestException('Это занятие синхронизируется из внешнего источника и доступно только для просмотра.');
       const context = await this.getContext(lessonRepo, id, manager);
       const oldValues = lessonChangeValues(lesson);
@@ -112,7 +112,7 @@ export class PlatformAcademicLegacyService {
       const saved = await lessonRepo.save(lesson);
       const newValues = lessonChangeValues(saved);
       const change = await manager.getRepository(LessonChange).save({ lessonId: saved.id, changeType: lessonChangeType(oldValues, newValues), oldValues, newValues, changedBy: access.actorId, reason, source: 'manual' });
-      await manager.getRepository(ScheduleChange).save({ universityId: saved.universityId, occurrenceId: null, legacyLessonId: saved.id, originalValue: oldValues, newValue: newValues, reason, actorId: access.actorId, source: 'manual', timestamp: new Date() });
+      await manager.getRepository(ScheduleChange).save({ organizationId: saved.organizationId, occurrenceId: null, legacyLessonId: saved.id, originalValue: oldValues, newValue: newValues, reason, actorId: access.actorId, source: 'manual', timestamp: new Date() });
       await manager.getRepository(AuditLog).save({ userId: access.actorId, action: 'platform.academic_lesson.updated', entity: 'academic_lesson', entityId: saved.id, oldValues: { ...oldValues, ...this.auditScope(context) }, newValues: { ...newValues, ...this.auditScope(newContext), reason }, ...this.auditContext(auditContext) });
       return { lesson: saved, oldValues, newValues, context: newContext, changeId: change.id };
     });
@@ -123,7 +123,7 @@ export class PlatformAcademicLegacyService {
     await this.eventBus.publish({
       idempotencyKey: `platform-academic-lesson-change:${result.changeId}`,
       type: eventType,
-      universityId: result.lesson.universityId,
+      organizationId: result.lesson.organizationId,
       actor: { id: actor.id, type: 'user', role: actor.role },
       target: { type: 'lesson', id: result.lesson.id },
       payload: { subject: result.lesson.subject, oldValue: result.oldValues, newValue: result.newValues, reason, groupId: result.lesson.groupId, teacherId: result.lesson.teacherId, deepLink: `/pair-space/${result.lesson.id}` },
@@ -145,13 +145,13 @@ export class PlatformAcademicLegacyService {
     const courseRepo = manager?.getRepository(Course) ?? this.courses;
     const seriesRepo = manager?.getRepository(LessonSeries) ?? this.series;
     const [university, group, teacher, course, series] = await Promise.all([
-      universityRepo.findOne({ where: { id: lesson.universityId } }),
+      universityRepo.findOne({ where: { id: lesson.organizationId } }),
       groupRepo.findOne({ where: { id: lesson.groupId } }),
-      lesson.teacherId ? userRepo.findOne({ where: { id: lesson.teacherId }, select: ['id', 'firstName', 'lastName', 'universityId', 'role'] }) : null,
+      lesson.teacherId ? userRepo.findOne({ where: { id: lesson.teacherId }, select: ['id', 'firstName', 'lastName', 'organizationId', 'role'] }) : null,
       lesson.courseId ? courseRepo.findOne({ where: { id: lesson.courseId } }) : null,
       lesson.seriesId ? seriesRepo.findOne({ where: { id: lesson.seriesId } }) : null,
     ]);
-    if (!university || !group || group.universityId !== lesson.universityId || (lesson.teacherId && (!teacher || teacher.universityId !== lesson.universityId || teacher.role !== UserRole.TEACHER)) || (lesson.courseId && (!course || course.universityId !== lesson.universityId)) || (lesson.seriesId && (!series || !course || series.universityId !== lesson.universityId || series.courseId !== lesson.courseId || series.groupId !== lesson.groupId || series.teacherId !== lesson.teacherId))) {
+    if (!university || !group || group.organizationId !== lesson.organizationId || (lesson.teacherId && (!teacher || teacher.organizationId !== lesson.organizationId || teacher.role !== UserRole.TEACHER)) || (lesson.courseId && (!course || course.organizationId !== lesson.organizationId)) || (lesson.seriesId && (!series || !course || series.organizationId !== lesson.organizationId || series.courseId !== lesson.courseId || series.groupId !== lesson.groupId || series.teacherId !== lesson.teacherId))) {
       throw new BadRequestException('Связи legacy-занятия с вузом, группой, курсом или преподавателем не согласованы.');
     }
     return { lesson, university, group, teacher, course, series };
@@ -170,7 +170,7 @@ export class PlatformAcademicLegacyService {
       teacherName = row.platform_teacher_name as string | null ?? lesson.teacherName ?? null;
     }
     return {
-      id: lesson.id, universityId: lesson.universityId, universityName, groupId: lesson.groupId, groupName,
+      id: lesson.id, organizationId: lesson.organizationId, universityName, groupId: lesson.groupId, groupName,
       courseId: lesson.courseId, seriesId: lesson.seriesId, teacherId: lesson.teacherId, teacherName,
       subject: lesson.subject, subjectType: lesson.subjectType, room: lesson.room, building: lesson.building,
       dayOfWeek: lesson.dayOfWeek, startTime: lesson.startTime, endTime: lesson.endTime, pairNumber: lesson.pairNumber,
@@ -182,7 +182,7 @@ export class PlatformAcademicLegacyService {
   }
 
   private auditScope(context: LegacyLessonContext) {
-    return { universityId: context.lesson.universityId, groupId: context.lesson.groupId, courseId: context.lesson.courseId, teacherId: context.lesson.teacherId };
+    return { organizationId: context.lesson.organizationId, groupId: context.lesson.groupId, courseId: context.lesson.courseId, teacherId: context.lesson.teacherId };
   }
 
   private auditContext(context: AuditContext) {

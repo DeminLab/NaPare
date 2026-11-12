@@ -12,7 +12,7 @@ import { PlatformService } from '../platform/platform.service';
 import { PlatformDiscussionModerationDto, PlatformDiscussionPatchDto, PlatformDiscussionQueryDto } from './platform-discussions.dto';
 
 type RequestAuditContext = { ip?: string; userAgent?: string };
-type DiscussionSummary = { id: string; pairSpaceId: string; lessonId: string; universityId: string; universityName: string; subject: string; lessonDate: Date; pairNumber: number; groupId: string; authorId: string; authorName: string; authorEmail: string; textPreview: string; parentId: string | null; moderationState: 'visible' | 'hidden'; createdAt: Date; updatedAt: Date };
+type DiscussionSummary = { id: string; pairSpaceId: string; lessonId: string; organizationId: string; universityName: string; subject: string; lessonDate: Date; pairNumber: number; groupId: string; authorId: string; authorName: string; authorEmail: string; textPreview: string; parentId: string | null; moderationState: 'visible' | 'hidden'; createdAt: Date; updatedAt: Date };
 type DiscussionDetail = DiscussionSummary & { text: string; moderationReason: string | null; moderatedBy: string | null; moderatedAt: Date | null };
 
 @Injectable()
@@ -27,8 +27,8 @@ export class PlatformDiscussionsService {
     const data = await qb.orderBy('message.createdAt', 'DESC').addOrderBy('message.id', 'DESC')
       .skip((query.page - 1) * query.limit).take(query.limit).getRawMany<DiscussionSummary>();
     await this.auditRead('platform.discussion_message.search', 'search', access.actorId, {
-      recordIds: data.map(row => row.id), universityIds: [...new Set(data.map(row => row.universityId))],
-      ...(query.universityId ? { universityId: query.universityId } : {}), ...(query.authorId ? { authorId: query.authorId } : {}),
+      recordIds: data.map(row => row.id), organizationIds: [...new Set(data.map(row => row.organizationId))],
+      ...(query.organizationId ? { organizationId: query.organizationId } : {}), ...(query.authorId ? { authorId: query.authorId } : {}),
       queryEntered: Boolean(query.q?.trim()), state: query.state ?? 'any', page: query.page, limit: query.limit, resultCount: data.length, total,
     }, context);
     return toPaginatedResponse(data, total, query);
@@ -38,9 +38,9 @@ export class PlatformDiscussionsService {
     const access = await this.platform.require('discussion-data.read');
     const detail = await this.summaryQuery(true).where('message.id = :id', { id }).getRawOne<DiscussionDetail>();
     if (!detail) throw new NotFoundException('Сообщение обсуждения не найдено.');
-    this.platform.assertUniversityScope(access, detail.universityId);
+    this.platform.assertUniversityScope(access, detail.organizationId);
     await this.auditRead('platform.discussion_message.viewed', detail.id, access.actorId, {
-      targetUserId: detail.authorId, universityId: detail.universityId, pairSpaceId: detail.pairSpaceId, result: 'viewed',
+      targetUserId: detail.authorId, organizationId: detail.organizationId, pairSpaceId: detail.pairSpaceId, result: 'viewed',
     }, context);
     return detail;
   }
@@ -54,12 +54,12 @@ export class PlatformDiscussionsService {
       const message = await manager.findOne(DiscussionMessage, { where: { id }, lock: { mode: 'pessimistic_write' } });
       if (!message) throw new NotFoundException('Сообщение обсуждения не найдено.');
       const resource = await this.assertMessageContext(manager, message);
-      this.platform.assertUniversityScope(access, resource.universityId);
+      this.platform.assertUniversityScope(access, resource.organizationId);
       if (message.text === text) throw new ConflictException('Новый текст совпадает с текущим.');
       const oldValues: JsonObject = { text: message.text, moderationState: message.moderationState };
       message.text = text;
       const updated = await manager.save(DiscussionMessage, message);
-      await this.auditMutation(manager, access.actorId, updated, resource.universityId, oldValues,
+      await this.auditMutation(manager, access.actorId, updated, resource.organizationId, oldValues,
         { text: updated.text, moderationState: updated.moderationState, adminReason: dto.reason.trim(), result: 'updated' }, context);
       return { id: updated.id, text: updated.text, moderationState: updated.moderationState, updatedAt: updated.updatedAt };
     });
@@ -72,7 +72,7 @@ export class PlatformDiscussionsService {
       const message = await manager.findOne(DiscussionMessage, { where: { id }, lock: { mode: 'pessimistic_write' } });
       if (!message) throw new NotFoundException('Сообщение обсуждения не найдено.');
       const resource = await this.assertMessageContext(manager, message);
-      this.platform.assertUniversityScope(access, resource.universityId);
+      this.platform.assertUniversityScope(access, resource.organizationId);
       if (message.moderationState === dto.state && message.moderationReason === dto.reason.trim()) throw new ConflictException('Сообщение уже имеет это состояние и причину.');
       const oldValues: JsonObject = { moderationState: message.moderationState, moderationReason: message.moderationReason, moderatedBy: message.moderatedBy, moderatedAt: message.moderatedAt?.toISOString() ?? null };
       message.moderationState = dto.state;
@@ -80,7 +80,7 @@ export class PlatformDiscussionsService {
       message.moderatedBy = access.actorId;
       message.moderatedAt = new Date();
       const updated = await manager.save(DiscussionMessage, message);
-      await this.auditMutation(manager, access.actorId, updated, resource.universityId, oldValues,
+      await this.auditMutation(manager, access.actorId, updated, resource.organizationId, oldValues,
         { moderationState: updated.moderationState, moderationReason: updated.moderationReason, moderatedBy: updated.moderatedBy, moderatedAt: updated.moderatedAt?.toISOString() ?? null, adminReason: dto.reason.trim(), result: dto.state === 'hidden' ? 'hidden' : 'restored' }, context);
       return { id: updated.id, moderationState: updated.moderationState, moderationReason: updated.moderationReason, moderatedAt: updated.moderatedAt };
     });
@@ -89,11 +89,11 @@ export class PlatformDiscussionsService {
   private summaryQuery(includeText = false): SelectQueryBuilder<DiscussionMessage> {
     const qb = this.db.getRepository(DiscussionMessage).createQueryBuilder('message')
       .innerJoin(PairSpace, 'pairSpace', 'pairSpace.id = message.pairSpaceId')
-      .innerJoin(University, 'university', 'university.id = pairSpace.universityId')
-      .innerJoin(Lesson, 'lesson', 'lesson.id = pairSpace.lessonId AND lesson.universityId = pairSpace.universityId')
+      .innerJoin(University, 'university', 'university.id = pairSpace.organizationId')
+      .innerJoin(Lesson, 'lesson', 'lesson.id = pairSpace.lessonId AND lesson.organizationId = pairSpace.organizationId')
       .leftJoin(User, 'author', 'author.id = message.userId')
       .select('message.id', 'id').addSelect('message.pairSpaceId', 'pairSpaceId')
-      .addSelect('pairSpace.lessonId', 'lessonId').addSelect('pairSpace.universityId', 'universityId')
+      .addSelect('pairSpace.lessonId', 'lessonId').addSelect('pairSpace.organizationId', 'organizationId')
       .addSelect('university.name', 'universityName').addSelect('lesson.subject', 'subject')
       .addSelect('lesson.startDate', 'lessonDate').addSelect('lesson.pairNumber', 'pairNumber')
       .addSelect('lesson.groupId', 'groupId').addSelect('message.userId', 'authorId')
@@ -107,15 +107,15 @@ export class PlatformDiscussionsService {
   }
 
   private applyFilters(qb: SelectQueryBuilder<DiscussionMessage>, query: PlatformDiscussionQueryDto, access: Awaited<ReturnType<PlatformService['access']>>): void {
-    if (query.universityId) {
-      if (access.owner || access.universityIds === null || access.universityIds.length > 0) {
-        this.platform.assertUniversityScope(access, query.universityId);
+    if (query.organizationId) {
+      if (access.owner || access.organizationIds === null || access.organizationIds.length > 0) {
+        this.platform.assertUniversityScope(access, query.organizationId);
       }
-      qb.andWhere('pairSpace.universityId = :universityId', { universityId: query.universityId });
+      qb.andWhere('pairSpace.organizationId = :organizationId', { organizationId: query.organizationId });
     }
-    if (!access.owner && access.universityIds !== null) {
-      if (!access.universityIds.length) qb.andWhere('1 = 0');
-      else qb.andWhere('pairSpace.universityId IN (:...allowedUniversityIds)', { allowedUniversityIds: access.universityIds });
+    if (!access.owner && access.organizationIds !== null) {
+      if (!access.organizationIds.length) qb.andWhere('1 = 0');
+      else qb.andWhere('pairSpace.organizationId IN (:...allowedOrganizationIds)', { allowedOrganizationIds: access.organizationIds });
     }
     if (query.authorId) qb.andWhere('message.userId = :authorId', { authorId: query.authorId });
     if (query.state) qb.andWhere('message.moderationState = :state', { state: query.state });
@@ -127,8 +127,8 @@ export class PlatformDiscussionsService {
 
   private async assertMessageContext(manager: EntityManager, message: DiscussionMessage): Promise<PairSpace> {
     const pairSpace = await manager.findOne(PairSpace, { where: { id: message.pairSpaceId }, lock: { mode: 'pessimistic_read' } });
-    if (!pairSpace || !await manager.getRepository(University).existsBy({ id: pairSpace.universityId })) throw new BadRequestException('Сообщение не связано с действующим университетом.');
-    const lesson = await manager.findOne(Lesson, { where: { id: pairSpace.lessonId, universityId: pairSpace.universityId }, select: ['id'] });
+    if (!pairSpace || !await manager.getRepository(University).existsBy({ id: pairSpace.organizationId })) throw new BadRequestException('Сообщение не связано с действующим университетом.');
+    const lesson = await manager.findOne(Lesson, { where: { id: pairSpace.lessonId, organizationId: pairSpace.organizationId }, select: ['id'] });
     if (!lesson) throw new BadRequestException('Пространство пары не связано с занятием своего университета.');
     return pairSpace;
   }
@@ -140,10 +140,10 @@ export class PlatformDiscussionsService {
     }));
   }
 
-  private async auditMutation(manager: EntityManager, actorId: string, message: DiscussionMessage, universityId: string, oldValues: JsonObject, newValues: JsonObject, context: RequestAuditContext): Promise<void> {
+  private async auditMutation(manager: EntityManager, actorId: string, message: DiscussionMessage, organizationId: string, oldValues: JsonObject, newValues: JsonObject, context: RequestAuditContext): Promise<void> {
     await manager.save(AuditLog, manager.create(AuditLog, {
       userId: actorId, action: `platform.discussion_message.${newValues.result}`, entity: 'personal_data.discussion_message', entityId: message.id,
-      oldValues, newValues: { ...newValues, targetUserId: message.userId, universityId, pairSpaceId: message.pairSpaceId },
+      oldValues, newValues: { ...newValues, targetUserId: message.userId, organizationId, pairSpaceId: message.pairSpaceId },
       ...(context.ip ? { ip: context.ip } : {}), ...(context.userAgent ? { userAgent: context.userAgent.slice(0, 512) } : {}),
     }));
   }

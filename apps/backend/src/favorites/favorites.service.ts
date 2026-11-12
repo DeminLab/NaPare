@@ -7,20 +7,20 @@ import { Favorite, FavoriteKind } from './entities/favorite.entity';
 export class FavoritesService {
   constructor(@InjectRepository(Favorite) private readonly favorites: Repository<Favorite>) {}
 
-  list(userId: string, universityId: string): Promise<Favorite[]> {
-    return this.favorites.find({ where: { userId, universityId }, order: { kind: 'ASC', label: 'ASC' } });
+  list(userId: string, organizationId: string): Promise<Favorite[]> {
+    return this.favorites.find({ where: { userId, organizationId }, order: { kind: 'ASC', label: 'ASC' } });
   }
 
-  async add(userId: string, universityId: string, kind: FavoriteKind, externalIdInput: string, labelInput: string): Promise<void> {
+  async add(userId: string, organizationId: string, kind: FavoriteKind, externalIdInput: string, labelInput: string): Promise<void> {
     const externalId = this.normalize(kind, externalIdInput);
     const label = labelInput.trim().normalize('NFKC');
     if (!label) throw new BadRequestException('Укажите название избранного элемента');
-    await this.favorites.upsert({ userId, universityId, kind, externalId, label }, ['userId', 'universityId', 'kind', 'externalId']);
+    await this.favorites.upsert({ userId, organizationId, kind, externalId, label }, ['userId', 'organizationId', 'kind', 'externalId']);
   }
 
-  async remove(userId: string, universityId: string, kind: FavoriteKind, externalIdInput: string): Promise<void> {
+  async remove(userId: string, organizationId: string, kind: FavoriteKind, externalIdInput: string): Promise<void> {
     const externalId = this.normalize(kind, externalIdInput);
-    await this.favorites.delete({ userId, universityId, kind, externalId });
+    await this.favorites.delete({ userId, organizationId, kind, externalId });
   }
 
   private normalize(kind: FavoriteKind, value: string): string {

@@ -30,10 +30,10 @@ export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 @Entity('notifications')
 @Index('IDX_notifications_user_university_created_at', [
   'userId',
-  'universityId',
+  'organizationId',
   'createdAt',
 ])
-@Index('IDX_notifications_user_university_unread', ['userId', 'universityId'], {
+@Index('IDX_notifications_user_university_unread', ['userId', 'organizationId'], {
   where: '"isRead" = false',
 })
 @Index('UQ_notifications_event_user', ['eventId', 'userId'], { unique: true })
@@ -45,7 +45,7 @@ export class Notification {
   userId: string;
 
   @Column({ type: 'uuid' })
-  universityId: string;
+  organizationId: string;
 
   @Column({
     type: 'enum',

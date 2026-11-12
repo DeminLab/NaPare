@@ -14,16 +14,16 @@ import { University } from './university.entity';
 import { Group } from './group.entity';
 
 @Entity('faculties')
-@Index('IDX_faculties_university_name', ['universityId', 'name'])
+@Index('IDX_faculties_university_name', ['organizationId', 'name'])
 export class Faculty {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
   @Column({ type: 'uuid' })
-  universityId: string;
+  organizationId: string;
 
   @ManyToOne(() => University, (university) => university.faculties)
-  @JoinColumn({ name: 'universityId' })
+  @JoinColumn({ name: 'organizationId' })
   university: University;
 
   @Column()

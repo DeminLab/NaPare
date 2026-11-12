@@ -6,7 +6,7 @@ import * as path from 'node:path';
 import { UserRole } from '../src/auth/interfaces/user-role';
 
 /** Opt-in metadata only, on real test AppModules; never install on a guard probe. */
-export function installHttpRouteEvidence(app: INestApplication, universityIds: () => string[] = () => []) {
+export function installHttpRouteEvidence(app: INestApplication, organizationIds: () => string[] = () => []) {
   const configured = process.env.BUSINESS_ROUTE_EVIDENCE_FILE;
   if (!configured) return;
   if (process.env.NODE_ENV !== 'test') throw new Error('Business HTTP evidence is test-only');
@@ -24,9 +24,9 @@ export function installHttpRouteEvidence(app: INestApplication, universityIds: (
       const state = typeof expect === 'function' ? expect.getState() : undefined;
       const suite = state?.testPath ? path.basename(state.testPath) : '';
       if (!/^[a-z0-9.-]+\.e2e-spec\.ts$/i.test(suite)) return;
-      const actor = (req as Request & { user?: { role?: UserRole; universityId?: string } }).user;
-      const ids = universityIds(), index = actor?.universityId ? ids.indexOf(actor.universityId) : -1;
-      const scope = !actor?.universityId ? 'none' : index === 0 ? 'primary' : index === 1 ? 'secondary' : 'other';
+      const actor = (req as Request & { user?: { role?: UserRole; organizationId?: string } }).user;
+      const ids = organizationIds(), index = actor?.organizationId ? ids.indexOf(actor.organizationId) : -1;
+      const scope = !actor?.organizationId ? 'none' : index === 0 ? 'primary' : index === 1 ? 'secondary' : 'other';
       const role = actor?.role && Object.values(UserRole).includes(actor.role) ? actor.role : actor ? 'other' : 'anonymous';
       appendFileSync(filename, JSON.stringify({ method: req.method, path: route, status: res.statusCode, role, scope, suite,
         caseId: createHash('sha256').update(suite + ':' + (state?.currentTestName || 'setup')).digest('hex').slice(0, 16) }) + '\n');

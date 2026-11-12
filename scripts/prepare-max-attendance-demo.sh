@@ -28,13 +28,13 @@ if [[ "$database_name" != *demo* && "$database_name" != *test* ]]; then
 fi
 
 group_row="$("${compose[@]}" exec -T postgres sh -c \
-  'psql -v ON_ERROR_STOP=1 -At -F "|" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT id, \"universityId\", \"name\" FROM \"groups\""' \
+  'psql -v ON_ERROR_STOP=1 -At -F "|" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT id, \"organizationId\", \"name\" FROM \"groups\""' \
   | awk -F '|' -v wanted="$group_id" 'tolower($1) == tolower(wanted) { print $2 "|" $3 }' | tr -d '\r')"
 if [[ -z "$group_row" ]]; then
   echo 'The requested group does not exist in the selected database.' >&2
   exit 1
 fi
-university_id="${group_row%%|*}"
+organization_id="${group_row%%|*}"
 group_name="${group_row#*|}"
 
 hash_password() {
@@ -49,26 +49,26 @@ teacher_hash="$(hash_password "$teacher_password")"
 
 "${compose[@]}" exec -T postgres sh -c \
   'psql -v ON_ERROR_STOP=1 \
-    -v university_id="$1" \
+    -v organization_id="$1" \
     -v group_id="$2" \
     -v student_hash="$3" \
     -v teacher_hash="$4" \
     -U "$POSTGRES_USER" -d "$POSTGRES_DB"' \
-  sh "$university_id" "$group_id" "$student_hash" "$teacher_hash" <<'SQL'
+  sh "$organization_id" "$group_id" "$student_hash" "$teacher_hash" <<'SQL'
 BEGIN;
 SELECT pg_advisory_xact_lock(hashtext('napare:max-attendance-demo'));
 
 INSERT INTO "users"
-  ("email", "passwordHash", "firstName", "lastName", "role", "universityId", "groupId", "isActive")
+  ("email", "passwordHash", "firstName", "lastName", "role", "organizationId", "groupId", "isActive")
 VALUES
-  ('max-student@demo.napare', :'student_hash', 'Тест', 'Студент MAX', 'student', :'university_id', :'group_id', true),
-  ('max-teacher@demo.napare', :'teacher_hash', 'Тест', 'Преподаватель MAX', 'teacher', :'university_id', NULL, true)
+  ('max-student@demo.napare', :'student_hash', 'Тест', 'Студент MAX', 'student', :'organization_id', :'group_id', true),
+  ('max-teacher@demo.napare', :'teacher_hash', 'Тест', 'Преподаватель MAX', 'teacher', :'organization_id', NULL, true)
 ON CONFLICT ("email") DO UPDATE SET
   "passwordHash" = EXCLUDED."passwordHash",
   "firstName" = EXCLUDED."firstName",
   "lastName" = EXCLUDED."lastName",
   "role" = EXCLUDED."role",
-  "universityId" = EXCLUDED."universityId",
+  "organizationId" = EXCLUDED."organizationId",
   "groupId" = EXCLUDED."groupId",
   "isActive" = true,
   "maxUserId" = NULL,
@@ -77,7 +77,7 @@ ON CONFLICT ("email") DO UPDATE SET
   "lastLoginAt" = NULL;
 
 UPDATE "lessons" AS lesson
-SET "universityId" = :'university_id'::uuid,
+SET "organizationId" = :'organization_id'::uuid,
     "groupId" = :'group_id'::uuid,
     "teacherId" = teacher.id,
     subject = 'ТЕСТ: отметка посещаемости MAX',
@@ -102,9 +102,9 @@ WHERE lesson.source = 'hackathon-demo'
   AND teacher.email = 'max-teacher@demo.napare';
 
 INSERT INTO "lessons"
-  ("universityId", "groupId", "teacherId", subject, "subjectType", "dayOfWeek", "startTime", "endTime",
+  ("organizationId", "groupId", "teacherId", subject, "subjectType", "dayOfWeek", "startTime", "endTime",
    "pairNumber", "weekType", "startDate", "endDate", "teacherName", "groupName", source, "externalId", "syncStatus")
-SELECT :'university_id'::uuid,
+SELECT :'organization_id'::uuid,
        :'group_id'::uuid,
        teacher.id,
        'ТЕСТ: отметка посещаемости MAX',
@@ -127,7 +127,7 @@ WHERE demo_group.id = :'group_id'::uuid
   AND teacher.email = 'max-teacher@demo.napare'
   AND NOT EXISTS (
     SELECT 1 FROM "lessons" AS existing
-    WHERE existing."universityId" = :'university_id'::uuid
+    WHERE existing."organizationId" = :'organization_id'::uuid
       AND existing."groupId" = :'group_id'::uuid
       AND existing.source = 'hackathon-demo'
       AND existing."externalId" = 'max-attendance-demo'
@@ -138,7 +138,7 @@ DELETE FROM "attendance_records" AS attendance
 USING "lessons" AS lesson, "users" AS student
 WHERE attendance."lessonId" = lesson.id
   AND attendance."studentId" = student.id
-  AND lesson."universityId" = :'university_id'::uuid
+  AND lesson."organizationId" = :'organization_id'::uuid
   AND lesson."groupId" = :'group_id'::uuid
   AND lesson.source = 'hackathon-demo'
   AND lesson."externalId" = 'max-attendance-demo'

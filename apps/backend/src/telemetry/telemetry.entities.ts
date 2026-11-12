@@ -9,11 +9,11 @@ export type AuthEventType = 'login_success' | 'login_failed' | 'logout' | 'logou
 
 @Entity('user_sessions')
 @Index('IDX_user_sessions_user_created', ['userId', 'createdAt'])
-@Index('IDX_user_sessions_scope_seen', ['universityId', 'lastSeenAt'])
+@Index('IDX_user_sessions_scope_seen', ['organizationId', 'lastSeenAt'])
 export class UserSession {
   @PrimaryColumn('uuid') id: string;
   @Column('uuid') userId: string;
-  @Column('uuid', { nullable: true }) universityId: string | null;
+  @Column('uuid', { nullable: true }) organizationId: string | null;
   @Column({ type: 'varchar', default: 'web' }) client: string;
   @Column({ type: 'varchar', default: 'unknown' }) device: string;
   @Column({ type: 'varchar', default: 'unknown' }) os: string;
@@ -36,7 +36,7 @@ export class UserSession {
 export class AuthEvent {
   @PrimaryGeneratedColumn('uuid') id: string;
   @Column('uuid', { nullable: true }) userId: string | null;
-  @Column('uuid', { nullable: true }) universityId: string | null;
+  @Column('uuid', { nullable: true }) organizationId: string | null;
   @Column({ type: 'varchar' }) type: AuthEventType;
   @Column({ type: 'varchar', length: 64, nullable: true }) emailHash: string | null;
   @Column('uuid', { nullable: true }) sessionId: string | null;
@@ -49,7 +49,7 @@ export class AuthEvent {
 
 @Entity('platform_events')
 @Index('IDX_platform_events_created', ['createdAt'])
-@Index('IDX_platform_events_scope_created', ['universityId', 'createdAt'])
+@Index('IDX_platform_events_scope_created', ['organizationId', 'createdAt'])
 @Index('IDX_platform_events_category_created', ['category', 'createdAt'])
 @Index('IDX_platform_events_user_created', ['userId', 'createdAt'])
 @Index('IDX_platform_events_name_created', ['name', 'createdAt'])
@@ -60,7 +60,7 @@ export class PlatformEvent {
   @Column({ type: 'varchar' }) name: string;
   @Column({ type: 'varchar', default: 'info' }) severity: TelemetrySeverity;
   @Column('uuid', { nullable: true }) userId: string | null;
-  @Column('uuid', { nullable: true }) universityId: string | null;
+  @Column('uuid', { nullable: true }) organizationId: string | null;
   @Column('uuid', { nullable: true }) sessionId: string | null;
   @Column({ type: 'varchar', length: 12, nullable: true }) method: string | null;
   @Column({ type: 'varchar', length: 300, nullable: true }) path: string | null;

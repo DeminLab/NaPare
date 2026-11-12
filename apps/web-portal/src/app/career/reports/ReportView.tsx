@@ -7,7 +7,7 @@ import career from '../career.module.css';
 import styles from './report.module.css';
 
 type Report = {
-  universityId: string; universityName: string; asOf: string; period: 'all_time';
+  organizationId: string; universityName: string; asOf: string; period: 'all_time';
   tasks: number; applications: number; acceptedWorks: number;
   byState: Record<'tasks' | 'applications' | 'works', { state: string; count: number }[]>;
   limitations: string[];
@@ -31,7 +31,7 @@ export default function ReportView() {
     if (!session.current) { setReport(null); setError('Войдите в аккаунт сотрудника карьерного центра своего вуза.'); setBusy(false); return; }
     try {
       const data = await accountApi<Report>('/career/center/report', session.current, next.signal);
-      if (data.period !== 'all_time' || !data.universityId || !data.byState ||
+      if (data.period !== 'all_time' || !data.organizationId || !data.byState ||
         ![data.tasks, data.applications, data.acceptedWorks].every(value => Number.isSafeInteger(value) && value >= 0)) throw new Error('Не удалось проверить отчёт сервера.');
       setReport(data);
     } catch (failure) { if (!next.signal.aborted) {
@@ -55,7 +55,7 @@ export default function ReportView() {
     const next = new AbortController(); controller.current = next;
     try {
       const response = await accountApi<Response>('/career/center/report.xlsx', session.current, next.signal, {}, 'response');
-      if (response.headers.get('X-NaPare-University-Id') !== report.universityId ||
+      if (response.headers.get('X-NaPare-University-Id') !== report.organizationId ||
         !response.headers.get('Content-Type')?.includes('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')) throw new Error('Формат или вуз отчёта изменился. Обновите сведения.');
       const blob = await response.blob(); next.signal.throwIfAborted();
       const stored = currentSession();

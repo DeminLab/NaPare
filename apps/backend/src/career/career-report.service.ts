@@ -6,7 +6,7 @@ import { CareerService } from './career.service';
 
 type StateCount = { state: string; count: number };
 export interface CareerUniversityReport {
-  universityId: string;
+  organizationId: string;
   universityName: string;
   asOf: string;
   period: 'all_time';
@@ -27,25 +27,25 @@ export class CareerReportService {
   constructor(private readonly db: DataSource, private readonly career: CareerService) {}
 
   async snapshot(actor: AuthenticatedUser): Promise<CareerUniversityReport> {
-    const universityId = await this.career.assertCenterAccess(actor);
+    const organizationId = await this.career.assertCenterAccess(actor);
     return this.db.transaction('REPEATABLE READ', async manager => {
       await manager.query('SET TRANSACTION READ ONLY');
-      const [university] = await manager.query('SELECT name FROM universities WHERE id=$1', [universityId]);
+      const [university] = await manager.query('SELECT name FROM universities WHERE id=$1', [organizationId]);
       if (!university) throw new NotFoundException('Вуз не найден');
       const [time] = await manager.query('SELECT transaction_timestamp() AS at');
       const query = async (sql: string): Promise<StateCount[]> => {
-        const rows: { state: string; count: string }[] = await manager.query(sql, [universityId]);
+        const rows: { state: string; count: string }[] = await manager.query(sql, [organizationId]);
         return rows.map(row => {
           const count = Number(row.count);
           if (!Number.isSafeInteger(count) || count < 0) throw new Error('Report count exceeds safe integer range');
           return { state: row.state, count };
         });
       };
-      const tasks = await query('SELECT state, count(*)::text AS count FROM career_task WHERE "universityId"=$1 GROUP BY state ORDER BY state');
-      const applications = await query('SELECT application.state, count(*)::text AS count FROM career_application application JOIN career_task task ON task.id=application."taskId" WHERE task."universityId"=$1 GROUP BY application.state ORDER BY application.state');
-      const works = await query('SELECT work.state, count(*)::text AS count FROM career_work work JOIN career_task task ON task.id=work."taskId" WHERE task."universityId"=$1 GROUP BY work.state ORDER BY work.state');
+      const tasks = await query('SELECT state, count(*)::text AS count FROM career_task WHERE "organizationId"=$1 GROUP BY state ORDER BY state');
+      const applications = await query('SELECT application.state, count(*)::text AS count FROM career_application application JOIN career_task task ON task.id=application."taskId" WHERE task."organizationId"=$1 GROUP BY application.state ORDER BY application.state');
+      const works = await query('SELECT work.state, count(*)::text AS count FROM career_work work JOIN career_task task ON task.id=work."taskId" WHERE task."organizationId"=$1 GROUP BY work.state ORDER BY work.state');
       const total = (rows: StateCount[]) => rows.reduce((sum, row) => sum + row.count, 0);
-      return { universityId, universityName: university.name, asOf: new Date(time.at).toISOString(), period: 'all_time',
+      return { organizationId, universityName: university.name, asOf: new Date(time.at).toISOString(), period: 'all_time',
         tasks: total(tasks), applications: total(applications), acceptedWorks: works.find(row => row.state === 'accepted')?.count || 0,
         byState: { tasks, applications, works }, limitations: [...LIMITATIONS] };
     });
@@ -57,7 +57,7 @@ export class CareerReportService {
     const summary = workbook.addWorksheet('Сводка', { views: [{ state: 'frozen', ySplit: 1 }] });
     summary.columns = [{ header: 'Показатель', key: 'name', width: 34 }, { header: 'Значение', key: 'value', width: 72 }];
     summary.addRows([
-      { name: 'Вуз', value: report.universityName }, { name: 'Код вуза', value: report.universityId },
+      { name: 'Вуз', value: report.universityName }, { name: 'Код вуза', value: report.organizationId },
       { name: 'Снимок UTC', value: report.asOf }, { name: 'Период', value: 'За всё время' },
       { name: 'Задачи', value: report.tasks }, { name: 'Отклики', value: report.applications }, { name: 'Принятые работы', value: report.acceptedWorks },
       ...report.limitations.map(value => ({ name: 'Ограничение', value })),

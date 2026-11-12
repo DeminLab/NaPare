@@ -18,7 +18,7 @@ type AbsenceSearchRow = {
   studentId: string;
   studentName: string;
   studentEmail: string;
-  universityId: string;
+  organizationId: string;
   universityName: string;
   type: string;
   startDate: Date;
@@ -37,7 +37,7 @@ type AttendanceSearchRow = {
   studentId: string;
   studentName: string;
   studentEmail: string;
-  universityId: string;
+  organizationId: string;
   universityName: string;
   lessonId: string;
   lessonSubject: string;
@@ -53,7 +53,7 @@ type AbsenceConfirmationSearchRow = {
   studentId: string;
   studentName: string;
   studentEmail: string;
-  universityId: string;
+  organizationId: string;
   universityName: string;
   curatorId: string;
   curatorName: string | null;
@@ -75,16 +75,16 @@ export class PlatformDataService {
 
   async absences(query: PlatformAbsenceQueryDto, context: RequestAuditContext = {}) {
     const access = await this.platform.require('student-data.read');
-    if (query.universityId) this.platform.assertUniversityScope(access, query.universityId);
+    if (query.organizationId) this.platform.assertUniversityScope(access, query.organizationId);
     this.assertQueryDateRange(query.startDate, query.endDate);
     const qb = this.db.getRepository(Absence).createQueryBuilder('a')
-      .innerJoin(User, 'student', 'student.id = a.studentId AND student.universityId = a.universityId AND student.role = :studentRole', { studentRole: UserRole.STUDENT })
-      .innerJoin(University, 'university', 'university.id = a.universityId')
+      .innerJoin(User, 'student', 'student.id = a.studentId AND student.organizationId = a.organizationId AND student.role = :studentRole', { studentRole: UserRole.STUDENT })
+      .innerJoin(University, 'university', 'university.id = a.organizationId')
       .select('a.id', 'id')
       .addSelect('a.studentId', 'studentId')
       .addSelect("concat_ws(' ', student.firstName, student.lastName)", 'studentName')
       .addSelect('student.email', 'studentEmail')
-      .addSelect('a.universityId', 'universityId')
+      .addSelect('a.organizationId', 'organizationId')
       .addSelect('university.name', 'universityName')
       .addSelect('a.type', 'type')
       .addSelect('a.startDate', 'startDate')
@@ -97,8 +97,8 @@ export class PlatformDataService {
       .addSelect('a.syncStatus', 'syncStatus')
       .addSelect('a.createdAt', 'createdAt');
 
-    if (query.universityId) qb.andWhere('a.universityId = :universityId', { universityId: query.universityId });
-    this.applyUniversityScope(qb, access, 'a.universityId');
+    if (query.organizationId) qb.andWhere('a.organizationId = :organizationId', { organizationId: query.organizationId });
+    this.applyUniversityScope(qb, access, 'a.organizationId');
     if (query.type) qb.andWhere('a.type = :type', { type: query.type });
     if (query.confirmationRequired !== undefined) qb.andWhere('a.confirmationRequired = :confirmationRequired', { confirmationRequired: query.confirmationRequired });
     if (query.startDate) qb.andWhere('a.startDate >= :startDate', { startDate: new Date(query.startDate) });
@@ -112,17 +112,17 @@ export class PlatformDataService {
 
   async attendance(query: PlatformAttendanceQueryDto, context: RequestAuditContext = {}) {
     const access = await this.platform.require('student-data.read');
-    if (query.universityId) this.platform.assertUniversityScope(access, query.universityId);
+    if (query.organizationId) this.platform.assertUniversityScope(access, query.organizationId);
     this.assertQueryDateRange(query.startDate, query.endDate);
     const qb = this.db.getRepository(AttendanceRecord).createQueryBuilder('record')
-      .innerJoin(User, 'student', 'student.id = record.studentId AND student.universityId = record.universityId AND student.role = :studentRole', { studentRole: UserRole.STUDENT })
-      .innerJoin(Lesson, 'lesson', 'lesson.id = record.lessonId AND lesson.universityId = record.universityId')
-      .innerJoin(University, 'university', 'university.id = record.universityId')
+      .innerJoin(User, 'student', 'student.id = record.studentId AND student.organizationId = record.organizationId AND student.role = :studentRole', { studentRole: UserRole.STUDENT })
+      .innerJoin(Lesson, 'lesson', 'lesson.id = record.lessonId AND lesson.organizationId = record.organizationId')
+      .innerJoin(University, 'university', 'university.id = record.organizationId')
       .select('record.id', 'id')
       .addSelect('record.studentId', 'studentId')
       .addSelect("concat_ws(' ', student.firstName, student.lastName)", 'studentName')
       .addSelect('student.email', 'studentEmail')
-      .addSelect('record.universityId', 'universityId')
+      .addSelect('record.organizationId', 'organizationId')
       .addSelect('university.name', 'universityName')
       .addSelect('record.lessonId', 'lessonId')
       .addSelect('lesson.subject', 'lessonSubject')
@@ -132,8 +132,8 @@ export class PlatformDataService {
       .addSelect('record.markedById', 'markedById')
       .addSelect('record.updatedAt', 'updatedAt');
 
-    if (query.universityId) qb.andWhere('record.universityId = :universityId', { universityId: query.universityId });
-    this.applyUniversityScope(qb, access, 'record.universityId');
+    if (query.organizationId) qb.andWhere('record.organizationId = :organizationId', { organizationId: query.organizationId });
+    this.applyUniversityScope(qb, access, 'record.organizationId');
     if (query.status) qb.andWhere('record.status = :status', { status: query.status });
     if (query.startDate) qb.andWhere('lesson.startDate >= :startDate', { startDate: new Date(query.startDate) });
     if (query.endDate) qb.andWhere('lesson.startDate <= :endDate', { endDate: new Date(query.endDate) });
@@ -146,10 +146,10 @@ export class PlatformDataService {
 
   async absenceConfirmations(query: PlatformAbsenceConfirmationQueryDto, context: RequestAuditContext = {}) {
     const access = await this.platform.require('student-data.read');
-    if (query.universityId) this.platform.assertUniversityScope(access, query.universityId);
+    if (query.organizationId) this.platform.assertUniversityScope(access, query.organizationId);
     const qb = this.absenceConfirmationQuery();
-    if (query.universityId) qb.andWhere('absence.universityId = :universityId', { universityId: query.universityId });
-    this.applyUniversityScope(qb, access, 'absence.universityId');
+    if (query.organizationId) qb.andWhere('absence.organizationId = :organizationId', { organizationId: query.organizationId });
+    this.applyUniversityScope(qb, access, 'absence.organizationId');
     if (query.status) qb.andWhere('confirmation.status = :status', { status: query.status });
     if (query.q?.trim()) {
       const pattern = `%${query.q.trim().replace(/[\\%_]/g, '\\$&')}%`;
@@ -168,13 +168,13 @@ export class PlatformDataService {
       const confirmation = await manager.findOne(AbsenceConfirmation, { where: { id } });
       if (!confirmation) throw new NotFoundException('Решение по отсутствию не найдено.');
       const related = await this.assertAbsenceConfirmationContext(manager, confirmation);
-      this.platform.assertUniversityScope(access, related.absence.universityId);
+      this.platform.assertUniversityScope(access, related.absence.organizationId);
       await manager.save(AuditLog, manager.create(AuditLog, {
         userId: access.actorId,
         action: 'platform.absence_confirmation.viewed',
         entity: 'absence_confirmation',
         entityId: id,
-        newValues: { targetUserId: related.absence.studentId, universityId: related.absence.universityId, absenceId: confirmation.absenceId, curatorId: confirmation.curatorId, result: 'viewed' },
+        newValues: { targetUserId: related.absence.studentId, organizationId: related.absence.organizationId, absenceId: confirmation.absenceId, curatorId: confirmation.curatorId, result: 'viewed' },
         ip: context.ip,
         userAgent: context.userAgent?.slice(0, 512),
       }));
@@ -183,7 +183,7 @@ export class PlatformDataService {
         studentId: related.absence.studentId,
         studentName: `${related.student.firstName} ${related.student.lastName}`.trim(),
         studentEmail: related.student.email,
-        universityId: related.absence.universityId,
+        organizationId: related.absence.organizationId,
         universityName: related.university.name,
         curatorName: related.curator ? `${related.curator.firstName} ${related.curator.lastName}`.trim() : null,
         curatorEmail: related.curator?.email ?? null,
@@ -199,7 +199,7 @@ export class PlatformDataService {
       const confirmation = await manager.findOne(AbsenceConfirmation, { where: { id }, lock: { mode: 'pessimistic_write' } });
       if (!confirmation) throw new NotFoundException('Решение по отсутствию не найдено.');
       const related = await this.assertAbsenceConfirmationContext(manager, confirmation);
-      this.platform.assertUniversityScope(access, related.absence.universityId);
+      this.platform.assertUniversityScope(access, related.absence.organizationId);
       const oldValues: JsonObject = { status: confirmation.status, comment: confirmation.comment ?? null, confirmedAt: confirmation.confirmedAt?.toISOString() ?? null };
       const previousStatus = confirmation.status;
       if (dto.status !== undefined) confirmation.status = dto.status;
@@ -220,11 +220,11 @@ export class PlatformDataService {
         entity: 'absence_confirmation',
         entityId: id,
         oldValues,
-        newValues: { ...newValues, targetUserId: related.absence.studentId, universityId: related.absence.universityId, absenceId: confirmation.absenceId, curatorId: confirmation.curatorId, reason: dto.reason.trim(), result: 'corrected' },
+        newValues: { ...newValues, targetUserId: related.absence.studentId, organizationId: related.absence.organizationId, absenceId: confirmation.absenceId, curatorId: confirmation.curatorId, reason: dto.reason.trim(), result: 'corrected' },
         ip: context.ip,
         userAgent: context.userAgent?.slice(0, 512),
       }));
-      return { ...updated, studentId: related.absence.studentId, universityId: related.absence.universityId };
+      return { ...updated, studentId: related.absence.studentId, organizationId: related.absence.organizationId };
     });
   }
 
@@ -237,8 +237,8 @@ export class PlatformDataService {
     return this.db.transaction(async manager => {
       const absence = await manager.findOne(Absence, { where: { id }, lock: { mode: 'pessimistic_write' } });
       if (!absence) throw new NotFoundException('Запись отсутствия не найдена.');
-      this.platform.assertUniversityScope(access, absence.universityId);
-      const student = await this.assertStudentReference(manager, absence.studentId, absence.universityId);
+      this.platform.assertUniversityScope(access, absence.organizationId);
+      const student = await this.assertStudentReference(manager, absence.studentId, absence.organizationId);
       await this.assertAbsenceLessonReferences(manager, absence);
 
       const previous = this.snapshot(absence, changes);
@@ -253,7 +253,7 @@ export class PlatformDataService {
         entity: 'absence',
         entityId: id,
         oldValues: previous,
-        newValues: { ...this.snapshot(updated, patch), targetUserId: updated.studentId, universityId: updated.universityId, reason: dto.reason.trim() },
+        newValues: { ...this.snapshot(updated, patch), targetUserId: updated.studentId, organizationId: updated.organizationId, reason: dto.reason.trim() },
         ip: context.ip,
         userAgent: context.userAgent?.slice(0, 512),
       }));
@@ -274,11 +274,11 @@ export class PlatformDataService {
     return this.db.transaction(async manager => {
       const record = await manager.findOne(AttendanceRecord, { where: { id }, lock: { mode: 'pessimistic_write' } });
       if (!record) throw new NotFoundException('Запись посещаемости не найдена.');
-      this.platform.assertUniversityScope(access, record.universityId);
-      const student = await this.assertStudentReference(manager, record.studentId, record.universityId);
-      const lesson = await manager.findOne(Lesson, { where: { id: record.lessonId, universityId: record.universityId } });
+      this.platform.assertUniversityScope(access, record.organizationId);
+      const student = await this.assertStudentReference(manager, record.studentId, record.organizationId);
+      const lesson = await manager.findOne(Lesson, { where: { id: record.lessonId, organizationId: record.organizationId } });
       if (!lesson) throw new BadRequestException('Занятие не принадлежит вузу записи посещаемости.');
-      await manager.findOneOrFail(University, { where: { id: record.universityId } }).catch(() => {
+      await manager.findOneOrFail(University, { where: { id: record.organizationId } }).catch(() => {
         throw new BadRequestException('Университет записи посещаемости не найден.');
       });
       const previous = this.snapshot(record, changes);
@@ -291,7 +291,7 @@ export class PlatformDataService {
         entity: 'attendance_record',
         entityId: id,
         oldValues: previous,
-        newValues: { ...this.snapshot(updated, patch), targetUserId: updated.studentId, universityId: updated.universityId, reason: dto.reason.trim() },
+        newValues: { ...this.snapshot(updated, patch), targetUserId: updated.studentId, organizationId: updated.organizationId, reason: dto.reason.trim() },
         ip: context.ip,
         userAgent: context.userAgent?.slice(0, 512),
       }));
@@ -299,29 +299,29 @@ export class PlatformDataService {
     });
   }
 
-  private async assertStudentReference(manager: EntityManager, studentId: string, universityId: string): Promise<User> {
-    const university = await manager.findOne(University, { where: { id: universityId } });
+  private async assertStudentReference(manager: EntityManager, studentId: string, organizationId: string): Promise<User> {
+    const university = await manager.findOne(University, { where: { id: organizationId } });
     if (!university) throw new BadRequestException('Университет записи не найден.');
-    const student = await manager.findOne(User, { where: { id: studentId, universityId, role: UserRole.STUDENT } });
+    const student = await manager.findOne(User, { where: { id: studentId, organizationId, role: UserRole.STUDENT } });
     if (!student) throw new BadRequestException('Студент записи не принадлежит указанному вузу.');
     return student;
   }
 
   private applyUniversityScope<T extends ObjectLiteral>(qb: SelectQueryBuilder<T>, access: Awaited<ReturnType<PlatformService['access']>>, column: string) {
-    if (access.owner || access.universityIds === null) return;
-    if (!access.universityIds.length) qb.andWhere('1 = 0');
-    else qb.andWhere(`${column} IN (:...allowedUniversityIds)`, { allowedUniversityIds: access.universityIds });
+    if (access.owner || access.organizationIds === null) return;
+    if (!access.organizationIds.length) qb.andWhere('1 = 0');
+    else qb.andWhere(`${column} IN (:...allowedOrganizationIds)`, { allowedOrganizationIds: access.organizationIds });
   }
 
   private absenceConfirmationQuery(): SelectQueryBuilder<AbsenceConfirmation> {
     return this.db.getRepository(AbsenceConfirmation).createQueryBuilder('confirmation')
       .innerJoin(Absence, 'absence', 'absence.id = confirmation.absenceId')
       .innerJoin(User, 'student', 'student.id = absence.studentId')
-      .innerJoin(University, 'university', 'university.id = absence.universityId')
+      .innerJoin(University, 'university', 'university.id = absence.organizationId')
       .leftJoin(User, 'curator', 'curator.id = confirmation.curatorId')
       .select('confirmation.id', 'id').addSelect('confirmation.absenceId', 'absenceId')
       .addSelect('absence.studentId', 'studentId').addSelect("concat_ws(' ', student.firstName, student.lastName)", 'studentName')
-      .addSelect('student.email', 'studentEmail').addSelect('absence.universityId', 'universityId')
+      .addSelect('student.email', 'studentEmail').addSelect('absence.organizationId', 'organizationId')
       .addSelect('university.name', 'universityName')
       .addSelect('confirmation.curatorId', 'curatorId').addSelect("concat_ws(' ', curator.firstName, curator.lastName)", 'curatorName')
       .addSelect('curator.email', 'curatorEmail').addSelect('confirmation.status', 'status')
@@ -334,21 +334,21 @@ export class PlatformDataService {
     if (!absence) throw new BadRequestException('Решение не связано с существующим отсутствием.');
     const [student, university, curator] = await Promise.all([
       manager.findOne(User, { where: { id: absence.studentId }, select: ['id', 'firstName', 'lastName', 'email'] }),
-      manager.findOne(University, { where: { id: absence.universityId }, select: ['id', 'name'] }),
+      manager.findOne(University, { where: { id: absence.organizationId }, select: ['id', 'name'] }),
       manager.findOne(User, { where: { id: confirmation.curatorId }, select: ['id', 'firstName', 'lastName', 'email'] }),
     ]);
     if (!student || !university) throw new BadRequestException('Решение связано с отсутствующим студентом или университетом.');
     return { absence, student, university, curator };
   }
 
-  private async auditSearch(actorId: string, entity: string, query: PlatformAbsenceQueryDto | PlatformAttendanceQueryDto | PlatformAbsenceConfirmationQueryDto, total: number, records: Array<{ id: string; studentId: string; universityId: string }>, context: RequestAuditContext): Promise<void> {
+  private async auditSearch(actorId: string, entity: string, query: PlatformAbsenceQueryDto | PlatformAttendanceQueryDto | PlatformAbsenceConfirmationQueryDto, total: number, records: Array<{ id: string; studentId: string; organizationId: string }>, context: RequestAuditContext): Promise<void> {
     await this.db.getRepository(AuditLog).save({
       userId: actorId,
       action: `platform.student_data.${entity}`,
       entity,
       entityId: 'search',
       newValues: {
-        universityId: query.universityId ?? null,
+        organizationId: query.organizationId ?? null,
         filters: {
           queryPresent: Boolean(query.q?.trim()),
           status: 'status' in query ? query.status ?? null : null,
@@ -363,7 +363,7 @@ export class PlatformDataService {
         resultCount: records.length,
         recordIds: records.map(record => record.id),
         targetUserIds: [...new Set(records.map(record => record.studentId))],
-        universityIds: [...new Set(records.map(record => record.universityId))],
+        organizationIds: [...new Set(records.map(record => record.organizationId))],
       },
       ip: context.ip,
       userAgent: context.userAgent?.slice(0, 512),
@@ -375,7 +375,7 @@ export class PlatformDataService {
     if (!ids.length) return;
     const lessons = await manager.getRepository(Lesson).createQueryBuilder('lesson')
       .select('lesson.id', 'id')
-      .where('lesson.id IN (:...ids) AND lesson.universityId = :universityId', { ids, universityId: absence.universityId })
+      .where('lesson.id IN (:...ids) AND lesson.organizationId = :organizationId', { ids, organizationId: absence.organizationId })
       .getRawMany<{ id: string }>();
     if (lessons.length !== new Set(ids).size) throw new BadRequestException('Связанные занятия отсутствия не принадлежат указанному вузу или недоступны.');
   }
@@ -453,7 +453,7 @@ export class PlatformDataService {
   private absenceSnapshot(absence: Absence) {
     return {
       id: absence.id,
-      universityId: absence.universityId,
+      organizationId: absence.organizationId,
       studentId: absence.studentId,
       type: absence.type,
       startDate: absence.startDate,
@@ -474,7 +474,7 @@ export class PlatformDataService {
       studentId: record.studentId,
       studentName: `${student.firstName} ${student.lastName}`.trim(),
       studentEmail: student.email,
-      universityId: record.universityId,
+      organizationId: record.organizationId,
       lessonId: record.lessonId,
       lessonSubject: lesson.subject,
       lessonStartDate: lesson.startDate,

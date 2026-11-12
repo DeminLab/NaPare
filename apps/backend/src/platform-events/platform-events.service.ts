@@ -40,7 +40,7 @@ export class PlatformEventsService {
     }
 
     const qb = this.events.createQueryBuilder('event')
-      .innerJoin(University, 'university', 'university.id = event.universityId')
+      .innerJoin(University, 'university', 'university.id = event.organizationId')
       .addSelect('university.name', 'event_university_name');
     this.applyFilters(qb, query, access);
     const total = await qb.clone().getCount();
@@ -72,8 +72,8 @@ export class PlatformEventsService {
     const access = await this.platform.require('events-data.read');
     const event = await this.events.findOneBy({ id });
     if (!event) throw new NotFoundException('Событие не найдено.');
-    this.platform.assertUniversityScope(access, event.universityId);
-    const university = await this.universities.findOne({ where: { id: event.universityId }, select: ['id', 'name'] });
+    this.platform.assertUniversityScope(access, event.organizationId);
+    const university = await this.universities.findOne({ where: { id: event.organizationId }, select: ['id', 'name'] });
     if (!university) throw new NotFoundException('Университет события не найден.');
     const safeEvent = this.toSafeEvent(event, university?.name);
     await this.audits.save({
@@ -84,7 +84,7 @@ export class PlatformEventsService {
       newValues: {
         actorId: access.actorId,
         eventId: id,
-        universityId: event.universityId,
+        organizationId: event.organizationId,
         targetType: safeEvent.targetType,
         targetId: safeEvent.targetId,
         result: 'read',
@@ -95,15 +95,15 @@ export class PlatformEventsService {
   }
 
   private applyFilters(qb: ReturnType<Repository<EventRecord>['createQueryBuilder']>, query: PlatformEventsQueryDto, access: Awaited<ReturnType<PlatformService['access']>>) {
-    if (query.universityId) {
-      if (access.owner || access.universityIds === null || access.universityIds.length > 0) {
-        this.platform.assertUniversityScope(access, query.universityId);
+    if (query.organizationId) {
+      if (access.owner || access.organizationIds === null || access.organizationIds.length > 0) {
+        this.platform.assertUniversityScope(access, query.organizationId);
       }
-      qb.andWhere('event.universityId = :universityId', { universityId: query.universityId });
+      qb.andWhere('event.organizationId = :organizationId', { organizationId: query.organizationId });
     }
-    if (!access.owner && access.universityIds !== null) {
-      if (!access.universityIds.length) qb.andWhere('1 = 0');
-      else qb.andWhere('event.universityId IN (:...allowedUniversityIds)', { allowedUniversityIds: access.universityIds });
+    if (!access.owner && access.organizationIds !== null) {
+      if (!access.organizationIds.length) qb.andWhere('1 = 0');
+      else qb.andWhere('event.organizationId IN (:...allowedOrganizationIds)', { allowedOrganizationIds: access.organizationIds });
     }
     if (query.type?.trim()) qb.andWhere('event.type = :type', { type: query.type.trim() });
     if (query.from) qb.andWhere('event.timestamp >= :from', { from: new Date(query.from) });
@@ -112,7 +112,7 @@ export class PlatformEventsService {
     if (query.q?.trim()) {
       const pattern = `%${query.q.trim().replace(/[\\%_]/g, '\\$&')}%`;
       const allowlistedPayloadSearch = PAYLOAD_FIELDS.map(field => `COALESCE(event.payload ->> '${field}', '') ILIKE :q ESCAPE E'\\\\'`).join(' OR ');
-      qb.andWhere(`(event.type ILIKE :q ESCAPE E'\\\\' OR event."universityId"::text ILIKE :q ESCAPE E'\\\\' OR university.name ILIKE :q ESCAPE E'\\\\' OR event.target ->> 'type' ILIKE :q ESCAPE E'\\\\' OR event.target ->> 'id' ILIKE :q ESCAPE E'\\\\' OR ${allowlistedPayloadSearch})`, { q: pattern });
+      qb.andWhere(`(event.type ILIKE :q ESCAPE E'\\\\' OR event."organizationId"::text ILIKE :q ESCAPE E'\\\\' OR university.name ILIKE :q ESCAPE E'\\\\' OR event.target ->> 'type' ILIKE :q ESCAPE E'\\\\' OR event.target ->> 'id' ILIKE :q ESCAPE E'\\\\' OR ${allowlistedPayloadSearch})`, { q: pattern });
     }
   }
 
@@ -124,7 +124,7 @@ export class PlatformEventsService {
       id: event.id,
       type: safeString(event.type, 100),
       timestamp: event.timestamp instanceof Date ? event.timestamp.toISOString() : String(event.timestamp),
-      universityId: event.universityId,
+      organizationId: event.organizationId,
       universityName: safeString(universityName, 200),
       actorId: safeString(actor.id, 128),
       actorType: safeString(actor.type, 40),
@@ -139,7 +139,7 @@ export class PlatformEventsService {
 
   private auditFilters(query: PlatformEventsQueryDto): JsonObject {
     return {
-      universityId: query.universityId ?? null,
+      organizationId: query.organizationId ?? null,
       type: query.type?.trim() || null,
       from: query.from ?? null,
       to: query.to ?? null,

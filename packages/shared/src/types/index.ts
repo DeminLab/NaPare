@@ -15,7 +15,7 @@ export interface User {
   phone?: string;
   avatarUrl?: string;
   roles: Role[];
-  universityId: string;
+  organizationId: string;
   groupId?: string;
   passwordHash?: string;
   isActive: boolean;
@@ -31,7 +31,7 @@ export interface UserWithUniversity extends User {
 
 export interface Lesson {
   id: string;
-  universityId: string;
+  organizationId: string;
   groupId: string;
   teacherId?: string;
   subject: string;
@@ -70,7 +70,7 @@ export interface LessonWithDetails extends Lesson {
 
 export interface PairSpace {
   id: string;
-  universityId: string;
+  organizationId: string;
   lessonId: string;
   subject: string;
   date: Date;
@@ -131,7 +131,7 @@ export interface HomeworkWithDetails extends Homework {
 
 export interface Absence {
   id: string;
-  universityId: string;
+  organizationId: string;
   studentId: string;
   type: AbsenceType;
   startDate: Date;
@@ -166,7 +166,7 @@ export interface AbsenceDashboard {
 export interface Notification {
   id: string;
   userId: string;
-  universityId: string;
+  organizationId: string;
   type: NotificationType;
   title: string;
   body: string;

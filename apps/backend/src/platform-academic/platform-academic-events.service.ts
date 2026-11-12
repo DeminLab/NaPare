@@ -12,7 +12,7 @@ import { PlatformAcademicEventPatchDto, PlatformAcademicEventReasonDto, Platform
 
 type RequestAudit = { ip?: string; userAgent?: string };
 type EventRead = { event: AcademicEvent; universityName: string | null; courseName: string | null; groupName: string | null; actorName: string | null };
-const columns = ['event.id', 'event.universityId', 'event.type', 'event.courseId', 'event.groupId', 'event.occurrenceId', 'event.actorId', 'event.title', 'event.description', 'event.startsAt', 'event.endsAt', 'event.priority', 'event.source', 'event.lastSyncedAt', 'event.sourceVersion', 'event.syncStatus', 'event.createdAt', 'event.hiddenAt', 'event.hiddenBy', 'event.hideReason'];
+const columns = ['event.id', 'event.organizationId', 'event.type', 'event.courseId', 'event.groupId', 'event.occurrenceId', 'event.actorId', 'event.title', 'event.description', 'event.startsAt', 'event.endsAt', 'event.priority', 'event.source', 'event.lastSyncedAt', 'event.sourceVersion', 'event.syncStatus', 'event.createdAt', 'event.hiddenAt', 'event.hiddenBy', 'event.hideReason'];
 
 @Injectable()
 export class PlatformAcademicEventsService {
@@ -30,19 +30,19 @@ export class PlatformAcademicEventsService {
     if (query.from && query.to && new Date(query.from) >= new Date(query.to)) throw new BadRequestException('Дата начала фильтра должна предшествовать дате окончания.');
     const qb = this.events.createQueryBuilder('event')
       .select(columns)
-      .leftJoin(University, 'university', 'university.id = event.universityId')
-      .leftJoin('academic_courses', 'course', 'course.id = event.courseId AND course."universityId" = event."universityId"')
-      .leftJoin('groups', 'grp', 'grp.id = event.groupId AND grp."universityId" = event."universityId"')
+      .leftJoin(University, 'university', 'university.id = event.organizationId')
+      .leftJoin('academic_courses', 'course', 'course.id = event.courseId AND course."organizationId" = event."organizationId"')
+      .leftJoin('groups', 'grp', 'grp.id = event.groupId AND grp."organizationId" = event."organizationId"')
       .addSelect('university.name', 'platform_university_name')
       .addSelect('course.name', 'platform_course_name')
       .addSelect('grp.name', 'platform_group_name');
-    if (query.universityId) {
-      this.platform.assertUniversityScope(access, query.universityId);
-      qb.andWhere('event.universityId = :universityId', { universityId: query.universityId });
+    if (query.organizationId) {
+      this.platform.assertUniversityScope(access, query.organizationId);
+      qb.andWhere('event.organizationId = :organizationId', { organizationId: query.organizationId });
     }
-    if (!access.owner && access.universityIds !== null) {
-      if (!access.universityIds.length) qb.andWhere('1 = 0');
-      else qb.andWhere('event.universityId IN (:...allowedUniversityIds)', { allowedUniversityIds: access.universityIds });
+    if (!access.owner && access.organizationIds !== null) {
+      if (!access.organizationIds.length) qb.andWhere('1 = 0');
+      else qb.andWhere('event.organizationId IN (:...allowedOrganizationIds)', { allowedOrganizationIds: access.organizationIds });
     }
     if (query.type) qb.andWhere('event.type = :type', { type: query.type });
     if (query.visibility === 'visible') qb.andWhere('event.hiddenAt IS NULL');
@@ -57,14 +57,14 @@ export class PlatformAcademicEventsService {
     const { entities, raw } = await qb.orderBy('event.startsAt', 'DESC', 'NULLS LAST').addOrderBy('event.createdAt', 'DESC')
       .skip((query.page - 1) * query.limit).take(query.limit).getRawAndEntities();
     const data = entities.map((event, index) => this.toListItem({ event, universityName: raw[index].platform_university_name, courseName: raw[index].platform_course_name, groupName: raw[index].platform_group_name, actorName: null }));
-    await this.audits.save({ userId: access.actorId, action: 'platform.academic_event.search', entity: 'academic_event_search', entityId: 'search', newValues: { queryEntered: Boolean(query.q?.trim()), universityId: query.universityId ?? null, type: query.type ?? null, visibility: query.visibility, from: query.from ?? null, to: query.to ?? null, page: query.page, limit: query.limit, resultCount: data.length, total, resultEventIds: data.map(item => item.id) }, ...this.auditContext(request) });
+    await this.audits.save({ userId: access.actorId, action: 'platform.academic_event.search', entity: 'academic_event_search', entityId: 'search', newValues: { queryEntered: Boolean(query.q?.trim()), organizationId: query.organizationId ?? null, type: query.type ?? null, visibility: query.visibility, from: query.from ?? null, to: query.to ?? null, page: query.page, limit: query.limit, resultCount: data.length, total, resultEventIds: data.map(item => item.id) }, ...this.auditContext(request) });
     return toPaginatedResponse(data, total, query);
   }
 
   async detail(id: string, request: RequestAudit = {}) {
     const access = await this.platform.require('academic-data.read');
     const context = await this.load(id);
-    this.platform.assertUniversityScope(access, context.event.universityId);
+    this.platform.assertUniversityScope(access, context.event.organizationId);
     const history = await this.audits.find({ where: { entity: 'academic_event', entityId: id, action: In(['platform.academic_event.updated', 'platform.academic_event.hidden', 'platform.academic_event.restored']) }, order: { createdAt: 'DESC' }, take: 20 });
     await this.audits.save({ userId: access.actorId, action: 'platform.academic_event.viewed', entity: 'academic_event', entityId: id, newValues: this.auditScope(context.event), ...this.auditContext(request) });
     return { ...this.toListItem(context), changes: history.map(item => ({ id: item.id, action: item.action, oldValues: item.oldValues, newValues: item.newValues, actorId: item.userId, timestamp: item.createdAt })) };
@@ -83,7 +83,7 @@ export class PlatformAcademicEventsService {
       const repo = manager.getRepository(AcademicEvent);
       const event = await repo.createQueryBuilder('event').setLock('pessimistic_write').where('event.id = :id', { id }).getOne();
       if (!event) throw new NotFoundException('Академическое событие не найдено.');
-      this.platform.assertUniversityScope(access, event.universityId);
+      this.platform.assertUniversityScope(access, event.organizationId);
       this.assertEditable(event);
       const oldValues = snapshot(event);
       for (const key of fields) if (dto[key] !== undefined) {
@@ -105,7 +105,7 @@ export class PlatformAcademicEventsService {
       const repo = manager.getRepository(AcademicEvent);
       const event = await repo.createQueryBuilder('event').setLock('pessimistic_write').where('event.id = :id', { id }).getOne();
       if (!event) throw new NotFoundException('Академическое событие не найдено.');
-      this.platform.assertUniversityScope(access, event.universityId);
+      this.platform.assertUniversityScope(access, event.organizationId);
       const alreadyHidden = Boolean(event.hiddenAt);
       if (alreadyHidden === hidden) throw new BadRequestException(hidden ? 'Событие уже скрыто.' : 'Событие уже доступно в академической ленте.');
       const oldValues = { hiddenAt: event.hiddenAt?.toISOString() ?? null, hiddenBy: event.hiddenBy, hideReason: event.hideReason };
@@ -113,17 +113,17 @@ export class PlatformAcademicEventsService {
       event.hiddenBy = hidden ? access.actorId : null;
       event.hideReason = hidden ? reason : null;
       const saved = await repo.save(event);
-      await manager.getRepository(AuditLog).save({ userId: access.actorId, action: hidden ? 'platform.academic_event.hidden' : 'platform.academic_event.restored', entity: 'academic_event', entityId: id, oldValues: { ...oldValues, universityId: event.universityId }, newValues: { hiddenAt: saved.hiddenAt?.toISOString() ?? null, hiddenBy: saved.hiddenBy, hideReason: saved.hideReason, universityId: event.universityId, reason }, ...this.auditContext(request) });
+      await manager.getRepository(AuditLog).save({ userId: access.actorId, action: hidden ? 'platform.academic_event.hidden' : 'platform.academic_event.restored', entity: 'academic_event', entityId: id, oldValues: { ...oldValues, organizationId: event.organizationId }, newValues: { hiddenAt: saved.hiddenAt?.toISOString() ?? null, hiddenBy: saved.hiddenBy, hideReason: saved.hideReason, organizationId: event.organizationId, reason }, ...this.auditContext(request) });
     });
     return this.detail(id, request);
   }
 
   private async load(id: string): Promise<EventRead> {
     const qb = this.events.createQueryBuilder('event').select(columns)
-      .leftJoin(University, 'university', 'university.id = event.universityId')
-      .leftJoin('academic_courses', 'course', 'course.id = event.courseId AND course."universityId" = event."universityId"')
-      .leftJoin('groups', 'grp', 'grp.id = event.groupId AND grp."universityId" = event."universityId"')
-      .leftJoin('users', 'actor', 'actor.id = event.actorId AND actor."universityId" = event."universityId"')
+      .leftJoin(University, 'university', 'university.id = event.organizationId')
+      .leftJoin('academic_courses', 'course', 'course.id = event.courseId AND course."organizationId" = event."organizationId"')
+      .leftJoin('groups', 'grp', 'grp.id = event.groupId AND grp."organizationId" = event."organizationId"')
+      .leftJoin('users', 'actor', 'actor.id = event.actorId AND actor."organizationId" = event."organizationId"')
       .addSelect('university.name', 'platform_university_name').addSelect('course.name', 'platform_course_name').addSelect('grp.name', 'platform_group_name')
       .addSelect("concat_ws(' ', actor.\"firstName\", actor.\"lastName\")", 'platform_actor_name').where('event.id = :id', { id });
     const { entities, raw } = await qb.getRawAndEntities();
@@ -134,7 +134,7 @@ export class PlatformAcademicEventsService {
 
   private toListItem(context: EventRead) {
     const { event } = context;
-    return { id: event.id, universityId: event.universityId, universityName: context.universityName, type: event.type, courseId: event.courseId, courseName: context.courseName, groupId: event.groupId, groupName: context.groupName, occurrenceId: event.occurrenceId, actorId: event.actorId, actorName: context.actorName, title: event.title, description: event.description, startsAt: event.startsAt?.toISOString() ?? null, endsAt: event.endsAt?.toISOString() ?? null, priority: event.priority, source: event.source, lastSyncedAt: event.lastSyncedAt?.toISOString() ?? null, sourceVersion: event.sourceVersion, syncStatus: event.syncStatus, createdAt: event.createdAt.toISOString(), hiddenAt: event.hiddenAt?.toISOString() ?? null, hiddenBy: event.hiddenBy, hideReason: event.hideReason };
+    return { id: event.id, organizationId: event.organizationId, universityName: context.universityName, type: event.type, courseId: event.courseId, courseName: context.courseName, groupId: event.groupId, groupName: context.groupName, occurrenceId: event.occurrenceId, actorId: event.actorId, actorName: context.actorName, title: event.title, description: event.description, startsAt: event.startsAt?.toISOString() ?? null, endsAt: event.endsAt?.toISOString() ?? null, priority: event.priority, source: event.source, lastSyncedAt: event.lastSyncedAt?.toISOString() ?? null, sourceVersion: event.sourceVersion, syncStatus: event.syncStatus, createdAt: event.createdAt.toISOString(), hiddenAt: event.hiddenAt?.toISOString() ?? null, hiddenBy: event.hiddenBy, hideReason: event.hideReason };
   }
 
   private assertEditable(event: AcademicEvent) {
@@ -149,7 +149,7 @@ export class PlatformAcademicEventsService {
     if (event.startsAt && event.endsAt && event.startsAt >= event.endsAt) throw new BadRequestException('Дата начала должна предшествовать дате окончания.');
   }
 
-  private auditScope(event: AcademicEvent) { return { universityId: event.universityId, courseId: event.courseId, groupId: event.groupId, occurrenceId: event.occurrenceId }; }
+  private auditScope(event: AcademicEvent) { return { organizationId: event.organizationId, courseId: event.courseId, groupId: event.groupId, occurrenceId: event.occurrenceId }; }
   private auditContext(context: RequestAudit) { return { ...(context.ip ? { ip: context.ip } : {}), ...(context.userAgent ? { userAgent: context.userAgent.slice(0, 512) } : {}) }; }
 }
 

@@ -7,7 +7,7 @@ export class PersonalLessonNote {
   id: string;
 
   @Column({ type: 'uuid' })
-  universityId: string;
+  organizationId: string;
 
   @Column({ type: 'uuid' })
   pairSpaceId: string;

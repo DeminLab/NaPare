@@ -207,7 +207,7 @@ export interface Me {
   firstName: string;
   lastName: string;
   roles: string[];
-  universityId?: string;
+  organizationId?: string;
 }
 
 /** Last known profile so the workspace shell can paint before the network answers. */

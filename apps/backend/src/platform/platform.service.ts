@@ -22,7 +22,7 @@ import { TelemetryService } from '../telemetry/telemetry.service';
 
 type AgentJob = { id: string; service: string; action: string; status: string; actorId: string; createdAt: string; log?: string };
 type PlatformAuditContext = { ip?: string; userAgent?: string };
-const safeAccount = ({ id, email, firstName, lastName, role, universityId, groupId, isActive, lastLoginAt }: User) => ({ id, email, firstName, lastName, role, universityId, groupId, isActive, lastLoginAt });
+const safeAccount = ({ id, email, firstName, lastName, role, organizationId, groupId, isActive, lastLoginAt }: User) => ({ id, email, firstName, lastName, role, organizationId, groupId, isActive, lastLoginAt });
 
 @Injectable()
 export class PlatformService {
@@ -41,23 +41,23 @@ export class PlatformService {
       'analytics.read', 'telemetry.read',
     ].some(permission => permissions.has(permission))) permissions.add('universities.read');
     if (permissions.has('identity-links.write')) permissions.add('identity-links.read');
-    return { owner, ownerConfigured: !!control, permissions: [...permissions], serviceIds: owner ? [...SERVICE_IDS] : grant?.serviceIds ?? [], universityIds: owner ? null : grant?.universityIds ?? null, agentConfigured: this.agent.configured(), actorId: actor.id };
+    return { owner, ownerConfigured: !!control, permissions: [...permissions], serviceIds: owner ? [...SERVICE_IDS] : grant?.serviceIds ?? [], organizationIds: owner ? null : grant?.organizationIds ?? null, agentConfigured: this.agent.configured(), actorId: actor.id };
   }
   async require(permission: PlatformPermission, service?: string) {
     const access = await this.access();
     if (!access.permissions.includes(permission) || (service && !access.serviceIds.includes(service))) throw new ForbiddenException('Это действие не разрешено владельцем платформы.');
-    for (const grant of platformDatabaseGrants(permission, access.universityIds)) this.tenant.authorizeDatabaseAccess(grant);
+    for (const grant of platformDatabaseGrants(permission, access.organizationIds)) this.tenant.authorizeDatabaseAccess(grant);
     return access;
   }
   async requireOwner() {
     const access = await this.access();
     if (!access.owner) throw new ForbiddenException('Управление разрешениями доступно только владельцу.');
-    this.tenant.authorizeDatabaseAccess({ tables: PLATFORM_TENANT_TABLES, universityIds: null, write: true, replaceActor: true });
+    this.tenant.authorizeDatabaseAccess({ tables: PLATFORM_TENANT_TABLES, organizationIds: null, write: true, replaceActor: true });
     return access;
   }
-  assertUniversityScope(access: Awaited<ReturnType<PlatformService['access']>>, universityId: string | null | undefined) {
-    if (access.owner || access.universityIds === null) return;
-    if (!universityId || !access.universityIds.includes(universityId)) throw new ForbiddenException('У этого разрешения нет доступа к выбранному университету.');
+  assertUniversityScope(access: Awaited<ReturnType<PlatformService['access']>>, organizationId: string | null | undefined) {
+    if (access.owner || access.organizationIds === null) return;
+    if (!organizationId || !access.organizationIds.includes(organizationId)) throw new ForbiddenException('У этого разрешения нет доступа к выбранному университету.');
   }
   async protectOwner(id: string) {
     const control = await this.db.getRepository(PlatformControl).findOneBy({ id: 'platform' });
@@ -76,47 +76,47 @@ export class PlatformService {
     const access = await this.require('accounts.read');
     const qb = this.db.getRepository(User).createQueryBuilder('u');
     if (query.q) qb.andWhere("concat_ws(' ', u.email, u.firstName, u.lastName, u.phone, u.groupId, u.id) ILIKE :q", { q: `%${query.q}%` });
-    if (query.universityId) { this.assertUniversityScope(access, query.universityId); qb.andWhere('u.universityId = :universityId', { universityId: query.universityId }); }
-    if (!access.owner && access.universityIds !== null) {
-      if (!access.universityIds.length) qb.andWhere('1 = 0');
-      else qb.andWhere('u.universityId IN (:...allowedUniversityIds)', { allowedUniversityIds: access.universityIds });
+    if (query.organizationId) { this.assertUniversityScope(access, query.organizationId); qb.andWhere('u.organizationId = :organizationId', { organizationId: query.organizationId }); }
+    if (!access.owner && access.organizationIds !== null) {
+      if (!access.organizationIds.length) qb.andWhere('1 = 0');
+      else qb.andWhere('u.organizationId IN (:...allowedOrganizationIds)', { allowedOrganizationIds: access.organizationIds });
     }
     const [data, total] = await qb.orderBy('u.createdAt', 'DESC').addOrderBy('u.id', 'ASC').skip((query.page - 1) * query.limit).take(query.limit).getManyAndCount();
     const control = await this.db.getRepository(PlatformControl).findOneBy({ id: 'platform' });
-    await this.db.getRepository(AuditLog).save({ userId: access.actorId, action: 'platform.account.search', entity: 'platform', entityId: 'accounts', newValues: { queryEntered: Boolean(query.q?.trim()), universityId: query.universityId ?? null, page: query.page, limit: query.limit, resultCount: data.length, total, resultUserIds: data.map(user => user.id) }, ...(auditContext.ip ? { ip: auditContext.ip } : {}), ...(auditContext.userAgent ? { userAgent: auditContext.userAgent.slice(0, 512) } : {}) });
+    await this.db.getRepository(AuditLog).save({ userId: access.actorId, action: 'platform.account.search', entity: 'platform', entityId: 'accounts', newValues: { queryEntered: Boolean(query.q?.trim()), organizationId: query.organizationId ?? null, page: query.page, limit: query.limit, resultCount: data.length, total, resultUserIds: data.map(user => user.id) }, ...(auditContext.ip ? { ip: auditContext.ip } : {}), ...(auditContext.userAgent ? { userAgent: auditContext.userAgent.slice(0, 512) } : {}) });
     return toPaginatedResponse(data.map(user => ({ ...safeAccount(user), isOwner: user.id === control?.ownerId })), total, query);
   }
   async account(id: string, auditContext: PlatformAuditContext = {}) {
     const access = await this.require('accounts.read');
     const user = await this.db.getRepository(User).findOne({
       where: { id },
-      select: ['id', 'email', 'firstName', 'lastName', 'phone', 'avatarUrl', 'role', 'universityId', 'groupId', 'isActive', 'lastLoginAt', 'createdAt', 'updatedAt', 'maxUserId', 'telegramUserId'],
+      select: ['id', 'email', 'firstName', 'lastName', 'phone', 'avatarUrl', 'role', 'organizationId', 'groupId', 'isActive', 'lastLoginAt', 'createdAt', 'updatedAt', 'maxUserId', 'telegramUserId'],
     });
     if (!user) throw new NotFoundException('Аккаунт не найден.');
-    this.assertUniversityScope(access, user.universityId);
+    this.assertUniversityScope(access, user.organizationId);
     const assignmentQuery = this.db.getRepository(CuratorAssignment).createQueryBuilder('a')
-      .leftJoin(Group, 'g', 'g.id = a."groupId" AND g."universityId" = a."universityId"')
-      .select(['a.id', 'a.universityId', 'a.groupId', 'a.createdAt', 'g.name'])
+      .leftJoin(Group, 'g', 'g.id = a."groupId" AND g."organizationId" = a."organizationId"')
+      .select(['a.id', 'a.organizationId', 'a.groupId', 'a.createdAt', 'g.name'])
       .where('a."userId" = :userId AND a."revokedAt" IS NULL', { userId: id });
-    if (!access.owner && access.universityIds !== null) {
-      if (!access.universityIds.length) assignmentQuery.andWhere('1 = 0');
-      else assignmentQuery.andWhere('a."universityId" IN (:...allowedUniversityIds)', { allowedUniversityIds: access.universityIds });
+    if (!access.owner && access.organizationIds !== null) {
+      if (!access.organizationIds.length) assignmentQuery.andWhere('1 = 0');
+      else assignmentQuery.andWhere('a."organizationId" IN (:...allowedOrganizationIds)', { allowedOrganizationIds: access.organizationIds });
     }
     const [university, group, assignments, control, history, telegramChallenges] = await Promise.all([
-      user.universityId ? this.db.getRepository(University).findOne({ where: { id: user.universityId }, select: ['id', 'name', 'city'] }) : null,
-      user.universityId && user.groupId
-        ? this.db.getRepository(Group).createQueryBuilder('g').select(['g.id', 'g.name', 'g.externalId', 'g.universityId']).where('g.universityId = :universityId AND (g.id::text = :groupId OR g."externalId" = :groupId)', { universityId: user.universityId, groupId: user.groupId }).getOne()
+      user.organizationId ? this.db.getRepository(University).findOne({ where: { id: user.organizationId }, select: ['id', 'name', 'city'] }) : null,
+      user.organizationId && user.groupId
+        ? this.db.getRepository(Group).createQueryBuilder('g').select(['g.id', 'g.name', 'g.externalId', 'g.organizationId']).where('g.organizationId = :organizationId AND (g.id::text = :groupId OR g."externalId" = :groupId)', { organizationId: user.organizationId, groupId: user.groupId }).getOne()
         : null,
       assignmentQuery.orderBy('a."createdAt"', 'DESC').getRawMany(),
       this.db.getRepository(PlatformControl).findOneBy({ id: 'platform' }),
-      access.owner || access.universityIds === null
+      access.owner || access.organizationIds === null
         ? this.db.getRepository(AuditLog).find({ where: { entity: 'platform', entityId: id }, order: { createdAt: 'DESC', id: 'DESC' }, take: 10 })
         : Promise.resolve([] as AuditLog[]),
       this.db.getRepository(TelegramLinkChallenge).createQueryBuilder('challenge').select(['challenge.id', 'challenge.expiresAt'])
         .where('challenge.userId = :id AND challenge."consumedAt" IS NULL AND challenge."expiresAt" > CURRENT_TIMESTAMP', { id })
         .orderBy('challenge.expiresAt', 'ASC').getMany(),
     ]);
-    await this.db.getRepository(AuditLog).save({ userId: access.actorId, action: 'platform.account.read', entity: 'platform', entityId: id, newValues: { targetUserId: id, universityId: user.universityId ?? null, result: 'read' }, ...(auditContext.ip ? { ip: auditContext.ip } : {}), ...(auditContext.userAgent ? { userAgent: auditContext.userAgent.slice(0, 512) } : {}) });
+    await this.db.getRepository(AuditLog).save({ userId: access.actorId, action: 'platform.account.read', entity: 'platform', entityId: id, newValues: { targetUserId: id, organizationId: user.organizationId ?? null, result: 'read' }, ...(auditContext.ip ? { ip: auditContext.ip } : {}), ...(auditContext.userAgent ? { userAgent: auditContext.userAgent.slice(0, 512) } : {}) });
     return {
       ...safeAccount(user),
       phone: user.phone ?? '',
@@ -127,7 +127,7 @@ export class PlatformService {
       telegramLink: { pendingChallenges: telegramChallenges.length, nextExpiryAt: telegramChallenges[0]?.expiresAt?.toISOString() ?? null },
       university: university ? { id: university.id, name: university.name, city: university.city } : null,
       group: group ? { id: group.id, name: group.name, externalId: group.externalId } : user.groupId ? { id: null, name: user.groupId, externalId: user.groupId } : null,
-      curatorAssignments: assignments.map((assignment: { id: string; universityId: string; groupId: string; createdAt: Date; g_name?: string }) => ({ id: assignment.id, universityId: assignment.universityId, groupId: assignment.groupId, groupName: assignment.g_name ?? assignment.groupId, createdAt: assignment.createdAt })),
+      curatorAssignments: assignments.map((assignment: { id: string; organizationId: string; groupId: string; createdAt: Date; g_name?: string }) => ({ id: assignment.id, organizationId: assignment.organizationId, groupId: assignment.groupId, groupName: assignment.g_name ?? assignment.groupId, createdAt: assignment.createdAt })),
       recentActions: history.map(entry => ({ id: entry.id, action: entry.action, actorId: entry.userId, createdAt: entry.createdAt, oldValues: entry.oldValues, newValues: entry.newValues })),
       isOwner: user.id === control?.ownerId,
     };
@@ -138,7 +138,7 @@ export class PlatformService {
     if (id === access.actorId) throw new ForbiddenException('Изменение собственного доступа через эту форму запрещено.');
     const target = await manager.findOne(User, { where: { id }, ...(manager.queryRunner?.isTransactionActive ? { lock: { mode: 'pessimistic_write' as const } } : {}) });
     if (!target) throw new NotFoundException('Аккаунт не найден.');
-    this.assertUniversityScope(access, target.universityId);
+    this.assertUniversityScope(access, target.organizationId);
     return { access, target };
   }
   async updateAccount(id: string, dto: PlatformAccountDto, auditContext: PlatformAuditContext = {}) {
@@ -150,10 +150,10 @@ export class PlatformService {
       if ((dto.firstName !== undefined && !dto.firstName.trim()) || (dto.lastName !== undefined && !dto.lastName.trim())) throw new BadRequestException('Имя и фамилия не могут быть пустыми.');
       const current = await manager.findOneByOrFail(User, { id });
       const nextRole = dto.role ?? current.role;
-      const nextUniversityId = dto.universityId !== undefined ? dto.universityId : current.universityId;
-      this.assertUniversityScope(access, nextUniversityId);
-      if (![UserRole.DEVELOPER, UserRole.SUPERADMIN, UserRole.EMPLOYER, UserRole.CAREER_STAFF, UserRole.CAREER_ADMIN].includes(nextRole) && !nextUniversityId) throw new BadRequestException('Для этой роли требуется привязка к университету.');
-      if (dto.universityId && !await manager.getRepository(University).existsBy({ id: dto.universityId })) throw new BadRequestException('Университет не найден.');
+      const nextOrganizationId = dto.organizationId !== undefined ? dto.organizationId : current.organizationId;
+      this.assertUniversityScope(access, nextOrganizationId);
+      if (![UserRole.DEVELOPER, UserRole.SUPERADMIN, UserRole.EMPLOYER, UserRole.CAREER_STAFF, UserRole.CAREER_ADMIN].includes(nextRole) && !nextOrganizationId) throw new BadRequestException('Для этой роли требуется привязка к университету.');
+      if (dto.organizationId && !await manager.getRepository(University).existsBy({ id: dto.organizationId })) throw new BadRequestException('Университет не найден.');
       if (dto.email !== undefined) {
         const email = dto.email.trim().toLowerCase();
         const duplicate = await manager.getRepository(User).createQueryBuilder('u').where('LOWER(u.email) = :email AND u.id != :id', { email, id }).getExists();
@@ -162,7 +162,7 @@ export class PlatformService {
       }
       if (dto.phone !== undefined && dto.phone !== null) dto.phone = dto.phone.trim() || null;
       if (dto.avatarUrl !== undefined && dto.avatarUrl !== null) dto.avatarUrl = dto.avatarUrl.trim() || null;
-      if (dto.universityId !== undefined && dto.universityId !== current.universityId && dto.groupId === undefined) {
+      if (dto.organizationId !== undefined && dto.organizationId !== current.organizationId && dto.groupId === undefined) {
         const activeAssignments = await manager.getRepository(CuratorAssignment).countBy({ userId: id, revokedAt: IsNull() });
         if (activeAssignments) throw new BadRequestException('Сначала отзовите активные назначения куратора, затем переносите аккаунт в другой университет.');
         dto.groupId = null;
@@ -170,11 +170,11 @@ export class PlatformService {
       const nextGroupId = dto.groupId !== undefined ? dto.groupId : current.groupId;
       if (nextGroupId) {
         if (nextRole !== UserRole.STUDENT) throw new BadRequestException('Учебную группу можно назначить только аккаунту студента.');
-        if (!nextUniversityId) throw new BadRequestException('Сначала привяжите аккаунт к университету.');
+        if (!nextOrganizationId) throw new BadRequestException('Сначала привяжите аккаунт к университету.');
         const localGroup = await manager.getRepository(Group).createQueryBuilder('g')
-          .where('g.universityId = :universityId AND (g.id::text = :groupId OR g."externalId" = :groupId)', { universityId: nextUniversityId, groupId: nextGroupId }).getOne();
+          .where('g.organizationId = :organizationId AND (g.id::text = :groupId OR g."externalId" = :groupId)', { organizationId: nextOrganizationId, groupId: nextGroupId }).getOne();
         if (!localGroup) {
-          const university = await manager.getRepository(University).findOneBy({ id: nextUniversityId });
+          const university = await manager.getRepository(University).findOneBy({ id: nextOrganizationId });
           const isSibit = university?.name === SIBIT_UNIVERSITY.name && university.city === SIBIT_UNIVERSITY.city && university.connectorType === 'rasp-sano';
           if (!isSibit || !/^\d+$/.test(nextGroupId) || !await this.raspScraper.isValidGroup(nextGroupId)) throw new BadRequestException('Выберите существующую группу этого университета.');
         }
@@ -188,12 +188,12 @@ export class PlatformService {
         oldValues[key] = (current[key as keyof User] ?? null) as JsonObject[string];
         newValues[key] = value as JsonObject[string];
       }
-      const accessChanged = ['email', 'role', 'isActive', 'universityId', 'groupId'].some(key => key in changes);
+      const accessChanged = ['email', 'role', 'isActive', 'organizationId', 'groupId'].some(key => key in changes);
       if (accessChanged) invalidatedBy = access.actorId;
       // Only changes that affect login or authorization invalidate existing sessions.
       await manager.update(User, id, { ...changes, ...(accessChanged ? { sessionVersion: () => '"sessionVersion" + 1' } : {}) });
       if (dto.role && dto.role !== current.role) await manager.delete(PlatformGrant, { userId: id });
-      await manager.save(AuditLog, { userId: access.actorId, action: 'platform.account.updated', entity: 'platform', entityId: id, oldValues, newValues: { ...newValues, targetUserId: id, universityId: nextUniversityId ?? null, reason: suppliedReason?.trim() || 'Изменение аккаунта через управление платформой', result: 'updated' }, ...(auditContext.ip ? { ip: auditContext.ip } : {}), ...(auditContext.userAgent ? { userAgent: auditContext.userAgent.slice(0, 512) } : {}) });
+      await manager.save(AuditLog, { userId: access.actorId, action: 'platform.account.updated', entity: 'platform', entityId: id, oldValues, newValues: { ...newValues, targetUserId: id, organizationId: nextOrganizationId ?? null, reason: suppliedReason?.trim() || 'Изменение аккаунта через управление платформой', result: 'updated' }, ...(auditContext.ip ? { ip: auditContext.ip } : {}), ...(auditContext.userAgent ? { userAgent: auditContext.userAgent.slice(0, 512) } : {}) });
       return safeAccount(await manager.findOneByOrFail(User, { id }));
     });
     if (invalidatedBy) await this.telemetry.revokeAllForUser(id, invalidatedBy, 'Изменение доступа к аккаунту');
@@ -205,12 +205,12 @@ export class PlatformService {
     if (!dto.firstName?.trim() || !dto.lastName?.trim() || !dto.role) throw new BadRequestException('Укажите имя, фамилию и основную роль.');
     if (dto.role === UserRole.CURATOR) throw new BadRequestException('Кураторство назначается существующему аккаунту.');
     if (!access.owner && [UserRole.DEVELOPER, UserRole.SUPERADMIN].includes(dto.role)) throw new ForbiddenException('Платформенные роли назначает только владелец.');
-    this.assertUniversityScope(access, dto.universityId);
-    if (dto.universityId && !await this.db.getRepository(University).existsBy({ id: dto.universityId })) throw new BadRequestException('Университет не найден.');
-    if (![UserRole.DEVELOPER, UserRole.SUPERADMIN, UserRole.EMPLOYER, UserRole.CAREER_STAFF, UserRole.CAREER_ADMIN].includes(dto.role) && !dto.universityId) throw new BadRequestException('Для учебного аккаунта требуется университет.');
+    this.assertUniversityScope(access, dto.organizationId);
+    if (dto.organizationId && !await this.db.getRepository(University).existsBy({ id: dto.organizationId })) throw new BadRequestException('Университет не найден.');
+    if (![UserRole.DEVELOPER, UserRole.SUPERADMIN, UserRole.EMPLOYER, UserRole.CAREER_STAFF, UserRole.CAREER_ADMIN].includes(dto.role) && !dto.organizationId) throw new BadRequestException('Для учебного аккаунта требуется университет.');
     if (dto.groupId) {
       if (dto.role !== UserRole.STUDENT) throw new BadRequestException('Учебная группа назначается аккаунту студента.');
-      const university = dto.universityId ? await this.db.getRepository(University).findOneBy({ id: dto.universityId }) : null;
+      const university = dto.organizationId ? await this.db.getRepository(University).findOneBy({ id: dto.organizationId }) : null;
       if (university?.name !== SIBIT_UNIVERSITY.name || university.city !== SIBIT_UNIVERSITY.city || university.connectorType !== 'rasp-sano') throw new BadRequestException('Выберите университет СИБИТ с подключённым каталогом расписания.');
       if (!/^\d+$/.test(dto.groupId) || !await this.raspScraper.isValidGroup(dto.groupId)) throw new BadRequestException('Выберите группу из каталога СИБИТ.');
     }
@@ -219,7 +219,7 @@ export class PlatformService {
     const passwordHash = await bcrypt.hash(dto.password, 12);
     return this.db.transaction(async manager => {
       let user: User;
-      try { user = await manager.save(User, manager.create(User, { email, firstName: dto.firstName!.trim(), lastName: dto.lastName!.trim(), role: dto.role, universityId: dto.universityId ?? null, groupId: dto.groupId ?? undefined, passwordHash, isActive: dto.isActive ?? true })); }
+      try { user = await manager.save(User, manager.create(User, { email, firstName: dto.firstName!.trim(), lastName: dto.lastName!.trim(), role: dto.role, organizationId: dto.organizationId ?? null, groupId: dto.groupId ?? undefined, passwordHash, isActive: dto.isActive ?? true })); }
       catch (error) { if ((error as { code?: string }).code === '23505') throw new ConflictException('Email уже используется.'); throw error; }
       await manager.save(AuditLog, { userId: access.actorId, action: 'platform.account.created', entity: 'platform', entityId: user.id, newValues: { role: user.role, result: 'created' }, ...(auditContext.ip ? { ip: auditContext.ip } : {}), ...(auditContext.userAgent ? { userAgent: auditContext.userAgent.slice(0, 512) } : {}) });
       return safeAccount(user);
@@ -272,7 +272,7 @@ export class PlatformService {
         entity: 'platform',
         entityId: id,
         oldValues: { maxLinked: true },
-        newValues: { maxLinked: false, targetUserId: id, universityId: target.universityId ?? null, provider: 'max', reason: reason.trim(), sessionsRevoked: true, result: 'unlinked' },
+        newValues: { maxLinked: false, targetUserId: id, organizationId: target.organizationId ?? null, provider: 'max', reason: reason.trim(), sessionsRevoked: true, result: 'unlinked' },
         ...(auditContext.ip ? { ip: auditContext.ip } : {}),
         ...(auditContext.userAgent ? { userAgent: auditContext.userAgent.slice(0, 512) } : {}),
       });
@@ -298,7 +298,7 @@ export class PlatformService {
       await manager.save(AuditLog, {
         userId: access.actorId, action: 'platform.account.identity_telegram_revoked', entity: 'platform', entityId: id,
         oldValues: { telegramLinked: wasLinked, pendingChallengesRevoked: challenges.affected ?? 0 },
-        newValues: { telegramLinked: false, pendingChallengesRevoked: challenges.affected ?? 0, targetUserId: id, universityId: target.universityId ?? null, provider: 'telegram', reason: normalizedReason, sessionsRevoked: wasLinked, result: 'revoked' },
+        newValues: { telegramLinked: false, pendingChallengesRevoked: challenges.affected ?? 0, targetUserId: id, organizationId: target.organizationId ?? null, provider: 'telegram', reason: normalizedReason, sessionsRevoked: wasLinked, result: 'revoked' },
         ...(auditContext.ip ? { ip: auditContext.ip } : {}),
         ...(auditContext.userAgent ? { userAgent: auditContext.userAgent.slice(0, 512) } : {}),
       });
@@ -313,7 +313,7 @@ export class PlatformService {
     const grants = await this.db.getRepository(PlatformGrant).find();
     return toPaginatedResponse(data.map(user => {
       const grant = grants.find(g => g.userId === user.id);
-      return { ...safeAccount(user), grant: grant ? { permissions: grant.permissions, serviceIds: grant.serviceIds, universityIds: grant.universityIds } : null };
+      return { ...safeAccount(user), grant: grant ? { permissions: grant.permissions, serviceIds: grant.serviceIds, organizationIds: grant.organizationIds } : null };
     }), total, query);
   }
   async setGrant(id: string, dto: PlatformGrantDto) {
@@ -339,20 +339,20 @@ export class PlatformService {
       const user = await manager.findOne(User, { where: { id }, lock: { mode: 'pessimistic_write' } });
       if (!user?.isActive || ![UserRole.DEVELOPER, UserRole.SUPERADMIN].includes(user.role)) throw new BadRequestException('Выберите действующий аккаунт разработчика.');
       const existing = await manager.getRepository(PlatformGrant).findOneBy({ userId: id });
-      const universityIds = dto.universityIds === undefined ? existing?.universityIds ?? null : dto.universityIds;
-      if (universityIds !== null) {
-        const unique = new Set(universityIds);
+      const organizationIds = dto.organizationIds === undefined ? existing?.organizationIds ?? null : dto.organizationIds;
+      if (organizationIds !== null) {
+        const unique = new Set(organizationIds);
         const validCount = unique.size ? await manager.getRepository(University).createQueryBuilder('u').where('u.id IN (:...ids)', { ids: [...unique] }).getCount() : 0;
         if (validCount !== unique.size) throw new BadRequestException('Выберите только существующие университеты.');
       }
-      if (universityIds !== null && dto.permissions.some(permission => !universityScopedPermissions.includes(permission))) {
+      if (organizationIds !== null && dto.permissions.some(permission => !universityScopedPermissions.includes(permission))) {
         throw new BadRequestException('Для ограниченной области доступны только разрешения, изолированные по выбранным вузам. Управление компаниями, сервисами и другими глобальными операциями требует доступа ко всем вузам.');
       }
-      await manager.upsert(PlatformGrant, { userId: id, permissions: [...permissions], serviceIds: dto.serviceIds, universityIds, grantedBy: access.actorId }, ['userId']);
+      await manager.upsert(PlatformGrant, { userId: id, permissions: [...permissions], serviceIds: dto.serviceIds, organizationIds, grantedBy: access.actorId }, ['userId']);
       await manager.save(AuditLog, {
         userId: access.actorId, action: 'platform.permissions.updated', entity: 'platform', entityId: id,
-        ...(existing ? { oldValues: { permissions: existing.permissions, serviceIds: existing.serviceIds, universityIds: existing.universityIds } } : {}),
-        newValues: { permissions: [...permissions], serviceIds: dto.serviceIds, universityIds },
+        ...(existing ? { oldValues: { permissions: existing.permissions, serviceIds: existing.serviceIds, organizationIds: existing.organizationIds } } : {}),
+        newValues: { permissions: [...permissions], serviceIds: dto.serviceIds, organizationIds },
       });
     });
     return { changed: true };
@@ -388,88 +388,88 @@ export class PlatformService {
     const access = await this.require('universities.read');
     const qb = this.db.getRepository(University).createQueryBuilder('u').select(['u.id', 'u.name', 'u.city', 'u.status', 'u.connectorType']);
     if (query.q) qb.where('u.name ILIKE :q', { q: `%${query.q}%` });
-    if (query.universityId) { this.assertUniversityScope(access, query.universityId); qb.andWhere('u.id = :universityId', { universityId: query.universityId }); }
-    if (!access.owner && access.universityIds !== null) {
-      if (!access.universityIds.length) qb.andWhere('1 = 0');
-      else qb.andWhere('u.id IN (:...allowedUniversityIds)', { allowedUniversityIds: access.universityIds });
+    if (query.organizationId) { this.assertUniversityScope(access, query.organizationId); qb.andWhere('u.id = :organizationId', { organizationId: query.organizationId }); }
+    if (!access.owner && access.organizationIds !== null) {
+      if (!access.organizationIds.length) qb.andWhere('1 = 0');
+      else qb.andWhere('u.id IN (:...allowedOrganizationIds)', { allowedOrganizationIds: access.organizationIds });
     }
     const [data, total] = await qb.orderBy('u.name', 'ASC').skip((query.page - 1) * query.limit).take(query.limit).getManyAndCount();
     return toPaginatedResponse(data, total, query);
   }
-  async groups(universityId: string) {
+  async groups(organizationId: string) {
     const access = await this.require('universities.read');
-    this.assertUniversityScope(access, universityId);
-    if (!await this.db.getRepository(University).existsBy({ id: universityId })) throw new NotFoundException('Университет не найден.');
+    this.assertUniversityScope(access, organizationId);
+    if (!await this.db.getRepository(University).existsBy({ id: organizationId })) throw new NotFoundException('Университет не найден.');
     return this.db.getRepository(Group).createQueryBuilder('g')
-      .select(['g.id', 'g.name', 'g.externalId', 'g.curriculumYear', 'g.universityId'])
-      .where('g.universityId = :universityId', { universityId })
+      .select(['g.id', 'g.name', 'g.externalId', 'g.curriculumYear', 'g.organizationId'])
+      .where('g.organizationId = :organizationId', { organizationId })
       .orderBy('g.name', 'ASC').getMany();
   }
   async organizationFaculties(query: PlatformQueryDto) {
     const access = await this.require('universities.read');
-    if (!query.universityId) throw new BadRequestException('Выберите университет.');
-    this.assertUniversityScope(access, query.universityId);
-    if (!await this.db.getRepository(University).existsBy({ id: query.universityId })) throw new NotFoundException('Университет не найден.');
+    if (!query.organizationId) throw new BadRequestException('Выберите университет.');
+    this.assertUniversityScope(access, query.organizationId);
+    if (!await this.db.getRepository(University).existsBy({ id: query.organizationId })) throw new NotFoundException('Университет не найден.');
     const qb = this.db.getRepository(Faculty).createQueryBuilder('f')
-      .select(['f.id', 'f.universityId', 'f.name', 'f.code', 'f.createdAt', 'f.updatedAt'])
+      .select(['f.id', 'f.organizationId', 'f.name', 'f.code', 'f.createdAt', 'f.updatedAt'])
       .addSelect('(SELECT COUNT(*) FROM "groups" g WHERE g."facultyId" = f.id)', 'groupCount')
-      .where('f.universityId = :universityId', { universityId: query.universityId });
+      .where('f.organizationId = :organizationId', { organizationId: query.organizationId });
     if (query.q?.trim()) qb.andWhere("(f.name ILIKE :q OR f.code ILIKE :q OR f.id::text ILIKE :q)", { q: `%${query.q.trim().replace(/[\\%_]/g, '\\$&')}%` });
     const total = await qb.clone().getCount();
     const rows = await qb.orderBy('f.name', 'ASC').addOrderBy('f.id', 'ASC').skip((query.page - 1) * query.limit).take(query.limit).getRawAndEntities();
     const countById = new Map(rows.raw.map(row => [row.f_id, Number(row.groupCount)]));
-    await this.db.getRepository(AuditLog).save({ userId: this.tenant.getUser()!.id, action: 'platform.organization.faculty.search', entity: 'platform', entityId: query.universityId, newValues: { universityId: query.universityId, queryEntered: Boolean(query.q?.trim()), page: query.page, limit: query.limit, resultCount: rows.entities.length, total } });
-    return toPaginatedResponse(rows.entities.map(faculty => ({ id: faculty.id, universityId: faculty.universityId, name: faculty.name, code: faculty.code, groupCount: countById.get(faculty.id) ?? 0, createdAt: faculty.createdAt, updatedAt: faculty.updatedAt })), total, query);
+    await this.db.getRepository(AuditLog).save({ userId: this.tenant.getUser()!.id, action: 'platform.organization.faculty.search', entity: 'platform', entityId: query.organizationId, newValues: { organizationId: query.organizationId, queryEntered: Boolean(query.q?.trim()), page: query.page, limit: query.limit, resultCount: rows.entities.length, total } });
+    return toPaginatedResponse(rows.entities.map(faculty => ({ id: faculty.id, organizationId: faculty.organizationId, name: faculty.name, code: faculty.code, groupCount: countById.get(faculty.id) ?? 0, createdAt: faculty.createdAt, updatedAt: faculty.updatedAt })), total, query);
   }
   async organizationGroups(query: PlatformQueryDto) {
     const access = await this.require('universities.read');
-    if (!query.universityId) throw new BadRequestException('Выберите университет.');
-    this.assertUniversityScope(access, query.universityId);
-    if (!await this.db.getRepository(University).existsBy({ id: query.universityId })) throw new NotFoundException('Университет не найден.');
+    if (!query.organizationId) throw new BadRequestException('Выберите университет.');
+    this.assertUniversityScope(access, query.organizationId);
+    if (!await this.db.getRepository(University).existsBy({ id: query.organizationId })) throw new NotFoundException('Университет не найден.');
     const qb = this.db.getRepository(Group).createQueryBuilder('g')
-      .leftJoin(Faculty, 'f', 'f.id = g."facultyId" AND f."universityId" = g."universityId"')
-      .select(['g.id', 'g.universityId', 'g.facultyId', 'g.name', 'g.externalId', 'g.curriculumYear', 'g.specialization', 'g.createdAt', 'g.updatedAt'])
+      .leftJoin(Faculty, 'f', 'f.id = g."facultyId" AND f."organizationId" = g."organizationId"')
+      .select(['g.id', 'g.organizationId', 'g.facultyId', 'g.name', 'g.externalId', 'g.curriculumYear', 'g.specialization', 'g.createdAt', 'g.updatedAt'])
       .addSelect('f.name', 'facultyName')
-      .where('g.universityId = :universityId', { universityId: query.universityId });
+      .where('g.organizationId = :organizationId', { organizationId: query.organizationId });
     if (query.q?.trim()) qb.andWhere("(g.name ILIKE :q OR COALESCE(g.\"externalId\", '') ILIKE :q OR COALESCE(g.specialization, '') ILIKE :q OR f.name ILIKE :q OR g.id::text ILIKE :q)", { q: `%${query.q.trim().replace(/[\\%_]/g, '\\$&')}%` });
     const total = await qb.clone().getCount();
     const rows = await qb.orderBy('g.name', 'ASC').addOrderBy('g.id', 'ASC').skip((query.page - 1) * query.limit).take(query.limit).getRawAndEntities();
     const facultyNameByGroup = new Map(rows.raw.map(row => [row.g_id, row.facultyName ?? '']));
-    await this.db.getRepository(AuditLog).save({ userId: this.tenant.getUser()!.id, action: 'platform.organization.group.search', entity: 'platform', entityId: query.universityId, newValues: { universityId: query.universityId, queryEntered: Boolean(query.q?.trim()), page: query.page, limit: query.limit, resultCount: rows.entities.length, total } });
-    return toPaginatedResponse(rows.entities.map(group => ({ id: group.id, universityId: group.universityId, facultyId: group.facultyId, facultyName: facultyNameByGroup.get(group.id) ?? '', name: group.name, externalId: group.externalId, curriculumYear: group.curriculumYear, specialization: group.specialization ?? '', curatorManagedSeparately: Boolean(group.curatorId), createdAt: group.createdAt, updatedAt: group.updatedAt })), total, query);
+    await this.db.getRepository(AuditLog).save({ userId: this.tenant.getUser()!.id, action: 'platform.organization.group.search', entity: 'platform', entityId: query.organizationId, newValues: { organizationId: query.organizationId, queryEntered: Boolean(query.q?.trim()), page: query.page, limit: query.limit, resultCount: rows.entities.length, total } });
+    return toPaginatedResponse(rows.entities.map(group => ({ id: group.id, organizationId: group.organizationId, facultyId: group.facultyId, facultyName: facultyNameByGroup.get(group.id) ?? '', name: group.name, externalId: group.externalId, curriculumYear: group.curriculumYear, specialization: group.specialization ?? '', curatorManagedSeparately: Boolean(group.curatorId), createdAt: group.createdAt, updatedAt: group.updatedAt })), total, query);
   }
-  async saveOrganizationFaculty(universityId: string | undefined, dto: PlatformFacultyDto, id?: string) {
+  async saveOrganizationFaculty(organizationId: string | undefined, dto: PlatformFacultyDto, id?: string) {
     const access = await this.require('universities.write');
     const name = dto.name.trim(), code = dto.code.trim(), reason = dto.reason.trim();
     if (!name || !code || reason.length < 3) throw new BadRequestException('Укажите название, код и причину изменения.');
     return this.db.transaction(async manager => {
       const faculty = id ? await manager.getRepository(Faculty).createQueryBuilder('f').where('f.id = :id', { id }).setLock('pessimistic_write').getOne() : null;
       if (id && !faculty) throw new NotFoundException('Факультет не найден.');
-      const targetUniversityId = faculty?.universityId ?? universityId;
-      if (!targetUniversityId || !await manager.getRepository(University).existsBy({ id: targetUniversityId })) throw new NotFoundException('Университет не найден.');
-      this.assertUniversityScope(access, targetUniversityId);
-      const duplicate = await manager.getRepository(Faculty).createQueryBuilder('f').where('f."universityId" = :universityId AND f.id IS DISTINCT FROM :id AND (LOWER(f.name) = LOWER(:name) OR LOWER(f.code) = LOWER(:code))', { universityId: targetUniversityId, id: id ?? null, name, code }).getExists();
+      const targetOrganizationId = faculty?.organizationId ?? organizationId;
+      if (!targetOrganizationId || !await manager.getRepository(University).existsBy({ id: targetOrganizationId })) throw new NotFoundException('Университет не найден.');
+      this.assertUniversityScope(access, targetOrganizationId);
+      const duplicate = await manager.getRepository(Faculty).createQueryBuilder('f').where('f."organizationId" = :organizationId AND f.id IS DISTINCT FROM :id AND (LOWER(f.name) = LOWER(:name) OR LOWER(f.code) = LOWER(:code))', { organizationId: targetOrganizationId, id: id ?? null, name, code }).getExists();
       if (duplicate) throw new ConflictException('Факультет с таким названием или кодом уже есть в университете.');
-      const saved = await manager.save(Faculty, manager.create(Faculty, { ...(faculty ? { ...faculty, id: faculty.id } : {}), universityId: targetUniversityId, name, code }));
-      await manager.save(AuditLog, { userId: access.actorId, action: id ? 'platform.organization.faculty.updated' : 'platform.organization.faculty.created', entity: 'platform', entityId: saved.id, oldValues: faculty ? { universityId: faculty.universityId, name: faculty.name, code: faculty.code } : undefined, newValues: { universityId: saved.universityId, name: saved.name, code: saved.code, reason } });
-      return { id: saved.id, universityId: saved.universityId, name: saved.name, code: saved.code };
+      const saved = await manager.save(Faculty, manager.create(Faculty, { ...(faculty ? { ...faculty, id: faculty.id } : {}), organizationId: targetOrganizationId, name, code }));
+      await manager.save(AuditLog, { userId: access.actorId, action: id ? 'platform.organization.faculty.updated' : 'platform.organization.faculty.created', entity: 'platform', entityId: saved.id, oldValues: faculty ? { organizationId: faculty.organizationId, name: faculty.name, code: faculty.code } : undefined, newValues: { organizationId: saved.organizationId, name: saved.name, code: saved.code, reason } });
+      return { id: saved.id, organizationId: saved.organizationId, name: saved.name, code: saved.code };
     });
   }
-  async saveOrganizationGroup(universityId: string | undefined, dto: PlatformGroupDto, id?: string) {
+  async saveOrganizationGroup(organizationId: string | undefined, dto: PlatformGroupDto, id?: string) {
     const access = await this.require('universities.write');
     const name = dto.name.trim(), specialization = dto.specialization?.trim() || null, reason = dto.reason.trim();
     if (!name || reason.length < 3 || !Number.isInteger(dto.curriculumYear) || dto.curriculumYear < 1 || dto.curriculumYear > 12) throw new BadRequestException('Проверьте название, курс и причину изменения.');
     return this.db.transaction(async manager => {
       const group = id ? await manager.getRepository(Group).createQueryBuilder('g').where('g.id = :id', { id }).setLock('pessimistic_write').getOne() : null;
       if (id && !group) throw new NotFoundException('Группа не найдена.');
-      const targetUniversityId = group?.universityId ?? universityId;
-      if (!targetUniversityId || !await manager.getRepository(University).existsBy({ id: targetUniversityId })) throw new NotFoundException('Университет не найден.');
-      this.assertUniversityScope(access, targetUniversityId);
-      const faculty = await manager.getRepository(Faculty).findOneBy({ id: dto.facultyId, universityId: targetUniversityId });
+      const targetOrganizationId = group?.organizationId ?? organizationId;
+      if (!targetOrganizationId || !await manager.getRepository(University).existsBy({ id: targetOrganizationId })) throw new NotFoundException('Университет не найден.');
+      this.assertUniversityScope(access, targetOrganizationId);
+      const faculty = await manager.getRepository(Faculty).findOneBy({ id: dto.facultyId, organizationId: targetOrganizationId });
       if (!faculty) throw new BadRequestException('Факультет должен принадлежать выбранному университету.');
-      const saved = await manager.save(Group, manager.create(Group, { ...(group ? { ...group, id: group.id } : {}), universityId: targetUniversityId, facultyId: faculty.id, name, curriculumYear: dto.curriculumYear, specialization }));
-      await manager.save(AuditLog, { userId: access.actorId, action: id ? 'platform.organization.group.updated' : 'platform.organization.group.created', entity: 'platform', entityId: saved.id, oldValues: group ? { universityId: group.universityId, facultyId: group.facultyId, name: group.name, curriculumYear: group.curriculumYear, specialization: group.specialization } : undefined, newValues: { universityId: saved.universityId, facultyId: saved.facultyId, name: saved.name, curriculumYear: saved.curriculumYear, specialization: saved.specialization, externalId: saved.externalId, reason } });
-      return { id: saved.id, universityId: saved.universityId, facultyId: saved.facultyId, name: saved.name, curriculumYear: saved.curriculumYear, specialization: saved.specialization ?? '', externalId: saved.externalId };
+      const saved = await manager.save(Group, manager.create(Group, { ...(group ? { ...group, id: group.id } : {}), organizationId: targetOrganizationId, facultyId: faculty.id, name, curriculumYear: dto.curriculumYear, specialization }));
+      await manager.save(AuditLog, { userId: access.actorId, action: id ? 'platform.organization.group.updated' : 'platform.organization.group.created', entity: 'platform', entityId: saved.id, oldValues: group ? { organizationId: group.organizationId, facultyId: group.facultyId, name: group.name, curriculumYear: group.curriculumYear, specialization: group.specialization } : undefined, newValues: { organizationId: saved.organizationId, facultyId: saved.facultyId, name: saved.name, curriculumYear: saved.curriculumYear, specialization: saved.specialization, externalId: saved.externalId, reason } });
+      return { id: saved.id, organizationId: saved.organizationId, facultyId: saved.facultyId, name: saved.name, curriculumYear: saved.curriculumYear, specialization: saved.specialization ?? '', externalId: saved.externalId };
     });
   }
   async saveUniversity(dto: PlatformUniversityDto, id?: string) {
@@ -532,7 +532,7 @@ export class PlatformService {
       const pattern = `%${query.q.trim().replace(/[\\%_]/g, '\\$&')}%`;
       qb.andWhere("(audit.action ILIKE :q ESCAPE E'\\\\' OR audit.entity ILIKE :q ESCAPE E'\\\\' OR audit.entityId ILIKE :q ESCAPE E'\\\\' OR audit.userId::text ILIKE :q ESCAPE E'\\\\' OR COALESCE(audit.newValues::text, '') ILIKE :q ESCAPE E'\\\\')", { q: pattern });
     }
-    if (query.universityId) qb.andWhere("(audit.newValues ->> 'universityId' = :universityId OR audit.oldValues ->> 'universityId' = :universityId OR (audit.newValues -> 'universityIds') ? :universityId)", { universityId: query.universityId });
+    if (query.organizationId) qb.andWhere("(audit.newValues ->> 'organizationId' = :organizationId OR audit.oldValues ->> 'organizationId' = :organizationId OR (audit.newValues -> 'organizationIds') ? :organizationId)", { organizationId: query.organizationId });
     const total = await qb.clone().getCount();
     const data = await qb.orderBy('audit.createdAt', 'DESC').addOrderBy('audit.id', 'DESC')
       .skip((query.page - 1) * query.limit).take(query.limit).getMany();

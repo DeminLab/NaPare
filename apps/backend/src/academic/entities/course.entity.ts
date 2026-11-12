@@ -3,14 +3,14 @@ import { Column, CreateDateColumn, Entity, Index, PrimaryGeneratedColumn, Update
 import { ProvenanceSyncStatus } from '../academic.types';
 
 @Entity('academic_courses')
-@Index('UQ_academic_courses_university_code', ['universityId', 'code'], { unique: true })
-@Index('IDX_academic_courses_university_name', ['universityId', 'name'])
+@Index('UQ_academic_courses_university_code', ['organizationId', 'code'], { unique: true })
+@Index('IDX_academic_courses_university_name', ['organizationId', 'name'])
 export class Course {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
   @Column({ type: 'uuid' })
-  universityId: string;
+  organizationId: string;
 
   @Column({ type: 'uuid', nullable: true })
   facultyId: string | null;

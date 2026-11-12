@@ -46,12 +46,12 @@ function parseTeachers(raw: string): TeacherInput[] {
 }
 
 async function main() {
-  const universityId = option('--university-id');
+  const organizationId = option('--university-id');
   const inputPath = option('--input');
   const credentialsPath = option('--credentials-output');
   const apply = process.argv.includes('--apply');
   const dryRun = process.argv.includes('--dry-run');
-  if (!universityId || !inputPath || (!apply && !dryRun) || (apply && !credentialsPath)) {
+  if (!organizationId || !inputPath || (!apply && !dryRun) || (apply && !credentialsPath)) {
     throw new Error('Usage: provision-sibit-teachers --university-id UUID --input /run/secrets/sibit-teachers.json --dry-run | --apply --credentials-output /tmp/sibit-teacher-credentials.json');
   }
   if (apply && dryRun) throw new Error('Choose either --dry-run or --apply.');
@@ -81,20 +81,20 @@ async function main() {
     if (apply) await rm(credentialsPath!, { force: true });
     throw error;
   }
-  await tenant.runWithDatabaseAccess({ tables: ['users', 'lessons'], universityIds: [universityId], write: apply }, async () => {
+  await tenant.runWithDatabaseAccess({ tables: ['users', 'lessons'], organizationIds: [organizationId], write: apply }, async () => {
   let databaseCommitted = false;
   try {
     const universities = await db.query(
       'SELECT id FROM universities WHERE id = $1 AND "connectorType" = $2',
-      [universityId, 'rasp-sano'],
+      [organizationId, 'rasp-sano'],
     );
     if (universities.length !== 1) throw new Error('University ID must point to one SIBIT rasp-sano tenant.');
 
     const lessonRows = await db.query(
       `SELECT "sourceTeacherId", min("teacherName") AS "teacherName", count(*)::int AS lessons, count(DISTINCT "groupId")::int AS groups
-       FROM lessons WHERE "universityId" = $1 AND source = 'sibit'
+       FROM lessons WHERE "organizationId" = $1 AND source = 'sibit'
        GROUP BY "sourceTeacherId"`,
-      [universityId],
+      [organizationId],
     ) as Array<{ sourceTeacherId: string | null; teacherName: string | null; lessons: number; groups: number }>;
     const lessonMap = new Map(lessonRows.filter((row) => row.sourceTeacherId).map((row) => [row.sourceTeacherId!, row]));
     for (const teacher of teachers) {
@@ -127,8 +127,8 @@ async function main() {
         const firstName = firstNames.join(' ') || lastName;
         if (!sourceName || !lastName) throw new Error(`No source teacher name for ID ${teacher.sourceTeacherId}.`);
         let userRows = await manager.query(
-          'SELECT id, email, role, "sourceTeacherId", "isActive" FROM users WHERE "universityId" = $1 AND "sourceTeacherId" = $2 FOR UPDATE',
-          [universityId, teacher.sourceTeacherId],
+          'SELECT id, email, role, "sourceTeacherId", "isActive" FROM users WHERE "organizationId" = $1 AND "sourceTeacherId" = $2 FOR UPDATE',
+          [organizationId, teacher.sourceTeacherId],
         ) as Array<{ id: string; email: string; role: string; sourceTeacherId: string | null; isActive: boolean }>;
         let user = userRows[0];
         if (user && user.email.toLowerCase() !== teacher.email) {
@@ -136,12 +136,12 @@ async function main() {
         }
         if (!user) {
           const emailRows = await manager.query(
-            'SELECT id, email, role, "universityId", "sourceTeacherId", "isActive" FROM users WHERE lower(email) = lower($1) FOR UPDATE',
+            'SELECT id, email, role, "organizationId", "sourceTeacherId", "isActive" FROM users WHERE lower(email) = lower($1) FOR UPDATE',
             [teacher.email],
-          ) as Array<{ id: string; email: string; role: string; universityId: string | null; sourceTeacherId: string | null; isActive: boolean }>;
+          ) as Array<{ id: string; email: string; role: string; organizationId: string | null; sourceTeacherId: string | null; isActive: boolean }>;
           const existing = emailRows[0];
           if (existing) {
-            if (existing.universityId !== universityId || existing.role !== 'teacher' || !existing.isActive || (existing.sourceTeacherId && existing.sourceTeacherId !== teacher.sourceTeacherId)) {
+            if (existing.organizationId !== organizationId || existing.role !== 'teacher' || !existing.isActive || (existing.sourceTeacherId && existing.sourceTeacherId !== teacher.sourceTeacherId)) {
               throw new Error(`Email ${teacher.email} belongs to a different account and was not modified.`);
             }
             user = existing;
@@ -152,9 +152,9 @@ async function main() {
             const passwordHash = await bcrypt.hash(temporaryPassword, 12);
             const id = randomUUID();
             await manager.query(
-              `INSERT INTO users (id, email, "passwordHash", "firstName", "lastName", role, "universityId", "sourceTeacherId", "isActive", "sessionVersion", "createdAt", "updatedAt")
+              `INSERT INTO users (id, email, "passwordHash", "firstName", "lastName", role, "organizationId", "sourceTeacherId", "isActive", "sessionVersion", "createdAt", "updatedAt")
                VALUES ($1, $2, $3, $4, $5, 'teacher', $6, $7, true, 0, now(), now())`,
-              [id, teacher.email, passwordHash, firstName, lastName, universityId, teacher.sourceTeacherId],
+              [id, teacher.email, passwordHash, firstName, lastName, organizationId, teacher.sourceTeacherId],
             );
             user = { id, email: teacher.email, role: 'teacher', sourceTeacherId: teacher.sourceTeacherId, isActive: true };
             temporaryCredentials.push({ sourceTeacherId: teacher.sourceTeacherId, email: teacher.email, temporaryPassword });
@@ -166,9 +166,9 @@ async function main() {
 
         const updated = await manager.query(
           `UPDATE lessons SET "teacherId" = $1
-           WHERE "universityId" = $2 AND source = 'sibit' AND "sourceTeacherId" = $3
+           WHERE "organizationId" = $2 AND source = 'sibit' AND "sourceTeacherId" = $3
            RETURNING "groupId"`,
-          [user.id, universityId, teacher.sourceTeacherId],
+          [user.id, organizationId, teacher.sourceTeacherId],
         ) as Array<{ groupId: string }>;
         groupLinks.push({ teacher: teacher.sourceTeacherId, groups: new Set(updated.map((row) => row.groupId)).size, lessons: updated.length });
       }

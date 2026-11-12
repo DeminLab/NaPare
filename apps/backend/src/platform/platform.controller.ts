@@ -27,14 +27,14 @@ export class PlatformController {
   @Get('settings') settings() { return this.platform.settings(); }
   @Put('settings') updateSettings(@Body() dto: PlatformSettingsDto) { return this.platform.updateSettings(dto); }
   @Get('universities') universities(@Query() query: PlatformQueryDto) { return this.platform.universities(query); }
-  @Get('groups') groups(@Query('universityId', ParseUUIDPipe) universityId: string) { return this.platform.groups(universityId); }
+  @Get('groups') groups(@Query('organizationId', ParseUUIDPipe) organizationId: string) { return this.platform.groups(organizationId); }
   @Post('universities') createUniversity(@Body() dto: PlatformUniversityDto) { return this.platform.saveUniversity(dto); }
   @Put('universities/:id') updateUniversity(@Param('id', ParseUUIDPipe) id: string, @Body() dto: PlatformUniversityDto) { return this.platform.saveUniversity(dto, id); }
   @Get('organization/faculties') organizationFaculties(@Query() query: PlatformQueryDto) { return this.platform.organizationFaculties(query); }
-  @Post('organization/faculties') createOrganizationFaculty(@Query('universityId', ParseUUIDPipe) universityId: string, @Body() dto: PlatformFacultyDto) { return this.platform.saveOrganizationFaculty(universityId, dto); }
+  @Post('organization/faculties') createOrganizationFaculty(@Query('organizationId', ParseUUIDPipe) organizationId: string, @Body() dto: PlatformFacultyDto) { return this.platform.saveOrganizationFaculty(organizationId, dto); }
   @Put('organization/faculties/:id') updateOrganizationFaculty(@Param('id', ParseUUIDPipe) id: string, @Body() dto: PlatformFacultyDto) { return this.platform.saveOrganizationFaculty(undefined, dto, id); }
   @Get('organization/groups') organizationGroups(@Query() query: PlatformQueryDto) { return this.platform.organizationGroups(query); }
-  @Post('organization/groups') createOrganizationGroup(@Query('universityId', ParseUUIDPipe) universityId: string, @Body() dto: PlatformGroupDto) { return this.platform.saveOrganizationGroup(universityId, dto); }
+  @Post('organization/groups') createOrganizationGroup(@Query('organizationId', ParseUUIDPipe) organizationId: string, @Body() dto: PlatformGroupDto) { return this.platform.saveOrganizationGroup(organizationId, dto); }
   @Put('organization/groups/:id') updateOrganizationGroup(@Param('id', ParseUUIDPipe) id: string, @Body() dto: PlatformGroupDto) { return this.platform.saveOrganizationGroup(undefined, dto, id); }
   @Get('audit') audit(@Query() query: PlatformQueryDto) { return this.platform.auditLog(query); }
 }

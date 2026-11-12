@@ -239,7 +239,7 @@ export class ApiClient {
   }
 
   async updateNotificationPreferences(
-    data: Partial<Omit<NotificationPreference, 'id' | 'userId' | 'universityId'>>,
+    data: Partial<Omit<NotificationPreference, 'id' | 'userId' | 'organizationId'>>,
   ): Promise<NotificationPreference> {
     const response = await this.client.patch<NotificationPreference>('/notifications/preferences', data);
     return response.data;

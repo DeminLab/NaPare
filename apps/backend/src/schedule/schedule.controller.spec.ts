@@ -13,7 +13,7 @@ describe('ScheduleController write authorization', () => {
     getHandler: () => handler,
     getClass: () => ScheduleController,
     switchToHttp: () => ({
-      getRequest: () => ({ user: { id: 'user-1', role, universityId: 'university-1' } }),
+      getRequest: () => ({ user: { id: 'user-1', role, organizationId: 'university-1' } }),
     }),
   } as any);
 
@@ -34,7 +34,7 @@ describe('ScheduleController write authorization', () => {
     const scopedController = new ScheduleController(scheduleService as any);
     const query = { startDate: '2026-09-26', endDate: '2026-10-02' } as any;
 
-    await scopedController.findByDateRange({ user: { id: 'teacher-1', role: UserRole.TEACHER, universityId: 'uni-1' } }, query);
+    await scopedController.findByDateRange({ user: { id: 'teacher-1', role: UserRole.TEACHER, organizationId: 'uni-1' } }, query);
 
     expect(scheduleService.findByTeacherDateRange).toHaveBeenCalledWith('uni-1', 'teacher-1', '2026-09-26', '2026-10-02', query);
   });
@@ -42,7 +42,7 @@ describe('ScheduleController write authorization', () => {
   it('uses the authenticated user when opening a single lesson', async () => {
     const scheduleService = { findAccessibleById: jest.fn().mockResolvedValue({ id: 'lesson-1' }) };
     const scopedController = new ScheduleController(scheduleService as any);
-    const req = { user: { id: 'teacher-1', role: UserRole.TEACHER, universityId: 'uni-1' } };
+    const req = { user: { id: 'teacher-1', role: UserRole.TEACHER, organizationId: 'uni-1' } };
 
     await scopedController.findLesson('lesson-1', req);
 

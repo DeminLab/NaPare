@@ -59,7 +59,7 @@ describe('AcademicService', () => {
     context.getUser.mockReturnValue({
       id: 'teacher-1',
       role: UserRole.TEACHER,
-      universityId: 'university-1',
+      organizationId: 'university-1',
     });
     await expect(service.createCourse('university-1', { code: 'CS-1', name: 'Programming' }))
       .rejects.toThrow('University operator permission required');

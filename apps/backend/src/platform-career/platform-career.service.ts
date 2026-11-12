@@ -37,8 +37,8 @@ import {
   PlatformCareerAvailabilityQueryDto,
 } from './platform-career.dto';
 
-type ProfileRow = { id: string; studentId: string; studentName: string; studentEmail: string; studentUniversityId: string | null; universityId: string; universityName: string; headline: string; about: string; skills: string[]; verification: string; createdAt: Date; updatedAt: Date };
-type AdmissionRow = { id: string; studentId: string; studentName: string; studentEmail: string; studentUniversityId: string | null; universityId: string; universityName: string; skill: string; evidence: string; state: string; reason: string; basis: string; createdAt: Date; updatedAt: Date };
+type ProfileRow = { id: string; studentId: string; studentName: string; studentEmail: string; studentOrganizationId: string | null; organizationId: string; universityName: string; headline: string; about: string; skills: string[]; verification: string; createdAt: Date; updatedAt: Date };
+type AdmissionRow = { id: string; studentId: string; studentName: string; studentEmail: string; studentOrganizationId: string | null; organizationId: string; universityName: string; skill: string; evidence: string; state: string; reason: string; basis: string; createdAt: Date; updatedAt: Date };
 type RequestAuditContext = { ip?: string; userAgent?: string };
 
 @Injectable()
@@ -62,32 +62,32 @@ export class PlatformCareerService {
 
   async memberships(query: PlatformCareerMembershipQueryDto, context: RequestAuditContext = {}) {
     const access = await this.platform.require('career-data.read');
-    this.assertCareerQueryUniversity(access, query.universityId);
-    if (!access.owner && access.universityIds !== null && query.companyId) throw new ForbiddenException('Доступ к company memberships доступен только владельцу или глобальному разрешению.');
+    this.assertCareerQueryUniversity(access, query.organizationId);
+    if (!access.owner && access.organizationIds !== null && query.companyId) throw new ForbiddenException('Доступ к company memberships доступен только владельцу или глобальному разрешению.');
     const qb = this.db.getRepository(CareerMembership).createQueryBuilder('membership')
       .innerJoin(User, 'user', 'user.id = membership.userId')
       .leftJoin(CareerCompany, 'company', 'company.id = membership.companyId')
-      .leftJoin(University, 'university', 'university.id = membership.universityId')
+      .leftJoin(University, 'university', 'university.id = membership.organizationId')
       .select('membership.id', 'id').addSelect('membership.userId', 'userId')
       .addSelect("concat_ws(' ', user.firstName, user.lastName)", 'userName').addSelect('user.email', 'email')
       .addSelect('membership.role', 'role').addSelect('membership.companyId', 'companyId').addSelect('company.name', 'companyName')
-      .addSelect('membership.universityId', 'universityId').addSelect('university.name', 'universityName')
+      .addSelect('membership.organizationId', 'organizationId').addSelect('university.name', 'universityName')
       .addSelect('membership.createdAt', 'createdAt').addSelect('membership.revokedAt', 'revokedAt').addSelect('membership.revokedBy', 'revokedBy');
-    if (query.universityId) qb.andWhere('membership.universityId = :universityId', { universityId: query.universityId });
-    if (!access.owner && access.universityIds !== null) {
+    if (query.organizationId) qb.andWhere('membership.organizationId = :organizationId', { organizationId: query.organizationId });
+    if (!access.owner && access.organizationIds !== null) {
       qb.andWhere('membership.companyId IS NULL');
-      if (!access.universityIds.length) qb.andWhere('1 = 0');
-      else qb.andWhere('membership.universityId IN (:...careerAllowedUniversityIds)', { careerAllowedUniversityIds: access.universityIds })
-        .andWhere('user.universityId = membership.universityId');
+      if (!access.organizationIds.length) qb.andWhere('1 = 0');
+      else qb.andWhere('membership.organizationId IN (:...careerAllowedOrganizationIds)', { careerAllowedOrganizationIds: access.organizationIds })
+        .andWhere('user.organizationId = membership.organizationId');
     }
     if (query.status === 'active') qb.andWhere('membership.revokedAt IS NULL');
     if (query.status === 'revoked') qb.andWhere('membership.revokedAt IS NOT NULL');
     if (query.companyId) qb.andWhere('membership.companyId = :companyId', { companyId: query.companyId });
     if (query.role) qb.andWhere('membership.role = :role', { role: query.role });
-    if (query.q?.trim()) this.applySearch(qb, query.q.trim(), ['membership.id::text', 'membership.userId::text', 'user.email', 'user.firstName', 'user.lastName', 'membership.companyId::text', 'company.name', 'membership.universityId::text', 'university.name', 'membership.role']);
+    if (query.q?.trim()) this.applySearch(qb, query.q.trim(), ['membership.id::text', 'membership.userId::text', 'user.email', 'user.firstName', 'user.lastName', 'membership.companyId::text', 'company.name', 'membership.organizationId::text', 'university.name', 'membership.role']);
     const total = await qb.clone().getCount();
     const rows = await qb.orderBy('membership.revokedAt', 'ASC', 'NULLS FIRST').addOrderBy('membership.createdAt', 'DESC').skip((query.page - 1) * query.limit).take(query.limit).getRawMany<Record<string, unknown>>();
-    await this.db.getRepository(AuditLog).save(this.db.getRepository(AuditLog).create({ userId: access.actorId, action: 'platform.career_membership.search', entity: 'personal_data.career_membership', entityId: 'search', newValues: { recordIds: rows.map(row => String(row.id)), ...(query.universityId ? { universityId: query.universityId } : {}), ...(query.status ? { status: query.status } : {}), queryEntered: Boolean(query.q?.trim()), page: query.page, limit: query.limit, resultCount: rows.length, total }, ...(context.ip ? { ip: context.ip } : {}), ...(context.userAgent ? { userAgent: context.userAgent.slice(0, 512) } : {}) }));
+    await this.db.getRepository(AuditLog).save(this.db.getRepository(AuditLog).create({ userId: access.actorId, action: 'platform.career_membership.search', entity: 'personal_data.career_membership', entityId: 'search', newValues: { recordIds: rows.map(row => String(row.id)), ...(query.organizationId ? { organizationId: query.organizationId } : {}), ...(query.status ? { status: query.status } : {}), queryEntered: Boolean(query.q?.trim()), page: query.page, limit: query.limit, resultCount: rows.length, total }, ...(context.ip ? { ip: context.ip } : {}), ...(context.userAgent ? { userAgent: context.userAgent.slice(0, 512) } : {}) }));
     return toPaginatedResponse(rows, total, query);
   }
 
@@ -99,10 +99,10 @@ export class PlatformCareerService {
       if (!membership) throw new NotFoundException('Назначение не найдено.');
       if (membership.companyId) this.assertGlobalCareerAccess(access);
       else {
-        this.platform.assertUniversityScope(access, membership.universityId);
-        if (!access.owner && access.universityIds !== null) {
-          const memberUser = await manager.getRepository(User).findOne({ where: { id: membership.userId }, select: ['id', 'universityId'] });
-          if (!memberUser || memberUser.universityId !== membership.universityId) throw new BadRequestException('Назначение связано с пользователем другого университета.');
+        this.platform.assertUniversityScope(access, membership.organizationId);
+        if (!access.owner && access.organizationIds !== null) {
+          const memberUser = await manager.getRepository(User).findOne({ where: { id: membership.userId }, select: ['id', 'organizationId'] });
+          if (!memberUser || memberUser.organizationId !== membership.organizationId) throw new BadRequestException('Назначение связано с пользователем другого университета.');
         }
       }
       if (membership.revokedAt) throw new ConflictException('Назначение уже отозвано.');
@@ -111,12 +111,12 @@ export class PlatformCareerService {
         const ownerCount = await manager.getRepository(CareerMembership).createQueryBuilder('membership').where('membership."companyId" = :companyId AND membership.role = :role AND membership."revokedAt" IS NULL', { companyId: membership.companyId, role: 'company_owner' }).getCount();
         if (ownerCount <= 1) throw new ConflictException('Нельзя отозвать доступ последнего владельца компании. Сначала назначьте другого владельца.');
       }
-      const oldValues: JsonObject = { role: membership.role, companyId: membership.companyId, universityId: membership.universityId, revokedAt: null };
+      const oldValues: JsonObject = { role: membership.role, companyId: membership.companyId, organizationId: membership.organizationId, revokedAt: null };
       const revokedAt = new Date();
       membership.revokedAt = revokedAt;
       membership.revokedBy = access.actorId;
       const updated = await manager.save(CareerMembership, membership);
-      await manager.save(AuditLog, manager.create(AuditLog, { userId: access.actorId, action: 'platform.career_membership.revoked', entity: 'personal_data.career_membership', entityId: id, oldValues, newValues: { role: updated.role, companyId: updated.companyId, universityId: updated.universityId, revokedAt: revokedAt.toISOString(), revokedBy: access.actorId, targetUserId: updated.userId, adminReason: dto.reason.trim(), result: 'revoked' }, ...(context.ip ? { ip: context.ip } : {}), ...(context.userAgent ? { userAgent: context.userAgent.slice(0, 512) } : {}) }));
+      await manager.save(AuditLog, manager.create(AuditLog, { userId: access.actorId, action: 'platform.career_membership.revoked', entity: 'personal_data.career_membership', entityId: id, oldValues, newValues: { role: updated.role, companyId: updated.companyId, organizationId: updated.organizationId, revokedAt: revokedAt.toISOString(), revokedBy: access.actorId, targetUserId: updated.userId, adminReason: dto.reason.trim(), result: 'revoked' }, ...(context.ip ? { ip: context.ip } : {}), ...(context.userAgent ? { userAgent: context.userAgent.slice(0, 512) } : {}) }));
       return { id, revokedAt, revokedBy: access.actorId };
     });
   }
@@ -152,23 +152,23 @@ export class PlatformCareerService {
 
   async tests(query: PlatformCareerTestQueryDto, context: RequestAuditContext = {}) {
     const access = await this.platform.require('career-data.read');
-    this.assertCareerQueryUniversity(access, query.universityId);
+    this.assertCareerQueryUniversity(access, query.organizationId);
     const qb = this.db.getRepository(CareerTest).createQueryBuilder('test')
-      .innerJoin(University, 'university', 'university.id = test.universityId')
-      .select('test.id', 'id').addSelect('test.universityId', 'universityId').addSelect('university.name', 'universityName')
+      .innerJoin(University, 'university', 'university.id = test.organizationId')
+      .select('test.id', 'id').addSelect('test.organizationId', 'organizationId').addSelect('university.name', 'universityName')
       .addSelect('test.title', 'title').addSelect('test.skill', 'skill').addSelect('test.passingPercent', 'passingPercent')
       .addSelect('jsonb_array_length(test.questions)', 'questionCount')
       .addSelect('(SELECT COUNT(*) FROM career_test_attempt attempt WHERE attempt."testId" = test.id)', 'attemptCount')
       .addSelect('test.updatedAt', 'updatedAt');
-    if (query.universityId) qb.andWhere('test.universityId = :universityId', { universityId: query.universityId });
-    this.applyCareerUniversityScope(qb, access, 'test.universityId');
-    if (!access.owner && access.universityIds !== null) qb.andWhere('student.universityId = test.universityId');
-    if (query.q?.trim()) this.applySearch(qb, query.q.trim(), ['test.id::text', 'test.title', 'test.skill', 'test.universityId::text', 'university.name']);
+    if (query.organizationId) qb.andWhere('test.organizationId = :organizationId', { organizationId: query.organizationId });
+    this.applyCareerUniversityScope(qb, access, 'test.organizationId');
+    if (!access.owner && access.organizationIds !== null) qb.andWhere('student.organizationId = test.organizationId');
+    if (query.q?.trim()) this.applySearch(qb, query.q.trim(), ['test.id::text', 'test.title', 'test.skill', 'test.organizationId::text', 'university.name']);
     if (query.outcome === 'passed') qb.andWhere('EXISTS (SELECT 1 FROM career_test_attempt attempt WHERE attempt."testId" = test.id AND attempt.passed = true)');
     if (query.outcome === 'failed') qb.andWhere('EXISTS (SELECT 1 FROM career_test_attempt attempt WHERE attempt."testId" = test.id AND attempt.passed = false)');
     const total = await qb.clone().getCount();
     const rows = await qb.orderBy('test.updatedAt', 'DESC').addOrderBy('test.id', 'DESC').skip((query.page - 1) * query.limit).take(query.limit).getRawMany<Record<string, unknown>>();
-    await this.db.getRepository(AuditLog).save(this.db.getRepository(AuditLog).create({ userId: access.actorId, action: 'platform.career_test.search', entity: 'personal_data.career_test', entityId: 'search', newValues: { recordIds: rows.map(row => String(row.id)), ...(query.universityId ? { universityId: query.universityId } : {}), ...(query.outcome ? { outcome: query.outcome } : {}), queryEntered: Boolean(query.q?.trim()), page: query.page, limit: query.limit, resultCount: rows.length, total }, ...(context.ip ? { ip: context.ip } : {}), ...(context.userAgent ? { userAgent: context.userAgent.slice(0, 512) } : {}) }));
+    await this.db.getRepository(AuditLog).save(this.db.getRepository(AuditLog).create({ userId: access.actorId, action: 'platform.career_test.search', entity: 'personal_data.career_test', entityId: 'search', newValues: { recordIds: rows.map(row => String(row.id)), ...(query.organizationId ? { organizationId: query.organizationId } : {}), ...(query.outcome ? { outcome: query.outcome } : {}), queryEntered: Boolean(query.q?.trim()), page: query.page, limit: query.limit, resultCount: rows.length, total }, ...(context.ip ? { ip: context.ip } : {}), ...(context.userAgent ? { userAgent: context.userAgent.slice(0, 512) } : {}) }));
     return toPaginatedResponse(rows.map(row => ({ ...row, passingPercent: Number(row.passingPercent), questionCount: Number(row.questionCount), attemptCount: Number(row.attemptCount) })), total, query);
   }
 
@@ -176,11 +176,11 @@ export class PlatformCareerService {
     const access = await this.platform.require('career-data.read');
     const test = await this.db.getRepository(CareerTest).findOneBy({ id });
     if (!test) throw new NotFoundException('Карьерный тест не найден.');
-    this.platform.assertUniversityScope(access, test.universityId);
-    const university = await this.db.getRepository(University).findOne({ where: { id: test.universityId }, select: { id: true, name: true } });
+    this.platform.assertUniversityScope(access, test.organizationId);
+    const university = await this.db.getRepository(University).findOne({ where: { id: test.organizationId }, select: { id: true, name: true } });
     const attemptCount = await this.db.getRepository(CareerTestAttempt).countBy({ testId: id });
-    await this.db.getRepository(AuditLog).save(this.db.getRepository(AuditLog).create({ userId: access.actorId, action: 'platform.career_test.viewed', entity: 'personal_data.career_test', entityId: id, newValues: { universityId: test.universityId, result: 'viewed', correctAnswersIncluded: true }, ...(context.ip ? { ip: context.ip } : {}), ...(context.userAgent ? { userAgent: context.userAgent.slice(0, 512) } : {}) }));
-    return { id: test.id, universityId: test.universityId, universityName: university?.name ?? null, title: test.title, skill: test.skill, passingPercent: test.passingPercent, questions: test.questions, attemptCount, canEditQuestions: attemptCount === 0, createdAt: test.createdAt, updatedAt: test.updatedAt };
+    await this.db.getRepository(AuditLog).save(this.db.getRepository(AuditLog).create({ userId: access.actorId, action: 'platform.career_test.viewed', entity: 'personal_data.career_test', entityId: id, newValues: { organizationId: test.organizationId, result: 'viewed', correctAnswersIncluded: true }, ...(context.ip ? { ip: context.ip } : {}), ...(context.userAgent ? { userAgent: context.userAgent.slice(0, 512) } : {}) }));
+    return { id: test.id, organizationId: test.organizationId, universityName: university?.name ?? null, title: test.title, skill: test.skill, passingPercent: test.passingPercent, questions: test.questions, attemptCount, canEditQuestions: attemptCount === 0, createdAt: test.createdAt, updatedAt: test.updatedAt };
   }
 
   async patchTest(id: string, dto: PlatformCareerTestPatchDto, context: RequestAuditContext = {}) {
@@ -190,7 +190,7 @@ export class PlatformCareerService {
     return this.db.transaction(async manager => {
       const test = await manager.findOne(CareerTest, { where: { id }, lock: { mode: 'pessimistic_write' } });
       if (!test) throw new NotFoundException('Карьерный тест не найден.');
-      this.platform.assertUniversityScope(access, test.universityId);
+      this.platform.assertUniversityScope(access, test.organizationId);
       const attemptCount = await manager.getRepository(CareerTestAttempt).countBy({ testId: id });
       if (dto.questions !== undefined && attemptCount > 0) throw new ConflictException('Вопросы теста нельзя менять после появления попыток: результаты сохраняют исходный смысл.');
       if (dto.questions?.some(question => question.answer >= question.options.length || new Set(question.options.map(option => option.trim())).size !== question.options.length || question.options.some(option => !option.trim()))) throw new BadRequestException('Укажите существующий правильный вариант для каждого вопроса.');
@@ -202,58 +202,58 @@ export class PlatformCareerService {
       if (!test.title) throw new BadRequestException('Название теста не может быть пустым.');
       if (JSON.stringify(oldValues) === JSON.stringify(this.snapshot(test, fields))) throw new ConflictException('Новые значения совпадают с текущими.');
       const updated = await manager.save(CareerTest, test);
-      await manager.save(AuditLog, manager.create(AuditLog, { userId: access.actorId, action: 'platform.career_test.updated', entity: 'personal_data.career_test', entityId: id, oldValues, newValues: { ...this.snapshot(updated, fields), universityId: updated.universityId, skill: updated.skill, attemptCount, adminReason: dto.reason.trim(), result: 'updated' }, ...(context.ip ? { ip: context.ip } : {}), ...(context.userAgent ? { userAgent: context.userAgent.slice(0, 512) } : {}) }));
+      await manager.save(AuditLog, manager.create(AuditLog, { userId: access.actorId, action: 'platform.career_test.updated', entity: 'personal_data.career_test', entityId: id, oldValues, newValues: { ...this.snapshot(updated, fields), organizationId: updated.organizationId, skill: updated.skill, attemptCount, adminReason: dto.reason.trim(), result: 'updated' }, ...(context.ip ? { ip: context.ip } : {}), ...(context.userAgent ? { userAgent: context.userAgent.slice(0, 512) } : {}) }));
       return { id, title: updated.title, passingPercent: updated.passingPercent, updatedAt: updated.updatedAt };
     });
   }
 
   async testAttempts(query: PlatformCareerTestQueryDto, context: RequestAuditContext = {}) {
     const access = await this.platform.require('career-data.read');
-    this.assertCareerQueryUniversity(access, query.universityId);
+    this.assertCareerQueryUniversity(access, query.organizationId);
     const qb = this.db.getRepository(CareerTestAttempt).createQueryBuilder('attempt')
       .innerJoin(CareerTest, 'test', 'test.id = attempt.testId')
-      .innerJoin(University, 'university', 'university.id = test.universityId')
+      .innerJoin(University, 'university', 'university.id = test.organizationId')
       .innerJoin(User, 'student', 'student.id = attempt.studentId')
       .select('attempt.id', 'id').addSelect('attempt.testId', 'testId').addSelect('test.title', 'testTitle')
-      .addSelect('test.skill', 'skill').addSelect('test.universityId', 'universityId').addSelect('university.name', 'universityName')
+      .addSelect('test.skill', 'skill').addSelect('test.organizationId', 'organizationId').addSelect('university.name', 'universityName')
       .addSelect('attempt.studentId', 'studentId').addSelect("concat_ws(' ', student.firstName, student.lastName)", 'studentName')
       .addSelect('student.email', 'studentEmail').addSelect('attempt.score', 'score').addSelect('attempt.passed', 'passed').addSelect('attempt.createdAt', 'createdAt');
-    if (query.universityId) qb.andWhere('test.universityId = :universityId', { universityId: query.universityId });
-    this.applyCareerUniversityScope(qb, access, 'test.universityId');
+    if (query.organizationId) qb.andWhere('test.organizationId = :organizationId', { organizationId: query.organizationId });
+    this.applyCareerUniversityScope(qb, access, 'test.organizationId');
     if (query.outcome === 'passed') qb.andWhere('attempt.passed = true');
     if (query.outcome === 'failed') qb.andWhere('attempt.passed = false');
-    if (query.q?.trim()) this.applySearch(qb, query.q.trim(), ['attempt.id::text', 'attempt.studentId::text', 'student.email', 'student.firstName', 'student.lastName', 'test.title', 'test.skill', 'test.id::text', 'test.universityId::text', 'university.name']);
+    if (query.q?.trim()) this.applySearch(qb, query.q.trim(), ['attempt.id::text', 'attempt.studentId::text', 'student.email', 'student.firstName', 'student.lastName', 'test.title', 'test.skill', 'test.id::text', 'test.organizationId::text', 'university.name']);
     const total = await qb.clone().getCount();
     const rows = await qb.orderBy('attempt.createdAt', 'DESC').addOrderBy('attempt.id', 'DESC').skip((query.page - 1) * query.limit).take(query.limit).getRawMany<Record<string, unknown>>();
-    await this.db.getRepository(AuditLog).save(this.db.getRepository(AuditLog).create({ userId: access.actorId, action: 'platform.career_test_attempt.search', entity: 'personal_data.career_test_attempt', entityId: 'search', newValues: { recordIds: rows.map(row => String(row.id)), targetUserIds: [...new Set(rows.map(row => String(row.studentId)))], universityIds: [...new Set(rows.map(row => String(row.universityId)))], ...(query.universityId ? { universityId: query.universityId } : {}), ...(query.outcome ? { outcome: query.outcome } : {}), queryEntered: Boolean(query.q?.trim()), page: query.page, limit: query.limit, resultCount: rows.length, total }, ...(context.ip ? { ip: context.ip } : {}), ...(context.userAgent ? { userAgent: context.userAgent.slice(0, 512) } : {}) }));
+    await this.db.getRepository(AuditLog).save(this.db.getRepository(AuditLog).create({ userId: access.actorId, action: 'platform.career_test_attempt.search', entity: 'personal_data.career_test_attempt', entityId: 'search', newValues: { recordIds: rows.map(row => String(row.id)), targetUserIds: [...new Set(rows.map(row => String(row.studentId)))], organizationIds: [...new Set(rows.map(row => String(row.organizationId)))], ...(query.organizationId ? { organizationId: query.organizationId } : {}), ...(query.outcome ? { outcome: query.outcome } : {}), queryEntered: Boolean(query.q?.trim()), page: query.page, limit: query.limit, resultCount: rows.length, total }, ...(context.ip ? { ip: context.ip } : {}), ...(context.userAgent ? { userAgent: context.userAgent.slice(0, 512) } : {}) }));
     return toPaginatedResponse(rows, total, query);
   }
 
   async portfolios(query: PlatformCareerPortfolioQueryDto, context: RequestAuditContext = {}) {
     const access = await this.platform.require('career-data.read');
-    this.assertCareerQueryUniversity(access, query.universityId);
+    this.assertCareerQueryUniversity(access, query.organizationId);
     const qb = this.db.getRepository(CareerPortfolio).createQueryBuilder('portfolio')
       .innerJoin(CareerWork, 'work', 'work.id = portfolio.workId')
       .innerJoin(CareerTask, 'task', 'task.id = work.taskId')
       .innerJoin(CareerCompany, 'company', 'company.id = task.companyId')
-      .innerJoin(University, 'university', 'university.id = task.universityId')
+      .innerJoin(University, 'university', 'university.id = task.organizationId')
       .innerJoin(User, 'student', 'student.id = portfolio.studentId')
       .leftJoin(CareerReview, 'review', 'review.workId = portfolio.workId')
       .select('portfolio.id', 'id').addSelect('portfolio.studentId', 'studentId')
       .addSelect("concat_ws(' ', student.firstName, student.lastName)", 'studentName').addSelect('student.email', 'studentEmail')
-      .addSelect('task.universityId', 'universityId').addSelect('university.name', 'universityName')
+      .addSelect('task.organizationId', 'organizationId').addSelect('university.name', 'universityName')
       .addSelect('task.title', 'taskTitle').addSelect('company.name', 'companyName')
       .addSelect('portfolio.published', 'published').addSelect('LEFT(portfolio.caseText, 220)', 'casePreview')
       .addSelect('review.publishAllowed', 'reviewPublishAllowed').addSelect('portfolio.updatedAt', 'updatedAt');
-    if (query.universityId) qb.andWhere('task.universityId = :universityId', { universityId: query.universityId });
-    this.applyCareerUniversityScope(qb, access, 'task.universityId');
-    if (!access.owner && access.universityIds !== null) qb.andWhere('student.universityId = task.universityId');
+    if (query.organizationId) qb.andWhere('task.organizationId = :organizationId', { organizationId: query.organizationId });
+    this.applyCareerUniversityScope(qb, access, 'task.organizationId');
+    if (!access.owner && access.organizationIds !== null) qb.andWhere('student.organizationId = task.organizationId');
     if (query.visibility === 'published') qb.andWhere('portfolio.published = true');
     if (query.visibility === 'private') qb.andWhere('portfolio.published = false');
     if (query.q?.trim()) this.applySearch(qb, query.q.trim(), ['portfolio.id::text', 'portfolio.studentId::text', 'student.email', 'student.firstName', 'student.lastName', 'task.title', 'company.name', 'portfolio.caseText']);
     const total = await qb.clone().getCount();
     const rows = await qb.orderBy('portfolio.updatedAt', 'DESC').addOrderBy('portfolio.id', 'DESC').skip((query.page - 1) * query.limit).take(query.limit).getRawMany<Record<string, unknown>>();
-    await this.db.getRepository(AuditLog).save(this.db.getRepository(AuditLog).create({ userId: access.actorId, action: 'platform.career_portfolio.search', entity: 'personal_data.career_portfolio', entityId: 'search', newValues: { recordIds: rows.map(row => String(row.id)), targetUserIds: [...new Set(rows.map(row => String(row.studentId)))], universityIds: [...new Set(rows.map(row => String(row.universityId)))], ...(query.universityId ? { universityId: query.universityId } : {}), ...(query.visibility ? { visibility: query.visibility } : {}), queryEntered: Boolean(query.q?.trim()), page: query.page, limit: query.limit, resultCount: rows.length, total }, ...(context.ip ? { ip: context.ip } : {}), ...(context.userAgent ? { userAgent: context.userAgent.slice(0, 512) } : {}) }));
+    await this.db.getRepository(AuditLog).save(this.db.getRepository(AuditLog).create({ userId: access.actorId, action: 'platform.career_portfolio.search', entity: 'personal_data.career_portfolio', entityId: 'search', newValues: { recordIds: rows.map(row => String(row.id)), targetUserIds: [...new Set(rows.map(row => String(row.studentId)))], organizationIds: [...new Set(rows.map(row => String(row.organizationId)))], ...(query.organizationId ? { organizationId: query.organizationId } : {}), ...(query.visibility ? { visibility: query.visibility } : {}), queryEntered: Boolean(query.q?.trim()), page: query.page, limit: query.limit, resultCount: rows.length, total }, ...(context.ip ? { ip: context.ip } : {}), ...(context.userAgent ? { userAgent: context.userAgent.slice(0, 512) } : {}) }));
     return toPaginatedResponse(rows, total, query);
   }
 
@@ -261,10 +261,10 @@ export class PlatformCareerService {
     const access = await this.platform.require('career-data.read');
     const row = await this.db.getRepository(CareerPortfolio).createQueryBuilder('portfolio')
       .innerJoin(CareerWork, 'work', 'work.id = portfolio.workId').innerJoin(CareerTask, 'task', 'task.id = work.taskId')
-      .innerJoin(CareerCompany, 'company', 'company.id = task.companyId').innerJoin(University, 'university', 'university.id = task.universityId')
+      .innerJoin(CareerCompany, 'company', 'company.id = task.companyId').innerJoin(University, 'university', 'university.id = task.organizationId')
       .innerJoin(User, 'student', 'student.id = portfolio.studentId').leftJoin(CareerReview, 'review', 'review.workId = portfolio.workId')
       .select('portfolio.id', 'id').addSelect('portfolio.studentId', 'studentId').addSelect("concat_ws(' ', student.firstName, student.lastName)", 'studentName')
-      .addSelect('student.email', 'studentEmail').addSelect('student.universityId', 'studentUniversityId').addSelect('task.universityId', 'universityId').addSelect('university.name', 'universityName')
+      .addSelect('student.email', 'studentEmail').addSelect('student.organizationId', 'studentOrganizationId').addSelect('task.organizationId', 'organizationId').addSelect('university.name', 'universityName')
       .addSelect('task.id', 'taskId').addSelect('task.title', 'taskTitle').addSelect('company.name', 'companyName')
       .addSelect('portfolio.caseText', 'caseText').addSelect('portfolio.published', 'published').addSelect('work.submission', 'acceptedResult')
       .addSelect('work.resultUrl', 'resultUrl').addSelect('review.id', 'reviewId').addSelect('review.body', 'reviewBody')
@@ -272,10 +272,10 @@ export class PlatformCareerService {
       .addSelect('portfolio.createdAt', 'createdAt').addSelect('portfolio.updatedAt', 'updatedAt')
       .where('portfolio.id = :id', { id }).getRawOne<Record<string, unknown>>();
     if (!row) throw new NotFoundException('Кейс портфолио не найден.');
-    this.platform.assertUniversityScope(access, String(row.universityId));
-    if (row.studentUniversityId !== row.universityId) throw new BadRequestException('Кейс портфолио связан с пользователем другого университета.');
-    const { studentUniversityId: _studentUniversityId, ...visibleRow } = row;
-    const auditValues: JsonObject = { targetUserId: String(row.studentId), universityId: String(row.universityId), reviewId: row.reviewId ? String(row.reviewId) : null, result: 'viewed' };
+    this.platform.assertUniversityScope(access, String(row.organizationId));
+    if (row.studentOrganizationId !== row.organizationId) throw new BadRequestException('Кейс портфолио связан с пользователем другого университета.');
+    const { studentOrganizationId: _studentOrganizationId, ...visibleRow } = row;
+    const auditValues: JsonObject = { targetUserId: String(row.studentId), organizationId: String(row.organizationId), reviewId: row.reviewId ? String(row.reviewId) : null, result: 'viewed' };
     await this.db.getRepository(AuditLog).save(this.db.getRepository(AuditLog).create({ userId: access.actorId, action: 'platform.career_portfolio.viewed', entity: 'personal_data.career_portfolio', entityId: id, newValues: auditValues, ...(context.ip ? { ip: context.ip } : {}), ...(context.userAgent ? { userAgent: context.userAgent.slice(0, 512) } : {}) }));
     return visibleRow;
   }
@@ -288,11 +288,11 @@ export class PlatformCareerService {
       const item = await manager.findOne(CareerPortfolio, { where: { id }, lock: { mode: 'pessimistic_write' } });
       if (!item) throw new NotFoundException('Кейс портфолио не найден.');
       const scopeRow = await manager.createQueryBuilder(CareerWork, 'work').innerJoin(CareerTask, 'task', 'task.id = work.taskId')
-        .select('task.universityId', 'universityId').addSelect('work.studentId', 'studentId').where('work.id = :workId', { workId: item.workId }).getRawOne<{ universityId: string; studentId: string }>();
+        .select('task.organizationId', 'organizationId').addSelect('work.studentId', 'studentId').where('work.id = :workId', { workId: item.workId }).getRawOne<{ organizationId: string; studentId: string }>();
       if (!scopeRow || scopeRow.studentId !== item.studentId) throw new BadRequestException('Кейс не связан с пользователем работы и существующей задачей.');
-      this.platform.assertUniversityScope(access, scopeRow.universityId);
-      const portfolioUser = await manager.getRepository(User).findOne({ where: { id: item.studentId }, select: ['id', 'universityId'] });
-      if (!portfolioUser || portfolioUser.universityId !== scopeRow.universityId) throw new BadRequestException('Кейс портфолио связан с пользователем другого университета.');
+      this.platform.assertUniversityScope(access, scopeRow.organizationId);
+      const portfolioUser = await manager.getRepository(User).findOne({ where: { id: item.studentId }, select: ['id', 'organizationId'] });
+      if (!portfolioUser || portfolioUser.organizationId !== scopeRow.organizationId) throw new BadRequestException('Кейс портфолио связан с пользователем другого университета.');
       const oldValues: JsonObject = { caseText: item.caseText, published: item.published };
       const wasPublished = item.published;
       if (dto.caseText !== undefined) {
@@ -307,25 +307,25 @@ export class PlatformCareerService {
       }
       if (item.caseText === oldValues.caseText && item.published === oldValues.published) throw new ConflictException('Новые значения совпадают с текущими.');
       const updated = await manager.save(CareerPortfolio, item);
-      const contextRow = await manager.createQueryBuilder(CareerWork, 'work').innerJoin(CareerTask, 'task', 'task.id = work.taskId').select('task.universityId', 'universityId').where('work.id = :workId', { workId: item.workId }).getRawOne<{ universityId: string }>();
-      await manager.save(AuditLog, manager.create(AuditLog, { userId: access.actorId, action: 'platform.career_portfolio.updated', entity: 'personal_data.career_portfolio', entityId: id, oldValues, newValues: { caseText: updated.caseText, published: updated.published, targetUserId: updated.studentId, universityId: contextRow?.universityId ?? null, adminReason: dto.reason.trim(), result: dto.hide === true ? 'hidden' : 'updated' }, ...(context.ip ? { ip: context.ip } : {}), ...(context.userAgent ? { userAgent: context.userAgent.slice(0, 512) } : {}) }));
+      const contextRow = await manager.createQueryBuilder(CareerWork, 'work').innerJoin(CareerTask, 'task', 'task.id = work.taskId').select('task.organizationId', 'organizationId').where('work.id = :workId', { workId: item.workId }).getRawOne<{ organizationId: string }>();
+      await manager.save(AuditLog, manager.create(AuditLog, { userId: access.actorId, action: 'platform.career_portfolio.updated', entity: 'personal_data.career_portfolio', entityId: id, oldValues, newValues: { caseText: updated.caseText, published: updated.published, targetUserId: updated.studentId, organizationId: contextRow?.organizationId ?? null, adminReason: dto.reason.trim(), result: dto.hide === true ? 'hidden' : 'updated' }, ...(context.ip ? { ip: context.ip } : {}), ...(context.userAgent ? { userAgent: context.userAgent.slice(0, 512) } : {}) }));
       return { id, caseText: updated.caseText, published: updated.published, updatedAt: updated.updatedAt };
     });
   }
 
   async reviews(query: PlatformCareerReviewQueryDto, context: RequestAuditContext = {}) {
     const access = await this.platform.require('career-data.read');
-    this.assertCareerQueryUniversity(access, query.universityId);
+    this.assertCareerQueryUniversity(access, query.organizationId);
     const qb = this.reviewQuery();
-    if (query.universityId) qb.andWhere('task.universityId = :universityId', { universityId: query.universityId });
-    this.applyCareerUniversityScope(qb, access, 'task.universityId');
-    if (!access.owner && access.universityIds !== null) qb.andWhere('student.universityId = task.universityId');
+    if (query.organizationId) qb.andWhere('task.organizationId = :organizationId', { organizationId: query.organizationId });
+    this.applyCareerUniversityScope(qb, access, 'task.organizationId');
+    if (!access.owner && access.organizationIds !== null) qb.andWhere('student.organizationId = task.organizationId');
     if (query.consent === 'allowed') qb.andWhere('review.publishAllowed = true');
     if (query.consent === 'withheld') qb.andWhere('review.publishAllowed = false');
     if (query.q?.trim()) this.applySearch(qb, query.q.trim(), ['review.id::text', 'review.workId::text', 'work.studentId::text', 'student.email', 'student.firstName', 'student.lastName', 'task.title', 'company.name', 'review.body']);
     const total = await qb.clone().getCount();
     const rows = await qb.orderBy('review.updatedAt', 'DESC').addOrderBy('review.id', 'DESC').skip((query.page - 1) * query.limit).take(query.limit).getRawMany<Record<string, unknown>>();
-    await this.db.getRepository(AuditLog).save(this.db.getRepository(AuditLog).create({ userId: access.actorId, action: 'platform.career_review.search', entity: 'personal_data.career_review', entityId: 'search', newValues: { recordIds: rows.map(row => String(row.id)), targetUserIds: [...new Set(rows.map(row => String(row.studentId)))], universityIds: [...new Set(rows.map(row => String(row.universityId)))], ...(query.universityId ? { universityId: query.universityId } : {}), ...(query.consent ? { consent: query.consent } : {}), queryEntered: Boolean(query.q?.trim()), page: query.page, limit: query.limit, resultCount: rows.length, total }, ...(context.ip ? { ip: context.ip } : {}), ...(context.userAgent ? { userAgent: context.userAgent.slice(0, 512) } : {}) }));
+    await this.db.getRepository(AuditLog).save(this.db.getRepository(AuditLog).create({ userId: access.actorId, action: 'platform.career_review.search', entity: 'personal_data.career_review', entityId: 'search', newValues: { recordIds: rows.map(row => String(row.id)), targetUserIds: [...new Set(rows.map(row => String(row.studentId)))], organizationIds: [...new Set(rows.map(row => String(row.organizationId)))], ...(query.organizationId ? { organizationId: query.organizationId } : {}), ...(query.consent ? { consent: query.consent } : {}), queryEntered: Boolean(query.q?.trim()), page: query.page, limit: query.limit, resultCount: rows.length, total }, ...(context.ip ? { ip: context.ip } : {}), ...(context.userAgent ? { userAgent: context.userAgent.slice(0, 512) } : {}) }));
     return toPaginatedResponse(rows, total, query);
   }
 
@@ -333,10 +333,10 @@ export class PlatformCareerService {
     const access = await this.platform.require('career-data.read');
     const row = await this.reviewQuery(true).where('review.id = :id', { id }).getRawOne<Record<string, unknown>>();
     if (!row) throw new NotFoundException('Отзыв не найден.');
-    this.platform.assertUniversityScope(access, String(row.universityId));
-    if (row.studentUniversityId !== row.universityId) throw new BadRequestException('Отзыв связан с пользователем другого университета.');
-    const { studentUniversityId: _studentUniversityId, ...visibleRow } = row;
-    const auditValues: JsonObject = { targetUserId: String(row.studentId), universityId: String(row.universityId), result: 'viewed' };
+    this.platform.assertUniversityScope(access, String(row.organizationId));
+    if (row.studentOrganizationId !== row.organizationId) throw new BadRequestException('Отзыв связан с пользователем другого университета.');
+    const { studentOrganizationId: _studentOrganizationId, ...visibleRow } = row;
+    const auditValues: JsonObject = { targetUserId: String(row.studentId), organizationId: String(row.organizationId), result: 'viewed' };
     await this.db.getRepository(AuditLog).save(this.db.getRepository(AuditLog).create({ userId: access.actorId, action: 'platform.career_review.viewed', entity: 'personal_data.career_review', entityId: id, newValues: auditValues, ...(context.ip ? { ip: context.ip } : {}), ...(context.userAgent ? { userAgent: context.userAgent.slice(0, 512) } : {}) }));
     return visibleRow;
   }
@@ -351,9 +351,9 @@ export class PlatformCareerService {
       const work = await manager.findOne(CareerWork, { where: { id: review.workId }, lock: { mode: 'pessimistic_read' } });
       const task = work ? await manager.findOne(CareerTask, { where: { id: work.taskId }, lock: { mode: 'pessimistic_read' } }) : null;
       if (!work || !task) throw new BadRequestException('Отзыв не связан с существующей работой и задачей.');
-      this.platform.assertUniversityScope(access, task.universityId);
-      const reviewUser = await manager.getRepository(User).findOne({ where: { id: work.studentId }, select: ['id', 'universityId'] });
-      if (!reviewUser || reviewUser.universityId !== task.universityId) throw new BadRequestException('Отзыв связан с пользователем другого университета.');
+      this.platform.assertUniversityScope(access, task.organizationId);
+      const reviewUser = await manager.getRepository(User).findOne({ where: { id: work.studentId }, select: ['id', 'organizationId'] });
+      if (!reviewUser || reviewUser.organizationId !== task.organizationId) throw new BadRequestException('Отзыв связан с пользователем другого университета.');
       const oldValues: JsonObject = { rating: review.rating, body: review.body, publishAllowed: review.publishAllowed };
       if (dto.rating !== undefined) review.rating = dto.rating;
       if (dto.body !== undefined) review.body = dto.body.trim();
@@ -365,41 +365,41 @@ export class PlatformCareerService {
       if (portfolioHidden && portfolio) {
         portfolio.published = false;
         const hiddenPortfolio = await manager.save(CareerPortfolio, portfolio);
-        await manager.save(AuditLog, manager.create(AuditLog, { userId: access.actorId, action: 'platform.career_portfolio.hidden_by_review_edit', entity: 'personal_data.career_portfolio', entityId: portfolio.id, oldValues: { published: true }, newValues: { published: hiddenPortfolio.published, targetUserId: work.studentId, universityId: task.universityId, relatedReviewId: review.id, adminReason: dto.reason.trim(), result: 'hidden' }, ...(context.ip ? { ip: context.ip } : {}), ...(context.userAgent ? { userAgent: context.userAgent.slice(0, 512) } : {}) }));
+        await manager.save(AuditLog, manager.create(AuditLog, { userId: access.actorId, action: 'platform.career_portfolio.hidden_by_review_edit', entity: 'personal_data.career_portfolio', entityId: portfolio.id, oldValues: { published: true }, newValues: { published: hiddenPortfolio.published, targetUserId: work.studentId, organizationId: task.organizationId, relatedReviewId: review.id, adminReason: dto.reason.trim(), result: 'hidden' }, ...(context.ip ? { ip: context.ip } : {}), ...(context.userAgent ? { userAgent: context.userAgent.slice(0, 512) } : {}) }));
       }
-      await manager.save(AuditLog, manager.create(AuditLog, { userId: access.actorId, action: 'platform.career_review.updated', entity: 'personal_data.career_review', entityId: id, oldValues, newValues: { rating: updated.rating, body: updated.body, publishAllowed: updated.publishAllowed, portfolioHidden, targetUserId: work.studentId, universityId: task.universityId, adminReason: dto.reason.trim(), result: 'updated' }, ...(context.ip ? { ip: context.ip } : {}), ...(context.userAgent ? { userAgent: context.userAgent.slice(0, 512) } : {}) }));
+      await manager.save(AuditLog, manager.create(AuditLog, { userId: access.actorId, action: 'platform.career_review.updated', entity: 'personal_data.career_review', entityId: id, oldValues, newValues: { rating: updated.rating, body: updated.body, publishAllowed: updated.publishAllowed, portfolioHidden, targetUserId: work.studentId, organizationId: task.organizationId, adminReason: dto.reason.trim(), result: 'updated' }, ...(context.ip ? { ip: context.ip } : {}), ...(context.userAgent ? { userAgent: context.userAgent.slice(0, 512) } : {}) }));
       return { id, rating: updated.rating, body: updated.body, publishAllowed: updated.publishAllowed, updatedAt: updated.updatedAt };
     });
   }
 
   async notices(query: PlatformCareerNoticeQueryDto, context: RequestAuditContext = {}) {
     const access = await this.platform.require('career-data.read');
-    this.assertCareerQueryUniversity(access, query.universityId);
-    const qb = this.db.getRepository(CareerNotice).createQueryBuilder('notice').innerJoin(User, 'user', 'user.id = notice.userId').leftJoin(University, 'university', 'university.id = user.universityId')
+    this.assertCareerQueryUniversity(access, query.organizationId);
+    const qb = this.db.getRepository(CareerNotice).createQueryBuilder('notice').innerJoin(User, 'user', 'user.id = notice.userId').leftJoin(University, 'university', 'university.id = user.organizationId')
       .select('notice.id', 'id').addSelect('notice.userId', 'userId').addSelect("concat_ws(' ', user.firstName, user.lastName)", 'userName').addSelect('user.email', 'email')
-      .addSelect('user.universityId', 'universityId').addSelect('university.name', 'universityName').addSelect('notice.title', 'title')
+      .addSelect('user.organizationId', 'organizationId').addSelect('university.name', 'universityName').addSelect('notice.title', 'title')
       .addSelect('LEFT(notice.body, 220)', 'bodyPreview').addSelect('notice.isRead', 'isRead').addSelect('notice.createdAt', 'createdAt').addSelect('notice.updatedAt', 'updatedAt');
-    if (query.universityId) qb.andWhere('user.universityId = :universityId', { universityId: query.universityId });
-    this.applyCareerUniversityScope(qb, access, 'user.universityId');
-    if (!access.owner && access.universityIds !== null) qb.andWhere('user.universityId IS NOT NULL');
+    if (query.organizationId) qb.andWhere('user.organizationId = :organizationId', { organizationId: query.organizationId });
+    this.applyCareerUniversityScope(qb, access, 'user.organizationId');
+    if (!access.owner && access.organizationIds !== null) qb.andWhere('user.organizationId IS NOT NULL');
     if (query.readState === 'read') qb.andWhere('notice.isRead = true');
     if (query.readState === 'unread') qb.andWhere('notice.isRead = false');
     if (query.q?.trim()) this.applySearch(qb, query.q.trim(), ['notice.id::text', 'notice.userId::text', 'user.email', 'user.firstName', 'user.lastName', 'notice.title', 'notice.body']);
     const total = await qb.clone().getCount();
     const rows = await qb.orderBy('notice.createdAt', 'DESC').addOrderBy('notice.id', 'DESC').skip((query.page - 1) * query.limit).take(query.limit).getRawMany<Record<string, unknown>>();
-    await this.db.getRepository(AuditLog).save(this.db.getRepository(AuditLog).create({ userId: access.actorId, action: 'platform.career_notice.search', entity: 'personal_data.career_notice', entityId: 'search', newValues: { recordIds: rows.map(row => String(row.id)), targetUserIds: [...new Set(rows.map(row => String(row.userId)))], ...(query.universityId ? { universityId: query.universityId } : {}), ...(query.readState ? { readState: query.readState } : {}), queryEntered: Boolean(query.q?.trim()), page: query.page, limit: query.limit, resultCount: rows.length, total }, ...(context.ip ? { ip: context.ip } : {}), ...(context.userAgent ? { userAgent: context.userAgent.slice(0, 512) } : {}) }));
+    await this.db.getRepository(AuditLog).save(this.db.getRepository(AuditLog).create({ userId: access.actorId, action: 'platform.career_notice.search', entity: 'personal_data.career_notice', entityId: 'search', newValues: { recordIds: rows.map(row => String(row.id)), targetUserIds: [...new Set(rows.map(row => String(row.userId)))], ...(query.organizationId ? { organizationId: query.organizationId } : {}), ...(query.readState ? { readState: query.readState } : {}), queryEntered: Boolean(query.q?.trim()), page: query.page, limit: query.limit, resultCount: rows.length, total }, ...(context.ip ? { ip: context.ip } : {}), ...(context.userAgent ? { userAgent: context.userAgent.slice(0, 512) } : {}) }));
     return toPaginatedResponse(rows, total, query);
   }
 
   async notice(id: string, context: RequestAuditContext = {}) {
     const access = await this.platform.require('career-data.read');
-    const row = await this.db.getRepository(CareerNotice).createQueryBuilder('notice').innerJoin(User, 'user', 'user.id = notice.userId').leftJoin(University, 'university', 'university.id = user.universityId')
+    const row = await this.db.getRepository(CareerNotice).createQueryBuilder('notice').innerJoin(User, 'user', 'user.id = notice.userId').leftJoin(University, 'university', 'university.id = user.organizationId')
       .select('notice.id', 'id').addSelect('notice.userId', 'userId').addSelect("concat_ws(' ', user.firstName, user.lastName)", 'userName').addSelect('user.email', 'email')
-      .addSelect('user.universityId', 'universityId').addSelect('university.name', 'universityName').addSelect('notice.title', 'title').addSelect('notice.body', 'body')
+      .addSelect('user.organizationId', 'organizationId').addSelect('university.name', 'universityName').addSelect('notice.title', 'title').addSelect('notice.body', 'body')
       .addSelect('notice.isRead', 'isRead').addSelect('notice.createdAt', 'createdAt').addSelect('notice.updatedAt', 'updatedAt').where('notice.id = :id', { id }).getRawOne<Record<string, unknown>>();
     if (!row) throw new NotFoundException('Карьерное уведомление не найдено.');
-    this.platform.assertUniversityScope(access, row.universityId ? String(row.universityId) : null);
-    const auditValues: JsonObject = { targetUserId: String(row.userId), universityId: row.universityId ? String(row.universityId) : null, result: 'viewed' };
+    this.platform.assertUniversityScope(access, row.organizationId ? String(row.organizationId) : null);
+    const auditValues: JsonObject = { targetUserId: String(row.userId), organizationId: row.organizationId ? String(row.organizationId) : null, result: 'viewed' };
     await this.db.getRepository(AuditLog).save(this.db.getRepository(AuditLog).create({ userId: access.actorId, action: 'platform.career_notice.viewed', entity: 'personal_data.career_notice', entityId: id, newValues: auditValues, ...(context.ip ? { ip: context.ip } : {}), ...(context.userAgent ? { userAgent: context.userAgent.slice(0, 512) } : {}) }));
     return row;
   }
@@ -411,39 +411,39 @@ export class PlatformCareerService {
     return this.db.transaction(async manager => {
       const notice = await manager.findOne(CareerNotice, { where: { id }, lock: { mode: 'pessimistic_write' } });
       if (!notice) throw new NotFoundException('Карьерное уведомление не найдено.');
-      const user = await manager.findOne(User, { where: { id: notice.userId }, select: ['id', 'universityId'] });
+      const user = await manager.findOne(User, { where: { id: notice.userId }, select: ['id', 'organizationId'] });
       if (!user) throw new BadRequestException('Уведомление не связано с существующим пользователем.');
-      this.platform.assertUniversityScope(access, user.universityId);
+      this.platform.assertUniversityScope(access, user.organizationId);
       const oldValues: JsonObject = { title: notice.title, body: notice.body, isRead: notice.isRead };
       if (dto.title !== undefined) notice.title = dto.title.trim();
       if (dto.body !== undefined) notice.body = dto.body.trim();
       if (dto.isRead !== undefined) notice.isRead = dto.isRead;
       if (!notice.title || JSON.stringify(oldValues) === JSON.stringify({ title: notice.title, body: notice.body, isRead: notice.isRead })) throw new ConflictException('Новые значения совпадают с текущими или заголовок пуст.');
       const updated = await manager.save(CareerNotice, notice);
-      await manager.save(AuditLog, manager.create(AuditLog, { userId: access.actorId, action: 'platform.career_notice.updated', entity: 'personal_data.career_notice', entityId: id, oldValues, newValues: { title: updated.title, body: updated.body, isRead: updated.isRead, targetUserId: user.id, universityId: user.universityId, adminReason: dto.reason.trim(), result: 'updated' }, ...(context.ip ? { ip: context.ip } : {}), ...(context.userAgent ? { userAgent: context.userAgent.slice(0, 512) } : {}) }));
+      await manager.save(AuditLog, manager.create(AuditLog, { userId: access.actorId, action: 'platform.career_notice.updated', entity: 'personal_data.career_notice', entityId: id, oldValues, newValues: { title: updated.title, body: updated.body, isRead: updated.isRead, targetUserId: user.id, organizationId: user.organizationId, adminReason: dto.reason.trim(), result: 'updated' }, ...(context.ip ? { ip: context.ip } : {}), ...(context.userAgent ? { userAgent: context.userAgent.slice(0, 512) } : {}) }));
       return { id, title: updated.title, body: updated.body, isRead: updated.isRead, updatedAt: updated.updatedAt };
     });
   }
 
   async availabilities(query: PlatformCareerAvailabilityQueryDto, context: RequestAuditContext = {}) {
     const access = await this.platform.require('career-data.read');
-    this.assertCareerQueryUniversity(access, query.universityId);
+    this.assertCareerQueryUniversity(access, query.organizationId);
     const qb = this.db.getRepository(CareerAvailability).createQueryBuilder('availability')
       .innerJoin(User, 'student', 'student.id = availability.studentId')
-      .innerJoin(University, 'university', 'university.id = availability.universityId')
+      .innerJoin(University, 'university', 'university.id = availability.organizationId')
       .select('availability.studentId', 'studentId').addSelect("concat_ws(' ', student.firstName, student.lastName)", 'studentName')
       .addSelect('student.email', 'studentEmail').addSelect('student.role', 'role')
-      .addSelect('availability.universityId', 'universityId').addSelect('university.name', 'universityName')
+      .addSelect('availability.organizationId', 'organizationId').addSelect('university.name', 'universityName')
       .addSelect('availability.weeklyHours', 'weeklyHours').addSelect('availability.timeZone', 'timeZone')
       .addSelect('jsonb_array_length(availability.windows)', 'windowCount').addSelect('jsonb_array_length(availability."blockedDates")', 'blockedDateCount')
       .addSelect('availability.updatedAt', 'updatedAt');
-    if (query.universityId) qb.andWhere('availability.universityId = :universityId', { universityId: query.universityId });
-    this.applyCareerUniversityScope(qb, access, 'availability.universityId');
-    if (!access.owner && access.universityIds !== null) qb.andWhere('student.universityId = availability.universityId');
-    if (query.q?.trim()) this.applySearch(qb, query.q.trim(), ['availability.studentId::text', 'student.email', 'student.firstName', 'student.lastName', 'student.role', 'availability.universityId::text', 'university.name']);
+    if (query.organizationId) qb.andWhere('availability.organizationId = :organizationId', { organizationId: query.organizationId });
+    this.applyCareerUniversityScope(qb, access, 'availability.organizationId');
+    if (!access.owner && access.organizationIds !== null) qb.andWhere('student.organizationId = availability.organizationId');
+    if (query.q?.trim()) this.applySearch(qb, query.q.trim(), ['availability.studentId::text', 'student.email', 'student.firstName', 'student.lastName', 'student.role', 'availability.organizationId::text', 'university.name']);
     const total = await qb.clone().getCount();
     const rows = await qb.orderBy('availability.updatedAt', 'DESC').addOrderBy('availability.studentId', 'ASC').skip((query.page - 1) * query.limit).take(query.limit).getRawMany<Record<string, unknown>>();
-    await this.db.getRepository(AuditLog).save(this.db.getRepository(AuditLog).create({ userId: access.actorId, action: 'platform.career_availability.search', entity: 'personal_data.career_availability', entityId: 'search', newValues: { recordIds: rows.map(row => String(row.studentId)), targetUserIds: rows.map(row => String(row.studentId)), universityIds: [...new Set(rows.map(row => String(row.universityId)))], ...(query.universityId ? { universityId: query.universityId } : {}), queryEntered: Boolean(query.q?.trim()), page: query.page, limit: query.limit, resultCount: rows.length, total }, ...(context.ip ? { ip: context.ip } : {}), ...(context.userAgent ? { userAgent: context.userAgent.slice(0, 512) } : {}) }));
+    await this.db.getRepository(AuditLog).save(this.db.getRepository(AuditLog).create({ userId: access.actorId, action: 'platform.career_availability.search', entity: 'personal_data.career_availability', entityId: 'search', newValues: { recordIds: rows.map(row => String(row.studentId)), targetUserIds: rows.map(row => String(row.studentId)), organizationIds: [...new Set(rows.map(row => String(row.organizationId)))], ...(query.organizationId ? { organizationId: query.organizationId } : {}), queryEntered: Boolean(query.q?.trim()), page: query.page, limit: query.limit, resultCount: rows.length, total }, ...(context.ip ? { ip: context.ip } : {}), ...(context.userAgent ? { userAgent: context.userAgent.slice(0, 512) } : {}) }));
     return toPaginatedResponse(rows.map(row => ({ ...row, weeklyHours: Number(row.weeklyHours), windowCount: Number(row.windowCount), blockedDateCount: Number(row.blockedDateCount) })), total, query);
   }
 
@@ -451,18 +451,18 @@ export class PlatformCareerService {
     const access = await this.platform.require('career-data.read');
     const row = await this.db.getRepository(CareerAvailability).createQueryBuilder('availability')
       .innerJoin(User, 'student', 'student.id = availability.studentId')
-      .innerJoin(University, 'university', 'university.id = availability.universityId')
+      .innerJoin(University, 'university', 'university.id = availability.organizationId')
       .select('availability.studentId', 'studentId').addSelect("concat_ws(' ', student.firstName, student.lastName)", 'studentName')
       .addSelect('student.email', 'studentEmail').addSelect('student.role', 'role')
-      .addSelect('availability.universityId', 'universityId').addSelect('university.name', 'universityName')
+      .addSelect('availability.organizationId', 'organizationId').addSelect('university.name', 'universityName')
       .addSelect('availability.weeklyHours', 'weeklyHours').addSelect('availability.timeZone', 'timeZone')
       .addSelect('availability.windows', 'windows').addSelect('availability."blockedDates"', 'blockedDates')
-      .addSelect('student.universityId', 'studentUniversityId').addSelect('availability.updatedAt', 'updatedAt').where('availability.studentId = :studentId', { studentId }).getRawOne<Record<string, unknown>>();
+      .addSelect('student.organizationId', 'studentOrganizationId').addSelect('availability.updatedAt', 'updatedAt').where('availability.studentId = :studentId', { studentId }).getRawOne<Record<string, unknown>>();
     if (!row) throw new NotFoundException('Настройки планирования не найдены.');
-    this.platform.assertUniversityScope(access, String(row.universityId));
-    if (row.studentUniversityId !== row.universityId) throw new BadRequestException('Настройки связаны с пользователем другого университета.');
-    const { studentUniversityId: _studentUniversityId, ...visibleRow } = row;
-    const auditValues: JsonObject = { targetUserId: String(row.studentId), universityId: String(row.universityId), result: 'viewed' };
+    this.platform.assertUniversityScope(access, String(row.organizationId));
+    if (row.studentOrganizationId !== row.organizationId) throw new BadRequestException('Настройки связаны с пользователем другого университета.');
+    const { studentOrganizationId: _studentOrganizationId, ...visibleRow } = row;
+    const auditValues: JsonObject = { targetUserId: String(row.studentId), organizationId: String(row.organizationId), result: 'viewed' };
     await this.db.getRepository(AuditLog).save(this.db.getRepository(AuditLog).create({ userId: access.actorId, action: 'platform.career_availability.viewed', entity: 'personal_data.career_availability', entityId: studentId, newValues: auditValues, ...(context.ip ? { ip: context.ip } : {}), ...(context.userAgent ? { userAgent: context.userAgent.slice(0, 512) } : {}) }));
     return visibleRow;
   }
@@ -475,11 +475,11 @@ export class PlatformCareerService {
       const availability = await manager.findOne(CareerAvailability, { where: { studentId }, lock: { mode: 'pessimistic_write' } });
       if (!availability) throw new NotFoundException('Настройки планирования не найдены.');
       const [user, university] = await Promise.all([
-        manager.getRepository(User).findOne({ where: { id: studentId }, select: ['id', 'role', 'universityId'] }),
-        manager.getRepository(University).findOneBy({ id: availability.universityId }),
+        manager.getRepository(User).findOne({ where: { id: studentId }, select: ['id', 'role', 'organizationId'] }),
+        manager.getRepository(University).findOneBy({ id: availability.organizationId }),
       ]);
-      if (!user || user.universityId !== availability.universityId || !university) throw new BadRequestException('Настройки не связаны с пользователем этого университета.');
-      this.platform.assertUniversityScope(access, availability.universityId);
+      if (!user || user.organizationId !== availability.organizationId || !university) throw new BadRequestException('Настройки не связаны с пользователем этого университета.');
+      this.platform.assertUniversityScope(access, availability.organizationId);
       const fields = ['weeklyHours', 'timeZone', 'windows', 'blockedDates'] as const;
       const oldValues = this.snapshot(availability, fields);
       availability.weeklyHours = dto.weeklyHours;
@@ -488,7 +488,7 @@ export class PlatformCareerService {
       availability.blockedDates = dto.blockedDates.map(range => ({ ...range }));
       if (JSON.stringify(oldValues) === JSON.stringify(this.snapshot(availability, fields))) throw new ConflictException('Новые значения совпадают с текущими.');
       const updated = await manager.save(CareerAvailability, availability);
-      await manager.save(AuditLog, manager.create(AuditLog, { userId: access.actorId, action: 'platform.career_availability.updated', entity: 'personal_data.career_availability', entityId: studentId, oldValues, newValues: { ...this.snapshot(updated, fields), targetUserId: studentId, universityId: availability.universityId, currentRole: user.role, adminReason: dto.reason.trim(), result: 'updated' }, ...(context.ip ? { ip: context.ip } : {}), ...(context.userAgent ? { userAgent: context.userAgent.slice(0, 512) } : {}) }));
+      await manager.save(AuditLog, manager.create(AuditLog, { userId: access.actorId, action: 'platform.career_availability.updated', entity: 'personal_data.career_availability', entityId: studentId, oldValues, newValues: { ...this.snapshot(updated, fields), targetUserId: studentId, organizationId: availability.organizationId, currentRole: user.role, adminReason: dto.reason.trim(), result: 'updated' }, ...(context.ip ? { ip: context.ip } : {}), ...(context.userAgent ? { userAgent: context.userAgent.slice(0, 512) } : {}) }));
       return { studentId, ...this.snapshot(updated, fields), updatedAt: updated.updatedAt };
     });
   }
@@ -502,8 +502,8 @@ export class PlatformCareerService {
       .where('company.id = :id', { id }).getRawOne<Record<string, unknown>>();
     if (!company) throw new NotFoundException('Компания не найдена.');
     const partnerships = await this.db.getRepository(CareerPartnership).createQueryBuilder('partnership')
-      .innerJoin(University, 'university', 'university.id = partnership.universityId')
-      .select('partnership.id', 'id').addSelect('partnership.universityId', 'universityId')
+      .innerJoin(University, 'university', 'university.id = partnership.organizationId')
+      .select('partnership.id', 'id').addSelect('partnership.organizationId', 'organizationId')
       .addSelect('university.name', 'universityName').addSelect('partnership.state', 'state')
       .addSelect('partnership.createdAt', 'createdAt').addSelect('partnership.updatedAt', 'updatedAt')
       .where('partnership.companyId = :id', { id }).orderBy('partnership.createdAt', 'DESC').getRawMany();
@@ -531,17 +531,17 @@ export class PlatformCareerService {
 
   async partnerships(query: PlatformCareerPartnershipQueryDto, context: RequestAuditContext = {}) {
     const access = await this.platform.require('career-data.read');
-    this.assertCareerQueryUniversity(access, query.universityId);
+    this.assertCareerQueryUniversity(access, query.organizationId);
     const qb = this.db.getRepository(CareerPartnership).createQueryBuilder('partnership')
       .innerJoin(CareerCompany, 'company', 'company.id = partnership.companyId')
-      .innerJoin(University, 'university', 'university.id = partnership.universityId')
+      .innerJoin(University, 'university', 'university.id = partnership.organizationId')
       .select('partnership.id', 'id').addSelect('partnership.companyId', 'companyId').addSelect('company.name', 'companyName')
-      .addSelect('partnership.universityId', 'universityId').addSelect('university.name', 'universityName')
+      .addSelect('partnership.organizationId', 'organizationId').addSelect('university.name', 'universityName')
       .addSelect('partnership.state', 'state').addSelect('partnership.createdAt', 'createdAt').addSelect('partnership.updatedAt', 'updatedAt');
-    if (query.universityId) qb.andWhere('partnership.universityId = :universityId', { universityId: query.universityId });
-    this.applyCareerUniversityScope(qb, access, 'partnership.universityId');
+    if (query.organizationId) qb.andWhere('partnership.organizationId = :organizationId', { organizationId: query.organizationId });
+    this.applyCareerUniversityScope(qb, access, 'partnership.organizationId');
     if (query.state) qb.andWhere('partnership.state = :state', { state: query.state });
-    if (query.q?.trim()) this.applySearch(qb, query.q.trim(), ['partnership.id::text', 'partnership.companyId::text', 'partnership.universityId::text', 'company.name', 'university.name']);
+    if (query.q?.trim()) this.applySearch(qb, query.q.trim(), ['partnership.id::text', 'partnership.companyId::text', 'partnership.organizationId::text', 'company.name', 'university.name']);
     const total = await qb.clone().getCount();
     const rows = await qb.orderBy('partnership.updatedAt', 'DESC').addOrderBy('partnership.id', 'DESC').skip((query.page - 1) * query.limit).take(query.limit).getRawMany<Record<string, unknown>>();
     await this.auditCatalogRead('career_partnership', 'search', access.actorId, rows.map(row => String(row.id)), query, total, context);
@@ -552,8 +552,8 @@ export class PlatformCareerService {
     const access = await this.platform.require('career-data.read');
     const row = await this.partnershipQuery().where('partnership.id = :id', { id }).getRawOne<Record<string, unknown>>();
     if (!row) throw new NotFoundException('Партнёрство не найдено.');
-    this.platform.assertUniversityScope(access, String(row.universityId));
-    await this.auditCatalogRead('career_partnership', 'viewed', access.actorId, [id], undefined, undefined, context, String(row.universityId));
+    this.platform.assertUniversityScope(access, String(row.organizationId));
+    await this.auditCatalogRead('career_partnership', 'viewed', access.actorId, [id], undefined, undefined, context, String(row.organizationId));
     return row;
   }
 
@@ -563,28 +563,28 @@ export class PlatformCareerService {
     return this.db.transaction(async manager => {
       const partnership = await manager.findOne(CareerPartnership, { where: { id }, lock: { mode: 'pessimistic_write' } });
       if (!partnership) throw new NotFoundException('Партнёрство не найдено.');
-      this.platform.assertUniversityScope(access, partnership.universityId);
+      this.platform.assertUniversityScope(access, partnership.organizationId);
       if (partnership.state !== 'pending') throw new ConflictException('Решение доступно только для заявки, ожидающей проверки.');
       const [company, university] = await Promise.all([
         manager.getRepository(CareerCompany).findOneBy({ id: partnership.companyId }),
-        manager.getRepository(University).findOneBy({ id: partnership.universityId }),
+        manager.getRepository(University).findOneBy({ id: partnership.organizationId }),
       ]);
       if (!company || !university) throw new BadRequestException('Партнёрство не связано с существующей компанией и университетом.');
       if (company.createdBy === access.actorId || await manager.getRepository(CareerMembership).createQueryBuilder('membership').where('membership."userId" = :actorId AND membership."companyId" = :companyId AND membership."revokedAt" IS NULL', { actorId: access.actorId, companyId: company.id }).getExists()) throw new ForbiddenException('Создатель и действующий участник компании не могут проверять её партнёрство.');
       const oldState = partnership.state;
       partnership.state = dto.decision;
       const updated = await manager.save(CareerPartnership, partnership);
-      await manager.save(AuditLog, manager.create(AuditLog, { userId: access.actorId, action: `platform.career_partnership.${dto.decision}`, entity: 'personal_data.career_partnership', entityId: id, oldValues: { state: oldState, companyId: company.id, universityId: university.id }, newValues: { state: updated.state, companyId: company.id, universityId: university.id, adminReason: dto.reason.trim(), result: dto.decision }, ...(context.ip ? { ip: context.ip } : {}), ...(context.userAgent ? { userAgent: context.userAgent.slice(0, 512) } : {}) }));
+      await manager.save(AuditLog, manager.create(AuditLog, { userId: access.actorId, action: `platform.career_partnership.${dto.decision}`, entity: 'personal_data.career_partnership', entityId: id, oldValues: { state: oldState, companyId: company.id, organizationId: university.id }, newValues: { state: updated.state, companyId: company.id, organizationId: university.id, adminReason: dto.reason.trim(), result: dto.decision }, ...(context.ip ? { ip: context.ip } : {}), ...(context.userAgent ? { userAgent: context.userAgent.slice(0, 512) } : {}) }));
       return { id, state: updated.state, updatedAt: updated.updatedAt };
     });
   }
 
   async tasks(query: PlatformCareerTaskQueryDto, context: RequestAuditContext = {}) {
     const access = await this.platform.require('career-data.read');
-    this.assertCareerQueryUniversity(access, query.universityId);
+    this.assertCareerQueryUniversity(access, query.organizationId);
     const qb = this.taskQuery();
-    if (query.universityId) qb.andWhere('task.universityId = :universityId', { universityId: query.universityId });
-    this.applyCareerUniversityScope(qb, access, 'task.universityId');
+    if (query.organizationId) qb.andWhere('task.organizationId = :organizationId', { organizationId: query.organizationId });
+    this.applyCareerUniversityScope(qb, access, 'task.organizationId');
     if (query.state) qb.andWhere('task.state = :state', { state: query.state });
     if (query.q?.trim()) this.applySearch(qb, query.q.trim(), ['task.id::text', 'task.title', 'task.description', 'task.criteria', 'task.skill', 'company.name', 'university.name']);
     const total = await qb.clone().getCount();
@@ -597,12 +597,12 @@ export class PlatformCareerService {
     const access = await this.platform.require('career-data.read');
     const row = await this.taskQuery(true).where('task.id = :id', { id }).getRawOne<Record<string, unknown>>();
     if (!row) throw new NotFoundException('Карьерная задача не найдена.');
-    this.platform.assertUniversityScope(access, String(row.universityId));
+    this.platform.assertUniversityScope(access, String(row.organizationId));
     const [applicationCount, workCount] = await Promise.all([
       this.db.getRepository(CareerApplication).countBy({ taskId: id }),
       this.db.getRepository(CareerWork).countBy({ taskId: id }),
     ]);
-    await this.auditCatalogRead('career_task', 'viewed', access.actorId, [id], undefined, undefined, context, String(row.universityId));
+    await this.auditCatalogRead('career_task', 'viewed', access.actorId, [id], undefined, undefined, context, String(row.organizationId));
     return { ...row, canEdit: row.state === 'draft' && applicationCount === 0 && workCount === 0 };
   }
 
@@ -614,13 +614,13 @@ export class PlatformCareerService {
     return this.db.transaction(async manager => {
       const task = await manager.findOne(CareerTask, { where: { id }, lock: { mode: 'pessimistic_write' } });
       if (!task) throw new NotFoundException('Карьерная задача не найдена.');
-      this.platform.assertUniversityScope(access, task.universityId);
+      this.platform.assertUniversityScope(access, task.organizationId);
       if (task.state !== 'draft') throw new ConflictException('Редактировать можно только черновик карьерной задачи.');
       if (await manager.getRepository(CareerApplication).existsBy({ taskId: id }) || await manager.getRepository(CareerWork).existsBy({ taskId: id })) throw new ConflictException('Задачу нельзя исправить: к ней уже привязаны отклики или работы.');
       const [company, university, partnership] = await Promise.all([
         manager.getRepository(CareerCompany).findOneBy({ id: task.companyId }),
-        manager.getRepository(University).findOneBy({ id: task.universityId }),
-        manager.getRepository(CareerPartnership).findOneBy({ companyId: task.companyId, universityId: task.universityId }),
+        manager.getRepository(University).findOneBy({ id: task.organizationId }),
+        manager.getRepository(CareerPartnership).findOneBy({ companyId: task.companyId, organizationId: task.organizationId }),
       ]);
       if (!company || !university || partnership?.state !== 'verified') throw new BadRequestException('Задача не связана с действующей компанией, университетом и подтверждённым партнёрством.');
       const oldValues = this.snapshot(task, changes);
@@ -638,27 +638,27 @@ export class PlatformCareerService {
       const deadlineTime = Date.parse(`${task.deadline}T00:00:00.000Z`);
       if (!task.title || task.title.length < 5 || task.title.length > 180 || task.description.length < 20 || task.description.length > 10000 || task.criteria.length < 10 || task.criteria.length > 4000 || task.rewardKopecks < 100 || task.rewardKopecks > 100000000 || task.hours < 1 || task.hours > 500 || !Number.isFinite(deadlineTime) || new Date(deadlineTime).toISOString().slice(0, 10) !== task.deadline || task.deadline < today || task.profiled && !task.skill.trim() || !['starter', 'standard', 'advanced'].includes(task.level)) throw new BadRequestException('Проверьте название, описание, критерии, оплату, часы, дату и профильные требования задачи.');
       const updated = await manager.save(CareerTask, task);
-      await manager.save(AuditLog, manager.create(AuditLog, { userId: access.actorId, action: 'platform.career_task.updated', entity: 'personal_data.career_task', entityId: id, oldValues, newValues: { ...this.snapshot(updated, changes), companyId: updated.companyId, universityId: updated.universityId, adminReason: dto.reason.trim(), result: 'updated' }, ...(context.ip ? { ip: context.ip } : {}), ...(context.userAgent ? { userAgent: context.userAgent.slice(0, 512) } : {}) }));
-      return { id, ...this.snapshot(updated, changes), companyId: updated.companyId, universityId: updated.universityId, updatedAt: updated.updatedAt };
+      await manager.save(AuditLog, manager.create(AuditLog, { userId: access.actorId, action: 'platform.career_task.updated', entity: 'personal_data.career_task', entityId: id, oldValues, newValues: { ...this.snapshot(updated, changes), companyId: updated.companyId, organizationId: updated.organizationId, adminReason: dto.reason.trim(), result: 'updated' }, ...(context.ip ? { ip: context.ip } : {}), ...(context.userAgent ? { userAgent: context.userAgent.slice(0, 512) } : {}) }));
+      return { id, ...this.snapshot(updated, changes), companyId: updated.companyId, organizationId: updated.organizationId, updatedAt: updated.updatedAt };
     });
   }
 
   async profiles(query: PlatformCareerProfileQueryDto, context: RequestAuditContext = {}) {
     const access = await this.platform.require('career-data.read');
-    this.assertCareerQueryUniversity(access, query.universityId);
+    this.assertCareerQueryUniversity(access, query.organizationId);
     const qb = this.db.getRepository(CareerProfile).createQueryBuilder('profile')
       .leftJoin(User, 'student', 'student.id = profile.studentId')
-      .innerJoin(University, 'university', 'university.id = profile.universityId')
+      .innerJoin(University, 'university', 'university.id = profile.organizationId')
       .select('profile.id', 'id').addSelect('profile.studentId', 'studentId')
       .addSelect("concat_ws(' ', student.firstName, student.lastName)", 'studentName')
-      .addSelect('student.email', 'studentEmail').addSelect('profile.universityId', 'universityId')
+      .addSelect('student.email', 'studentEmail').addSelect('profile.organizationId', 'organizationId')
       .addSelect('university.name', 'universityName').addSelect('profile.headline', 'headline')
       .addSelect('profile.skills', 'skills')
       .addSelect('profile.verification', 'verification').addSelect('profile.createdAt', 'createdAt')
       .addSelect('profile.updatedAt', 'updatedAt');
-    if (query.universityId) qb.andWhere('profile.universityId = :universityId', { universityId: query.universityId });
-    this.applyCareerUniversityScope(qb, access, 'profile.universityId');
-    if (!access.owner && access.universityIds !== null) qb.andWhere('student.universityId = profile.universityId');
+    if (query.organizationId) qb.andWhere('profile.organizationId = :organizationId', { organizationId: query.organizationId });
+    this.applyCareerUniversityScope(qb, access, 'profile.organizationId');
+    if (!access.owner && access.organizationIds !== null) qb.andWhere('student.organizationId = profile.organizationId');
     if (query.verification) qb.andWhere('profile.verification = :verification', { verification: query.verification });
     if (query.q?.trim()) this.applySearch(qb, query.q.trim(), ['profile.id::text', 'profile.studentId::text', 'student.email', "concat_ws(' ', student.firstName, student.lastName)", 'profile.headline', 'profile.about', 'profile.skills::text']);
     const [data, total] = await this.paginate<CareerProfile, ProfileRow>(qb, query.page, query.limit, 'profile.updatedAt', 'profile.id');
@@ -668,19 +668,19 @@ export class PlatformCareerService {
 
   async admissions(query: PlatformCareerAdmissionQueryDto, context: RequestAuditContext = {}) {
     const access = await this.platform.require('career-data.read');
-    this.assertCareerQueryUniversity(access, query.universityId);
+    this.assertCareerQueryUniversity(access, query.organizationId);
     const qb = this.db.getRepository(CareerAdmission).createQueryBuilder('admission')
       .leftJoin(User, 'student', 'student.id = admission.studentId')
-      .innerJoin(University, 'university', 'university.id = admission.universityId')
+      .innerJoin(University, 'university', 'university.id = admission.organizationId')
       .select('admission.id', 'id').addSelect('admission.studentId', 'studentId')
       .addSelect("concat_ws(' ', student.firstName, student.lastName)", 'studentName')
-      .addSelect('student.email', 'studentEmail').addSelect('admission.universityId', 'universityId')
+      .addSelect('student.email', 'studentEmail').addSelect('admission.organizationId', 'organizationId')
       .addSelect('university.name', 'universityName').addSelect('admission.skill', 'skill')
       .addSelect('admission.state', 'state').addSelect('admission.basis', 'basis')
       .addSelect('admission.createdAt', 'createdAt').addSelect('admission.updatedAt', 'updatedAt');
-    if (query.universityId) qb.andWhere('admission.universityId = :universityId', { universityId: query.universityId });
-    this.applyCareerUniversityScope(qb, access, 'admission.universityId');
-    if (!access.owner && access.universityIds !== null) qb.andWhere('student.universityId = admission.universityId');
+    if (query.organizationId) qb.andWhere('admission.organizationId = :organizationId', { organizationId: query.organizationId });
+    this.applyCareerUniversityScope(qb, access, 'admission.organizationId');
+    if (!access.owner && access.organizationIds !== null) qb.andWhere('student.organizationId = admission.organizationId');
     if (query.state) qb.andWhere('admission.state = :state', { state: query.state });
     if (query.q?.trim()) this.applySearch(qb, query.q.trim(), ['admission.id::text', 'admission.studentId::text', 'student.email', "concat_ws(' ', student.firstName, student.lastName)", 'admission.skill', 'admission.evidence', 'admission.reason']);
     const [data, total] = await this.paginate<CareerAdmission, AdmissionRow>(qb, query.page, query.limit, 'admission.updatedAt', 'admission.id');
@@ -692,19 +692,19 @@ export class PlatformCareerService {
     const access = await this.platform.require('career-data.read');
     const profile = await this.db.getRepository(CareerProfile).createQueryBuilder('profile')
       .leftJoin(User, 'student', 'student.id = profile.studentId')
-      .innerJoin(University, 'university', 'university.id = profile.universityId')
+      .innerJoin(University, 'university', 'university.id = profile.organizationId')
       .select('profile.id', 'id').addSelect('profile.studentId', 'studentId')
       .addSelect("concat_ws(' ', student.firstName, student.lastName)", 'studentName').addSelect('student.email', 'studentEmail')
-      .addSelect('student.universityId', 'studentUniversityId')
-      .addSelect('profile.universityId', 'universityId').addSelect('university.name', 'universityName')
+      .addSelect('student.organizationId', 'studentOrganizationId')
+      .addSelect('profile.organizationId', 'organizationId').addSelect('university.name', 'universityName')
       .addSelect('profile.headline', 'headline').addSelect('profile.about', 'about').addSelect('profile.skills', 'skills')
       .addSelect('profile.verification', 'verification').addSelect('profile.createdAt', 'createdAt').addSelect('profile.updatedAt', 'updatedAt')
       .where('profile.id = :id', { id }).getRawOne<ProfileRow>();
     if (!profile) throw new NotFoundException('Карьерный профиль не найден.');
-    this.platform.assertUniversityScope(access, profile.universityId);
-    if (profile.studentUniversityId !== profile.universityId) throw new BadRequestException('Карьерный профиль связан с пользователем другого университета.');
-    const { studentUniversityId: _studentUniversityId, ...visibleProfile } = profile;
-    await this.auditDetailRead('career_profile', access.actorId, profile.id, profile.studentId, profile.universityId, context);
+    this.platform.assertUniversityScope(access, profile.organizationId);
+    if (profile.studentOrganizationId !== profile.organizationId) throw new BadRequestException('Карьерный профиль связан с пользователем другого университета.');
+    const { studentOrganizationId: _studentOrganizationId, ...visibleProfile } = profile;
+    await this.auditDetailRead('career_profile', access.actorId, profile.id, profile.studentId, profile.organizationId, context);
     return visibleProfile;
   }
 
@@ -712,19 +712,19 @@ export class PlatformCareerService {
     const access = await this.platform.require('career-data.read');
     const admission = await this.db.getRepository(CareerAdmission).createQueryBuilder('admission')
       .leftJoin(User, 'student', 'student.id = admission.studentId')
-      .innerJoin(University, 'university', 'university.id = admission.universityId')
+      .innerJoin(University, 'university', 'university.id = admission.organizationId')
       .select('admission.id', 'id').addSelect('admission.studentId', 'studentId')
       .addSelect("concat_ws(' ', student.firstName, student.lastName)", 'studentName').addSelect('student.email', 'studentEmail')
-      .addSelect('student.universityId', 'studentUniversityId').addSelect('admission.universityId', 'universityId').addSelect('university.name', 'universityName')
+      .addSelect('student.organizationId', 'studentOrganizationId').addSelect('admission.organizationId', 'organizationId').addSelect('university.name', 'universityName')
       .addSelect('admission.skill', 'skill').addSelect('admission.evidence', 'evidence').addSelect('admission.state', 'state')
       .addSelect('admission.reason', 'reason').addSelect('admission.basis', 'basis')
       .addSelect('admission.createdAt', 'createdAt').addSelect('admission.updatedAt', 'updatedAt')
       .where('admission.id = :id', { id }).getRawOne<AdmissionRow>();
     if (!admission) throw new NotFoundException('Заявка на допуск не найдена.');
-    this.platform.assertUniversityScope(access, admission.universityId);
-    if (admission.studentUniversityId !== admission.universityId) throw new BadRequestException('Заявка связана с пользователем другого университета.');
-    const { studentUniversityId: _studentUniversityId, ...visibleAdmission } = admission;
-    await this.auditDetailRead('career_admission', access.actorId, admission.id, admission.studentId, admission.universityId, context);
+    this.platform.assertUniversityScope(access, admission.organizationId);
+    if (admission.studentOrganizationId !== admission.organizationId) throw new BadRequestException('Заявка связана с пользователем другого университета.');
+    const { studentOrganizationId: _studentOrganizationId, ...visibleAdmission } = admission;
+    await this.auditDetailRead('career_admission', access.actorId, admission.id, admission.studentId, admission.organizationId, context);
     return visibleAdmission;
   }
 
@@ -744,14 +744,14 @@ export class PlatformCareerService {
     return this.db.transaction(async manager => {
       const profile = await manager.findOne(CareerProfile, { where: { id }, lock: { mode: 'pessimistic_write' } });
       if (!profile) throw new NotFoundException('Карьерный профиль не найден.');
-      this.platform.assertUniversityScope(access, profile.universityId);
-      await this.assertStudent(manager, profile.studentId, profile.universityId);
+      this.platform.assertUniversityScope(access, profile.organizationId);
+      await this.assertStudent(manager, profile.studentId, profile.organizationId);
       const oldValues = this.snapshot(profile, Object.keys(patch));
       const changes = Object.fromEntries(Object.entries(patch).filter(([key, value]) => JSON.stringify((profile as unknown as Record<string, unknown>)[key]) !== JSON.stringify(value)));
       if (!Object.keys(changes).length) throw new BadRequestException('Новые значения совпадают с текущими.');
       Object.assign(profile, changes, { verification: 'pending' });
       const updated = await manager.save(CareerProfile, profile);
-      await this.audit(manager, access.actorId, 'career_profile', id, { ...oldValues, ...this.snapshot(profile, ['verification']) }, { ...this.snapshot(updated, [...Object.keys(changes), 'verification']), adminReason: dto.reason.trim(), result: 'updated' }, updated.studentId, updated.universityId, context);
+      await this.audit(manager, access.actorId, 'career_profile', id, { ...oldValues, ...this.snapshot(profile, ['verification']) }, { ...this.snapshot(updated, [...Object.keys(changes), 'verification']), adminReason: dto.reason.trim(), result: 'updated' }, updated.studentId, updated.organizationId, context);
       return updated;
     });
   }
@@ -762,14 +762,14 @@ export class PlatformCareerService {
     return this.db.transaction(async manager => {
       const profile = await manager.findOne(CareerProfile, { where: { id }, lock: { mode: 'pessimistic_write' } });
       if (!profile) throw new NotFoundException('Карьерный профиль не найден.');
-      this.platform.assertUniversityScope(access, profile.universityId);
-      await this.assertStudent(manager, profile.studentId, profile.universityId);
+      this.platform.assertUniversityScope(access, profile.organizationId);
+      await this.assertStudent(manager, profile.studentId, profile.organizationId);
       const verification = dto.decision === 'approved' ? 'verified' : 'rejected';
       if (profile.verification === verification) throw new ConflictException('Профиль уже имеет это решение.');
       const oldValues = this.snapshot(profile, ['verification']);
       profile.verification = verification;
       const updated = await manager.save(CareerProfile, profile);
-      await this.audit(manager, access.actorId, 'career_profile', id, oldValues, { verification, decision: dto.decision, adminReason: dto.reason.trim(), result: 'updated' }, updated.studentId, updated.universityId, context);
+      await this.audit(manager, access.actorId, 'career_profile', id, oldValues, { verification, decision: dto.decision, adminReason: dto.reason.trim(), result: 'updated' }, updated.studentId, updated.organizationId, context);
       return updated;
     });
   }
@@ -786,15 +786,15 @@ export class PlatformCareerService {
     return this.db.transaction(async manager => {
       const admission = await manager.findOne(CareerAdmission, { where: { id }, lock: { mode: 'pessimistic_write' } });
       if (!admission) throw new NotFoundException('Заявка на допуск не найдена.');
-      this.platform.assertUniversityScope(access, admission.universityId);
-      await this.assertStudent(manager, admission.studentId, admission.universityId);
+      this.platform.assertUniversityScope(access, admission.organizationId);
+      await this.assertStudent(manager, admission.studentId, admission.organizationId);
       if (patch.skill !== undefined && patch.skill !== admission.skill && await manager.getRepository(CareerAdmission).existsBy({ studentId: admission.studentId, skill: String(patch.skill) })) throw new ConflictException('У студента уже есть заявка по этому направлению.');
       const oldValues = { ...this.snapshot(admission, Object.keys(patch)), ...this.snapshot(admission, ['state', 'basis', 'reason']) };
       const changes = Object.fromEntries(Object.entries(patch).filter(([key, value]) => (admission as unknown as Record<string, unknown>)[key] !== value));
       if (!Object.keys(changes).length) throw new BadRequestException('Новые значения совпадают с текущими.');
       Object.assign(admission, changes, { state: 'pending', basis: 'unspecified', reason: '' });
       const updated = await manager.save(CareerAdmission, admission);
-      await this.audit(manager, access.actorId, 'career_admission', id, oldValues, { ...this.snapshot(updated, [...Object.keys(changes), 'state', 'basis', 'reason']), adminReason: dto.reason.trim(), result: 'updated' }, updated.studentId, updated.universityId, context);
+      await this.audit(manager, access.actorId, 'career_admission', id, oldValues, { ...this.snapshot(updated, [...Object.keys(changes), 'state', 'basis', 'reason']), adminReason: dto.reason.trim(), result: 'updated' }, updated.studentId, updated.organizationId, context);
       return updated;
     });
   }
@@ -805,8 +805,8 @@ export class PlatformCareerService {
     return this.db.transaction(async manager => {
       const admission = await manager.findOne(CareerAdmission, { where: { id }, lock: { mode: 'pessimistic_write' } });
       if (!admission) throw new NotFoundException('Заявка на допуск не найдена.');
-      this.platform.assertUniversityScope(access, admission.universityId);
-      await this.assertStudent(manager, admission.studentId, admission.universityId);
+      this.platform.assertUniversityScope(access, admission.organizationId);
+      await this.assertStudent(manager, admission.studentId, admission.organizationId);
       const state = dto.decision;
       if (admission.state === state && admission.reason === dto.reason.trim()) throw new ConflictException('Заявка уже сохранена с таким решением и причиной.');
       const oldValues = this.snapshot(admission, ['state', 'basis', 'reason']);
@@ -814,28 +814,28 @@ export class PlatformCareerService {
       admission.basis = state === 'approved' ? 'center' : 'unspecified';
       admission.reason = dto.reason.trim();
       const updated = await manager.save(CareerAdmission, admission);
-      await this.audit(manager, access.actorId, 'career_admission', id, oldValues, { state, basis: updated.basis, reason: updated.reason, adminReason: dto.reason.trim(), result: 'updated' }, updated.studentId, updated.universityId, context);
+      await this.audit(manager, access.actorId, 'career_admission', id, oldValues, { state, basis: updated.basis, reason: updated.reason, adminReason: dto.reason.trim(), result: 'updated' }, updated.studentId, updated.organizationId, context);
       return updated;
     });
   }
 
-  private async assertStudent(manager: EntityManager, studentId: string, universityId: string): Promise<void> {
-    const user = await manager.findOne(User, { where: { id: studentId }, select: ['id', 'universityId'] });
-    if (!user || user.universityId !== universityId || !await manager.getRepository(University).existsBy({ id: universityId })) throw new BadRequestException('Карьерная запись не связана с пользователем этого университета.');
+  private async assertStudent(manager: EntityManager, studentId: string, organizationId: string): Promise<void> {
+    const user = await manager.findOne(User, { where: { id: studentId }, select: ['id', 'organizationId'] });
+    if (!user || user.organizationId !== organizationId || !await manager.getRepository(University).existsBy({ id: organizationId })) throw new BadRequestException('Карьерная запись не связана с пользователем этого университета.');
   }
 
   private assertGlobalCareerAccess(access: Awaited<ReturnType<PlatformService['access']>>): void {
-    if (!access.owner && access.universityIds !== null) throw new ForbiddenException('Управление компаниями и company memberships доступно только владельцу или глобальному разрешению.');
+    if (!access.owner && access.organizationIds !== null) throw new ForbiddenException('Управление компаниями и company memberships доступно только владельцу или глобальному разрешению.');
   }
 
-  private assertCareerQueryUniversity(access: Awaited<ReturnType<PlatformService['access']>>, universityId?: string): void {
-    if (universityId) this.platform.assertUniversityScope(access, universityId);
+  private assertCareerQueryUniversity(access: Awaited<ReturnType<PlatformService['access']>>, organizationId?: string): void {
+    if (organizationId) this.platform.assertUniversityScope(access, organizationId);
   }
 
   private applyCareerUniversityScope<T extends CareerProfile | CareerAdmission | CareerAvailability | CareerPartnership | CareerPortfolio | CareerReview | CareerNotice | CareerTask | CareerTest | CareerTestAttempt>(qb: SelectQueryBuilder<T>, access: Awaited<ReturnType<PlatformService['access']>>, universityColumn: string): void {
-    if (access.owner || access.universityIds === null) return;
-    if (!access.universityIds.length) qb.andWhere('1 = 0');
-    else qb.andWhere(`${universityColumn} IN (:...careerAllowedUniversityIds)`, { careerAllowedUniversityIds: access.universityIds });
+    if (access.owner || access.organizationIds === null) return;
+    if (!access.organizationIds.length) qb.andWhere('1 = 0');
+    else qb.andWhere(`${universityColumn} IN (:...careerAllowedOrganizationIds)`, { careerAllowedOrganizationIds: access.organizationIds });
   }
 
   private applySearch<T extends CareerProfile | CareerAdmission | CareerAvailability | CareerCompany | CareerMembership | CareerPartnership | CareerPortfolio | CareerReview | CareerNotice | CareerTask | CareerTest | CareerTestAttempt>(qb: SelectQueryBuilder<T>, query: string, fields: string[]): void {
@@ -863,7 +863,7 @@ export class PlatformCareerService {
     if (reason.trim().length < 3) throw new BadRequestException('Укажите причину изменения (не менее 3 символов).');
   }
 
-  private async auditRead<T extends { id: string; universityId: string }>(entity: string, actorId: string, rows: T[], query: PlatformCareerProfileQueryDto | PlatformCareerAdmissionQueryDto, total: number, context: RequestAuditContext): Promise<void> {
+  private async auditRead<T extends { id: string; organizationId: string }>(entity: string, actorId: string, rows: T[], query: PlatformCareerProfileQueryDto | PlatformCareerAdmissionQueryDto, total: number, context: RequestAuditContext): Promise<void> {
     await this.db.getRepository(AuditLog).save(this.db.getRepository(AuditLog).create({
       userId: actorId,
       action: `platform.${entity}.search`,
@@ -871,8 +871,8 @@ export class PlatformCareerService {
       entityId: 'search',
       newValues: {
         recordIds: rows.map(row => row.id),
-        universityIds: [...new Set(rows.map(row => row.universityId))],
-        ...(query.universityId ? { universityId: query.universityId } : {}),
+        organizationIds: [...new Set(rows.map(row => row.organizationId))],
+        ...(query.organizationId ? { organizationId: query.organizationId } : {}),
         page: query.page,
         limit: query.limit,
         resultCount: rows.length,
@@ -883,31 +883,31 @@ export class PlatformCareerService {
     }));
   }
 
-  private async auditDetailRead(entity: string, actorId: string, id: string, targetUserId: string, universityId: string, context: RequestAuditContext): Promise<void> {
+  private async auditDetailRead(entity: string, actorId: string, id: string, targetUserId: string, organizationId: string, context: RequestAuditContext): Promise<void> {
     await this.db.getRepository(AuditLog).save(this.db.getRepository(AuditLog).create({
       userId: actorId,
       action: `platform.${entity}.viewed`,
       entity: `personal_data.${entity}`,
       entityId: id,
-      newValues: { targetUserId, universityId, result: 'viewed' },
+      newValues: { targetUserId, organizationId, result: 'viewed' },
       ...(context.ip ? { ip: context.ip } : {}),
       ...(context.userAgent ? { userAgent: context.userAgent.slice(0, 512) } : {}),
     }));
   }
 
-  private async auditCatalogRead(entity: 'career_company' | 'career_partnership' | 'career_task', operation: 'search' | 'viewed', actorId: string, recordIds: string[], query: PlatformQueryDto | undefined, total: number | undefined, context: RequestAuditContext, universityId?: string): Promise<void> {
+  private async auditCatalogRead(entity: 'career_company' | 'career_partnership' | 'career_task', operation: 'search' | 'viewed', actorId: string, recordIds: string[], query: PlatformQueryDto | undefined, total: number | undefined, context: RequestAuditContext, organizationId?: string): Promise<void> {
     const values: JsonObject = operation === 'search'
-      ? { recordIds, ...(query?.universityId ? { universityId: query.universityId } : {}), ...(universityId ? { universityId } : {}), ...(query && 'state' in query && query.state ? { state: String(query.state) } : {}), ...(query && 'partnershipState' in query && query.partnershipState ? { partnershipState: String(query.partnershipState) } : {}), queryEntered: Boolean(query?.q?.trim()), page: query?.page ?? 1, limit: query?.limit ?? 20, resultCount: recordIds.length, total: total ?? 0 }
-      : { recordIds, ...(universityId ? { universityId } : {}), result: 'viewed' };
+      ? { recordIds, ...(query?.organizationId ? { organizationId: query.organizationId } : {}), ...(organizationId ? { organizationId } : {}), ...(query && 'state' in query && query.state ? { state: String(query.state) } : {}), ...(query && 'partnershipState' in query && query.partnershipState ? { partnershipState: String(query.partnershipState) } : {}), queryEntered: Boolean(query?.q?.trim()), page: query?.page ?? 1, limit: query?.limit ?? 20, resultCount: recordIds.length, total: total ?? 0 }
+      : { recordIds, ...(organizationId ? { organizationId } : {}), result: 'viewed' };
     await this.db.getRepository(AuditLog).save(this.db.getRepository(AuditLog).create({ userId: actorId, action: `platform.${entity}.${operation}`, entity: `personal_data.${entity}`, entityId: operation === 'search' ? 'search' : recordIds[0], newValues: values, ...(context.ip ? { ip: context.ip } : {}), ...(context.userAgent ? { userAgent: context.userAgent.slice(0, 512) } : {}) }));
   }
 
   private taskQuery(includeDetails = false): SelectQueryBuilder<CareerTask> {
     const qb = this.db.getRepository(CareerTask).createQueryBuilder('task')
       .innerJoin(CareerCompany, 'company', 'company.id = task.companyId')
-      .innerJoin(University, 'university', 'university.id = task.universityId')
+      .innerJoin(University, 'university', 'university.id = task.organizationId')
       .select('task.id', 'id').addSelect('task.companyId', 'companyId').addSelect('company.name', 'companyName')
-      .addSelect('task.universityId', 'universityId').addSelect('university.name', 'universityName')
+      .addSelect('task.organizationId', 'organizationId').addSelect('university.name', 'universityName')
       .addSelect('task.title', 'title').addSelect('task.state', 'state').addSelect('task.rewardKopecks', 'rewardKopecks')
       .addSelect('task.hours', 'hours').addSelect('task.deadline', 'deadline').addSelect('task.profiled', 'profiled')
       .addSelect('task.skill', 'skill').addSelect('task.level', 'level').addSelect('task.updatedAt', 'updatedAt');
@@ -919,9 +919,9 @@ export class PlatformCareerService {
   private partnershipQuery(): SelectQueryBuilder<CareerPartnership> {
     return this.db.getRepository(CareerPartnership).createQueryBuilder('partnership')
       .innerJoin(CareerCompany, 'company', 'company.id = partnership.companyId')
-      .innerJoin(University, 'university', 'university.id = partnership.universityId')
+      .innerJoin(University, 'university', 'university.id = partnership.organizationId')
       .select('partnership.id', 'id').addSelect('partnership.companyId', 'companyId').addSelect('company.name', 'companyName')
-      .addSelect('partnership.universityId', 'universityId').addSelect('university.name', 'universityName')
+      .addSelect('partnership.organizationId', 'organizationId').addSelect('university.name', 'universityName')
       .addSelect('partnership.state', 'state').addSelect('partnership.createdAt', 'createdAt').addSelect('partnership.updatedAt', 'updatedAt');
   }
 
@@ -930,28 +930,28 @@ export class PlatformCareerService {
       .innerJoin(CareerWork, 'work', 'work.id = review.workId')
       .innerJoin(CareerTask, 'task', 'task.id = work.taskId')
       .innerJoin(CareerCompany, 'company', 'company.id = task.companyId')
-      .innerJoin(University, 'university', 'university.id = task.universityId')
+      .innerJoin(University, 'university', 'university.id = task.organizationId')
       .innerJoin(User, 'student', 'student.id = work.studentId')
       .leftJoin(CareerPortfolio, 'portfolio', 'portfolio.workId = work.id')
       .select('review.id', 'id').addSelect('review.workId', 'workId').addSelect('work.id', 'careerWorkId')
       .addSelect('work.studentId', 'studentId').addSelect("concat_ws(' ', student.firstName, student.lastName)", 'studentName')
-      .addSelect('student.email', 'studentEmail').addSelect('task.universityId', 'universityId').addSelect('university.name', 'universityName')
+      .addSelect('student.email', 'studentEmail').addSelect('task.organizationId', 'organizationId').addSelect('university.name', 'universityName')
       .addSelect('task.title', 'taskTitle').addSelect('company.name', 'companyName').addSelect('review.rating', 'rating')
       .addSelect('LEFT(review.body, 220)', 'bodyPreview').addSelect('review.publishAllowed', 'publishAllowed')
       .addSelect('portfolio.id', 'portfolioId').addSelect('portfolio.published', 'portfolioPublished')
       .addSelect('review.createdAt', 'createdAt').addSelect('review.updatedAt', 'updatedAt');
-    if (includeDetails) qb.addSelect('review.body', 'body').addSelect('student.universityId', 'studentUniversityId');
+    if (includeDetails) qb.addSelect('review.body', 'body').addSelect('student.organizationId', 'studentOrganizationId');
     return qb;
   }
 
-  private async audit(manager: EntityManager, actorId: string, entity: string, id: string, oldValues: JsonObject, newValues: JsonObject, targetUserId: string, universityId: string, context: RequestAuditContext): Promise<void> {
+  private async audit(manager: EntityManager, actorId: string, entity: string, id: string, oldValues: JsonObject, newValues: JsonObject, targetUserId: string, organizationId: string, context: RequestAuditContext): Promise<void> {
     await manager.save(AuditLog, manager.create(AuditLog, {
       userId: actorId,
       action: `platform.${entity}.${newValues.result === 'created' ? 'created' : newValues.result === 'deleted' ? 'deleted' : 'updated'}`,
       entity: `personal_data.${entity}`,
       entityId: id,
       oldValues,
-      newValues: { ...newValues, targetUserId, universityId },
+      newValues: { ...newValues, targetUserId, organizationId },
       ...(context.ip ? { ip: context.ip } : {}),
       ...(context.userAgent ? { userAgent: context.userAgent.slice(0, 512) } : {}),
     }));

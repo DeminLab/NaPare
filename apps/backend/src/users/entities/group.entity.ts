@@ -13,8 +13,8 @@ import { University } from "./university.entity";
 import { Faculty } from "./faculty.entity";
 
 @Entity("groups")
-@Index("IDX_groups_university_name", ["universityId", "name"])
-@Index("UQ_groups_university_external_id", ["universityId", "externalId"], {
+@Index("IDX_groups_university_name", ["organizationId", "name"])
+@Index("UQ_groups_university_external_id", ["organizationId", "externalId"], {
   unique: true,
   where: '"externalId" IS NOT NULL',
 })
@@ -31,10 +31,10 @@ export class Group {
   faculty: Faculty;
 
   @Column({ type: "uuid" })
-  universityId: string;
+  organizationId: string;
 
   @ManyToOne(() => University, (university) => university.groups)
-  @JoinColumn({ name: "universityId" })
+  @JoinColumn({ name: "organizationId" })
   university: University;
 
   @Column()

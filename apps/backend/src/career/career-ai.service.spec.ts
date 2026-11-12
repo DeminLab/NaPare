@@ -4,7 +4,7 @@ import { DataSource } from 'typeorm';
 import { CareerAiService, validateAiSuggestion } from './career-ai.service';
 import { CareerService } from './career.service';
 import { UserRole } from '../auth/interfaces/user-role';
-const actor={id:'owner',role:UserRole.EMPLOYER,universityId:null,email:'owner@test'};
+const actor={id:'owner',role:UserRole.EMPLOYER,organizationId:null,email:'owner@test'};
 const draft={title:'Подготовить каталог',description:'Описать товары по предоставленным материалам.',criteria:'Все товары имеют проверенное описание.',questions:['Сколько товаров?']};
 function setup(configured=true,counts=[0,0]) {
   const settings:Record<string,string>=configured?{CAREER_AI_COMPLIANCE_APPROVED:'true',CAREER_AI_BASE_URL:'https://provider.example/v1',CAREER_AI_API_KEY:'private-test-key',CAREER_AI_MODEL:'selected-model',CAREER_AI_PROVIDER_LABEL:'Тестовый провайдер'}:{};

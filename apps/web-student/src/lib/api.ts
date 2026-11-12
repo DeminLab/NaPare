@@ -45,7 +45,7 @@ export interface StudentUser {
   firstName: string;
   lastName: string;
   role: string;
-  universityId: string;
+  organizationId: string;
   isActive: boolean;
   groupName?: string;
   universityName?: string;
@@ -203,7 +203,7 @@ export async function register(payload: {
   password: string;
   firstName: string;
   lastName: string;
-  universityId: string;
+  organizationId: string;
   groupId: string;
 }): Promise<void> {
   const response = await fetch(`${API_BASE}/auth/register`, {

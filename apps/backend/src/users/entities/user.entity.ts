@@ -10,8 +10,8 @@ import { Exclude } from "class-transformer";
 import { UserRole } from "../../auth/interfaces/user-role";
 
 @Entity("users")
-@Index("IDX_users_university_id", ["universityId"])
-@Index("UQ_users_university_source_teacher", ["universityId", "sourceTeacherId"], { unique: true, where: '"sourceTeacherId" IS NOT NULL' })
+@Index("IDX_users_organization_id", ["organizationId"])
+@Index("UQ_users_university_source_teacher", ["organizationId", "sourceTeacherId"], { unique: true, where: '"sourceTeacherId" IS NOT NULL' })
 @Index("IDX_users_max_user_id", ["maxUserId"], { unique: true })
 @Index("IDX_users_telegram_user_id", ["telegramUserId"], { unique: true })
 export class User {
@@ -45,7 +45,7 @@ export class User {
   role: UserRole;
 
   @Column({ type: "uuid", nullable: true })
-  universityId: string | null;
+  organizationId: string | null;
 
   @Column({ type: "varchar", nullable: true })
   groupId: string;

@@ -14,7 +14,7 @@ export class CreateLessonDto {
   @IsOptional()
   @IsString()
   @IsUUID()
-  universityId?: string;
+  organizationId?: string;
 
   @ApiProperty()
   @IsUUID()

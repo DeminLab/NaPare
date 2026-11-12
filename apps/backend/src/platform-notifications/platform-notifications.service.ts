@@ -12,7 +12,7 @@ import { University } from '../users/entities/university.entity';
 import { PlatformDeviceTokenQueryDto, PlatformNotificationKind, PlatformNotificationPatchDto, PlatformNotificationQueryDto } from './platform-notifications.dto';
 
 type RequestAuditContext = { ip?: string; userAgent?: string };
-type OperatorSummary = { id: string; kind: PlatformNotificationKind; userId: string; userName: string; userEmail: string; universityId: string; universityName: string; title: string; status: string; priority: string; createdAt: Date; updatedAt: Date };
+type OperatorSummary = { id: string; kind: PlatformNotificationKind; userId: string; userName: string; userEmail: string; organizationId: string; universityName: string; title: string; status: string; priority: string; createdAt: Date; updatedAt: Date };
 
 @Injectable()
 export class PlatformNotificationsService {
@@ -21,14 +21,14 @@ export class PlatformNotificationsService {
   async records(query: PlatformNotificationQueryDto, context: RequestAuditContext = {}) {
     const access = await this.platform.require('notification-data.read');
     this.assertKind(query.kind);
-    if (query.universityId) this.platform.assertUniversityScope(access, query.universityId);
+    if (query.organizationId) this.platform.assertUniversityScope(access, query.organizationId);
     if (query.userId) await this.assertUserScope(query.userId, access);
     const qb = (query.kind === 'notification'
       ? this.notificationQuery()
       : this.inboxQuery()) as unknown as SelectQueryBuilder<Notification | InboxItem>;
     this.applyUniversityScope(qb, access);
     if (query.userId) qb.andWhere('record.userId = :userId', { userId: query.userId });
-    if (query.universityId) qb.andWhere('record.universityId = :universityId', { universityId: query.universityId });
+    if (query.organizationId) qb.andWhere('record.organizationId = :organizationId', { organizationId: query.organizationId });
     if (query.status) {
       if (query.kind === 'notification') {
         if (!['read', 'unread'].includes(query.status)) throw new BadRequestException('Для уведомления выберите статус read или unread.');
@@ -48,7 +48,7 @@ export class PlatformNotificationsService {
     const rows = await qb.orderBy('record.createdAt', 'DESC').addOrderBy('record.id', 'DESC')
       .skip((query.page - 1) * query.limit).take(query.limit).getRawMany<OperatorSummary>();
     await this.audit(this.db.manager, access.actorId, 'platform.notification_data.search', query.kind, 'search', {
-      kind: query.kind, userId: query.userId ?? null, universityId: query.universityId ?? null,
+      kind: query.kind, userId: query.userId ?? null, organizationId: query.organizationId ?? null,
       status: query.status ?? null, queryEntered: Boolean(query.q?.trim()), page: query.page,
       limit: query.limit, resultCount: rows.length, total, recordIds: rows.map(row => row.id),
     }, context);
@@ -61,7 +61,7 @@ export class PlatformNotificationsService {
     return this.db.transaction(async manager => {
       const detail = await this.loadDetail(manager, kind, id, access);
       await this.audit(manager, access.actorId, 'platform.notification_data.viewed', kind, id, {
-        kind, targetUserId: detail.user.id, universityId: detail.university.id, result: 'viewed',
+        kind, targetUserId: detail.user.id, organizationId: detail.university.id, result: 'viewed',
       }, context);
       return detail;
     });
@@ -83,7 +83,7 @@ export class PlatformNotificationsService {
         ? await manager.findOne(Notification, { where: { id }, lock: { mode: 'pessimistic_write' } })
         : await manager.findOne(InboxItem, { where: { id }, lock: { mode: 'pessimistic_write' } });
       if (!entity) throw new NotFoundException('Запись уведомления не найдена.');
-      const relation = await this.assertRecordContext(manager, entity.userId, entity.universityId, access);
+      const relation = await this.assertRecordContext(manager, entity.userId, entity.organizationId, access);
       const oldValues = this.snapshot(kind, entity);
       if (kind === 'notification') this.applyNotificationPatch(entity as Notification, dto);
       else this.applyInboxPatch(entity as InboxItem, dto);
@@ -93,7 +93,7 @@ export class PlatformNotificationsService {
         ? await manager.save(Notification, entity as Notification)
         : await manager.save(InboxItem, entity as InboxItem);
       await this.audit(manager, access.actorId, 'platform.notification_data.corrected', kind, id, {
-        oldValues, newValues, targetUserId: entity.userId, universityId: relation.universityId,
+        oldValues, newValues, targetUserId: entity.userId, organizationId: relation.organizationId,
         reason: dto.reason.trim(), result: 'corrected',
       }, context);
       return { id, kind, updatedAt: saved.updatedAt };
@@ -110,7 +110,7 @@ export class PlatformNotificationsService {
       .addSelect('user.email', 'userEmail').addSelect('record.platform', 'platform')
       .addSelect('record.deviceName', 'deviceName').addSelect('record.isActive', 'isActive')
       .addSelect('record.createdAt', 'createdAt').addSelect('record.updatedAt', 'updatedAt')
-      .addSelect('user.universityId', 'universityId');
+      .addSelect('user.organizationId', 'organizationId');
     this.applyUserUniversityScope(qb, access);
     if (query.userId) qb.andWhere('record.userId = :userId', { userId: query.userId });
     if (query.q?.trim()) {
@@ -123,9 +123,9 @@ export class PlatformNotificationsService {
     await this.audit(this.db.manager, access.actorId, 'platform.notification_data.devices_searched', 'device_token', 'devices', {
       userId: query.userId ?? null, queryEntered: Boolean(query.q?.trim()), page: query.page,
       limit: query.limit, resultCount: rows.length, total, deviceIds: rows.map(row => row.id),
-      universityIds: [...new Set(rows.map(row => row.universityId).filter((id): id is string => Boolean(id)))],
+      organizationIds: [...new Set(rows.map(row => row.organizationId).filter((id): id is string => Boolean(id)))],
     }, context);
-    return toPaginatedResponse(rows.map(({ universityId: _universityId, ...row }) => row), total, query);
+    return toPaginatedResponse(rows.map(({ organizationId: _organizationId, ...row }) => row), total, query);
   }
 
   async revokeDevice(id: string, reason: string, context: RequestAuditContext = {}) {
@@ -134,14 +134,14 @@ export class PlatformNotificationsService {
     return this.db.transaction(async manager => {
       const record = await manager.findOne(DeviceToken, { where: { id }, lock: { mode: 'pessimistic_write' } });
       if (!record) throw new NotFoundException('Push-устройство не найдено.');
-      const user = await manager.findOne(User, { where: { id: record.userId }, select: ['id', 'universityId'] });
+      const user = await manager.findOne(User, { where: { id: record.userId }, select: ['id', 'organizationId'] });
       if (!user) throw new BadRequestException('Устройство связано с отсутствующим пользователем.');
-      this.platform.assertUniversityScope(access, user.universityId);
+      this.platform.assertUniversityScope(access, user.organizationId);
       if (!record.isActive) throw new ConflictException('Push-устройство уже отозвано.');
       record.isActive = false;
       await manager.save(DeviceToken, record);
       await this.audit(manager, access.actorId, 'platform.notification_data.device_revoked', 'device_token', id, {
-        targetUserId: record.userId, universityId: user.universityId ?? null,
+        targetUserId: record.userId, organizationId: user.organizationId ?? null,
         platform: record.platform, deviceName: record.deviceName ?? null,
         result: 'revoked', reason: reason.trim(),
       }, context);
@@ -152,10 +152,10 @@ export class PlatformNotificationsService {
   private notificationQuery() {
     return this.db.getRepository(Notification).createQueryBuilder('record')
       .innerJoin(User, 'user', 'user.id = record.userId')
-      .innerJoin(University, 'university', 'university.id = record.universityId')
+      .innerJoin(University, 'university', 'university.id = record.organizationId')
       .select('record.id', 'id').addSelect('record.userId', 'userId')
       .addSelect("concat_ws(' ', user.firstName, user.lastName)", 'userName')
-      .addSelect('user.email', 'userEmail').addSelect('record.universityId', 'universityId')
+      .addSelect('user.email', 'userEmail').addSelect('record.organizationId', 'organizationId')
       .addSelect('university.name', 'universityName').addSelect('record.title', 'title')
       .addSelect("CASE WHEN record.isRead THEN 'read' ELSE 'unread' END", 'status')
       .addSelect('record.priority', 'priority').addSelect('record.createdAt', 'createdAt').addSelect('record.updatedAt', 'updatedAt');
@@ -164,10 +164,10 @@ export class PlatformNotificationsService {
   private inboxQuery() {
     return this.db.getRepository(InboxItem).createQueryBuilder('record')
       .innerJoin(User, 'user', 'user.id = record.userId')
-      .innerJoin(University, 'university', 'university.id = record.universityId')
+      .innerJoin(University, 'university', 'university.id = record.organizationId')
       .select('record.id', 'id').addSelect('record.userId', 'userId')
       .addSelect("concat_ws(' ', user.firstName, user.lastName)", 'userName')
-      .addSelect('user.email', 'userEmail').addSelect('record.universityId', 'universityId')
+      .addSelect('user.email', 'userEmail').addSelect('record.organizationId', 'organizationId')
       .addSelect('university.name', 'universityName').addSelect('record.title', 'title')
       .addSelect('record.status', 'status').addSelect('record.priority', 'priority')
       .addSelect('record.createdAt', 'createdAt').addSelect('record.updatedAt', 'updatedAt');
@@ -178,7 +178,7 @@ export class PlatformNotificationsService {
       ? await manager.findOne(Notification, { where: { id } })
       : await manager.findOne(InboxItem, { where: { id } });
     if (!entity) throw new NotFoundException('Запись уведомления не найдена.');
-    const relation = await this.assertRecordContext(manager, entity.userId, entity.universityId, access);
+    const relation = await this.assertRecordContext(manager, entity.userId, entity.organizationId, access);
     return {
       ...entity,
       kind,
@@ -187,42 +187,42 @@ export class PlatformNotificationsService {
       userName: `${relation.user.firstName} ${relation.user.lastName}`.trim(),
       userEmail: relation.user.email,
       university: relation.university,
-      universityId: relation.universityId,
+      organizationId: relation.organizationId,
       universityName: relation.university.name,
     };
   }
 
-  private async assertRecordContext(manager: EntityManager, userId: string, universityId: string, access: Awaited<ReturnType<PlatformService['access']>>) {
+  private async assertRecordContext(manager: EntityManager, userId: string, organizationId: string, access: Awaited<ReturnType<PlatformService['access']>>) {
     const [user, university] = await Promise.all([
       manager.findOne(User, { where: { id: userId }, select: ['id', 'firstName', 'lastName', 'email'] }),
-      manager.findOne(University, { where: { id: universityId }, select: ['id', 'name'] }),
+      manager.findOne(University, { where: { id: organizationId }, select: ['id', 'name'] }),
     ]);
     if (!user || !university) throw new BadRequestException('Запись уведомления ссылается на отсутствующего пользователя или университет.');
     this.platform.assertUniversityScope(access, university.id);
-    return { user, university, universityId: university.id };
+    return { user, university, organizationId: university.id };
   }
 
   private applyUniversityScope<T extends Notification | InboxItem>(qb: SelectQueryBuilder<T>, access: Awaited<ReturnType<PlatformService['access']>>): void {
-    if (access.owner || access.universityIds === null) return;
-    if (!access.universityIds.length) {
+    if (access.owner || access.organizationIds === null) return;
+    if (!access.organizationIds.length) {
       qb.andWhere('1 = 0');
       return;
     }
-    qb.andWhere('record.universityId IN (:...allowedUniversityIds)', { allowedUniversityIds: access.universityIds });
+    qb.andWhere('record.organizationId IN (:...allowedOrganizationIds)', { allowedOrganizationIds: access.organizationIds });
   }
 
   private applyUserUniversityScope<T extends Notification | InboxItem | DeviceToken>(qb: SelectQueryBuilder<T>, access: Awaited<ReturnType<PlatformService['access']>>): void {
-    if (access.owner || access.universityIds === null) return;
-    if (!access.universityIds.length) {
+    if (access.owner || access.organizationIds === null) return;
+    if (!access.organizationIds.length) {
       qb.andWhere('1 = 0');
       return;
     }
-    qb.andWhere('user.universityId IN (:...allowedUniversityIds)', { allowedUniversityIds: access.universityIds });
+    qb.andWhere('user.organizationId IN (:...allowedOrganizationIds)', { allowedOrganizationIds: access.organizationIds });
   }
 
   private async assertUserScope(userId: string, access: Awaited<ReturnType<PlatformService['access']>>): Promise<void> {
-    const user = await this.db.getRepository(User).findOne({ where: { id: userId }, select: ['id', 'universityId'] });
-    if (user) this.platform.assertUniversityScope(access, user.universityId);
+    const user = await this.db.getRepository(User).findOne({ where: { id: userId }, select: ['id', 'organizationId'] });
+    if (user) this.platform.assertUniversityScope(access, user.organizationId);
   }
 
   private applyNotificationPatch(record: Notification, dto: PlatformNotificationPatchDto): void {

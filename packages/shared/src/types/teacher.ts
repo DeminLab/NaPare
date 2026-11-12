@@ -1,7 +1,7 @@
 export interface Teacher {
   id: string;
   userId: string;
-  universityId: string;
+  organizationId: string;
   department?: string;
   position?: string;
   createdAt: Date;

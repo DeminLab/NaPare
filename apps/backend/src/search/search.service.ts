@@ -1,4 +1,4 @@
-import { requireUniversityId } from '../common/tenant/require-university';
+import { requireOrganizationId } from '../common/tenant/require-university';
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ObjectLiteral, Repository, SelectQueryBuilder } from 'typeorm';
@@ -30,7 +30,7 @@ export interface SearchResult {
 }
 
 interface SearchScope {
-  universityId: string;
+  organizationId: string;
   groupId?: string;
   teacherId?: string;
   sourceGroupId?: string;
@@ -46,10 +46,10 @@ function normalize(value: string | null | undefined): string {
 }
 
 function constrainLessons<T extends ObjectLiteral>(query: SelectQueryBuilder<T>, scope: SearchScope, alias: string) {
-  query.andWhere(`${alias}.universityId = :searchUniversityId`, { searchUniversityId: scope.universityId });
+  query.andWhere(`${alias}.organizationId = :searchOrganizationId`, { searchOrganizationId: scope.organizationId });
   if (scope.groupId) query.andWhere(`${alias}.groupId = :searchGroupId`, { searchGroupId: scope.groupId });
   if (scope.teacherId) query.andWhere(`${alias}.teacherId = :searchTeacherId`, { searchTeacherId: scope.teacherId });
-  if (scope.curatorId) query.andWhere(`EXISTS (SELECT 1 FROM curator_assignments ca WHERE ca."groupId" = ${alias}."groupId" AND ca."universityId" = ${alias}."universityId" AND ca."userId" = :searchCuratorId AND ca."revokedAt" IS NULL)`, { searchCuratorId: scope.curatorId });
+  if (scope.curatorId) query.andWhere(`EXISTS (SELECT 1 FROM curator_assignments ca WHERE ca."groupId" = ${alias}."groupId" AND ca."organizationId" = ${alias}."organizationId" AND ca."userId" = :searchCuratorId AND ca."revokedAt" IS NULL)`, { searchCuratorId: scope.curatorId });
   return query;
 }
 
@@ -66,14 +66,14 @@ export class SearchService {
   ) {}
 
   async search(query: SearchQueryDto, user: AuthenticatedUser) {
-    this.tenantContext.assertAccess(requireUniversityId(user));
+    this.tenantContext.assertAccess(requireOrganizationId(user));
     const term = query.q.trim();
     if (term.length < 2 || term.length > 80) return { query: term, results: [] as SearchResult[] };
     const scope = await this.resolveScope(user);
     const pattern = searchPattern(term);
 
     const lessonQuery = this.lessonRepository.createQueryBuilder('lesson')
-      .where('lesson.universityId = :universityId', { universityId: requireUniversityId(user) })
+      .where('lesson.organizationId = :organizationId', { organizationId: requireOrganizationId(user) })
       .andWhere('(lesson.subject ILIKE :pattern OR lesson.teacherName ILIKE :pattern OR lesson.room ILIKE :pattern OR lesson.building ILIKE :pattern)', { pattern })
       .orderBy('lesson.startDate', 'DESC')
       .take(MAX_MATCHED_LESSONS);
@@ -81,8 +81,8 @@ export class SearchService {
 
     const homeworkQuery = this.homeworkRepository.createQueryBuilder('homework')
       .innerJoin(PairSpace, 'pairSpace', 'pairSpace.id = homework.pairSpaceId')
-      .innerJoin(Lesson, 'lesson', 'lesson.id = pairSpace.lessonId AND lesson.universityId = pairSpace.universityId')
-      .where('pairSpace.universityId = :universityId', { universityId: requireUniversityId(user) })
+      .innerJoin(Lesson, 'lesson', 'lesson.id = pairSpace.lessonId AND lesson.organizationId = pairSpace.organizationId')
+      .where('pairSpace.organizationId = :organizationId', { organizationId: requireOrganizationId(user) })
       .andWhere('(homework.title ILIKE :pattern OR COALESCE(homework.description, \'\') ILIKE :pattern)', { pattern })
       .orderBy('homework.deadline', 'ASC', 'NULLS LAST')
       .take(MAX_MATCHED_LESSONS);
@@ -90,8 +90,8 @@ export class SearchService {
 
     const fileQuery = this.fileRepository.createQueryBuilder('file')
       .innerJoin(PairSpace, 'pairSpace', 'pairSpace.id = file.pairSpaceId')
-      .innerJoin(Lesson, 'lesson', 'lesson.id = pairSpace.lessonId AND lesson.universityId = pairSpace.universityId')
-      .where('pairSpace.universityId = :universityId', { universityId: requireUniversityId(user) })
+      .innerJoin(Lesson, 'lesson', 'lesson.id = pairSpace.lessonId AND lesson.organizationId = pairSpace.organizationId')
+      .where('pairSpace.organizationId = :organizationId', { organizationId: requireOrganizationId(user) })
       .andWhere('file.fileName ILIKE :pattern', { pattern })
       .orderBy('file.createdAt', 'DESC')
       .take(MAX_MATCHED_LESSONS);
@@ -217,23 +217,23 @@ export class SearchService {
       let sourceGroupId: string | undefined;
       if (/^\d+$/.test(groupId)) {
         sourceGroupId = groupId;
-        const group = await this.groupRepository.findOne({ where: { universityId: requireUniversityId(user), externalId: groupId } });
+        const group = await this.groupRepository.findOne({ where: { organizationId: requireOrganizationId(user), externalId: groupId } });
         if (group) {
           groupId = group.id;
           sourceGroupId = group.externalId || undefined;
         }
       } else {
-        const group = await this.groupRepository.findOne({ where: { id: groupId, universityId: requireUniversityId(user) } });
+        const group = await this.groupRepository.findOne({ where: { id: groupId, organizationId: requireOrganizationId(user) } });
         if (group?.externalId) sourceGroupId = group.externalId;
       }
       if (sourceGroupId) {
-        const university = await this.universityRepository.findOne({ where: { id: requireUniversityId(user) } });
+        const university = await this.universityRepository.findOne({ where: { id: requireOrganizationId(user) } });
         if (university?.name !== SIBIT_UNIVERSITY.name || university.city !== SIBIT_UNIVERSITY.city) sourceGroupId = undefined;
       }
-      return { universityId: requireUniversityId(user), groupId, sourceGroupId };
+      return { organizationId: requireOrganizationId(user), groupId, sourceGroupId };
     }
-    if (user.role === UserRole.TEACHER) return { universityId: requireUniversityId(user), teacherId: user.id };
-    if (user.role === UserRole.CURATOR) return { universityId: requireUniversityId(user), curatorId: user.id };
-    return { universityId: requireUniversityId(user) };
+    if (user.role === UserRole.TEACHER) return { organizationId: requireOrganizationId(user), teacherId: user.id };
+    if (user.role === UserRole.CURATOR) return { organizationId: requireOrganizationId(user), curatorId: user.id };
+    return { organizationId: requireOrganizationId(user) };
   }
 }

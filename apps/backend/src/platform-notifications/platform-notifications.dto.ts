@@ -24,7 +24,7 @@ export class PlatformNotificationQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional({ format: 'uuid' })
   @IsOptional()
   @IsUUID()
-  universityId?: string;
+  organizationId?: string;
 
   @ApiPropertyOptional({ description: 'Для уведомлений: read/unread. Для inbox: open/snoozed/done.' })
   @IsOptional()

@@ -62,11 +62,11 @@ export class AcademicService {
     @Optional() private readonly curation?: CurationService,
   ) {}
 
-  async findCourses(universityId: string, pagination: PaginationQueryDto): Promise<PaginatedResponse<Course>> {
+  async findCourses(organizationId: string, pagination: PaginationQueryDto): Promise<PaginatedResponse<Course>> {
     const user = this.requireUser();
-    this.tenantContext.assertAccess(universityId);
+    this.tenantContext.assertAccess(organizationId);
     const query = this.courseRepository.createQueryBuilder('course')
-      .where('course.universityId = :universityId', { universityId })
+      .where('course.organizationId = :organizationId', { organizationId })
       .andWhere('course.isActive = true');
 
     this.applyCourseScope(query, user);
@@ -85,23 +85,23 @@ export class AcademicService {
     return course;
   }
 
-  async createCourse(universityId: string, dto: CreateCourseDto): Promise<Course> {
+  async createCourse(organizationId: string, dto: CreateCourseDto): Promise<Course> {
     const user = this.requireUser();
-    this.assertUniversityOperator(user, universityId);
+    this.assertUniversityOperator(user, organizationId);
     if (dto.facultyId) {
-      const faculty = await this.facultyRepository.findOne({ where: { id: dto.facultyId, universityId } });
+      const faculty = await this.facultyRepository.findOne({ where: { id: dto.facultyId, organizationId } });
       if (!faculty) throw new NotFoundException('Faculty not found in this university');
     }
 
     return this.dataSource.transaction(async (manager) => {
       const course = await manager.getRepository(Course).save(manager.getRepository(Course).create({
         ...dto,
-        universityId,
+        organizationId,
         syncStatus: 'synced',
         source: 'manual',
       }));
       await manager.getRepository(CourseSpace).save(manager.getRepository(CourseSpace).create({
-        universityId,
+        organizationId,
         courseId: course.id,
         name: course.name,
       }));
@@ -111,9 +111,9 @@ export class AcademicService {
 
   async updateCourse(id: string, dto: UpdateCourseDto): Promise<Course> {
     const course = await this.getCourse(id);
-    this.assertUniversityOperator(this.requireUser(), course.universityId);
+    this.assertUniversityOperator(this.requireUser(), course.organizationId);
     if (dto.facultyId) {
-      const faculty = await this.facultyRepository.findOne({ where: { id: dto.facultyId, universityId: course.universityId } });
+      const faculty = await this.facultyRepository.findOne({ where: { id: dto.facultyId, organizationId: course.organizationId } });
       if (!faculty) throw new NotFoundException('Faculty not found in this university');
     }
     Object.assign(course, dto);
@@ -125,7 +125,7 @@ export class AcademicService {
   async findSeries(courseId: string, pagination: PaginationQueryDto): Promise<PaginatedResponse<LessonSeries>> {
     const course = await this.getCourse(courseId);
     const [data, total] = await this.seriesRepository.findAndCount({
-      where: { courseId: course.id, universityId: course.universityId },
+      where: { courseId: course.id, organizationId: course.organizationId },
       order: { dayOfWeek: 'ASC', pairNumber: 'ASC' },
       skip: (pagination.page - 1) * pagination.limit,
       take: pagination.limit,
@@ -136,19 +136,19 @@ export class AcademicService {
   async createSeries(courseId: string, dto: CreateLessonSeriesDto): Promise<LessonSeries> {
     const course = await this.getCourse(courseId);
     await this.assertCourseManageable(course);
-    await this.assertGroup(course.universityId, dto.groupId);
+    await this.assertGroup(course.organizationId, dto.groupId);
     const user = this.requireUser();
     const teacherId = dto.teacherId ?? (user.role === UserRole.TEACHER ? user.id : null);
     if (user.role === UserRole.TEACHER && teacherId !== user.id) {
       throw new ForbiddenException('Teacher can only create their own lesson series');
     }
-    if (teacherId && !await this.dataSource.getRepository(User).findOne({ where: { id: teacherId, universityId: course.universityId } })) {
+    if (teacherId && !await this.dataSource.getRepository(User).findOne({ where: { id: teacherId, organizationId: course.organizationId } })) {
       throw new NotFoundException('Teacher not found in this university');
     }
     return this.seriesRepository.save(this.seriesRepository.create({
       ...dto,
       courseId: course.id,
-      universityId: course.universityId,
+      organizationId: course.organizationId,
       teacherId,
       validFrom: new Date(dto.validFrom),
       validTo: dto.validTo ? new Date(dto.validTo) : null,
@@ -158,13 +158,13 @@ export class AcademicService {
   }
 
   async findOccurrences(
-    universityId: string,
+    organizationId: string,
     queryDto: AcademicEventQueryDto,
   ): Promise<PaginatedResponse<LessonOccurrence>> {
     const user = this.requireUser();
-    this.tenantContext.assertAccess(universityId);
+    this.tenantContext.assertAccess(organizationId);
     const query = this.occurrenceRepository.createQueryBuilder('occurrence')
-      .where('occurrence.universityId = :universityId', { universityId });
+      .where('occurrence.organizationId = :organizationId', { organizationId });
     if (queryDto.courseId) query.andWhere('occurrence.courseId = :courseId', { courseId: queryDto.courseId });
     if (queryDto.groupId) query.andWhere('occurrence.groupId = :groupId', { groupId: queryDto.groupId });
     if (queryDto.from) query.andWhere('occurrence.startsAt >= :from', { from: new Date(queryDto.from) });
@@ -185,7 +185,7 @@ export class AcademicService {
       const saved = await manager.getRepository(LessonOccurrence).save(manager.getRepository(LessonOccurrence).create({
         ...dto,
         seriesId: series.id,
-        universityId: series.universityId,
+        organizationId: series.organizationId,
         courseId: series.courseId,
         groupId: series.groupId,
         teacherId: series.teacherId,
@@ -200,7 +200,7 @@ export class AcademicService {
       const courseSpace = await manager.getRepository(CourseSpace).findOne({ where: { courseId: saved.courseId } });
       if (courseSpace) {
         await manager.getRepository(LessonSpace).save(manager.getRepository(LessonSpace).create({
-          universityId: saved.universityId,
+          organizationId: saved.organizationId,
           courseSpaceId: courseSpace.id,
           occurrenceId: saved.id,
           name: `${courseSpace.name} — ${saved.startsAt.toISOString().slice(0, 10)}`,
@@ -209,7 +209,7 @@ export class AcademicService {
       return saved;
     });
     await this.recordAcademicEvent({
-      universityId: occurrence.universityId,
+      organizationId: occurrence.organizationId,
       type: 'lesson',
       courseId: occurrence.courseId,
       groupId: occurrence.groupId,
@@ -238,7 +238,7 @@ export class AcademicService {
     const updated = await this.dataSource.transaction(async (manager) => {
       const saved = await manager.getRepository(LessonOccurrence).save(occurrence);
       const change = await manager.getRepository(ScheduleChange).save(manager.getRepository(ScheduleChange).create({
-        universityId: saved.universityId,
+        organizationId: saved.organizationId,
         occurrenceId: saved.id,
         originalValue,
         newValue: occurrenceSnapshot(saved),
@@ -263,7 +263,7 @@ export class AcademicService {
     await this.eventBus.publish({
       idempotencyKey: `academic-schedule-change:${updated.changeId}`,
       type: eventType,
-      universityId: updated.saved.universityId,
+      organizationId: updated.saved.organizationId,
       actor: { id: actor.id, type: 'user', role: actor.role },
       target: { type: 'lesson_occurrence', id: updated.saved.id },
       payload: {
@@ -296,7 +296,7 @@ export class AcademicService {
 
   async getCourseSpace(courseId: string): Promise<CourseSpace> {
     const course = await this.getCourse(courseId);
-    const space = await this.courseSpaceRepository.findOne({ where: { courseId: course.id, universityId: course.universityId } });
+    const space = await this.courseSpaceRepository.findOne({ where: { courseId: course.id, organizationId: course.organizationId } });
     if (!space) throw new NotFoundException(`Course space for ${courseId} not found`);
     return space;
   }
@@ -308,18 +308,18 @@ export class AcademicService {
       where: {
         occurrenceId: context.occurrence.id,
         courseSpaceId: courseSpace.id,
-        universityId: context.occurrence.universityId,
+        organizationId: context.occurrence.organizationId,
       },
     });
     if (!space) throw new NotFoundException(`Lesson space for ${occurrenceId} not found`);
     return space;
   }
 
-  async findAcademicEvents(universityId: string, queryDto: AcademicEventQueryDto): Promise<PaginatedResponse<Omit<AcademicEvent, 'hiddenAt' | 'hiddenBy' | 'hideReason'>>> {
+  async findAcademicEvents(organizationId: string, queryDto: AcademicEventQueryDto): Promise<PaginatedResponse<Omit<AcademicEvent, 'hiddenAt' | 'hiddenBy' | 'hideReason'>>> {
     const user = this.requireUser();
-    this.tenantContext.assertAccess(universityId);
+    this.tenantContext.assertAccess(organizationId);
     const query = this.eventRepository.createQueryBuilder('event')
-      .where('event.universityId = :universityId', { universityId })
+      .where('event.organizationId = :organizationId', { organizationId })
       .andWhere('event.hiddenAt IS NULL');
     if (queryDto.type) query.andWhere('event.type = :type', { type: queryDto.type });
     if (queryDto.courseId) query.andWhere('event.courseId = :courseId', { courseId: queryDto.courseId });
@@ -336,13 +336,13 @@ export class AcademicService {
     return toPaginatedResponse(publicEvents, total, queryDto);
   }
 
-  async createAcademicEvent(universityId: string, dto: CreateAcademicEventDto): Promise<Omit<AcademicEvent, 'hiddenAt' | 'hiddenBy' | 'hideReason'>> {
+  async createAcademicEvent(organizationId: string, dto: CreateAcademicEventDto): Promise<Omit<AcademicEvent, 'hiddenAt' | 'hiddenBy' | 'hideReason'>> {
     const actor = this.requireUser();
-    this.tenantContext.assertAccess(universityId);
+    this.tenantContext.assertAccess(organizationId);
     if (dto.courseId) await this.assertCourseManageable(await this.getCourse(dto.courseId));
-    if (dto.groupId) await this.assertGroup(universityId, dto.groupId);
+    if (dto.groupId) await this.assertGroup(organizationId, dto.groupId);
     if (dto.occurrenceId) {
-      const occurrence = await this.occurrenceRepository.findOne({ where: { id: dto.occurrenceId, universityId } });
+      const occurrence = await this.occurrenceRepository.findOne({ where: { id: dto.occurrenceId, organizationId } });
       if (!occurrence) throw new NotFoundException('Lesson occurrence not found in this university');
       await this.assertCourseReadable(await this.getCourse(occurrence.courseId));
       if ((dto.courseId && dto.courseId !== occurrence.courseId) || (dto.groupId && dto.groupId !== occurrence.groupId)) {
@@ -350,7 +350,7 @@ export class AcademicService {
       }
     }
     const event = await this.recordAcademicEvent({
-      universityId,
+      organizationId,
       type: dto.type,
       courseId: dto.courseId ?? null,
       groupId: dto.groupId ?? null,
@@ -371,7 +371,7 @@ export class AcademicService {
     if (!occurrence) throw new NotFoundException(`Lesson occurrence with id ${occurrenceId} not found`);
     await this.getCourse(occurrence.courseId);
     const [data, total] = await this.scheduleChangeRepository.findAndCount({
-      where: { occurrenceId, universityId: occurrence.universityId },
+      where: { occurrenceId, organizationId: occurrence.organizationId },
       order: { timestamp: 'DESC' },
       skip: (pagination.page - 1) * pagination.limit,
       take: pagination.limit,
@@ -379,7 +379,7 @@ export class AcademicService {
     return toPaginatedResponse(data, total, pagination);
   }
 
-  private async recordAcademicEvent(input: Partial<AcademicEvent> & Pick<AcademicEvent, 'universityId' | 'type' | 'title'>): Promise<AcademicEvent> {
+  private async recordAcademicEvent(input: Partial<AcademicEvent> & Pick<AcademicEvent, 'organizationId' | 'type' | 'title'>): Promise<AcademicEvent> {
     return this.eventRepository.save(this.eventRepository.create({
       ...input,
       priority: input.priority ?? 'normal',
@@ -399,7 +399,7 @@ export class AcademicService {
     }
     if (user.role === UserRole.CURATOR) {
       query.innerJoin(LessonSeries, 'curator_series', 'curator_series.courseId = course.id')
-        .andWhere('EXISTS (SELECT 1 FROM curator_assignments ca WHERE ca."groupId" = curator_series."groupId" AND ca."universityId" = course."universityId" AND ca."userId" = :curatorId AND ca."revokedAt" IS NULL)', { curatorId: user.id });
+        .andWhere('EXISTS (SELECT 1 FROM curator_assignments ca WHERE ca."groupId" = curator_series."groupId" AND ca."organizationId" = course."organizationId" AND ca."userId" = :curatorId AND ca."revokedAt" IS NULL)', { curatorId: user.id });
       return;
     }
     query.andWhere('1 = 0');
@@ -409,7 +409,7 @@ export class AcademicService {
     if (UNIVERSITY_OPERATORS.includes(user.role)) return;
     if (user.role === UserRole.TEACHER) query.andWhere('occurrence.teacherId = :teacherId', { teacherId: user.id });
     else if (user.role === UserRole.STUDENT && user.groupId) query.andWhere('occurrence.groupId = :studentGroupId', { studentGroupId: user.groupId });
-    else if (user.role === UserRole.CURATOR) query.andWhere('EXISTS (SELECT 1 FROM curator_assignments ca WHERE ca."groupId" = occurrence."groupId" AND ca."universityId" = occurrence."universityId" AND ca."userId" = :curatorId AND ca."revokedAt" IS NULL)', { curatorId: user.id });
+    else if (user.role === UserRole.CURATOR) query.andWhere('EXISTS (SELECT 1 FROM curator_assignments ca WHERE ca."groupId" = occurrence."groupId" AND ca."organizationId" = occurrence."organizationId" AND ca."userId" = :curatorId AND ca."revokedAt" IS NULL)', { curatorId: user.id });
     else query.andWhere('1 = 0');
   }
 
@@ -417,13 +417,13 @@ export class AcademicService {
     if (UNIVERSITY_OPERATORS.includes(user.role)) return;
     if (user.role === UserRole.TEACHER) query.andWhere('(event.actorId = :teacherId OR EXISTS (SELECT 1 FROM lesson_series event_series WHERE event_series.courseId = event.courseId AND event_series.teacherId = :teacherId))', { teacherId: user.id });
     else if (user.role === UserRole.STUDENT && user.groupId) query.andWhere('(event.groupId = :studentGroupId OR EXISTS (SELECT 1 FROM lesson_series event_series WHERE event_series.courseId = event.courseId AND event_series.groupId = :studentGroupId))', { studentGroupId: user.groupId });
-    else if (user.role === UserRole.CURATOR) query.andWhere('EXISTS (SELECT 1 FROM curator_assignments ca WHERE ca."groupId" = event."groupId" AND ca."universityId" = event."universityId" AND ca."userId" = :curatorId AND ca."revokedAt" IS NULL)', { curatorId: user.id });
+    else if (user.role === UserRole.CURATOR) query.andWhere('EXISTS (SELECT 1 FROM curator_assignments ca WHERE ca."groupId" = event."groupId" AND ca."organizationId" = event."organizationId" AND ca."userId" = :curatorId AND ca."revokedAt" IS NULL)', { curatorId: user.id });
     else query.andWhere('1 = 0');
   }
 
   private async assertCourseReadable(course: Course): Promise<void> {
     const user = this.requireUser();
-    this.tenantContext.assertAccess(course.universityId);
+    this.tenantContext.assertAccess(course.organizationId);
     if (UNIVERSITY_OPERATORS.includes(user.role)) return;
     if (user.role === UserRole.TEACHER && await this.seriesRepository.exists({ where: { courseId: course.id, teacherId: user.id } })) return;
     if (user.role === UserRole.STUDENT && user.groupId && await this.seriesRepository.exists({ where: { courseId: course.id, groupId: user.groupId } })) return;
@@ -443,15 +443,15 @@ export class AcademicService {
     throw new ForbiddenException('Course is outside the user write scope');
   }
 
-  private assertUniversityOperator(user: AuthenticatedUser, universityId: string): void {
-    this.tenantContext.assertAccess(universityId);
+  private assertUniversityOperator(user: AuthenticatedUser, organizationId: string): void {
+    this.tenantContext.assertAccess(organizationId);
     if (!UNIVERSITY_OPERATORS.includes(user.role) || !hasPermission(user.role, PERMISSIONS.ACADEMIC_COURSE_MANAGE)) {
       throw new ForbiddenException('University operator permission required');
     }
   }
 
-  private async assertGroup(universityId: string, groupId: string): Promise<Group> {
-    const group = await this.groupRepository.findOne({ where: { id: groupId, universityId } });
+  private async assertGroup(organizationId: string, groupId: string): Promise<Group> {
+    const group = await this.groupRepository.findOne({ where: { id: groupId, organizationId } });
     if (!group) throw new NotFoundException('Group not found in this university');
     const user = this.requireUser();
     if (user.role === UserRole.CURATOR) {

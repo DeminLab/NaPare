@@ -93,11 +93,11 @@ describe("AbsencesService", () => {
       mockTenantContext.getUser.mockReturnValue({
         id: "teacher-1",
         role: UserRole.TEACHER,
-        universityId: "uni-1",
+        organizationId: "uni-1",
       });
       mockUserRepository.findOne.mockResolvedValue({
         id: "student-1",
-        universityId: "uni-1",
+        organizationId: "uni-1",
         groupId: "group-2",
         role: UserRole.STUDENT,
       });
@@ -113,17 +113,17 @@ describe("AbsencesService", () => {
       mockTenantContext.getUser.mockReturnValue({
         id: "teacher-1",
         role: UserRole.TEACHER,
-        universityId: "uni-1",
+        organizationId: "uni-1",
       });
       mockUserRepository.findOne.mockResolvedValue({
         id: "student-1",
-        universityId: "uni-1",
+        organizationId: "uni-1",
         groupId: "group-1",
         role: UserRole.STUDENT,
       });
       mockLessonRepository.findOne.mockResolvedValue({
         id: "lesson-1",
-        universityId: "uni-1",
+        organizationId: "uni-1",
         groupId: "group-1",
         teacherId: "teacher-1",
       });
@@ -133,7 +133,7 @@ describe("AbsencesService", () => {
       });
       expect(mockRepo.findAndCount).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { studentId: "student-1", universityId: "uni-1" },
+          where: { studentId: "student-1", organizationId: "uni-1" },
         }),
       );
     });
@@ -150,25 +150,25 @@ describe("AbsencesService", () => {
     it("should confirm absence", async () => {
       const absence = {
         id: "1",
-        universityId: "uni-1",
+        organizationId: "uni-1",
         confirmationRequired: true,
       };
       mockRepo.findOne.mockResolvedValue(absence);
       mockTenantContext.getUser.mockReturnValue({
         id: "curator-1",
         role: UserRole.CURATOR,
-        universityId: "uni-1",
+        organizationId: "uni-1",
       });
       const result = await service.confirm("1", "curator-1");
       expect(result.confirmationRequired).toBe(false);
     });
 
     it("rejects a student confirmation attempt", async () => {
-      mockRepo.findOne.mockResolvedValue({ id: "1", universityId: "uni-1" });
+      mockRepo.findOne.mockResolvedValue({ id: "1", organizationId: "uni-1" });
       mockTenantContext.getUser.mockReturnValue({
         id: "student-1",
         role: UserRole.STUDENT,
-        universityId: "uni-1",
+        organizationId: "uni-1",
       });
 
       await expect(service.confirm("1", "student-1")).rejects.toThrow(
@@ -179,14 +179,14 @@ describe("AbsencesService", () => {
     it("rejects a teacher confirmation for a colleague's lesson", async () => {
       mockRepo.findOne.mockResolvedValue({
         id: "absence-1",
-        universityId: "uni-1",
+        organizationId: "uni-1",
         confirmationRequired: true,
         affectedLessonIds: ["lesson-1"],
       });
       mockTenantContext.getUser.mockReturnValue({
         id: "teacher-1",
         role: UserRole.TEACHER,
-        universityId: "uni-1",
+        organizationId: "uni-1",
       });
       mockLessonRepository.findOne.mockResolvedValue(null);
 
@@ -202,14 +202,14 @@ describe("AbsencesService", () => {
       mockTenantContext.getUser.mockReturnValue({
         id: "admin-1",
         role: UserRole.UNIVERSITY_ADMIN,
-        universityId: "uni-1",
+        organizationId: "uni-1",
       });
       mockRepo.findAndCount.mockResolvedValue([
         [
           {
             id: "absence-1",
             studentId: "student-1",
-            universityId: "uni-1",
+            organizationId: "uni-1",
             confirmationRequired: true,
           },
         ],
@@ -240,7 +240,7 @@ describe("AbsencesService", () => {
       expect(mockUserRepository.find).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            universityId: "uni-1",
+            organizationId: "uni-1",
             role: UserRole.STUDENT,
           }),
         }),
@@ -252,7 +252,7 @@ describe("AbsencesService", () => {
     it("resolves the pending queue while preserving the decision comment", async () => {
       const absence = {
         id: "absence-1",
-        universityId: "uni-1",
+        organizationId: "uni-1",
         confirmationRequired: true,
         comment: null,
       };
@@ -260,7 +260,7 @@ describe("AbsencesService", () => {
       mockTenantContext.getUser.mockReturnValue({
         id: "curator-1",
         role: UserRole.CURATOR,
-        universityId: "uni-1",
+        organizationId: "uni-1",
       });
 
       const result = await service.reject(
@@ -283,7 +283,7 @@ describe("AbsencesService", () => {
       mockTenantContext.getUser.mockReturnValue({
         id: "student-1",
         role: UserRole.STUDENT,
-        universityId: "uni-1",
+        organizationId: "uni-1",
       });
       const dto = {
         type: "sick",
@@ -296,7 +296,7 @@ describe("AbsencesService", () => {
 
       expect(mockRepo.create).toHaveBeenCalledWith({
         studentId: "student-1",
-        universityId: "uni-1",
+        organizationId: "uni-1",
         type: "sick",
         startDate: new Date("2026-09-16"),
         endDate: new Date("2026-09-18"),
@@ -310,12 +310,12 @@ describe("AbsencesService", () => {
       mockTenantContext.getUser.mockReturnValue({
         id: "student-1",
         role: UserRole.STUDENT,
-        universityId: "uni-1",
+        organizationId: "uni-1",
         groupId: "group-1",
       });
       mockLessonRepository.findOne.mockResolvedValue({
         id: "lesson-1",
-        universityId: "uni-1",
+        organizationId: "uni-1",
         groupId: "group-1",
         teacherId: "teacher-1",
       });
@@ -342,13 +342,13 @@ describe("AbsencesService", () => {
       mockTenantContext.getUser.mockReturnValue({
         id: "student-1",
         role: UserRole.STUDENT,
-        universityId: "uni-1",
+        organizationId: "uni-1",
         groupId: "12136",
       });
       mockGroupRepository.findOne.mockResolvedValue({ id: "group-uuid" });
       mockLessonRepository.findOne.mockResolvedValue({
         id: "lesson-1",
-        universityId: "uni-1",
+        organizationId: "uni-1",
         groupId: "group-uuid",
         teacherId: "teacher-1",
       });
@@ -365,7 +365,7 @@ describe("AbsencesService", () => {
         ),
       ).resolves.toMatchObject({ id: "1" });
       expect(mockGroupRepository.findOne).toHaveBeenCalledWith({
-        where: { universityId: "uni-1", externalId: "12136" },
+        where: { organizationId: "uni-1", externalId: "12136" },
       });
     });
 
@@ -373,7 +373,7 @@ describe("AbsencesService", () => {
       mockTenantContext.getUser.mockReturnValue({
         id: "student-1",
         role: UserRole.STUDENT,
-        universityId: "uni-1",
+        organizationId: "uni-1",
       });
 
       await expect(
@@ -395,12 +395,12 @@ describe("AbsencesService", () => {
       mockRepo.findOne.mockResolvedValue({
         id: "absence-1",
         studentId: "student-2",
-        universityId: "uni-1",
+        organizationId: "uni-1",
       });
       mockTenantContext.getUser.mockReturnValue({
         id: "student-1",
         role: UserRole.STUDENT,
-        universityId: "uni-1",
+        organizationId: "uni-1",
       });
 
       await expect(service.update("absence-1", {})).rejects.toThrow(
@@ -415,11 +415,11 @@ describe("AbsencesService", () => {
       mockTenantContext.getUser.mockReturnValue({
         id: "teacher-1",
         role: UserRole.TEACHER,
-        universityId: "uni-1",
+        organizationId: "uni-1",
       });
       mockLessonRepository.findOne.mockResolvedValue({
         id: "lesson-1",
-        universityId: "uni-1",
+        organizationId: "uni-1",
         groupId: "group-1",
         teacherId: "teacher-1",
       });
@@ -461,11 +461,11 @@ describe("AbsencesService", () => {
       mockTenantContext.getUser.mockReturnValue({
         id: "teacher-1",
         role: UserRole.TEACHER,
-        universityId: "uni-1",
+        organizationId: "uni-1",
       });
       mockLessonRepository.findOne.mockResolvedValue({
         id: "lesson-1",
-        universityId: "uni-1",
+        organizationId: "uni-1",
         groupId: "group-1",
         teacherId: "teacher-2",
       });
@@ -492,12 +492,12 @@ describe("AbsencesService", () => {
       mockRepo.findOne.mockResolvedValue({
         id: "absence-1",
         studentId: "student-2",
-        universityId: "uni-1",
+        organizationId: "uni-1",
       });
       mockTenantContext.getUser.mockReturnValue({
         id: "student-1",
         role: UserRole.STUDENT,
-        universityId: "uni-1",
+        organizationId: "uni-1",
       });
 
       await expect(service.delete("absence-1")).rejects.toThrow(

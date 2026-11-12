@@ -18,7 +18,7 @@ type SubmissionSummary = {
   studentId: string;
   studentName: string;
   studentEmail: string;
-  universityId: string;
+  organizationId: string;
   universityName: string;
   homeworkId: string;
   homeworkTitle: string;
@@ -37,7 +37,7 @@ export class PlatformHomeworkService {
 
   async submissions(query: PlatformHomeworkSubmissionQueryDto, context: RequestAuditContext = {}) {
     const access = await this.platform.require('homework-data.read');
-    if (query.universityId) this.platform.assertUniversityScope(access, query.universityId);
+    if (query.organizationId) this.platform.assertUniversityScope(access, query.organizationId);
     return this.db.transaction(async manager => {
       const qb = this.summaryQuery(manager);
       this.applyUniversityScope(qb, access);
@@ -46,8 +46,8 @@ export class PlatformHomeworkService {
       const rows = await qb.orderBy('submission.updatedAt', 'DESC').addOrderBy('submission.id', 'DESC')
         .skip((query.page - 1) * query.limit).take(query.limit).getRawMany<SubmissionSummary>();
       await this.auditRead(manager, 'platform.homework_submission.search', 'search', access.actorId, {
-        recordIds: rows.map(row => row.id), universityIds: [...new Set(rows.map(row => row.universityId))],
-        ...(query.universityId ? { universityId: query.universityId } : {}), status: query.status ?? 'any',
+        recordIds: rows.map(row => row.id), organizationIds: [...new Set(rows.map(row => row.organizationId))],
+        ...(query.organizationId ? { organizationId: query.organizationId } : {}), status: query.status ?? 'any',
         queryEntered: Boolean(query.q?.trim()), page: query.page, limit: query.limit, resultCount: rows.length, total,
       }, context);
       return toPaginatedResponse(rows, total, query);
@@ -59,9 +59,9 @@ export class PlatformHomeworkService {
     return this.db.transaction(async manager => {
       const detail = await this.summaryQuery(manager, true).where('submission.id = :id', { id }).getRawOne<SubmissionDetail>();
       if (!detail) throw new NotFoundException('Сдача домашнего задания не найдена.');
-      this.platform.assertUniversityScope(access, detail.universityId);
+      this.platform.assertUniversityScope(access, detail.organizationId);
       await this.auditRead(manager, 'platform.homework_submission.viewed', detail.id, access.actorId, {
-        targetUserId: detail.studentId, universityId: detail.universityId, homeworkId: detail.homeworkId, result: 'viewed',
+        targetUserId: detail.studentId, organizationId: detail.organizationId, homeworkId: detail.homeworkId, result: 'viewed',
       }, context);
       return detail;
     });
@@ -127,7 +127,7 @@ export class PlatformHomeworkService {
           reason: dto.reason.trim(),
           targetUserId: updated.studentId,
           homeworkId: updated.homeworkId,
-          universityId: resource.universityId,
+          organizationId: resource.organizationId,
           result: 'corrected',
         },
         ...(context.ip ? { ip: context.ip } : {}),
@@ -148,14 +148,14 @@ export class PlatformHomeworkService {
     const qb = manager.getRepository(HomeworkSubmission).createQueryBuilder('submission')
       .innerJoin(Homework, 'homework', 'homework.id = submission.homeworkId')
       .innerJoin(PairSpace, 'pairSpace', 'pairSpace.id = homework.pairSpaceId')
-      .innerJoin(Lesson, 'lesson', 'lesson.id = pairSpace.lessonId AND lesson.universityId = pairSpace.universityId')
-      .innerJoin(University, 'university', 'university.id = pairSpace.universityId')
+      .innerJoin(Lesson, 'lesson', 'lesson.id = pairSpace.lessonId AND lesson.organizationId = pairSpace.organizationId')
+      .innerJoin(University, 'university', 'university.id = pairSpace.organizationId')
       .innerJoin(User, 'student', 'student.id = submission.studentId')
       .select('submission.id', 'id')
       .addSelect('submission.studentId', 'studentId')
       .addSelect("concat_ws(' ', student.firstName, student.lastName)", 'studentName')
       .addSelect('student.email', 'studentEmail')
-      .addSelect('pairSpace.universityId', 'universityId')
+      .addSelect('pairSpace.organizationId', 'organizationId')
       .addSelect('university.name', 'universityName')
       .addSelect('homework.id', 'homeworkId')
       .addSelect('homework.title', 'homeworkTitle')
@@ -174,7 +174,7 @@ export class PlatformHomeworkService {
     if (query.startDate && query.endDate && new Date(query.startDate) > new Date(query.endDate)) {
       throw new BadRequestException('Начало периода позже его окончания.');
     }
-    if (query.universityId) qb.andWhere('pairSpace.universityId = :universityId', { universityId: query.universityId });
+    if (query.organizationId) qb.andWhere('pairSpace.organizationId = :organizationId', { organizationId: query.organizationId });
     if (query.status) qb.andWhere('submission.status = :status', { status: query.status });
     if (query.startDate) qb.andWhere('submission.submittedAt >= :startDate', { startDate: new Date(query.startDate) });
     if (query.endDate) qb.andWhere('submission.submittedAt <= :endDate', { endDate: new Date(query.endDate) });
@@ -185,27 +185,27 @@ export class PlatformHomeworkService {
   }
 
   private applyUniversityScope(qb: SelectQueryBuilder<HomeworkSubmission>, access: Awaited<ReturnType<PlatformService['access']>>): void {
-    if (access.owner || access.universityIds === null) return;
-    if (!access.universityIds.length) {
+    if (access.owner || access.organizationIds === null) return;
+    if (!access.organizationIds.length) {
       qb.andWhere('1 = 0');
       return;
     }
-    qb.andWhere('pairSpace.universityId IN (:...allowedUniversityIds)', { allowedUniversityIds: access.universityIds });
+    qb.andWhere('pairSpace.organizationId IN (:...allowedOrganizationIds)', { allowedOrganizationIds: access.organizationIds });
   }
 
-  private async assertSubmissionContext(manager: EntityManager, submission: HomeworkSubmission, access: Awaited<ReturnType<PlatformService['access']>>): Promise<{ universityId: string }> {
+  private async assertSubmissionContext(manager: EntityManager, submission: HomeworkSubmission, access: Awaited<ReturnType<PlatformService['access']>>): Promise<{ organizationId: string }> {
     const homework = await manager.findOne(Homework, { where: { id: submission.homeworkId }, lock: { mode: 'pessimistic_read' } });
     if (!homework) throw new BadRequestException('Сдача не связана с существующим заданием.');
     const pairSpace = await manager.findOne(PairSpace, { where: { id: homework.pairSpaceId }, lock: { mode: 'pessimistic_read' } });
     if (!pairSpace) throw new BadRequestException('Задание не связано с существующим пространством пары.');
-    const lesson = await manager.findOne(Lesson, { where: { id: pairSpace.lessonId, universityId: pairSpace.universityId }, lock: { mode: 'pessimistic_read' } });
+    const lesson = await manager.findOne(Lesson, { where: { id: pairSpace.lessonId, organizationId: pairSpace.organizationId }, lock: { mode: 'pessimistic_read' } });
     if (!lesson) throw new BadRequestException('Пространство пары не связано с занятием того же университета.');
-    const university = await manager.findOne(University, { where: { id: pairSpace.universityId }, select: ['id'], lock: { mode: 'pessimistic_read' } });
+    const university = await manager.findOne(University, { where: { id: pairSpace.organizationId }, select: ['id'], lock: { mode: 'pessimistic_read' } });
     if (!university) throw new BadRequestException('Университет сдачи не найден.');
     this.platform.assertUniversityScope(access, university.id);
     const student = await manager.findOne(User, { where: { id: submission.studentId }, select: ['id'], lock: { mode: 'pessimistic_read' } });
     if (!student) throw new BadRequestException('Пользователь сдачи не найден.');
-    return { universityId: university.id };
+    return { organizationId: university.id };
   }
 
   private async auditRead(manager: EntityManager, action: string, entityId: string, actorId: string, values: JsonObject, context: RequestAuditContext): Promise<void> {

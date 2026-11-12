@@ -1,7 +1,7 @@
 /** Explicit database capability. University NULL means global; [] means none. */
 export interface TenantDatabaseGrant {
   tables: string[];
-  universityIds: string[] | null;
+  organizationIds: string[] | null;
   write?: boolean;
   /** A checked platform scope replaces the actor's ordinary university access. */
   replaceActor?: boolean;

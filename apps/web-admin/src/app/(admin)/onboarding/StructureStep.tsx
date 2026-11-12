@@ -5,13 +5,13 @@ import { apiFetch } from '@/lib/api';
 import { Button, Card } from '@/components/ui';
 import { errorMessage, fieldClass, type Faculty, type Group } from './types';
 
-export default function StructureStep({ universityId, owner, faculties, groups, reload }: { universityId: string; owner: boolean; faculties: Faculty[]; groups: Group[]; reload: () => Promise<void> }) {
+export default function StructureStep({ organizationId, owner, faculties, groups, reload }: { organizationId: string; owner: boolean; faculties: Faculty[]; groups: Group[]; reload: () => Promise<void> }) {
   const [facultyName, setFacultyName] = useState(''), [code, setCode] = useState('');
   const [groupName, setGroupName] = useState(''), [facultyId, setFacultyId] = useState(''), [year, setYear] = useState(1);
   const [busy, setBusy] = useState(''), [error, setError] = useState(''), [success, setSuccess] = useState('');
   async function save(event: FormEvent, kind: 'faculty' | 'group') {
     event.preventDefault(); setError(''); setSuccess(''); setBusy(kind);
-    const path = owner ? `/platform/organization/${kind === 'faculty' ? 'faculties' : 'groups'}?universityId=${universityId}` : `/admin/${kind === 'faculty' ? 'faculties' : 'groups'}`;
+    const path = owner ? `/platform/organization/${kind === 'faculty' ? 'faculties' : 'groups'}?organizationId=${organizationId}` : `/admin/${kind === 'faculty' ? 'faculties' : 'groups'}`;
     const data = kind === 'faculty' ? { name: facultyName.trim(), code: code.trim() } : { name: groupName.trim(), facultyId: facultyId || faculties[0]?.id, curriculumYear: owner ? year : String(year) };
     try {
       await apiFetch(path, { method: 'POST', body: JSON.stringify({ ...data, ...(owner ? { reason: 'Первичная настройка университета' } : {}) }) });

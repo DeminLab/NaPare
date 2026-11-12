@@ -107,9 +107,9 @@ function getCacheKey(monthKey: string): string | null {
     const normalized = token.replace(/-/g, '+').replace(/_/g, '/');
     const decoded = window.atob(normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '='));
     const bytes = Uint8Array.from(decoded, character => character.charCodeAt(0));
-    const claims = JSON.parse(new TextDecoder().decode(bytes)) as { sub?: unknown; universityId?: unknown };
-    if (typeof claims.sub !== 'string' || typeof claims.universityId !== 'string') return null;
-    return `napare:student-month:${claims.universityId}:${claims.sub}:${monthKey}`;
+    const claims = JSON.parse(new TextDecoder().decode(bytes)) as { sub?: unknown; organizationId?: unknown };
+    if (typeof claims.sub !== 'string' || typeof claims.organizationId !== 'string') return null;
+    return `napare:student-month:${claims.organizationId}:${claims.sub}:${monthKey}`;
   } catch {
     return null;
   }

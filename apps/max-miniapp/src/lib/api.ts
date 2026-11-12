@@ -33,7 +33,7 @@ export interface AuthResponse {
 
 export interface ProfileUser extends AuthUser {
   groupId?: string | null;
-  universityId: string;
+  organizationId: string;
   isActive: boolean;
 }
 

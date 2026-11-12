@@ -29,7 +29,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       throw new UnauthorizedException();
     }
     const actor = user as unknown as AuthenticatedUser;
-    if (([UserRole.EMPLOYER, UserRole.CAREER_STAFF, UserRole.CAREER_ADMIN].includes(actor.role) || !actor.universityId) && _context) {
+    if (([UserRole.EMPLOYER, UserRole.CAREER_STAFF, UserRole.CAREER_ADMIN].includes(actor.role) || !actor.organizationId) && _context) {
       const request = _context.switchToHttp().getRequest<{ originalUrl?: string; url?: string }>();
       const path = (request.originalUrl || request.url || '').split('?')[0];
       if (/^\/api\/v1\/platform(?:\/|$)/.test(path) && [UserRole.DEVELOPER, UserRole.SUPERADMIN].includes(actor.role)) {
@@ -44,5 +44,5 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
 }
 
 function isAuthenticatedUser(value: unknown): value is AuthenticatedUser {
-  return typeof value === 'object' && value !== null && 'id' in value && 'role' in value && 'universityId' in value;
+  return typeof value === 'object' && value !== null && 'id' in value && 'role' in value && 'organizationId' in value;
 }

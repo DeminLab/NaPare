@@ -9,22 +9,22 @@ import {
 } from 'typeorm';
 
 @Entity('lessons')
-@Index(['universityId', 'groupId', 'dayOfWeek'])
-@Index(['universityId', 'teacherId', 'dayOfWeek'])
-@Index('IDX_lessons_university_source_teacher', ['universityId', 'sourceTeacherId'])
+@Index(['organizationId', 'groupId', 'dayOfWeek'])
+@Index(['organizationId', 'teacherId', 'dayOfWeek'])
+@Index('IDX_lessons_university_source_teacher', ['organizationId', 'sourceTeacherId'])
 @Index('IDX_lessons_university_start_date_pair_number', [
-  'universityId',
+  'organizationId',
   'startDate',
   'pairNumber',
 ])
 @Index('IDX_lessons_university_group_start_date_pair_number', [
-  'universityId',
+  'organizationId',
   'groupId',
   'startDate',
   'pairNumber',
 ])
 @Index('IDX_lessons_university_teacher_start_date_pair_number', [
-  'universityId',
+  'organizationId',
   'teacherId',
   'startDate',
   'pairNumber',
@@ -37,7 +37,7 @@ export class Lesson {
   id: string;
 
   @Column({ type: 'uuid' })
-  universityId: string;
+  organizationId: string;
 
   @Column({ type: 'uuid' })
   groupId: string;

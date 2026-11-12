@@ -12,7 +12,7 @@ import {
 import { University } from './university.entity';
 
 @Entity('teachers')
-@Index('IDX_teachers_university_id', ['universityId'])
+@Index('IDX_teachers_organization_id', ['organizationId'])
 export class Teacher {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -21,10 +21,10 @@ export class Teacher {
   userId: string;
 
   @Column({ type: 'uuid' })
-  universityId: string;
+  organizationId: string;
 
   @ManyToOne(() => University)
-  @JoinColumn({ name: 'universityId' })
+  @JoinColumn({ name: 'organizationId' })
   university: University;
 
   @Column({ nullable: true })

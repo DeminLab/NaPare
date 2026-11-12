@@ -38,9 +38,9 @@ export class ScheduleController {
     @Request() req,
     @Query() query: DateRangeQueryDto,
   ) {
-    if (req.user.role === UserRole.STUDENT) return this.scheduleService.findForStudentDateRange(req.user.universityId, req.user.groupId, query.startDate, query.endDate, query);
-    if (req.user.role === UserRole.TEACHER) return this.scheduleService.findByTeacherDateRange(req.user.universityId, req.user.id, query.startDate, query.endDate, query);
-    return this.scheduleService.findByDateRange(req.user.universityId, query.startDate, query.endDate, query);
+    if (req.user.role === UserRole.STUDENT) return this.scheduleService.findForStudentDateRange(req.user.organizationId, req.user.groupId, query.startDate, query.endDate, query);
+    if (req.user.role === UserRole.TEACHER) return this.scheduleService.findByTeacherDateRange(req.user.organizationId, req.user.id, query.startDate, query.endDate, query);
+    return this.scheduleService.findByDateRange(req.user.organizationId, query.startDate, query.endDate, query);
   }
 
   @Get()
@@ -51,19 +51,19 @@ export class ScheduleController {
     @Request() req,
     @Query() query: ScheduleQueryDto,
   ) {
-    const universityId = req.user.universityId;
-    if (req.user.role === UserRole.STUDENT) return this.scheduleService.findForStudentDate(universityId, req.user.groupId, query.date, query);
-    if (req.user.role === UserRole.TEACHER) return this.scheduleService.findByTeacher(universityId, req.user.id, query.date, query);
+    const organizationId = req.user.organizationId;
+    if (req.user.role === UserRole.STUDENT) return this.scheduleService.findForStudentDate(organizationId, req.user.groupId, query.date, query);
+    if (req.user.role === UserRole.TEACHER) return this.scheduleService.findByTeacher(organizationId, req.user.id, query.date, query);
 
     if (query.groupId) {
-      return this.scheduleService.findByGroup(universityId, query.groupId, query.date, query);
+      return this.scheduleService.findByGroup(organizationId, query.groupId, query.date, query);
     }
 
     if (query.teacherId) {
-      return this.scheduleService.findByTeacher(universityId, query.teacherId, query.date, query);
+      return this.scheduleService.findByTeacher(organizationId, query.teacherId, query.date, query);
     }
 
-    return this.scheduleService.findByDate(universityId, query.date, query);
+    return this.scheduleService.findByDate(organizationId, query.date, query);
   }
 
   @Get('lessons/:id')
@@ -93,9 +93,9 @@ export class ScheduleController {
     @Request() req,
     @Query() query: DateRangeQueryDto,
   ) {
-    if (req.user.role === UserRole.STUDENT) return this.scheduleService.findForStudentDateRange(req.user.universityId, req.user.groupId, query.startDate, query.endDate, query);
-    if (req.user.role === UserRole.TEACHER) return this.scheduleService.findByTeacherDateRange(req.user.universityId, req.user.id, query.startDate, query.endDate, query);
-    return this.scheduleService.findByDateRange(req.user.universityId, query.startDate, query.endDate, query);
+    if (req.user.role === UserRole.STUDENT) return this.scheduleService.findForStudentDateRange(req.user.organizationId, req.user.groupId, query.startDate, query.endDate, query);
+    if (req.user.role === UserRole.TEACHER) return this.scheduleService.findByTeacherDateRange(req.user.organizationId, req.user.id, query.startDate, query.endDate, query);
+    return this.scheduleService.findByDateRange(req.user.organizationId, query.startDate, query.endDate, query);
   }
 
   @Get('changes')
@@ -103,7 +103,7 @@ export class ScheduleController {
   @ApiOkResponse({ description: 'Изменения получены', type: PaginatedResponseDto })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getChanges(@Request() req, @Query() query: ScheduleQueryDto) {
-    return this.scheduleService.getChangedLessons(req.user.universityId, query.date, query);
+    return this.scheduleService.getChangedLessons(req.user.organizationId, query.date, query);
   }
 
   @Post()
@@ -114,7 +114,7 @@ export class ScheduleController {
   async create(@Request() req, @Body() createLessonDto: CreateLessonDto) {
     return this.scheduleService.create({
       ...createLessonDto,
-      universityId: req.user.universityId,
+      organizationId: req.user.organizationId,
     });
   }
 

@@ -4,7 +4,7 @@ import { IsBoolean, IsDateString, IsInt, IsOptional, IsString, IsUUID, Max, MaxL
 
 export class PlatformAcademicLessonsQueryDto {
   @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(100) q?: string;
-  @ApiPropertyOptional() @IsOptional() @IsUUID() universityId?: string;
+  @ApiPropertyOptional() @IsOptional() @IsUUID() organizationId?: string;
   @ApiPropertyOptional({ description: 'ISO date or date-time; inclusive lower bound on startDate' }) @IsOptional() @IsDateString() from?: string;
   @ApiPropertyOptional({ description: 'ISO date or date-time; inclusive upper bound on startDate' }) @IsOptional() @IsDateString() to?: string;
   @ApiPropertyOptional({ default: 1 }) @IsOptional() @Type(() => Number) @IsInt() @Min(1) page = 1;

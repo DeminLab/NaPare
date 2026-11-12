@@ -38,7 +38,7 @@ export class HomeworkDeadlineReminderService implements OnModuleInit, OnModuleDe
 
   async checkDueDeadlines(now = new Date()): Promise<void> {
     return this.tenant.runWithDatabaseAccess(
-      { tables: ['pair_spaces', 'lessons'], universityIds: null },
+      { tables: ['pair_spaces', 'lessons'], organizationIds: null },
       () => this.scanDueDeadlines(now),
     );
   }
@@ -63,9 +63,9 @@ export class HomeworkDeadlineReminderService implements OnModuleInit, OnModuleDe
           .map((homework) => homework.pairSpace)
           .filter((pairSpace) => pairSpace?.isActive);
         const lessonIds = [...new Set(validPairSpaces.map((pairSpace) => pairSpace.lessonId))];
-        const universityIds = [...new Set(validPairSpaces.map((pairSpace) => pairSpace.universityId))];
+        const organizationIds = [...new Set(validPairSpaces.map((pairSpace) => pairSpace.organizationId))];
         const lessons = lessonIds.length
-          ? await this.lessonRepository.find({ where: { id: In(lessonIds), universityId: In(universityIds) } })
+          ? await this.lessonRepository.find({ where: { id: In(lessonIds), organizationId: In(organizationIds) } })
           : [];
         const lessonsById = new Map(lessons.map((lesson) => [lesson.id, lesson]));
 
@@ -73,17 +73,17 @@ export class HomeworkDeadlineReminderService implements OnModuleInit, OnModuleDe
           const pairSpace = homework.pairSpace;
           if (!pairSpace?.isActive || !homework.deadline) continue;
           const lesson = lessonsById.get(pairSpace.lessonId);
-          if (!lesson || lesson.universityId !== pairSpace.universityId) continue;
+          if (!lesson || lesson.organizationId !== pairSpace.organizationId) continue;
 
           try {
             await this.tenant.runWithDatabaseAccess(
-              { tables: ['event_records', 'notification_preferences', 'notifications', 'inbox_items'], universityIds: [pairSpace.universityId], write: true },
+              { tables: ['event_records', 'notification_preferences', 'notifications', 'inbox_items'], organizationIds: [pairSpace.organizationId], write: true },
               () => this.tenant.runWithDatabaseAccess(
-                { tables: ['users', 'groups'], universityIds: [pairSpace.universityId] },
+                { tables: ['users', 'groups'], organizationIds: [pairSpace.organizationId] },
                 () => this.eventBus.publish({
               type: 'homework.deadline_soon',
               idempotencyKey: `homework-deadline:${homework.id}:${homework.deadline.toISOString()}`,
-              universityId: pairSpace.universityId,
+              organizationId: pairSpace.organizationId,
               target: { type: 'homework', id: homework.id },
               priority: homework.deadline.getTime() - now.getTime() <= 6 * 60 * 60 * 1000 ? 'high' : 'normal',
               payload: {

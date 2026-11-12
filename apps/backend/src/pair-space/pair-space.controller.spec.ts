@@ -16,7 +16,7 @@ describe("PairSpaceController content write authorization", () => {
       getClass: () => PairSpaceController,
       switchToHttp: () => ({
         getRequest: () => ({
-          user: { id: "user-1", role, universityId: "university-1" },
+          user: { id: "user-1", role, organizationId: "university-1" },
         }),
       }),
     }) as any;
@@ -48,7 +48,7 @@ describe("PairSpaceController content write authorization", () => {
 
     await expect(
       subject.findByLesson("lesson-1", {
-        user: { universityId: "university-1" },
+        user: { organizationId: "university-1" },
       }),
     ).resolves.toEqual({ id: "space-1" });
     expect(pairSpaceService.getOrCreateByLesson).toHaveBeenCalledWith(
@@ -67,7 +67,7 @@ describe("PairSpaceController content write authorization", () => {
     expect(rolesGuard.canActivate(contextFor(handler, UserRole.UNIVERSITY_ADMIN))).toBe(true);
 
     await expect(subject.listExistingForGroup("group-1", {
-      user: { universityId: "university-1" },
+      user: { organizationId: "university-1" },
     }, new PaginationQueryDto())).resolves.toEqual(result);
     expect(pairSpaceService.listExistingForGroup).toHaveBeenCalledWith(
       "group-1",

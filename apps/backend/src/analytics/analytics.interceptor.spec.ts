@@ -4,7 +4,7 @@ import { ProductAnalyticsInterceptor } from './analytics.interceptor';
 import { ProductAnalyticsService } from './analytics.service';
 
 describe('Product analytics HTTP isolation',()=>{
-  const actor={id:'5fb21464-3c38-46e4-a987-1e1e1561ab65',universityId:'2b207679-669b-47f3-9a18-ce0d7dfbc5ee',role:'student'};
+  const actor={id:'5fb21464-3c38-46e4-a987-1e1e1561ab65',organizationId:'2b207679-669b-47f3-9a18-ce0d7dfbc5ee',role:'student'};
   const context=(url='/api/v1/schedule/range',statusCode=200)=>({getType:()=> 'http',switchToHttp:()=>({getRequest:()=>({user:actor,originalUrl:url}),getResponse:()=>({statusCode})})}) as unknown as ExecutionContext;
   const service=()=>({enabledFor:jest.fn(()=>true),recordActivity:jest.fn(async()=>undefined)});
   it('preserves successful business results when analytics storage fails',async()=>{

@@ -22,11 +22,11 @@ export default function AuditPanel({ access }: { access: Access }) {
   const [page, setPage] = useState(1);
   const [query, setQuery] = useState('');
   useEffect(() => { if (targetUserId) setQuery(targetUserId); }, [targetUserId]);
-  const [universityId, setUniversityId] = useState('');
+  const [organizationId, setOrganizationId] = useState('');
   const universities = useResource<Page<UniversityOption>>(access.permissions.includes('universities.read') ? '/platform/universities?limit=100' : null);
   const filters = new URLSearchParams({ page: String(page), limit: '20' });
   if (query.trim()) filters.set('q', query.trim());
-  if (universityId) filters.set('universityId', universityId);
+  if (organizationId) filters.set('organizationId', organizationId);
   const list = useResource<Page<Entry>>(`/platform/audit?${filters.toString()}`);
 
   return (
@@ -34,7 +34,7 @@ export default function AuditPanel({ access }: { access: Access }) {
       <h2 className="text-lg font-semibold">Журнал управления</h2>
       <div className="grid gap-3 sm:grid-cols-[minmax(14rem,1fr)_minmax(12rem,0.6fr)]">
         <label className="block text-sm">Поиск в журнале<input className={inputClass} type="search" maxLength={100} value={query} onChange={event => { setQuery(event.target.value); setPage(1); }} placeholder="Действие, объект, причина или ID" /></label>
-        {universities.data && <label className="block text-sm">Университет<select className={inputClass} value={universityId} onChange={event => { setUniversityId(event.target.value); setPage(1); }}><option value="">Все университеты</option>{universities.data.data.map(university => <option key={university.id} value={university.id}>{university.name} · {university.city}</option>)}</select></label>}
+        {universities.data && <label className="block text-sm">Университет<select className={inputClass} value={organizationId} onChange={event => { setOrganizationId(event.target.value); setPage(1); }}><option value="">Все университеты</option>{universities.data.data.map(university => <option key={university.id} value={university.id}>{university.name} · {university.city}</option>)}</select></label>}
       </div>
       {list.error && <Notice error>{list.error}</Notice>}
       {list.data?.data.map(entry => (

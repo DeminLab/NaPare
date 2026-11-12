@@ -45,7 +45,7 @@ import { validateEnvironment } from './config/validate-environment';
 import { AppConfig } from './config/configuration';
 import { TenantContextModule } from './common/tenant/tenant-context.module';
 import { TenantContext } from './common/tenant/tenant-context';
-import { assertTenantDatabase, assertTenantDatabaseRole, installTenantDatabase } from './common/tenant/tenant-database';
+import { assertTenantDatabase, assertTenantDatabaseRole, dropLegacyColumnDependencies, installTenantDatabase } from './common/tenant/tenant-database';
 import { TenantRowSecurity1700000000029 } from './migrations/1700000000029-TenantRowSecurity';
 import { PersonalDataRead1700000000037 } from './migrations/1700000000037-PersonalDataRead';
 import { AccountErasure1700000000038 } from './migrations/1700000000038-AccountErasure';
@@ -54,6 +54,7 @@ import { ProductAnalytics1700000000041 } from './migrations/1700000000041-Produc
 import { OfficeReports1700000000042 } from './migrations/1700000000042-OfficeReports';
 import { WebPushConsent1700000000043 } from './migrations/1700000000043-WebPushConsent';
 import { PlatformTelemetry1700000000044 } from './migrations/1700000000044-PlatformTelemetry';
+import { TenantOrganizationAlias1700000000046 } from './migrations/1700000000046-TenantOrganizationAlias';
 import { TelemetryModule } from './telemetry/telemetry.module';
 import { EventsModule } from './events/events.module';
 import { AcademicModule } from './academic/academic.module';
@@ -104,9 +105,19 @@ import { SearchModule } from './search/search.module';
           // Development schema synchronization does not run migrations. Apply
           // the same policies so development never silently disables isolation.
           if (databaseOptions.synchronize) {
+            // ADR-0008: entities no longer carry the legacy tenant column;
+            // clear its remaining dependents so synchronize can drop it.
+            await dropLegacyColumnDependencies(source);
             await source.synchronize();
             const runner = source.createQueryRunner();
-            try { await new TenantRowSecurity1700000000029().up(runner); await new PersonalDataRead1700000000037().up(runner); await new AccountErasure1700000000038().up(runner); await new CareerModeration1700000000040().up(runner); await new ProductAnalytics1700000000041().up(runner); await new OfficeReports1700000000042().up(runner); await new WebPushConsent1700000000043().up(runner); await new PlatformTelemetry1700000000044().up(runner); }
+            try {
+              // ADR-0008 expand: alias the tenant column both ways before the
+              // historic tail (it still hardcodes universityId), then run it
+              // again to canonicalize the functions/policies that tail creates.
+              await new TenantOrganizationAlias1700000000046().up(runner);
+              await new TenantRowSecurity1700000000029().up(runner); await new PersonalDataRead1700000000037().up(runner); await new AccountErasure1700000000038().up(runner); await new CareerModeration1700000000040().up(runner); await new ProductAnalytics1700000000041().up(runner); await new OfficeReports1700000000042().up(runner); await new WebPushConsent1700000000043().up(runner); await new PlatformTelemetry1700000000044().up(runner);
+              await new TenantOrganizationAlias1700000000046().up(runner);
+            }
             finally { await runner.release(); }
           }
           await assertTenantDatabase(source);

@@ -8,6 +8,7 @@ import { User } from '../src/users/entities/user.entity';
 import { UserRole } from '../src/auth/interfaces/user-role';
 import { OfficeAssignments1700000000031 } from '../src/migrations/1700000000031-OfficeAssignments';
 import { StudentRequests1700000000032 } from '../src/migrations/1700000000032-StudentRequests';
+import { TenantOrganizationAlias1700000000046 } from '../src/migrations/1700000000046-TenantOrganizationAlias';
 import { OfficeAssignment, RequestDecision, RequestStep, StudentRequest } from '../src/requests/request.entities';
 import { AuditLog } from '../src/common/entities/audit-log.entity';
 import { CuratorAssignment } from '../src/curation/entities/curator-assignment.entity';
@@ -37,13 +38,13 @@ suite('Academic office: persisted assignments, workflow and PostgreSQL RLS', () 
     // Exercise actual migrations on empty feature tables, not just synchronize.
     await f.db.query('DROP TABLE request_documents, request_decisions, request_steps, student_requests, office_routes, office_assignments');
     const runner = f.db.createQueryRunner();
-    try { await new OfficeAssignments1700000000031().up(runner); await new StudentRequests1700000000032().up(runner); } finally { await runner.release(); }
-    secondFaculty = await f.db.getRepository(Faculty).save({ universityId: f.uni.id, name: 'Второй факультет', code: 'ВТ' });
+    try { await new OfficeAssignments1700000000031().up(runner); await new StudentRequests1700000000032().up(runner); await new TenantOrganizationAlias1700000000046().up(runner); } finally { await runner.release(); }
+    secondFaculty = await f.db.getRepository(Faculty).save({ organizationId: f.uni.id, name: 'Второй факультет', code: 'ВТ' });
     await f.db.getRepository(Group).update(f.groups[2].id, { facultyId: secondFaculty.id });
     await f.db.getRepository(Faculty).update(f.groups[0].facultyId, { deanUserId: f.users.dean.id });
-    const employee = async (key: string) => f.db.getRepository(User).save({ universityId: f.uni.id, role: UserRole.TEACHER, firstName: key, lastName: 'Сотрудник', email: `${key}@office.test`, passwordHash: f.users.student.passwordHash });
+    const employee = async (key: string) => f.db.getRepository(User).save({ organizationId: f.uni.id, role: UserRole.TEACHER, firstName: key, lastName: 'Сотрудник', email: `${key}@office.test`, passwordHash: f.users.student.passwordHash });
     method = await employee('method'); dispatcher = await employee('dispatcher');
-    foreignStudent = await f.db.getRepository(User).save({ universityId: f.otherUni.id, role: UserRole.STUDENT, groupId: f.groups[3].id, firstName: 'Чужой', lastName: 'Студент', email: 'foreign@office.test', passwordHash: f.users.student.passwordHash });
+    foreignStudent = await f.db.getRepository(User).save({ organizationId: f.otherUni.id, role: UserRole.STUDENT, groupId: f.groups[3].id, firstName: 'Чужой', lastName: 'Студент', email: 'foreign@office.test', passwordHash: f.users.student.passwordHash });
     const accounts = { ...f.users, method, dispatcher, foreignStudent };
     for (const [key, user] of Object.entries(accounts)) {
       if (!user.isActive) continue;
@@ -71,7 +72,7 @@ suite('Academic office: persisted assignments, workflow and PostgreSQL RLS', () 
     const body = { userId: f.users.teacher.id, duty: 'office', groupIds: [], facultyIds: [] };
     await post('/assignments', { ...body, userId: f.users.outsider.id }).expect(400);
     await post('/assignments', { ...body, groupIds: [f.groups[3].id] }).expect(404);
-    const faculty = await f.db.getRepository(Faculty).findOneByOrFail({ universityId: f.otherUni.id });
+    const faculty = await f.db.getRepository(Faculty).findOneByOrFail({ organizationId: f.otherUni.id });
     await post('/assignments', { ...body, facultyIds: [faculty.id] }).expect(400);
     await post('/assignments', body, 'teacher').expect(403);
   });
@@ -188,7 +189,7 @@ suite('Academic office: persisted assignments, workflow and PostgreSQL RLS', () 
     expect((await f.db.getRepository(StudentRequest).findOneByOrFail({ id })).status).toBe('in_review');
   });
   it('preserves existing student-curator appointments without permitting self-approval', async () => {
-    const curator = await f.db.getRepository(CuratorAssignment).save({ universityId: f.uni.id, groupId: f.groups[0].id, userId: f.users.peer.id, grantedBy: f.users.admin.id });
+    const curator = await f.db.getRepository(CuratorAssignment).save({ organizationId: f.uni.id, groupId: f.groups[0].id, userId: f.users.peer.id, grantedBy: f.users.admin.id });
     const body = { groupId: f.groups[0].id, type: 'absence', assigneeIds: [f.users.teacher.id, f.users.peer.id], version: 0, dueDays: 5 };
     await http().put('/api/v1/requests/routes').auth(tokens.admin, { type: 'bearer' }).send(body).expect(200);
     const id = await submitted();

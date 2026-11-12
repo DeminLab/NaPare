@@ -28,13 +28,13 @@ export class PlatformAcademicCatalogQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsUUID()
-  universityId?: string;
+  organizationId?: string;
 }
 
 export class PlatformAcademicCatalogOptionsDto {
   @ApiPropertyOptional()
   @IsUUID()
-  universityId: string;
+  organizationId: string;
 }
 
 export class PlatformAcademicCoursePatchDto {

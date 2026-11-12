@@ -102,7 +102,7 @@ export class UsersController {
       phone: user.phone,
       avatarUrl: user.avatarUrl,
       role: user.role,
-      universityId: user.universityId,
+      organizationId: user.organizationId,
       groupId: user.groupId,
       isActive: user.isActive,
       createdAt: user.createdAt,

@@ -27,7 +27,7 @@ suite('Personal JSON export: actual JWT, PostgreSQL and restrictive RLS', () => 
 
   it('requires authentication, uses self identity even with foreign query parameters and never emits credentials', async () => {
     await http().get('/api/v1/users/me/export').expect(401);
-    const result = await download().query({ userId: f.users.outsider.id, universityId: f.otherUni.id }).expect(200);
+    const result = await download().query({ userId: f.users.outsider.id, organizationId: f.otherUni.id }).expect(200);
     expect(result.headers['content-disposition']).toContain('attachment;');
     expect(result.headers['cache-control']).toContain('no-store');
     expect(result.body.complete).toBe(true);
@@ -50,10 +50,10 @@ suite('Personal JSON export: actual JWT, PostgreSQL and restrictive RLS', () => 
   });
   it('exports all 205 rows across pages, including own former-university rows, while excluding peers and foreign accounts', async () => {
     // Notes have no pair-space FK: the lesson-space identifier is opaque here.
-    const rows = Array.from({ length: 205 }, (_, index) => ({ userId: f.users.student.id, universityId: index < 105 ? f.uni.id : f.otherUni.id, pairSpaceId: randomUUID(), content: `OWN_NOTE_${index}` }));
+    const rows = Array.from({ length: 205 }, (_, index) => ({ userId: f.users.student.id, organizationId: index < 105 ? f.uni.id : f.otherUni.id, pairSpaceId: randomUUID(), content: `OWN_NOTE_${index}` }));
     await f.db.getRepository(PersonalLessonNote).save(rows);
-    await f.db.getRepository(PersonalLessonNote).save({ userId: f.users.peer.id, universityId: f.uni.id, pairSpaceId: f.lesson.id, content: 'PEER_PRIVATE_SENTINEL' });
-    await f.db.getRepository(PersonalLessonNote).save({ userId: f.users.outsider.id, universityId: f.otherUni.id, pairSpaceId: f.lesson.id, content: 'FOREIGN_PRIVATE_SENTINEL' });
+    await f.db.getRepository(PersonalLessonNote).save({ userId: f.users.peer.id, organizationId: f.uni.id, pairSpaceId: f.lesson.id, content: 'PEER_PRIVATE_SENTINEL' });
+    await f.db.getRepository(PersonalLessonNote).save({ userId: f.users.outsider.id, organizationId: f.otherUni.id, pairSpaceId: f.lesson.id, content: 'FOREIGN_PRIVATE_SENTINEL' });
     const result = await download().expect(200);
     expect(result.body.counts.personal_lesson_notes).toBe(205);
     expect(new Set(result.body.datasets.personal_lesson_notes.map(row => row.id)).size).toBe(205);
@@ -67,13 +67,13 @@ suite('Personal JSON export: actual JWT, PostgreSQL and restrictive RLS', () => 
   it('keeps the extra SQL visibility self-only and read-only, and removes it after the scoped operation', async () => {
     const tenant = f.app.get(TenantContext), db = f.app.get(DataSource);
     await tenant.runInRequest(async () => {
-      tenant.setUser({ id: f.users.student.id, email: f.users.student.email, role: UserRole.STUDENT, universityId: f.uni.id });
-      const read = () => db.query('SELECT id FROM personal_lesson_notes WHERE "universityId"=$1', [f.otherUni.id]);
+      tenant.setUser({ id: f.users.student.id, email: f.users.student.email, role: UserRole.STUDENT, organizationId: f.uni.id });
+      const read = () => db.query('SELECT id FROM personal_lesson_notes WHERE "organizationId"=$1', [f.otherUni.id]);
       expect(await read()).toHaveLength(0);
       await tenant.runWithDatabaseAccess({ personalData: { userId: f.users.outsider.id } }, async () => expect(await read()).toHaveLength(0));
       await tenant.runWithDatabaseAccess({ personalData: { userId: f.users.student.id } }, async () => {
         expect(await read()).toHaveLength(100);
-        const updated = await db.query('UPDATE personal_lesson_notes SET content=$1 WHERE "universityId"=$2 RETURNING id', ['MUTATION_FORBIDDEN', f.otherUni.id]);
+        const updated = await db.query('UPDATE personal_lesson_notes SET content=$1 WHERE "organizationId"=$2 RETURNING id', ['MUTATION_FORBIDDEN', f.otherUni.id]);
         expect(updated[0]).toHaveLength(0);
       });
       expect(await read()).toHaveLength(0);
@@ -83,7 +83,7 @@ suite('Personal JSON export: actual JWT, PostgreSQL and restrictive RLS', () => 
     const teacher = await download('teacher').expect(200);
     expect(teacher.body.datasets.lessons.map(lesson => lesson.id)).toContain(f.lesson.id);
     expect(teacher.body.datasets.personal_lesson_notes).toEqual([]);
-    await f.db.getRepository(User).update(f.users.teacher.id, { universityId: null, role: UserRole.EMPLOYER });
+    await f.db.getRepository(User).update(f.users.teacher.id, { organizationId: null, role: UserRole.EMPLOYER });
     const login = await http().post('/api/v1/auth/login').send({ email: f.users.teacher.email, password: f.password }).expect(200);
     tokens.employer = login.body.accessToken;
     const result = await download('employer').expect(200);

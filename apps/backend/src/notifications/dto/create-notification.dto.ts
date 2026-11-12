@@ -10,7 +10,7 @@ export class CreateNotificationDto {
 
   @ApiProperty()
   @IsUUID()
-  universityId: string;
+  organizationId: string;
 
   @ApiProperty()
   @IsString()

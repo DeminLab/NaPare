@@ -59,8 +59,8 @@ function traceService(filename, className, methodName, depth = 0, visited = new 
     if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)) {
       const expression = node.expression.getText(source);
       const argumentsText = node.arguments.map(item => item.getText(source)).join(', ').replace(/\s+/g, ' ');
-      if (/assertAccess|assertUniversityScope|requireUniversityId|assert(?:Group|Student|Course|Lesson|.*Manage|.*Read)|\.company$|\.center$|\.require(?:Owner)?$/.test(expression) ||
-          (/\.(?:find\w*|where|andWhere|exists\w*|delete|update)$/.test(expression) && /universityId|university_id/.test(argumentsText))) {
+      if (/assertAccess|assertUniversityScope|requireOrganizationId|assert(?:Group|Student|Course|Lesson|.*Manage|.*Read)|\.company$|\.center$|\.require(?:Owner)?$/.test(expression) ||
+          (/\.(?:find\w*|where|andWhere|exists\w*|delete|update)$/.test(expression) && /organizationId|organization_id/.test(argumentsText))) {
         found.push({ file: path.relative(root, filename).replaceAll('\\', '/'), line: lineOf(node, source), check: `${expression.replace(/\s+/g, ' ').slice(0, 120)}(${argumentsText.slice(0, 180)})` });
       }
       const match = /^this\.(?:(\w+)\.)?(\w+)$/.exec(expression);
@@ -103,7 +103,7 @@ function inventory() {
             file: path.relative(root, filename).replaceAll('\\', '/'),
             controller: controller.name.text, handler: handler.name.getText(source),
             line: lineOf(handler, source), calls,
-            scopeEvidence: [...new Set(body.match(/(?:req|request)\.user(?:\.[a-zA-Z]+)?|(?:dto|query|body)\.universityId|universityId/g) || [])],
+            scopeEvidence: [...new Set(body.match(/(?:req|request)\.user(?:\.[a-zA-Z]+)?|(?:dto|query|body)\.organizationId|organizationId/g) || [])],
             guards: [callDecorator(controller, 'UseGuards'), callDecorator(handler, 'UseGuards')]
               .filter(Boolean).flatMap(call => call.arguments.map(arg => arg.getText(source))),
             serviceEvidence: traceService(filename, controller.name.text, handler.name.getText(source)),
@@ -119,9 +119,9 @@ function tenantRule(route) {
     ? 'Bank signature + server-to-server lookup; immutable OrderId/PaymentId/amount'
     : 'JWT actor + active company membership; platform owner required for refunds';
   if (route.controller.startsWith('Platform') && route.controller !== 'PlatformPublicController') {
-    return 'Persisted platform permission; universityIds NULL/global, []/none, UUID list; service checks resource university';
+    return 'Persisted platform permission; organizationIds NULL/global, []/none, UUID list; service checks resource university';
   }
-  if (route.controller.startsWith('Career')) return 'Career self/company membership, university partnership/admission; universityId input checked in CareerService';
+  if (route.controller.startsWith('Career')) return 'Career self/company membership, university partnership/admission; organizationId input checked in CareerService';
   if (route.controller === 'SuperadminController') return 'SUPERADMIN plus platform owner check for university/connector mutations';
   if (['AppController', 'HealthController', 'PlatformPublicController'].includes(route.controller)) return 'Public technical response; no personal academic data';
   if (route.controller === 'TelegramWebhookController') return 'Webhook secret; verified challenge identifies account';
@@ -132,7 +132,7 @@ function tenantRule(route) {
     ? 'Anonymous beacon or verified JWT actor; university taken only from the verified actor, payload sanitized in service'
     : 'Verified JWT identity; self-only telemetry operation';
   if (route.controller === 'UsersController' || route.controller === 'DevicesController' || route.controller === 'NotificationsController' || route.controller === 'FavoritesController') {
-    return 'JWT user.id (self), universityId from verified actor; resource owner check in service';
+    return 'JWT user.id (self), organizationId from verified actor; resource owner check in service';
   }
   if (route.controller === 'CurationController' || route.controller === 'CuratorController') return 'TenantContext actor; active curator assignment + own university, dean/admin manage scope';
   return route.scopeEvidence.some(item => item.includes('.user'))

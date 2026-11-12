@@ -22,7 +22,7 @@ export class WebPushClientService {
   }
   private async lockActor(manager: EntityManager, actor: AuthenticatedUser) {
     const user = await manager.findOne(User, { where: { id: actor.id }, lock: { mode: 'pessimistic_read' } });
-    if (!user || !user.isActive || user.personalDataDeletedAt || user.sessionVersion !== actor.sessionVersion || user.role !== actor.role || user.universityId !== actor.universityId) throw new UnauthorizedException('Сессия изменилась. Войдите заново.');
+    if (!user || !user.isActive || user.personalDataDeletedAt || user.sessionVersion !== actor.sessionVersion || user.role !== actor.role || user.organizationId !== actor.organizationId) throw new UnauthorizedException('Сессия изменилась. Войдите заново.');
   }
   async status() {
     const actor = this.actor();

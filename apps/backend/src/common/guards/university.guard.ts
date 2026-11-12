@@ -18,14 +18,14 @@ export class UniversityGuard implements CanActivate {
     }
 
     // Resource IDs (lesson, user, request) are never university IDs. A route
-    // without :universityId still requires an authenticated university scope;
+    // without :organizationId still requires an authenticated university scope;
     // resource ownership must additionally be checked by its service.
-    if (!user.universityId) {
+    if (!user.organizationId) {
       throw new ForbiddenException('Для этого раздела необходима привязка к вузу');
     }
-    const universityId = params.universityId;
+    const organizationId = params.organizationId;
 
-    if (universityId && user.universityId !== universityId) {
+    if (organizationId && user.organizationId !== organizationId) {
       throw new ForbiddenException('Access denied to this university');
     }
 

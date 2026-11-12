@@ -151,7 +151,7 @@ export interface UserInfo {
   firstName: string;
   lastName: string;
   role: string;
-  universityId?: string;
+  organizationId?: string;
 }
 
 /** Last known profile so the workspace shell can paint before the network answers. */

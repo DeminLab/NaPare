@@ -68,13 +68,13 @@ describe('TelemetryService', () => {
 
   it('keeps a failed session write from breaking the login itself', async () => {
     const { service } = create({ failInsert: true });
-    await expect(service.createSession({ id: 'user-1', universityId: 'uni-1' }, { userAgent: 'NaPareAndroid/1.0' })).resolves.toBeNull();
+    await expect(service.createSession({ id: 'user-1', organizationId: 'uni-1' }, { userAgent: 'NaPareAndroid/1.0' })).resolves.toBeNull();
   });
 
   it('derives the session lifetime from the configured refresh token expiry', async () => {
     const { service, calls } = create({ refreshExpiration: '12h' });
     jest.useFakeTimers().setSystemTime(new Date('2026-11-01T00:00:00.000Z'));
-    await service.createSession({ id: 'user-1', universityId: 'uni-1' }, {});
+    await service.createSession({ id: 'user-1', organizationId: 'uni-1' }, {});
     jest.useRealTimers();
     const row = inserted(calls, 'UserSession');
     expect(new Date(row.expiresAt as Date).getTime() - new Date(row.createdAt as Date).getTime()).toBe(12 * 3_600_000);
@@ -124,7 +124,7 @@ describe('TelemetryService', () => {
 
   it('normalizes paths and sanitizes metadata for buffered client events', async () => {
     const { service, calls } = create();
-    service.enqueueEvent({ source: 'web', category: 'ui', name: 'page.view', userId: 'user-1', universityId: 'uni-1', path: '/pair-space/11111111-1111-4111-8111-111111111111/notes?q=hello', metadata: { installId: 'install-1', token: 'secret-value' } } as never);
+    service.enqueueEvent({ source: 'web', category: 'ui', name: 'page.view', userId: 'user-1', organizationId: 'uni-1', path: '/pair-space/11111111-1111-4111-8111-111111111111/notes?q=hello', metadata: { installId: 'install-1', token: 'secret-value' } } as never);
     await service.flush();
     const row = inserted(calls, 'PlatformEvent');
     // flush() writes the whole buffer as one batch insert.

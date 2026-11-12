@@ -19,7 +19,7 @@ export interface TelemetryRequestContext {
 export interface AuthEventInput extends TelemetryRequestContext {
   type: AuthEventType;
   userId?: string | null;
-  universityId?: string | null;
+  organizationId?: string | null;
   sessionId?: string | null;
   emailHash?: string | null;
   metadata?: unknown;
@@ -31,7 +31,7 @@ export interface PlatformEventInput extends TelemetryRequestContext {
   name: string;
   severity?: TelemetrySeverity;
   userId?: string | null;
-  universityId?: string | null;
+  organizationId?: string | null;
   sessionId?: string | null;
   method?: string | null;
   path?: string | null;
@@ -82,11 +82,11 @@ export class TelemetryService implements OnModuleInit, OnModuleDestroy {
   }
 
   private withWrite<T>(tables: string[], callback: () => Promise<T>): Promise<T> {
-    return this.tenant.runWithDatabaseAccess({ tables, universityIds: null, write: true, replaceActor: true }, callback);
+    return this.tenant.runWithDatabaseAccess({ tables, organizationIds: null, write: true, replaceActor: true }, callback);
   }
 
   private withRead<T>(tables: string[], callback: () => Promise<T>): Promise<T> {
-    return this.tenant.runWithDatabaseAccess({ tables, universityIds: null, replaceActor: true }, callback);
+    return this.tenant.runWithDatabaseAccess({ tables, organizationIds: null, replaceActor: true }, callback);
   }
 
   private refreshTtlMs(): number {
@@ -104,7 +104,7 @@ export class TelemetryService implements OnModuleInit, OnModuleDestroy {
     return createHmac('sha256', secret).update(email.trim().toLowerCase()).digest('hex');
   }
 
-  async createSession(user: Pick<User, 'id' | 'universityId'>, context: TelemetryRequestContext = {}): Promise<string | null> {
+  async createSession(user: Pick<User, 'id' | 'organizationId'>, context: TelemetryRequestContext = {}): Promise<string | null> {
     const id = randomUUID();
     const parsed = parseUserAgent(context.userAgent);
     const client = context.client ?? parsed.client;
@@ -112,7 +112,7 @@ export class TelemetryService implements OnModuleInit, OnModuleDestroy {
       await this.withWrite(['user_sessions'], () => this.sessions.insert({
         id,
         userId: user.id,
-        universityId: user.universityId ?? null,
+        organizationId: user.organizationId ?? null,
         client,
         device: parsed.device,
         os: parsed.os,
@@ -141,7 +141,7 @@ export class TelemetryService implements OnModuleInit, OnModuleDestroy {
       // TypeORM's deep partial type explodes on this enum-heavy insert shape.
       const row = {
         userId: input.userId ?? null,
-        universityId: input.universityId ?? null,
+        organizationId: input.organizationId ?? null,
         type: input.type,
         emailHash: input.emailHash ?? null,
         sessionId: input.sessionId ?? null,
@@ -261,7 +261,7 @@ export class TelemetryService implements OnModuleInit, OnModuleDestroy {
       name: input.name.slice(0, 120),
       severity: input.severity ?? 'info',
       userId: input.userId ?? null,
-      universityId: input.universityId ?? null,
+      organizationId: input.organizationId ?? null,
       sessionId: input.sessionId ?? null,
       method: input.method?.slice(0, 12) ?? null,
       path: input.path ? normalizePath(input.path) : null,

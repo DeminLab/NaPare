@@ -38,7 +38,7 @@ export class TelemetryController {
         name: event.name,
         severity,
         userId: user?.id ?? null,
-        universityId: user?.universityId ?? null,
+        organizationId: user?.organizationId ?? null,
         sessionId: user?.sessionId ?? null,
         path: event.path ?? null,
         ip: request.ip ?? null,

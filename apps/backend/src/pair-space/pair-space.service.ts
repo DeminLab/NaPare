@@ -140,11 +140,11 @@ export class PairSpaceService {
 
   async findByLesson(
     lessonId: string,
-    universityId?: string,
+    organizationId?: string,
   ): Promise<PairSpaceResponse> {
     this.assertPersistedLessonId(lessonId);
     const pairSpace = await this.pairSpaceRepository.findOne({
-      where: universityId ? { lessonId, universityId } : { lessonId },
+      where: organizationId ? { lessonId, organizationId } : { lessonId },
       relations: ["announcements", "homeworks", "files", "messages"],
     });
 
@@ -158,22 +158,22 @@ export class PairSpaceService {
     return this.attachMoodleUrl(pairSpace);
   }
 
-  async getSubjectTimeline(lessonId: string, universityId: string) {
-    this.tenantContext.assertAccess(universityId);
+  async getSubjectTimeline(lessonId: string, organizationId: string) {
+    this.tenantContext.assertAccess(organizationId);
     this.assertPersistedLessonId(lessonId);
     if (!this.lessonRepository) {
       throw new NotFoundException(`Lesson ${lessonId} not found`);
     }
 
     const currentLesson = await this.lessonRepository.findOne({
-      where: { id: lessonId, universityId },
+      where: { id: lessonId, organizationId },
     });
     if (!currentLesson) throw new NotFoundException(`Lesson ${lessonId} not found`);
     await this.assertLessonScopedAccess(currentLesson);
 
     const user = this.tenantContext.getUser();
     const scope = {
-      universityId,
+      organizationId,
       subject: currentLesson.subject,
       ...([UserRole.STUDENT, UserRole.CURATOR].includes(user?.role as UserRole)
         ? { groupId: currentLesson.groupId }
@@ -198,7 +198,7 @@ export class PairSpaceService {
     const lessonIds = lessons.map((lesson) => lesson.id);
     const spaces = lessonIds.length
       ? await this.pairSpaceRepository.find({
-          where: { universityId, lessonId: In(lessonIds) },
+          where: { organizationId, lessonId: In(lessonIds) },
           relations: ["announcements", "homeworks", "files"],
           order: { date: "DESC" },
         })
@@ -223,24 +223,24 @@ export class PairSpaceService {
    */
   async getOrCreateByLesson(
     lessonId: string,
-    universityId?: string,
+    organizationId?: string,
   ): Promise<PairSpaceResponse> {
     this.assertPersistedLessonId(lessonId);
     try {
-      return await this.findByLesson(lessonId, universityId);
+      return await this.findByLesson(lessonId, organizationId);
     } catch (error) {
       if (!(error instanceof NotFoundException)) throw error;
     }
 
     const user = this.tenantContext.getUser();
-    const scopedUniversityId = universityId ?? user?.universityId;
-    if (!scopedUniversityId || !this.lessonRepository) {
+    const scopedOrganizationId = organizationId ?? user?.organizationId;
+    if (!scopedOrganizationId || !this.lessonRepository) {
       throw new NotFoundException(`Lesson ${lessonId} not found`);
     }
-    this.tenantContext.assertAccess(scopedUniversityId);
+    this.tenantContext.assertAccess(scopedOrganizationId);
 
     const lesson = await this.lessonRepository.findOne({
-      where: { id: lessonId, universityId: scopedUniversityId },
+      where: { id: lessonId, organizationId: scopedOrganizationId },
     });
     if (!lesson) throw new NotFoundException(`Lesson ${lessonId} not found`);
     await this.assertLessonScopedAccess(lesson);
@@ -248,7 +248,7 @@ export class PairSpaceService {
     try {
       await this.pairSpaceRepository.save(
         this.pairSpaceRepository.create({
-          universityId: lesson.universityId,
+          organizationId: lesson.organizationId,
           lessonId: lesson.id,
           courseId: lesson.courseId,
           lessonOccurrenceId: lesson.occurrenceId,
@@ -268,7 +268,7 @@ export class PairSpaceService {
       if (code !== "23505") throw error;
     }
 
-    return this.findByLesson(lessonId, scopedUniversityId);
+    return this.findByLesson(lessonId, scopedOrganizationId);
   }
 
   async createAnnouncement(
@@ -289,7 +289,7 @@ export class PairSpaceService {
     const pairSpace = await this.findById(pairSpaceId);
     await this.eventBus?.publish({
       type: "announcement.created",
-      universityId: pairSpace.universityId,
+      organizationId: pairSpace.organizationId,
       actor: this.eventActor(authorId),
       target: { type: "announcement", id: saved.id },
       payload: {
@@ -330,7 +330,7 @@ export class PairSpaceService {
     const pairSpace = await this.findById(pairSpaceId);
     await this.eventBus?.publish({
       type: "homework.created",
-      universityId: pairSpace.universityId,
+      organizationId: pairSpace.organizationId,
       actor: this.eventActor(authorId),
       target: { type: "homework", id: saved.id },
       payload: {
@@ -355,14 +355,14 @@ export class PairSpaceService {
 
   async listPreparationsForLessons(
     lessonIds: string[],
-    universityId: string,
+    organizationId: string,
   ): Promise<PairSpacePreparationSummary[]> {
-    this.tenantContext.assertAccess(universityId);
+    this.tenantContext.assertAccess(organizationId);
     const persistedLessonIds = lessonIds.filter((id) => UUID_PATTERN.test(id));
     if (persistedLessonIds.length === 0) return [];
 
     const pairSpaces = await this.pairSpaceRepository.find({
-      where: { universityId, lessonId: In(persistedLessonIds) },
+      where: { organizationId, lessonId: In(persistedLessonIds) },
       relations: ["homeworks"],
     });
 
@@ -395,29 +395,29 @@ export class PairSpaceService {
 
   async listExistingForGroup(
     groupId: string,
-    universityId: string,
+    organizationId: string,
     pagination: PaginationQueryDto,
   ): Promise<PaginatedResponse<PairSpaceGroupSummary>> {
-    this.tenantContext.assertAccess(universityId);
+    this.tenantContext.assertAccess(organizationId);
     if (!this.groupRepository || !this.lessonRepository) {
       throw new ForbiddenException("Group PairSpace listing is unavailable");
     }
 
     const group = await this.groupRepository.findOne({
-      where: { id: groupId, universityId },
+      where: { id: groupId, organizationId },
       select: { id: true },
     });
     if (!group) throw new NotFoundException("Group not found in this university");
 
     const lessons = await this.lessonRepository.find({
-      where: { groupId, universityId },
+      where: { groupId, organizationId },
       select: { id: true },
     });
     const lessonIds = lessons.map(({ id }) => id);
     if (!lessonIds.length) return toPaginatedResponse([], 0, pagination);
 
     const [spaces, total] = await this.pairSpaceRepository.findAndCount({
-      where: { universityId, lessonId: In(lessonIds) },
+      where: { organizationId, lessonId: In(lessonIds) },
       order: { date: "DESC", pairNumber: "DESC", id: "DESC" },
       skip: (pagination.page - 1) * pagination.limit,
       take: pagination.limit,
@@ -504,35 +504,35 @@ export class PairSpaceService {
     return toPaginatedResponse(data, total, pagination);
   }
 
-  async getPersonalNote(lessonId: string, universityId: string): Promise<PersonalLessonNote | null> {
-    const pairSpace = await this.getOrCreateByLesson(lessonId, universityId);
+  async getPersonalNote(lessonId: string, organizationId: string): Promise<PersonalLessonNote | null> {
+    const pairSpace = await this.getOrCreateByLesson(lessonId, organizationId);
     const user = this.tenantContext.getUser();
     if (!user) throw new ForbiddenException("Authenticated user required");
     return this.personalNoteRepository.findOne({
-      where: { pairSpaceId: pairSpace.id, universityId: pairSpace.universityId, userId: user.id },
+      where: { pairSpaceId: pairSpace.id, organizationId: pairSpace.organizationId, userId: user.id },
     });
   }
 
   async savePersonalNote(
     lessonId: string,
-    universityId: string,
+    organizationId: string,
     dto: UpsertPersonalNoteDto,
   ): Promise<PersonalLessonNote | null> {
-    const pairSpace = await this.getOrCreateByLesson(lessonId, universityId);
+    const pairSpace = await this.getOrCreateByLesson(lessonId, organizationId);
     const user = this.tenantContext.getUser();
     if (!user) throw new ForbiddenException("Authenticated user required");
     if (dto.content.length === 0) {
-      await this.personalNoteRepository.delete({ pairSpaceId: pairSpace.id, userId: user.id, universityId: pairSpace.universityId });
+      await this.personalNoteRepository.delete({ pairSpaceId: pairSpace.id, userId: user.id, organizationId: pairSpace.organizationId });
       return null;
     }
     await this.personalNoteRepository.upsert({
       pairSpaceId: pairSpace.id,
-      universityId: pairSpace.universityId,
+      organizationId: pairSpace.organizationId,
       userId: user.id,
       content: dto.content,
     }, { conflictPaths: ["pairSpaceId", "userId"] });
     return this.personalNoteRepository.findOne({
-      where: { pairSpaceId: pairSpace.id, universityId: pairSpace.universityId, userId: user.id },
+      where: { pairSpaceId: pairSpace.id, organizationId: pairSpace.organizationId, userId: user.id },
     });
   }
 
@@ -554,7 +554,7 @@ export class PairSpaceService {
     const eventPairSpace = await this.findById(pairSpaceId);
     await this.eventBus?.publish({
       type: "message.created",
-      universityId: eventPairSpace.universityId,
+      organizationId: eventPairSpace.organizationId,
       actor: this.eventActor(userId),
       target: { type: "message", id: saved.id },
       payload: {
@@ -625,13 +625,13 @@ export class PairSpaceService {
     if (!homework) {
       throw new NotFoundException(`Homework with id ${homeworkId} not found`);
     }
-    this.tenantContext.assertAccess(homework.pairSpace.universityId);
+    this.tenantContext.assertAccess(homework.pairSpace.organizationId);
 
     homework.isCompleted = true;
     const saved = await this.homeworkRepository.save(homework);
     await this.eventBus?.publish({
       type: "homework.updated",
-      universityId: homework.pairSpace.universityId,
+      organizationId: homework.pairSpace.organizationId,
       actor: this.eventActor(),
       target: { type: "homework", id: saved.id },
       payload: {
@@ -658,17 +658,17 @@ export class PairSpaceService {
   private async assertRoleScopedAccess(pairSpace: PairSpace | null | undefined): Promise<void> {
     // A legacy child row can be visible while RLS hides its joined parent space.
     if (!pairSpace) throw new NotFoundException('PairSpace not found');
-    this.tenantContext.assertAccess(pairSpace.universityId);
+    this.tenantContext.assertAccess(pairSpace.organizationId);
     const user = this.tenantContext.getUser();
     if (user?.role === UserRole.CURATOR && this.curation) {
-      const lesson = await this.lessonRepository?.findOne({ where: { id: pairSpace.lessonId, universityId: pairSpace.universityId } });
+      const lesson = await this.lessonRepository?.findOne({ where: { id: pairSpace.lessonId, organizationId: pairSpace.organizationId } });
       if (!lesson) throw new ForbiddenException('Занятие недоступно.');
       await this.curation.assertGroup(lesson.groupId);
       return;
     }
     if (user?.role === UserRole.TEACHER) {
       const lesson = await this.lessonRepository?.findOne({
-        where: { id: pairSpace.lessonId, universityId: pairSpace.universityId },
+        where: { id: pairSpace.lessonId, organizationId: pairSpace.organizationId },
       });
       if (!lesson || lesson.teacherId !== user.id) {
         throw new ForbiddenException("Teachers can only access their own lesson spaces");
@@ -682,10 +682,10 @@ export class PairSpaceService {
       );
     }
     const lesson = await this.lessonRepository.findOne({
-      where: { id: pairSpace.lessonId, universityId: pairSpace.universityId },
+      where: { id: pairSpace.lessonId, organizationId: pairSpace.organizationId },
     });
     const groupId = await this.resolveStudentGroupId(
-      pairSpace.universityId,
+      pairSpace.organizationId,
       user.groupId,
     );
     if (!lesson || lesson.groupId !== groupId) {
@@ -700,7 +700,7 @@ export class PairSpaceService {
     if (!user) throw new ForbiddenException("Authenticated user required");
     if (user.role === UserRole.CURATOR && this.curation) await this.curation.assertGroup(lesson.groupId);
     const groupId = await this.resolveStudentGroupId(
-      lesson.universityId,
+      lesson.organizationId,
       user.groupId,
     );
     if (user.role === UserRole.STUDENT && lesson.groupId !== groupId) {
@@ -716,14 +716,14 @@ export class PairSpaceService {
   }
 
   private async resolveStudentGroupId(
-    universityId: string,
+    organizationId: string,
     groupId: string | null | undefined,
   ): Promise<string | null | undefined> {
     if (!groupId || !/^\d+$/.test(groupId) || !this.groupRepository) {
       return groupId;
     }
     const group = await this.groupRepository.findOne({
-      where: { universityId, externalId: groupId },
+      where: { organizationId, externalId: groupId },
     });
     return group?.id ?? groupId;
   }
@@ -749,7 +749,7 @@ export class PairSpaceService {
     }
     if (!this.universityRepository) return response;
     const university = await this.universityRepository.findOne({
-      where: { id: pairSpace.universityId },
+      where: { id: pairSpace.organizationId },
     });
     const baseUrl = university?.connectorConfig?.baseUrl;
     if (
@@ -796,7 +796,7 @@ export class PairSpaceService {
     const lesson = await this.lessonRepository.findOne({
       where: {
         id: pairSpace.lessonId,
-        universityId: pairSpace.universityId,
+        organizationId: pairSpace.organizationId,
         teacherId: user.id,
       },
     });

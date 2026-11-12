@@ -8,13 +8,13 @@ import { errorMessage, fieldClass, localDate, type Group, type ImportJob } from 
 
 const labels = { csv: 'CSV', json: 'JSON', ics: 'ICS', xlsx: 'XLSX', moodle: 'Moodle', sibit: 'СИБИТ' };
 const jobLabels: Record<string, string> = { queued: 'В очереди', processing: 'Обрабатывается', completed: 'Выполнено', failed: 'Отклонено' };
-export default function ImportStep({ actorId, universityId, groups }: { actorId: string; universityId: string; groups: Group[] }) {
+export default function ImportStep({ actorId, organizationId, groups }: { actorId: string; organizationId: string; groups: Group[] }) {
   const [format, setFormat] = useState<keyof typeof labels>('csv'), [file, setFile] = useState<File | null>(null), [content, setContent] = useState('');
   const [source, setSource] = useState('основное-расписание'), [offset, setOffset] = useState('+06:00');
   const [start, setStart] = useState(localDate()), [end, setEnd] = useState(localDate()), [group, setGroup] = useState(''), [pair, setPair] = useState(1);
   const [busy, setBusy] = useState(false), [reading, setReading] = useState(false), [error, setError] = useState(''), [job, setJob] = useState<ImportJob | null>(null);
   const intent = useRef<{ fingerprint: string; key: string } | null>(null), fileGeneration = useRef(0);
-  const storageKey = `napare-onboarding-import:${actorId}:${universityId}`;
+  const storageKey = `napare-onboarding-import:${actorId}:${organizationId}`;
   const external = format === 'sibit' || format === 'moodle';
   const refreshJob = useCallback(async (id: string) => {
     try { setJob(await apiFetch<ImportJob>(`/admin/schedule/imports/${id}`)); setError(''); }

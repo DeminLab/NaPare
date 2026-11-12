@@ -90,7 +90,7 @@ export class MyDayService {
 
   async getMyDay(
     userId: string,
-    universityId: string,
+    organizationId: string,
     role: UserRole,
     groupId?: string | null,
     timeZone = "UTC",
@@ -118,7 +118,7 @@ export class MyDayService {
       const query = new PaginationQueryDto();
       query.limit = SCHEDULE_PAGE_SIZE;
       const schedule = await this.scheduleService.findForStudentDateRange(
-        universityId,
+        organizationId,
         groupId,
         dayStart.toISOString(),
         rangeEnd.toISOString(),
@@ -137,7 +137,7 @@ export class MyDayService {
         nextPage.page = page;
         nextPage.limit = SCHEDULE_PAGE_SIZE;
         const result = await this.scheduleService.findForStudentDateRange(
-          universityId,
+          organizationId,
           groupId,
           dayStart.toISOString(),
           rangeEnd.toISOString(),
@@ -158,12 +158,12 @@ export class MyDayService {
       );
       upcomingPreparations = await this.pairSpaceService.listPreparationsForLessons(
         uniqueFutureLessons.map((lesson) => lesson.id),
-        universityId,
+        organizationId,
       );
     } else if (role === UserRole.TEACHER) {
       lessons = (
         await this.scheduleService.findByTeacherDateRange(
-          universityId,
+          organizationId,
           userId,
           dayStart.toISOString(),
           dayEnd.toISOString(),
@@ -171,7 +171,7 @@ export class MyDayService {
       ).data;
     } else {
       lessons = (await this.scheduleService.findByDateRange(
-        universityId,
+        organizationId,
         dayStart.toISOString(),
         dayEnd.toISOString(),
       )).data;
@@ -183,7 +183,7 @@ export class MyDayService {
       try {
         const pairSpace = await this.pairSpaceService.getOrCreateByLesson(
           lesson.id,
-          universityId,
+          organizationId,
         );
         pairSpaces.push(pairSpace);
       } catch {

@@ -14,7 +14,7 @@ import { PlatformAttachmentActionDto, PlatformAttachmentQueryDto } from './platf
 
 type AuditContext = { ip?: string; userAgent?: string };
 type AttachmentRow = {
-  id: string; pairSpaceId: string; lessonId: string; universityId: string; universityName: string;
+  id: string; pairSpaceId: string; lessonId: string; organizationId: string; universityName: string;
   subject: string; groupId: string; groupName: string; uploaderId: string; uploaderName: string;
   uploaderEmail: string; fileName: string; fileType: string; size: number; createdAt: Date | string;
   revokedAt: Date | string | null; revokedBy: string | null; revokeReason: string | null; sourceUrl: string;
@@ -29,10 +29,10 @@ export class PlatformAttachmentsService {
     const result = await this.db.transaction(async manager => {
       const qb = this.summaryQuery(manager);
       this.applyFilters(qb, query);
-      if (query.universityId) this.platform.assertUniversityScope(access, query.universityId);
-      if (!access.owner && access.universityIds !== null) {
-        if (!access.universityIds.length) qb.andWhere('1 = 0');
-        else qb.andWhere('pairSpace.universityId IN (:...allowedUniversityIds)', { allowedUniversityIds: access.universityIds });
+      if (query.organizationId) this.platform.assertUniversityScope(access, query.organizationId);
+      if (!access.owner && access.organizationIds !== null) {
+        if (!access.organizationIds.length) qb.andWhere('1 = 0');
+        else qb.andWhere('pairSpace.organizationId IN (:...allowedOrganizationIds)', { allowedOrganizationIds: access.organizationIds });
       }
       const total = await qb.clone().getCount();
       const rows = await qb.orderBy('attachment.createdAt', 'DESC').addOrderBy('attachment.id', 'DESC')
@@ -42,9 +42,9 @@ export class PlatformAttachmentsService {
         userId: access.actorId, action: 'platform.file_attachment.search', entity: 'file_attachment_search', entityId: 'search',
         newValues: {
           actorId: access.actorId, queryEntered: Boolean(query.q?.trim()),
-          filters: { universityId: query.universityId ?? null, status: query.status ?? 'active' },
+          filters: { organizationId: query.organizationId ?? null, status: query.status ?? 'active' },
           page: query.page, limit: query.limit, resultCount: data.length, total, resultAttachmentIds: data.map(item => item.id),
-          universityIds: [...new Set(data.map(item => item.universityId))],
+          organizationIds: [...new Set(data.map(item => item.organizationId))],
         },
       }, context);
       return toPaginatedResponse(data, total, query);
@@ -57,11 +57,11 @@ export class PlatformAttachmentsService {
     return this.db.transaction(async manager => {
       const row = await this.summaryQuery(manager).where('attachment.id = :id', { id }).getRawOne<AttachmentRow>();
       if (!row) throw new NotFoundException('Вложение PairSpace не найдено.');
-      this.platform.assertUniversityScope(access, row.universityId);
+      this.platform.assertUniversityScope(access, row.organizationId);
       const item = this.toPublicRow(row);
       await this.audit(manager, {
         userId: access.actorId, action: 'platform.file_attachment.viewed', entity: 'file_attachment', entityId: id,
-        newValues: { actorId: access.actorId, attachmentId: id, pairSpaceId: row.pairSpaceId, lessonId: row.lessonId, universityId: row.universityId, groupId: row.groupId, uploaderId: row.uploaderId, result: 'viewed' },
+        newValues: { actorId: access.actorId, attachmentId: id, pairSpaceId: row.pairSpaceId, lessonId: row.lessonId, organizationId: row.organizationId, groupId: row.groupId, uploaderId: row.uploaderId, result: 'viewed' },
       }, context);
       return item;
     });
@@ -83,7 +83,7 @@ export class PlatformAttachmentsService {
       const attachment = await manager.findOne(FileAttachment, { where: { id }, lock: { mode: 'pessimistic_write' } });
       if (!attachment) throw new NotFoundException('Вложение PairSpace не найдено.');
       const resource = await this.assertAttachmentContext(manager, attachment);
-      this.platform.assertUniversityScope(access, resource.universityId);
+      this.platform.assertUniversityScope(access, resource.organizationId);
       if (action === 'revoke' && attachment.revokedAt) throw new ConflictException('Вложение уже отозвано.');
       if (action === 'restore' && !attachment.revokedAt) throw new ConflictException('Вложение уже доступно пользователям.');
       const previous = attachment.revokedAt ? 'revoked' : 'active';
@@ -101,8 +101,8 @@ export class PlatformAttachmentsService {
         userId: access.actorId,
         action: action === 'revoke' ? 'platform.file_attachment.revoked' : 'platform.file_attachment.restored',
         entity: 'file_attachment', entityId: id,
-        oldValues: { status: previous, pairSpaceId: resource.pairSpaceId, lessonId: resource.lessonId, universityId: resource.universityId, groupId: resource.groupId },
-        newValues: { status: action === 'revoke' ? 'revoked' : 'active', reason, actorId: access.actorId, attachmentId: id, pairSpaceId: resource.pairSpaceId, lessonId: resource.lessonId, universityId: resource.universityId, groupId: resource.groupId, uploaderId: updated.uploadedBy },
+        oldValues: { status: previous, pairSpaceId: resource.pairSpaceId, lessonId: resource.lessonId, organizationId: resource.organizationId, groupId: resource.groupId },
+        newValues: { status: action === 'revoke' ? 'revoked' : 'active', reason, actorId: access.actorId, attachmentId: id, pairSpaceId: resource.pairSpaceId, lessonId: resource.lessonId, organizationId: resource.organizationId, groupId: resource.groupId, uploaderId: updated.uploadedBy },
       }, context);
       const row = await this.summaryQuery(manager).where('attachment.id = :id', { id }).getRawOne<AttachmentRow>();
       if (!row) throw new NotFoundException('Вложение PairSpace не найдено после изменения.');
@@ -113,14 +113,14 @@ export class PlatformAttachmentsService {
   private summaryQuery(manager: EntityManager): SelectQueryBuilder<FileAttachment> {
     return manager.getRepository(FileAttachment).createQueryBuilder('attachment')
       .innerJoin(PairSpace, 'pairSpace', 'pairSpace.id = attachment.pairSpaceId')
-      .innerJoin(Lesson, 'lesson', 'lesson.id = pairSpace.lessonId AND lesson.universityId = pairSpace.universityId')
-      .innerJoin(University, 'university', 'university.id = pairSpace.universityId')
-      .innerJoin(Group, 'attachmentGroup', 'attachmentGroup.id = lesson.groupId AND attachmentGroup.universityId = lesson.universityId')
+      .innerJoin(Lesson, 'lesson', 'lesson.id = pairSpace.lessonId AND lesson.organizationId = pairSpace.organizationId')
+      .innerJoin(University, 'university', 'university.id = pairSpace.organizationId')
+      .innerJoin(Group, 'attachmentGroup', 'attachmentGroup.id = lesson.groupId AND attachmentGroup.organizationId = lesson.organizationId')
       .innerJoin(User, 'uploader', 'uploader.id = attachment.uploadedBy')
       .select('attachment.id', 'id')
       .addSelect('pairSpace.id', 'pairSpaceId')
       .addSelect('lesson.id', 'lessonId')
-      .addSelect('pairSpace.universityId', 'universityId')
+      .addSelect('pairSpace.organizationId', 'organizationId')
       .addSelect('university.name', 'universityName')
       .addSelect('lesson.subject', 'subject')
       .addSelect('attachmentGroup.id', 'groupId')
@@ -139,7 +139,7 @@ export class PlatformAttachmentsService {
   }
 
   private applyFilters(qb: SelectQueryBuilder<FileAttachment>, query: PlatformAttachmentQueryDto): void {
-    if (query.universityId) qb.andWhere('pairSpace.universityId = :universityId', { universityId: query.universityId });
+    if (query.organizationId) qb.andWhere('pairSpace.organizationId = :organizationId', { organizationId: query.organizationId });
     if (query.status === 'active') qb.andWhere('attachment.revokedAt IS NULL');
     if (query.status === 'revoked') qb.andWhere('attachment.revokedAt IS NOT NULL');
     if (query.q?.trim()) {
@@ -148,23 +148,23 @@ export class PlatformAttachmentsService {
     }
   }
 
-  private async assertAttachmentContext(manager: EntityManager, attachment: FileAttachment): Promise<{ pairSpaceId: string; lessonId: string; universityId: string; groupId: string }> {
-    const pairSpace = await manager.findOne(PairSpace, { where: { id: attachment.pairSpaceId }, select: ['id', 'lessonId', 'universityId'], lock: { mode: 'pessimistic_read' } });
+  private async assertAttachmentContext(manager: EntityManager, attachment: FileAttachment): Promise<{ pairSpaceId: string; lessonId: string; organizationId: string; groupId: string }> {
+    const pairSpace = await manager.findOne(PairSpace, { where: { id: attachment.pairSpaceId }, select: ['id', 'lessonId', 'organizationId'], lock: { mode: 'pessimistic_read' } });
     if (!pairSpace) throw new BadRequestException('Вложение не связано с существующим пространством пары.');
-    const lesson = await manager.findOne(Lesson, { where: { id: pairSpace.lessonId, universityId: pairSpace.universityId }, select: ['id', 'universityId', 'groupId'], lock: { mode: 'pessimistic_read' } });
+    const lesson = await manager.findOne(Lesson, { where: { id: pairSpace.lessonId, organizationId: pairSpace.organizationId }, select: ['id', 'organizationId', 'groupId'], lock: { mode: 'pessimistic_read' } });
     if (!lesson) throw new BadRequestException('Пространство пары не связано с занятием того же университета.');
-    const university = await manager.findOne(University, { where: { id: pairSpace.universityId }, select: ['id'], lock: { mode: 'pessimistic_read' } });
+    const university = await manager.findOne(University, { where: { id: pairSpace.organizationId }, select: ['id'], lock: { mode: 'pessimistic_read' } });
     if (!university) throw new BadRequestException('Университет вложения не найден.');
-    const group = await manager.findOne(Group, { where: { id: lesson.groupId, universityId: lesson.universityId }, select: ['id'], lock: { mode: 'pessimistic_read' } });
+    const group = await manager.findOne(Group, { where: { id: lesson.groupId, organizationId: lesson.organizationId }, select: ['id'], lock: { mode: 'pessimistic_read' } });
     if (!group) throw new BadRequestException('Занятие не связано с группой того же университета.');
     const uploader = await manager.findOne(User, { where: { id: attachment.uploadedBy }, select: ['id'], lock: { mode: 'pessimistic_read' } });
     if (!uploader) throw new BadRequestException('Загрузивший пользователь не найден.');
-    return { pairSpaceId: pairSpace.id, lessonId: lesson.id, universityId: university.id, groupId: group.id };
+    return { pairSpaceId: pairSpace.id, lessonId: lesson.id, organizationId: university.id, groupId: group.id };
   }
 
   private toPublicRow(row: AttachmentRow) {
     return {
-      id: row.id, pairSpaceId: row.pairSpaceId, lessonId: row.lessonId, universityId: row.universityId,
+      id: row.id, pairSpaceId: row.pairSpaceId, lessonId: row.lessonId, organizationId: row.organizationId,
       universityName: row.universityName, subject: row.subject, groupId: row.groupId, groupName: row.groupName,
       uploaderId: row.uploaderId, uploaderName: row.uploaderName, uploaderEmail: row.uploaderEmail,
       fileName: row.fileName, fileType: row.fileType, size: Number(row.size),

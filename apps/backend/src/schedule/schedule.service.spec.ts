@@ -77,14 +77,14 @@ describe("ScheduleService", () => {
     it("does not expose another group's lesson to a student", async () => {
       mockLessonRepo.findOne.mockResolvedValue({
         id: "lesson-1",
-        universityId: "uni-1",
+        organizationId: "uni-1",
         groupId: "group-2",
       });
 
       await expect(
         service.findAccessibleById("lesson-1", {
           id: "student-1",
-          universityId: "uni-1",
+          organizationId: "uni-1",
           role: UserRole.STUDENT,
           groupId: "group-1",
         }),
@@ -94,14 +94,14 @@ describe("ScheduleService", () => {
     it("does not expose another teacher's lesson", async () => {
       mockLessonRepo.findOne.mockResolvedValue({
         id: "lesson-1",
-        universityId: "uni-1",
+        organizationId: "uni-1",
         teacherId: "teacher-2",
       });
 
       await expect(
         service.findAccessibleById("lesson-1", {
           id: "teacher-1",
-          universityId: "uni-1",
+          organizationId: "uni-1",
           role: UserRole.TEACHER,
         }),
       ).rejects.toThrow(ForbiddenException);
@@ -120,7 +120,7 @@ describe("ScheduleService", () => {
       expect(mockLessonRepo.findAndCount).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            universityId: "uni-1",
+            organizationId: "uni-1",
             groupId: "group-1",
           }),
         }),
@@ -241,7 +241,7 @@ describe("ScheduleService", () => {
       else await service.findByDateRange("uni-1", "2026-10-05", "2026-10-11");
       const options = mockLessonRepo.findAndCount.mock.calls[0][0];
       expect(options.where.startDate.value.map((date: Date) => date.toISOString())).toEqual(["2026-10-05T00:00:00.000Z", "2026-10-11T23:59:59.999Z"]);
-      expect(options.where.universityId).toBe("uni-1");
+      expect(options.where.organizationId).toBe("uni-1");
       if (role === "student") expect(options.where.groupId).toBe("group-1");
       if (role === "teacher") expect(options.where.teacherId).toBe("teacher-1");
     });
@@ -304,7 +304,7 @@ describe("ScheduleService", () => {
       mockTenantContext.getUser.mockReturnValue({
         id: "teacher-1",
         role: UserRole.TEACHER,
-        universityId: "uni-1",
+        organizationId: "uni-1",
       });
 
       await expect(
@@ -329,7 +329,7 @@ describe("ScheduleService", () => {
     it("should delete a lesson", async () => {
       mockLessonRepo.findOne.mockResolvedValue({
         id: "1",
-        universityId: "uni-1",
+        organizationId: "uni-1",
       });
       await service.delete("1");
       expect(mockLessonRepo.delete).toHaveBeenCalledWith("1");
@@ -339,11 +339,11 @@ describe("ScheduleService", () => {
       mockTenantContext.getUser.mockReturnValue({
         id: "teacher-1",
         role: UserRole.TEACHER,
-        universityId: "uni-1",
+        organizationId: "uni-1",
       });
       mockLessonRepo.findOne.mockResolvedValue({
         id: "lesson-1",
-        universityId: "uni-1",
+        organizationId: "uni-1",
         teacherId: "teacher-2",
       });
 

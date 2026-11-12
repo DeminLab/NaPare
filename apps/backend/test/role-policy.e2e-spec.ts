@@ -26,7 +26,7 @@ const secret = randomUUID();
 const tenant = randomUUID();
 const users = new Map(USER_ROLES.map(role => [role, {
   id: role, email: `${role}@roles.example.test`, role, isActive: true, sessionVersion: 1,
-  universityId: [UserRole.EMPLOYER, UserRole.CAREER_STAFF, UserRole.CAREER_ADMIN].includes(role) ? null : tenant,
+  organizationId: [UserRole.EMPLOYER, UserRole.CAREER_STAFF, UserRole.CAREER_ADMIN].includes(role) ? null : tenant,
   groupId: null,
 }]));
 
@@ -110,7 +110,7 @@ describe('Every declared protected route × every role (real HTTP/JWT/guards, sy
 
   it.each([UserRole.DEVELOPER, UserRole.SUPERADMIN])('checks %s without university across all protected routes', async role => {
     const user = users.get(role)!;
-    user.universityId = null;
+    user.organizationId = null;
     try {
       for (const [index, route] of protectedRoutes.entries()) {
         const platform = /^\/api\/v1\/platform(?:\/|$)/.test(route.path);
@@ -118,6 +118,6 @@ describe('Every declared protected route × every role (real HTTP/JWT/guards, sy
         const baselineStatus = baseline.routes.find(item => item.id === route.id)!.statuses[role];
         await request(app.getHttpServer()).get(`/role-policy-probe/${index}`).auth(tokens.get(role)!, { type: 'bearer' }).expect(platform || account ? baselineStatus : 403);
       }
-    } finally { user.universityId = tenant; }
+    } finally { user.organizationId = tenant; }
   }, 30000);
 });

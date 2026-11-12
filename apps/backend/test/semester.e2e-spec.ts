@@ -2,6 +2,7 @@ import * as request from 'supertest';
 import { DataSource } from 'typeorm';
 import { createCurationFixture } from './curation.fixture';
 import { AcademicIdentities1700000000036 } from '../src/migrations/1700000000036-AcademicIdentities';
+import { TenantOrganizationAlias1700000000046 } from '../src/migrations/1700000000046-TenantOrganizationAlias';
 import { AcademicIdentity } from '../src/semester/academic-identity.entity';
 import { MoodleConnectorService } from '../src/moodle/moodle-connector.service';
 import { University } from '../src/users/entities/university.entity';
@@ -28,7 +29,7 @@ suite('Semester: actual JWT/HTTP, numeric identities and PostgreSQL FORCE RLS', 
     process.env.CONNECTOR_ENCRYPTION_KEY = Buffer.alloc(32, 7).toString('base64');
     f = await createCurationFixture(process.env.SEMESTER_TEST_DATABASE_URL!);
     const runner = f.db.createQueryRunner();
-    try { await runner.query('DROP TABLE academic_identities'); await new AcademicIdentities1700000000036().up(runner); } finally { await runner.release(); }
+    try { await runner.query('DROP TABLE academic_identities'); await new AcademicIdentities1700000000036().up(runner); await new TenantOrganizationAlias1700000000046().up(runner); } finally { await runner.release(); }
     moodle = f.app.get(MoodleConnectorService);
     courses = jest.spyOn(moodle, 'getUserCourses').mockResolvedValue([{ id: 11, fullname: 'Математика', visible: 1, showgrades: true }, { id: 99, fullname: 'Другой семестр', visible: 1 }]);
     grades = jest.spyOn(moodle, 'getUserGradeItems').mockResolvedValue([{ id: 101, itemtype: 'course', itemname: 'Итог', graderaw: 0, gradeformatted: '0', grademin: 0, grademax: 100 }]);
@@ -71,7 +72,7 @@ suite('Semester: actual JWT/HTTP, numeric identities and PostgreSQL FORCE RLS', 
   it('enforces RLS against an actual foreign-university SQL read', async () => {
     const tenant = f.app.get(TenantContext);
     const rows = await tenant.runInRequest(async () => {
-      tenant.setUser({ id: f.users.outsider.id, email: f.users.outsider.email, role: UserRole.UNIVERSITY_ADMIN, universityId: f.otherUni.id });
+      tenant.setUser({ id: f.users.outsider.id, email: f.users.outsider.email, role: UserRole.UNIVERSITY_ADMIN, organizationId: f.otherUni.id });
       return f.app.get(DataSource).getRepository(AcademicIdentity).find();
     });
     expect(rows).toEqual([]);

@@ -17,11 +17,11 @@ describe('Tenant database connection scope', () => {
   it('sets local configuration on the same runner inside a short transaction', async () => {
     const { context, execute, runner } = fixture();
     await context.runInRequest(async () => {
-      context.setUser({ id: 'actor', email: 'a@test', role: UserRole.STUDENT, universityId: 'university-a' });
+      context.setUser({ id: 'actor', email: 'a@test', role: UserRole.STUDENT, organizationId: 'university-a' });
       await runner.query('SELECT * FROM users');
     });
     expect(execute.mock.calls.map(call => call[0])).toEqual([
-      'START TRANSACTION', expect.stringContaining("set_config('app.university_id'"), 'SELECT * FROM users', 'COMMIT',
+      'START TRANSACTION', expect.stringContaining("set_config('app.organization_id'"), 'SELECT * FROM users', 'COMMIT',
     ]);
     expect(execute.mock.calls[1][1]).toEqual(['university-a', 'actor', '[]']);
   });
@@ -53,7 +53,7 @@ describe('Tenant database connection scope', () => {
   it('serializes simultaneous statements and captures their separate ALS identities', async () => {
     const { context, execute, runner } = fixture();
     await Promise.all(['a', 'b'].map(id => context.runInRequest(async () => {
-      context.setUser({ id, email: `${id}@test`, role: UserRole.STUDENT, universityId: id });
+      context.setUser({ id, email: `${id}@test`, role: UserRole.STUDENT, organizationId: id });
       await runner.query(`SELECT '${id}'`);
     })));
     const settings = execute.mock.calls.filter(call => call[0].includes('set_config'));

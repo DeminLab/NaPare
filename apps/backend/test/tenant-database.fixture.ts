@@ -3,8 +3,8 @@ import { TenantContext } from '../src/common/tenant/tenant-context';
 
 /** Explicit capability for disposable test setup/assertions; HTTP keeps the real scoped source. */
 export function fixtureDatabase(source: DataSource, context: TenantContext): DataSource {
-  const tables = source.entityMetadatas.filter(entity => entity.columns.some(column => ['universityId', 'university_id'].includes(column.databaseName))).map(entity => entity.tableName);
-  const scope = { tables, universityIds: null, write: true };
+  const tables = source.entityMetadatas.filter(entity => entity.columns.some(column => ['organizationId', 'organization_id'].includes(column.databaseName))).map(entity => entity.tableName);
+  const scope = { tables, organizationIds: null, write: true };
   const factories = new Set(['getRepository', 'getTreeRepository', 'createQueryBuilder', 'createQueryRunner', 'createEntityManager']);
   const wrap = <T extends object>(target: T): T => new Proxy(target, {
     get(object, key) {

@@ -26,7 +26,7 @@ export class CreateUserDto {
   role: UserRole;
 
   @IsUUID()
-  universityId: string;
+  organizationId: string;
 
   @IsOptional()
   @IsString()

@@ -1,4 +1,4 @@
-import { requireUniversityId } from '../common/tenant/require-university';
+import { requireOrganizationId } from '../common/tenant/require-university';
 import { CurationService } from '../curation/curation.service';
 import { CurationQueryDto } from '../curation/curation-query.dto';
 import {
@@ -65,11 +65,11 @@ export class AbsencesService {
     pagination: PaginationQueryDto = new PaginationQueryDto(),
   ): Promise<PaginatedResponse<Absence>> {
     const user = this.tenantContext.getUser();
-    if (user) await this.assertStudentReadScope(studentId, requireUniversityId(user));
+    if (user) await this.assertStudentReadScope(studentId, requireOrganizationId(user));
     const [data, total] = await this.absenceRepository.findAndCount({
       where:
         user && user.role !== UserRole.SUPERADMIN
-          ? { studentId, universityId: requireUniversityId(user) }
+          ? { studentId, organizationId: requireOrganizationId(user) }
           : { studentId },
       order: { createdAt: "DESC" },
       skip: (pagination.page - 1) * pagination.limit,
@@ -88,14 +88,14 @@ export class AbsencesService {
     });
     if (!lesson)
       throw new NotFoundException(`Lesson with id ${lessonId} not found`);
-    this.assertStaffAccess(lesson.universityId);
+    this.assertStaffAccess(lesson.organizationId);
     await this.assertTeacherOwnsLesson(lesson);
     const [data, total] = await this.absenceRepository.findAndCount({
       where:
         user && user.role !== UserRole.SUPERADMIN
           ? {
               affectedLessonIds: ArrayContains([lessonId]),
-              universityId: requireUniversityId(user),
+              organizationId: requireOrganizationId(user),
             }
           : { affectedLessonIds: ArrayContains([lessonId]) },
       order: { createdAt: "DESC" },
@@ -106,16 +106,16 @@ export class AbsencesService {
   }
 
   async findByDateRange(
-    universityId: string,
+    organizationId: string,
     startDate: string,
     endDate: string,
     pagination: PaginationQueryDto = new PaginationQueryDto(),
   ): Promise<PaginatedResponse<Absence>> {
     if (this.curation && this.tenantContext.getUser()?.role === UserRole.CURATOR) return this.curation.absences({ ...pagination, startDate, endDate });
-    this.tenantContext.assertAccess(universityId);
+    this.tenantContext.assertAccess(organizationId);
     const [data, total] = await this.absenceRepository.findAndCount({
       where: {
-        universityId,
+        organizationId,
         startDate: Between(new Date(startDate), new Date(endDate)),
       },
       order: { createdAt: "DESC" },
@@ -127,25 +127,25 @@ export class AbsencesService {
 
   async create(
     createAbsenceDto: CreateAbsenceDto,
-    universityId: string,
+    organizationId: string,
   ): Promise<Absence> {
     const user = this.tenantContext.getUser();
     if (!user || user.role !== UserRole.STUDENT) {
       throw new ForbiddenException("Only students can create absences");
     }
-    this.tenantContext.assertAccess(universityId);
+    this.tenantContext.assertAccess(organizationId);
     const startDate = new Date(createAbsenceDto.startDate);
     const endDate = new Date(createAbsenceDto.endDate);
     this.assertValidDateRange(startDate, endDate);
     let lesson: Lesson | null = null;
     if (createAbsenceDto.lessonId) {
       lesson = await this.lessonRepository.findOne({
-        where: { id: createAbsenceDto.lessonId, universityId },
+        where: { id: createAbsenceDto.lessonId, organizationId },
       });
       if (!lesson)
         throw new NotFoundException("Занятие не найдено в текущем ВУЗе.");
       const groupId = await this.resolveStudentGroupId(
-        universityId,
+        organizationId,
         user.groupId,
       );
       if (groupId && lesson.groupId !== groupId) {
@@ -155,7 +155,7 @@ export class AbsencesService {
       }
     }
     const absence = this.absenceRepository.create({
-      universityId,
+      organizationId,
       studentId: user.id,
       type: createAbsenceDto.type,
       startDate,
@@ -207,14 +207,14 @@ export class AbsencesService {
   }
 
   async findByUniversity(
-    universityId: string,
+    organizationId: string,
     status?: string,
     pagination: PaginationQueryDto = new PaginationQueryDto(),
   ): Promise<PaginatedResponse<Absence>> {
     if (this.curation && this.tenantContext.getUser()?.role === UserRole.CURATOR) return this.curation.absences({ ...pagination, status } as CurationQueryDto);
-    this.tenantContext.assertAccess(universityId);
-    const where: { universityId: string; confirmationRequired?: boolean } = {
-      universityId,
+    this.tenantContext.assertAccess(organizationId);
+    const where: { organizationId: string; confirmationRequired?: boolean } = {
+      organizationId,
     };
     if (status === "pending") {
       where.confirmationRequired = true;
@@ -236,9 +236,9 @@ export class AbsencesService {
     if (!user || !ABSENCE_STAFF_ROLES.includes(user.role)) {
       throw new ForbiddenException("Staff role required");
     }
-    this.tenantContext.assertAccess(requireUniversityId(user));
+    this.tenantContext.assertAccess(requireOrganizationId(user));
     const [data, total] = await this.absenceRepository.findAndCount({
-      where: { universityId: requireUniversityId(user), confirmationRequired: true },
+      where: { organizationId: requireOrganizationId(user), confirmationRequired: true },
       order: { createdAt: "DESC" },
       skip: (pagination.page - 1) * pagination.limit,
       take: pagination.limit,
@@ -248,7 +248,7 @@ export class AbsencesService {
       ? await this.userRepository.find({
           where: {
             id: In(studentIds),
-            universityId: requireUniversityId(user),
+            organizationId: requireOrganizationId(user),
             role: UserRole.STUDENT,
           },
         })
@@ -289,7 +289,7 @@ export class AbsencesService {
     if (!absence) {
       throw new NotFoundException(`Absence with id ${id} not found`);
     }
-    this.assertStaffAccess(absence.universityId);
+    this.assertStaffAccess(absence.organizationId);
     await this.assertTeacherCanReviewAbsence(absence);
 
     absence.confirmationRequired = false;
@@ -317,7 +317,7 @@ export class AbsencesService {
     if (!absence) {
       throw new NotFoundException(`Absence with id ${id} not found`);
     }
-    this.assertStaffAccess(absence.universityId);
+    this.assertStaffAccess(absence.organizationId);
     await this.assertTeacherCanReviewAbsence(absence);
 
     absence.comment = reason;
@@ -339,13 +339,13 @@ export class AbsencesService {
   }
 
   async getStats(
-    universityId: string,
+    organizationId: string,
     studentId: string,
   ): Promise<{ total: number; byType: Record<string, number> }> {
-    this.tenantContext.assertAccess(universityId);
-    await this.assertStudentReadScope(studentId, universityId);
+    this.tenantContext.assertAccess(organizationId);
+    await this.assertStudentReadScope(studentId, organizationId);
     const absences = await this.absenceRepository.find({
-      where: { universityId, studentId },
+      where: { organizationId, studentId },
     });
 
     const total = absences.length;
@@ -366,10 +366,10 @@ export class AbsencesService {
     });
     if (!lesson)
       throw new NotFoundException(`Lesson with id ${lessonId} not found`);
-    this.assertStaffAccess(lesson.universityId);
+    this.assertStaffAccess(lesson.organizationId);
     await this.assertTeacherOwnsLesson(lesson);
     const [data, total] = await this.attendanceRepository.findAndCount({
-      where: { lessonId, universityId: lesson.universityId },
+      where: { lessonId, organizationId: lesson.organizationId },
       order: { updatedAt: "DESC" },
       skip: (pagination.page - 1) * pagination.limit,
       take: pagination.limit,
@@ -378,12 +378,12 @@ export class AbsencesService {
   }
 
   async markAttendance(
-    universityId: string,
+    organizationId: string,
     markedById: string,
     dto: MarkAttendanceDto,
   ): Promise<AttendanceRecord[]> {
     if (this.tenantContext.getUser()?.role === UserRole.CURATOR) throw new ForbiddenException('Кураторство не даёт права отмечать посещаемость.');
-    this.assertStaffAccess(universityId);
+    this.assertStaffAccess(organizationId);
     const studentIds = dto.entries.map((entry) => entry.studentId);
     if (new Set(studentIds).size !== studentIds.length) {
       throw new BadRequestException(
@@ -392,7 +392,7 @@ export class AbsencesService {
     }
 
     const lesson = await this.lessonRepository.findOne({
-      where: { id: dto.lessonId, universityId },
+      where: { id: dto.lessonId, organizationId },
     });
     if (!lesson)
       throw new NotFoundException("Занятие не найдено в текущем ВУЗе.");
@@ -401,7 +401,7 @@ export class AbsencesService {
     const students = await this.userRepository.find({
       where: {
         id: In(studentIds),
-        universityId,
+        organizationId,
         groupId: lesson.groupId,
         role: UserRole.STUDENT,
       },
@@ -421,7 +421,7 @@ export class AbsencesService {
     const records = dto.entries.map((entry) =>
       this.attendanceRepository.create({
         ...existingByStudent.get(entry.studentId),
-        universityId,
+        organizationId,
         lessonId: lesson.id,
         studentId: entry.studentId,
         status: entry.status,
@@ -433,7 +433,7 @@ export class AbsencesService {
     const user = this.tenantContext.getUser();
     await this.eventBus?.publish({
       type: "attendance.updated",
-      universityId,
+      organizationId,
       actor: user
         ? { id: user.id, type: "user", role: user.role }
         : { id: markedById, type: "user" },
@@ -450,7 +450,7 @@ export class AbsencesService {
     if (!user) {
       throw new ForbiddenException("User not authenticated");
     }
-    this.tenantContext.assertAccess(absence.universityId);
+    this.tenantContext.assertAccess(absence.organizationId);
     if (user.role === UserRole.STUDENT && absence.studentId !== user.id) {
       throw new ForbiddenException(
         "Students can only mutate their own absences",
@@ -466,12 +466,12 @@ export class AbsencesService {
     }
   }
 
-  private assertStaffAccess(universityId: string): void {
+  private assertStaffAccess(organizationId: string): void {
     const user = this.tenantContext.getUser();
     if (!user || !ABSENCE_STAFF_ROLES.includes(user.role)) {
       throw new ForbiddenException("Staff role required");
     }
-    this.tenantContext.assertAccess(universityId);
+    this.tenantContext.assertAccess(organizationId);
   }
 
   private async assertTeacherOwnsLesson(lesson: Lesson): Promise<void> {
@@ -496,7 +496,7 @@ export class AbsencesService {
     const lesson = await this.lessonRepository.findOne({
       where: {
         id: lessonId,
-        universityId: absence.universityId,
+        organizationId: absence.organizationId,
         teacherId: user.id,
       },
     });
@@ -509,11 +509,11 @@ export class AbsencesService {
 
   private async assertStudentReadScope(
     studentId: string,
-    universityId: string,
+    organizationId: string,
   ): Promise<void> {
     const user = this.tenantContext.getUser();
     if (!user) return;
-    this.tenantContext.assertAccess(universityId);
+    this.tenantContext.assertAccess(organizationId);
     if (user.role === UserRole.STUDENT) {
       if (studentId !== user.id) {
         throw new ForbiddenException(
@@ -529,7 +529,7 @@ export class AbsencesService {
     if (user.role !== UserRole.TEACHER) return;
 
     const student = await this.userRepository.findOne({
-      where: { id: studentId, universityId, role: UserRole.STUDENT },
+      where: { id: studentId, organizationId, role: UserRole.STUDENT },
     });
     if (!student?.groupId) {
       throw new ForbiddenException(
@@ -537,7 +537,7 @@ export class AbsencesService {
       );
     }
     const lesson = await this.lessonRepository.findOne({
-      where: { universityId, teacherId: user.id, groupId: student.groupId },
+      where: { organizationId, teacherId: user.id, groupId: student.groupId },
     });
     if (!lesson) {
       throw new ForbiddenException(
@@ -547,14 +547,14 @@ export class AbsencesService {
   }
 
   private async resolveStudentGroupId(
-    universityId: string,
+    organizationId: string,
     groupId: string | null | undefined,
   ): Promise<string | null | undefined> {
     if (!groupId || !/^\d+$/.test(groupId) || !this.groupRepository) {
       return groupId;
     }
     const group = await this.groupRepository.findOne({
-      where: { universityId, externalId: groupId },
+      where: { organizationId, externalId: groupId },
     });
     return group?.id ?? groupId;
   }
@@ -568,7 +568,7 @@ export class AbsencesService {
     const user = this.tenantContext.getUser();
     const universityReviewers = await this.userRepository.find({
       where: {
-        universityId: absence.universityId,
+        organizationId: absence.organizationId,
         isActive: true,
         role: In([
           UserRole.DEPARTMENT_HEAD,
@@ -577,7 +577,7 @@ export class AbsencesService {
         ]),
       },
     });
-    const assignedReviewers = this.curation ? await this.curation.assignedReviewers(absence.universityId, absence.studentId) : [];
+    const assignedReviewers = this.curation ? await this.curation.assignedReviewers(absence.organizationId, absence.studentId) : [];
     const reviewers = [...new Map([...universityReviewers, ...assignedReviewers].filter(item => item.id !== absence.studentId).map(item => [item.id, item])).values()];
     const lessonId = absence.affectedLessonIds?.[0];
     const recipientDeepLinks: Record<string, string> = {
@@ -596,7 +596,7 @@ export class AbsencesService {
     }
     await this.eventBus?.publish({
       type,
-      universityId: absence.universityId,
+      organizationId: absence.organizationId,
       actor: user
         ? { id: user.id, type: "user", role: user.role }
         : { type: "system" },

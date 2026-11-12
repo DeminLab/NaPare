@@ -25,7 +25,7 @@ test('real isolated PostgreSQL dump, authenticated restore, FORCE RLS and repeat
     await fs.writeFile(pass, '', { mode: 0o600 });
     const source = { ...process.env, BACKUP_KEY_FILE: key, PGPASSFILE: pass };
     const query = (env, sql) => execFileSync(psql, ['-X', '-w', '-tA', '-v', 'ON_ERROR_STOP=1', '-c', sql], { env, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] }).toString().trim();
-    query(source, "CREATE TABLE recovery_fixture(id integer PRIMARY KEY, university_id uuid NOT NULL); INSERT INTO recovery_fixture VALUES(1,'11111111-1111-4111-8111-111111111111'),(2,'22222222-2222-4222-8222-222222222222'); ALTER TABLE recovery_fixture ENABLE ROW LEVEL SECURITY; ALTER TABLE recovery_fixture FORCE ROW LEVEL SECURITY; CREATE POLICY tenant ON recovery_fixture USING (university_id::text = current_setting('app.university_id',true))");
+    query(source, "CREATE TABLE recovery_fixture(id integer PRIMARY KEY, organization_id uuid NOT NULL); INSERT INTO recovery_fixture VALUES(1,'11111111-1111-4111-8111-111111111111'),(2,'22222222-2222-4222-8222-222222222222'); ALTER TABLE recovery_fixture ENABLE ROW LEVEL SECURITY; ALTER TABLE recovery_fixture FORCE ROW LEVEL SECURITY; CREATE POLICY tenant ON recovery_fixture USING (organization_id::text = current_setting('app.organization_id',true))");
     await dumpEncrypted(archive, config(source));
     assert.notEqual((await fs.readFile(archive)).subarray(0, 5).toString(), 'PGDMP');
     const target = { ...source, PGDATABASE: 'napare_restore_drill', PGUSER: 'napare_restore_drill', RESTORE_CONFIRM: 'isolated-empty-test-database', RESTORE_BACKUP_FILE: archive };

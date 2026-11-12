@@ -107,7 +107,7 @@ describe("AuthService", () => {
         firstName: "Тест",
         lastName: "Студент",
         role: "student",
-        universityId: "uni-1",
+        organizationId: "uni-1",
         groupId: "12136",
       });
 
@@ -137,7 +137,7 @@ describe("AuthService", () => {
         firstName: "Тест",
         lastName: "Пользователь",
         role,
-        universityId: "uni-1",
+        organizationId: "uni-1",
       });
 
       await expect(
@@ -155,7 +155,7 @@ describe("AuthService", () => {
       sub: "user-1",
       email: "student@sibit.ru",
       role: "student",
-      universityId: "uni-1",
+      organizationId: "uni-1",
       sessionVersion: 2,
     };
 
@@ -206,7 +206,7 @@ describe("AuthService", () => {
       firstName: "Тест",
       lastName: "Студент",
       role: "student",
-      universityId: "uni-1",
+      organizationId: "uni-1",
       groupId: "12136",
     };
 
@@ -354,7 +354,7 @@ describe("AuthService", () => {
 
   describe("linkMaxToAuthenticatedUser", () => {
     const freshInitData = () => buildMaxInitData(Math.floor(Date.now() / 1000) - 60);
-    const activeUser = { id: "user-1", isActive: true, maxUserId: null, role: "student", universityId: "uni-1" };
+    const activeUser = { id: "user-1", isActive: true, maxUserId: null, role: "student", organizationId: "uni-1" };
 
     it("binds verified MAX identity to the current active session", async () => {
       (usersService.findById as jest.Mock).mockResolvedValue(activeUser);

@@ -5,7 +5,7 @@ import { ACADEMIC_EVENT_TYPES, AcademicEventType } from '../academic/academic.ty
 
 export class PlatformAcademicEventsQueryDto {
   @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(100) q?: string;
-  @ApiPropertyOptional() @IsOptional() @IsUUID() universityId?: string;
+  @ApiPropertyOptional() @IsOptional() @IsUUID() organizationId?: string;
   @ApiPropertyOptional({ enum: ACADEMIC_EVENT_TYPES }) @IsOptional() @IsEnum(ACADEMIC_EVENT_TYPES) type?: AcademicEventType;
   @ApiPropertyOptional({ enum: ['visible', 'hidden', 'all'], default: 'visible' }) @IsOptional() @IsIn(['visible', 'hidden', 'all']) visibility: 'visible' | 'hidden' | 'all' = 'visible';
   @ApiPropertyOptional() @IsOptional() @IsDateString() from?: string;

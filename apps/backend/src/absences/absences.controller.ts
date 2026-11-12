@@ -76,7 +76,7 @@ export class AbsencesController {
   @Roles(...ABSENCE_STAFF_ROLES)
   @ApiOperation({ summary: 'Сохранить посещаемость занятия' })
   async markAttendance(@Request() req, @Body() markAttendanceDto: MarkAttendanceDto) {
-    return this.absencesService.markAttendance(req.user.universityId, req.user.id, markAttendanceDto);
+    return this.absencesService.markAttendance(req.user.organizationId, req.user.id, markAttendanceDto);
   }
 
   @Get('stats/:studentId')
@@ -89,7 +89,7 @@ export class AbsencesController {
     @Request() req,
     @Param('studentId') studentId: string,
   ) {
-    return this.absencesService.getStats(req.user.universityId, studentId);
+    return this.absencesService.getStats(req.user.organizationId, studentId);
   }
 
   @Post()
@@ -98,7 +98,7 @@ export class AbsencesController {
   @ApiResponse({ status: 201, description: 'Пропуск создан' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async create(@Request() req, @Body() createAbsenceDto: CreateAbsenceDto) {
-    return this.absencesService.create(createAbsenceDto, req.user.universityId);
+    return this.absencesService.create(createAbsenceDto, req.user.organizationId);
   }
 
   @Patch(':id')

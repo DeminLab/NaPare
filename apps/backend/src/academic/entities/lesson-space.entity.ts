@@ -2,13 +2,13 @@ import { Column, CreateDateColumn, Entity, Index, PrimaryGeneratedColumn, Update
 
 @Entity('lesson_spaces')
 @Index('UQ_lesson_spaces_occurrence_id', ['occurrenceId'], { unique: true })
-@Index('IDX_lesson_spaces_university_course_space', ['universityId', 'courseSpaceId'])
+@Index('IDX_lesson_spaces_university_course_space', ['organizationId', 'courseSpaceId'])
 export class LessonSpace {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
   @Column({ type: 'uuid' })
-  universityId: string;
+  organizationId: string;
 
   @Column({ type: 'uuid' })
   courseSpaceId: string;

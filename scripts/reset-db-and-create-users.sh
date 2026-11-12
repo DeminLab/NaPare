@@ -33,7 +33,7 @@ echo ""
 # Создание пользователей для каждого фронтенда
 echo "👤 Создание пользователей для всех фронтендов..."
 docker exec napare-postgres-migrate psql -U postgres -d napare << 'EOF'
-INSERT INTO users (email, "passwordHash", "firstName", "lastName", role, "universityId", "isActive", "createdAt", "updatedAt") VALUES
+INSERT INTO users (email, "passwordHash", "firstName", "lastName", role, "organizationId", "isActive", "createdAt", "updatedAt") VALUES
 ('portal@example.com', 'test_hash', 'Portal', 'User', 'student', (SELECT id FROM universities WHERE name = 'Test University'), true, NOW(), NOW()),
 ('student@example.com', 'test_hash', 'Student', 'User', 'student', (SELECT id FROM universities WHERE name = 'Test University'), true, NOW(), NOW()),
 ('staff@example.com', 'test_hash', 'Staff', 'User', 'teacher', (SELECT id FROM universities WHERE name = 'Test University'), true, NOW(), NOW()),

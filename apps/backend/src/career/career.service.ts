@@ -6,7 +6,7 @@ import { University } from '../users/entities/university.entity';
 import { UserRole } from '../auth/interfaces/user-role';
 import { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { AuthService } from '../auth/auth.service';
-import { requireUniversityId } from '../common/tenant/require-university';
+import { requireOrganizationId } from '../common/tenant/require-university';
 import { CareerNotice, CareerTest, CareerTestAttempt, CareerCompany, CareerMembership, CareerPartnership, CareerProfile, CareerAdmission, CareerTask, CareerApplication, CareerWork, CareerReview, CareerPortfolio } from './career.entities';
 import { CareerTestDto, CareerAttemptDto, EmployerRegistrationDto, CareerCompanyDto, CareerProfileDto, CareerTaskDto, CareerMessageDto, CareerSubmissionDto, CareerDecisionDto, CareerReviewDto, CareerMembershipDto, CareerAdmissionDto } from './career.dto';
 import { randomUUID } from 'node:crypto';
@@ -39,25 +39,25 @@ export class CareerService {
   constructor(private readonly db: DataSource, private readonly auth: AuthService, private readonly tenant: TenantContext = new TenantContext(), @Optional() private readonly registry?: CompanyRegistryService) {}
   private repo<T extends object>(entity: new () => T, manager = this.db.manager) { return manager.getRepository(entity); }
   private async university(id: string) { if (!await this.repo(University).existsBy({id})) throw new NotFoundException('Вуз не найден'); }
-  private async center(actor: Actor, universityId: string, administrator = false): Promise<void> {
-    if (!universityId || actor.universityId !== universityId) throw new ForbiddenException('Другой вуз');
+  private async center(actor: Actor, organizationId: string, administrator = false): Promise<void> {
+    if (!organizationId || actor.organizationId !== organizationId) throw new ForbiddenException('Другой вуз');
     const primary = administrator ? [UserRole.CAREER_ADMIN, UserRole.UNIVERSITY_ADMIN] : centerRoles;
     if (primary.includes(actor.role)) return;
     const roles = administrator ? ['career_admin'] : ['career_admin','career_staff'];
-    if (!await this.repo(CareerMembership).existsBy({userId:actor.id,universityId,role:In(roles),revokedAt:IsNull()})) throw new ForbiddenException('Нужны права карьерного центра');
+    if (!await this.repo(CareerMembership).existsBy({userId:actor.id,organizationId,role:In(roles),revokedAt:IsNull()})) throw new ForbiddenException('Нужны права карьерного центра');
   }
   async assertCenterAccess(actor: Actor): Promise<string> {
-    const universityId = requireUniversityId(actor);
-    await this.center(actor, universityId);
-    return universityId;
+    const organizationId = requireOrganizationId(actor);
+    await this.center(actor, organizationId);
+    return organizationId;
   }
   private async company(actor: Actor, companyId: string, owner = false, manager = this.db.manager): Promise<void> {
     if (!await this.repo(CareerMembership,manager).existsBy({userId:actor.id,companyId,role:In(owner?['company_owner']:['company_owner','company_member']),revokedAt:IsNull()})) throw new ForbiddenException('Нет доступа к компании');
     // Keep membership management scoped to this proved company, including rows
-    // of invited colleagues whose universityId is deliberately NULL.
+    // of invited colleagues whose organizationId is deliberately NULL.
     if (this.tenant.getUser()) this.tenant.authorizeDatabaseAccess({ relation: { table: 'career_membership', column: 'companyId', value: companyId, write: owner } });
   }
-  private student(actor: Actor) { if (actor.role !== UserRole.STUDENT) throw new ForbiddenException('Действие доступно студенту'); return requireUniversityId(actor); }
+  private student(actor: Actor) { if (actor.role !== UserRole.STUDENT) throw new ForbiddenException('Действие доступно студенту'); return requireOrganizationId(actor); }
   async assertCompanyOwnerAccess(actor: Actor, companyId: string): Promise<void> { await this.company(actor, companyId, true); }
   private async task(id: string, manager = this.db.manager, lock = false) {
     const task = await this.repo(CareerTask,manager).findOne({where:{id},...(lock?{lock:{mode:'pessimistic_write' as const}}:{})});
@@ -72,44 +72,44 @@ export class CareerService {
     const email = dto.email.trim().toLowerCase();
     if (await this.tenant.runWithDatabaseAccess({ authentication: { email } }, () => this.repo(User).createQueryBuilder('u').where('LOWER(u.email) = :email',{email}).getExists())) throw new ConflictException('Аккаунт с такой почтой уже существует. Войдите в него.');
     const id = randomUUID();
-    try { await this.tenant.runWithDatabaseAccess({ authentication: { id, write: true } }, async () => this.repo(User).save(this.repo(User).create({id,email,passwordHash:await bcrypt.hash(dto.password,12),firstName:dto.firstName.trim(),lastName:dto.lastName.trim(),role:UserRole.EMPLOYER,universityId:null}))); }
+    try { await this.tenant.runWithDatabaseAccess({ authentication: { id, write: true } }, async () => this.repo(User).save(this.repo(User).create({id,email,passwordHash:await bcrypt.hash(dto.password,12),firstName:dto.firstName.trim(),lastName:dto.lastName.trim(),role:UserRole.EMPLOYER,organizationId:null}))); }
     catch (error) { if ((error as {driverError?:{code?:string}}).driverError?.code === '23505') throw new ConflictException('Аккаунт уже существует'); throw error; }
     return this.auth.portalLogin({email,password:dto.password});
   }
   async overview(actor: Actor, requestedMode?: string) {
     const memberships = await this.repo(CareerMembership).find({where:{userId:actor.id,revokedAt:IsNull()}});
-    const isCenter = Boolean(actor.universityId && (centerRoles.includes(actor.role) || memberships.some(m=>m.universityId===actor.universityId)));
+    const isCenter = Boolean(actor.organizationId && (centerRoles.includes(actor.role) || memberships.some(m=>m.organizationId===actor.organizationId)));
     const companyIds = memberships.filter(m=>m.companyId).map(m=>m.companyId!);
     const availableModes = actor.role===UserRole.STUDENT ? ['student'] : [...(isCenter?['center']:[]),...([UserRole.DEVELOPER,UserRole.SUPERADMIN].includes(actor.role)?[]:['employer'])];
     if(requestedMode&&!availableModes.includes(requestedMode))throw new ForbiddenException('Этот кабинет вам недоступен');
     const mode=requestedMode || availableModes[0] || 'unavailable';
     const ownedCompanies = companyIds.length ? await this.repo(CareerCompany).find({where:{id:In(companyIds)}}) : [];
-    const partnerships = mode==='center' ? await this.repo(CareerPartnership).find({where:{universityId:requireUniversityId(actor)},take:100}) : companyIds.length ? await this.repo(CareerPartnership).find({where:{companyId:In(companyIds)},take:100}) : [];
+    const partnerships = mode==='center' ? await this.repo(CareerPartnership).find({where:{organizationId:requireOrganizationId(actor)},take:100}) : companyIds.length ? await this.repo(CareerPartnership).find({where:{companyId:In(companyIds)},take:100}) : [];
     const partnerCompanies = mode==='center' && partnerships.length ? await this.repo(CareerCompany).find({where:{id:In(partnerships.map(p=>p.companyId))}}) : [];
     const companies=ownedCompanies;
     const profile = actor.role===UserRole.STUDENT ? await this.repo(CareerProfile).findOneBy({studentId:actor.id}) : null;
-    const profiles = mode==='center' ? await this.repo(CareerProfile).find({where:{universityId:requireUniversityId(actor)},take:100}) : [];
-    const admissions = mode==='center' ? await this.repo(CareerAdmission).find({where:{universityId:requireUniversityId(actor)},take:100}) : actor.role===UserRole.STUDENT ? await this.repo(CareerAdmission).find({where:{studentId:actor.id},take:100}) : [];
+    const profiles = mode==='center' ? await this.repo(CareerProfile).find({where:{organizationId:requireOrganizationId(actor)},take:100}) : [];
+    const admissions = mode==='center' ? await this.repo(CareerAdmission).find({where:{organizationId:requireOrganizationId(actor)},take:100}) : actor.role===UserRole.STUDENT ? await this.repo(CareerAdmission).find({where:{studentId:actor.id},take:100}) : [];
     const myApplications = actor.role===UserRole.STUDENT ? await this.repo(CareerApplication).find({where:{studentId:actor.id},take:100}) : [];
     const myWorks = actor.role===UserRole.STUDENT ? await this.repo(CareerWork).find({where:{studentId:actor.id},take:100}) : [];
-    const tasks = mode==='center' ? await this.repo(CareerTask).find({where:{universityId:requireUniversityId(actor)},order:{createdAt:'DESC'},take:100}) : mode==='employer' && companyIds.length ? await this.repo(CareerTask).find({where:{companyId:In(companyIds)},order:{createdAt:'DESC'},take:100}) : mode==='student' ? await this.repo(CareerTask).find({where:[{universityId:requireUniversityId(actor),state:'open'},...(myApplications.length? [{id:In(myApplications.map(a=>a.taskId)),universityId:requireUniversityId(actor)}]:[])],order:{createdAt:'DESC'},take:100}) : [];
+    const tasks = mode==='center' ? await this.repo(CareerTask).find({where:{organizationId:requireOrganizationId(actor)},order:{createdAt:'DESC'},take:100}) : mode==='employer' && companyIds.length ? await this.repo(CareerTask).find({where:{companyId:In(companyIds)},order:{createdAt:'DESC'},take:100}) : mode==='student' ? await this.repo(CareerTask).find({where:[{organizationId:requireOrganizationId(actor),state:'open'},...(myApplications.length? [{id:In(myApplications.map(a=>a.taskId)),organizationId:requireOrganizationId(actor)}]:[])],order:{createdAt:'DESC'},take:100}) : [];
     const taskIds=tasks.map(t=>t.id);
     const works = mode==='student' ? myWorks : taskIds.length ? await this.repo(CareerWork).find({where:{taskId:In(taskIds)},take:100}) : [];
     const applications = mode==='student' ? myApplications : taskIds.length ? await this.repo(CareerApplication).find({where:{taskId:In(taskIds)},take:100}) : [];
     // Employers receive only the professional profile of actual applicants, never university records.
     const candidateProfiles = mode==='employer' && applications.length ? await this.repo(CareerProfile).find({where:{studentId:In(applications.map(a=>a.studentId))}}) : [];
     const candidateNames=candidateProfiles.length?await this.repo(User).find({where:{id:In(candidateProfiles.map(p=>p.studentId))},select:{id:true,firstName:true,lastName:true}}):[];
-    const candidateAdmissions=mode==='employer'&&candidateProfiles.length?await this.repo(CareerAdmission).find({where:{studentId:In(candidateProfiles.map(p=>p.studentId)),universityId:In([...new Set(tasks.map(t=>t.universityId))]),state:'approved'}}):[];
-    const candidates=candidateProfiles.map(profile=>({...profile,approvedSkills:candidateAdmissions.filter(a=>a.studentId===profile.studentId&&applications.some(app=>app.studentId===profile.studentId&&tasks.some(task=>task.id===app.taskId&&task.universityId===a.universityId&&task.profiled&&task.skill===a.skill))).map(a=>({skill:a.skill,basis:a.basis})),name: candidateNames.find(u=>u.id===profile.studentId)?`${candidateNames.find(u=>u.id===profile.studentId)!.firstName} ${candidateNames.find(u=>u.id===profile.studentId)!.lastName}`:''}));
+    const candidateAdmissions=mode==='employer'&&candidateProfiles.length?await this.repo(CareerAdmission).find({where:{studentId:In(candidateProfiles.map(p=>p.studentId)),organizationId:In([...new Set(tasks.map(t=>t.organizationId))]),state:'approved'}}):[];
+    const candidates=candidateProfiles.map(profile=>({...profile,approvedSkills:candidateAdmissions.filter(a=>a.studentId===profile.studentId&&applications.some(app=>app.studentId===profile.studentId&&tasks.some(task=>task.id===app.taskId&&task.organizationId===a.organizationId&&task.profiled&&task.skill===a.skill))).map(a=>({skill:a.skill,basis:a.basis})),name: candidateNames.find(u=>u.id===profile.studentId)?`${candidateNames.find(u=>u.id===profile.studentId)!.firstName} ${candidateNames.find(u=>u.id===profile.studentId)!.lastName}`:''}));
     const contacts=mode==='center'&&partnerCompanies.length?await this.repo(User).find({where:{id:In(partnerCompanies.map(c=>c.createdBy))},select:{id:true,firstName:true,lastName:true,email:true}}):[];
     const relevantCompanies = [...companies,...partnerCompanies.map(company=>({...company,contact:contacts.find(u=>u.id===company.createdBy)?{name:`${contacts.find(u=>u.id===company.createdBy)!.firstName} ${contacts.find(u=>u.id===company.createdBy)!.lastName}`,email:contacts.find(u=>u.id===company.createdBy)!.email}:null}))];
     if (mode==='student' && tasks.length) relevantCompanies.push(...await this.repo(CareerCompany).find({where:{id:In(tasks.map(t=>t.companyId))}}));
     const workIds=works.map(w=>w.id);
     const reviews = workIds.length ? await this.repo(CareerReview).find({where:{workId:In(workIds)}}) : [];
     const portfolio = mode==='student' ? await this.repo(CareerPortfolio).find({where:{studentId:actor.id},take:100}) : [];
-    const ownUniversity=actor.universityId ? await this.repo(University).findOneBy({id:actor.universityId}) : null;
+    const ownUniversity=actor.organizationId ? await this.repo(University).findOneBy({id:actor.organizationId}) : null;
     const universities=mode==='employer' ? await this.repo(University).find({select:{id:true,name:true,city:true},take:100}) : ownUniversity ? [{id:ownUniversity.id,name:ownUniversity.name,city:ownUniversity.city}] : [];
-    const staff = mode==='center' ? await this.repo(User).find({where:{universityId:requireUniversityId(actor)},select:{id:true,firstName:true,lastName:true,role:true},take:100}) : [];
+    const staff = mode==='center' ? await this.repo(User).find({where:{organizationId:requireOrganizationId(actor)},select:{id:true,firstName:true,lastName:true,role:true},take:100}) : [];
     const notices=await this.repo(CareerNotice).find({where:{userId:actor.id},order:{createdAt:'DESC'},take:100});
     return {availableModes,notices,actor:{id:actor.id,role:actor.role},mode,payment:{configured:false,provider:null,country:'RU'},limit:100,companies:relevantCompanies,partnerships,memberships,profile,profiles,admissions,tasks,applications,candidates,works,reviews,portfolio,universities,staff};
   }
@@ -124,7 +124,7 @@ export class CareerService {
     if (!['all','draft','review','open','assigned','accepted'].includes(taskState)) throw new BadRequestException('Некорректное состояние задач');
 
     const memberships = await this.repo(CareerMembership).find({where:{userId:actor.id,revokedAt:IsNull()}});
-    const isCenter = Boolean(actor.universityId && (centerRoles.includes(actor.role) || memberships.some(m=>m.universityId===actor.universityId)));
+    const isCenter = Boolean(actor.organizationId && (centerRoles.includes(actor.role) || memberships.some(m=>m.organizationId===actor.organizationId)));
     const availableModes = actor.role===UserRole.STUDENT ? ['student'] : [...(isCenter?['center']:[]),...([UserRole.DEVELOPER,UserRole.SUPERADMIN].includes(actor.role)?[]:['employer'])];
     if (requestedMode && !availableModes.includes(requestedMode)) throw new ForbiddenException('Этот кабинет вам недоступен');
     const mode = requestedMode || availableModes[0] || 'unavailable';
@@ -133,16 +133,16 @@ export class CareerService {
     let applicationTaskIds: string[] = [];
 
     if (mode === 'student') {
-      const universityId = this.student(actor);
+      const organizationId = this.student(actor);
       const applications = await this.repo(CareerApplication).find({where:{studentId:actor.id},select:{taskId:true}});
       applicationTaskIds = applications.map(application=>application.taskId);
-      builder.where('task.universityId = :universityId',{universityId});
+      builder.where('task.organizationId = :organizationId',{organizationId});
       if (applicationTaskIds.length) builder.andWhere('(task.state = :openState OR task.id IN (:...applicationTaskIds))',{openState:'open',applicationTaskIds});
       else builder.andWhere('task.state = :openState',{openState:'open'});
     } else if (mode === 'center') {
-      const universityId = requireUniversityId(actor);
-      await this.center(actor,universityId);
-      builder.where('task.universityId = :universityId',{universityId});
+      const organizationId = requireOrganizationId(actor);
+      await this.center(actor,organizationId);
+      builder.where('task.organizationId = :organizationId',{organizationId});
     } else if (mode === 'employer') {
       const companyIds = memberships.filter(m=>m.companyId&&['company_owner','company_member'].includes(m.role)).map(m=>m.companyId!);
       if (companyIds.length) builder.where('task.companyId IN (:...companyIds)',{companyIds});
@@ -176,7 +176,7 @@ export class CareerService {
     if (!validStates.includes(state)) throw new BadRequestException('Некорректное состояние списка');
 
     const memberships = await this.repo(CareerMembership).find({where:{userId:actor.id,revokedAt:IsNull()}});
-    const isCenter = Boolean(actor.universityId && (centerRoles.includes(actor.role) || memberships.some(m=>m.universityId===actor.universityId)));
+    const isCenter = Boolean(actor.organizationId && (centerRoles.includes(actor.role) || memberships.some(m=>m.organizationId===actor.organizationId)));
     const availableModes = actor.role===UserRole.STUDENT ? ['student'] : [...(isCenter?['center']:[]),...([UserRole.DEVELOPER,UserRole.SUPERADMIN].includes(actor.role)?[]:['employer'])];
     if (requestedMode && !availableModes.includes(requestedMode)) throw new ForbiddenException('Этот кабинет вам недоступен');
     const mode = requestedMode || availableModes[0] || 'unavailable';
@@ -186,8 +186,8 @@ export class CareerService {
     const builder = (kind==='applications' ? this.repo(CareerApplication).createQueryBuilder(alias) : this.repo(CareerWork).createQueryBuilder(alias)) as unknown as SelectQueryBuilder<CareerApplication|CareerWork>;
     builder.innerJoin(CareerTask,'task',`task.id = ${alias}.taskId`);
     if (mode==='student') {
-      const universityId = this.student(actor);
-      builder.where(`${alias}.studentId = :studentId`,{studentId:actor.id}).andWhere('task.universityId = :universityId',{universityId});
+      const organizationId = this.student(actor);
+      builder.where(`${alias}.studentId = :studentId`,{studentId:actor.id}).andWhere('task.organizationId = :organizationId',{organizationId});
     } else {
       const companyIds = memberships.filter(m=>m.companyId&&['company_owner','company_member'].includes(m.role)).map(m=>m.companyId!);
       if (companyIds.length) builder.where('task.companyId IN (:...companyIds)',{companyIds});
@@ -216,12 +216,12 @@ export class CareerService {
       const [profiles,users,admissions] = await Promise.all([
         this.repo(CareerProfile).find({where:{studentId:In(studentIds)},select:{studentId:true,headline:true,skills:true}}),
         this.repo(User).find({where:{id:In(studentIds),role:UserRole.STUDENT,isActive:true},select:{id:true,firstName:true,lastName:true}}),
-        this.repo(CareerAdmission).find({where:{studentId:In(studentIds),universityId:In([...new Set(tasks.map(task=>task.universityId))]),state:'approved'},select:{studentId:true,universityId:true,skill:true,basis:true}}),
+        this.repo(CareerAdmission).find({where:{studentId:In(studentIds),organizationId:In([...new Set(tasks.map(task=>task.organizationId))]),state:'approved'},select:{studentId:true,organizationId:true,skill:true,basis:true}}),
       ]);
       candidates = new Map(profiles.filter(profile=>users.some(user=>user.id===profile.studentId)).map(profile=>{
         const user=users.find(item=>item.id===profile.studentId)!;
         const approvedSkills=[...new Set(tasks.filter(task=>task.profiled&&records.some(record=>record.studentId===profile.studentId&&record.taskId===task.id)).map(task=>task.skill))].flatMap(skill=>{
-          const admission=admissions.find(item=>item.studentId===profile.studentId&&item.skill===skill&&tasks.some(task=>task.skill===skill&&task.universityId===item.universityId&&task.profiled&&records.some(record=>record.studentId===profile.studentId&&record.taskId===task.id)));
+          const admission=admissions.find(item=>item.studentId===profile.studentId&&item.skill===skill&&tasks.some(task=>task.skill===skill&&task.organizationId===item.organizationId&&task.profiled&&records.some(record=>record.studentId===profile.studentId&&record.taskId===task.id)));
           return admission?[{skill,basis:admission.basis}]:[];
         });
         return [profile.studentId,{studentId:profile.studentId,name:`${user.firstName} ${user.lastName}`,headline:profile.headline,skills:profile.skills,approvedSkills}];
@@ -238,8 +238,8 @@ export class CareerService {
     return {items,total,offset,limit,hasMore:offset+items.length<total};
   }
   async listCenterReviews(actor: Actor, query: CareerCenterReviewQuery) {
-    const universityId=requireUniversityId(actor);
-    await this.center(actor,universityId);
+    const organizationId=requireOrganizationId(actor);
+    await this.center(actor,organizationId);
     const kind=query.kind;
     if(kind!=='profiles'&&kind!=='admissions')throw new BadRequestException('Укажите тип очереди: профили или допуски');
     const offset=query.offset===undefined?0:Number(query.offset);
@@ -252,8 +252,8 @@ export class CareerService {
     const alias=kind==='profiles'?'profile':'admission';
     const builder=(kind==='profiles'?this.repo(CareerProfile).createQueryBuilder(alias):this.repo(CareerAdmission).createQueryBuilder(alias)) as unknown as SelectQueryBuilder<CareerProfile|CareerAdmission>;
     builder.innerJoin(User,'student',`student.id = ${alias}.studentId`)
-      .where(`${alias}.universityId = :universityId`,{universityId})
-      .andWhere('student.universityId = :universityId',{universityId})
+      .where(`${alias}.organizationId = :organizationId`,{organizationId})
+      .andWhere('student.organizationId = :organizationId',{organizationId})
       .andWhere('student.role = :studentRole',{studentRole:UserRole.STUDENT})
       .andWhere('student.isActive = true');
     if(state!=='all')builder.andWhere(`${alias}.${kind==='profiles'?'verification':'state'} = :reviewState`,{reviewState:state});
@@ -267,7 +267,7 @@ export class CareerService {
     builder.orderBy(`${alias}.createdAt`,'DESC').addOrderBy(`${alias}.id`,'DESC').skip(offset).take(limit);
     const [records,total]=await builder.getManyAndCount();
     const studentIds=[...new Set(records.map(record=>record.studentId))];
-    const students=studentIds.length?await this.repo(User).find({where:{id:In(studentIds),universityId,role:UserRole.STUDENT,isActive:true},select:{id:true,firstName:true,lastName:true}}):[];
+    const students=studentIds.length?await this.repo(User).find({where:{id:In(studentIds),organizationId,role:UserRole.STUDENT,isActive:true},select:{id:true,firstName:true,lastName:true}}):[];
     const items=records.map(record=>({...record,studentName:students.find(student=>student.id===record.studentId)?`${students.find(student=>student.id===record.studentId)!.firstName} ${students.find(student=>student.id===record.studentId)!.lastName}`:'Студент'}));
     return {items,total,offset,limit,hasMore:offset+items.length<total};
   }
@@ -278,19 +278,19 @@ export class CareerService {
     const state=query.state||'pending';if(!['all','pending','verified','rejected'].includes(state))throw new BadRequestException('Некорректное состояние партнёрства');
     const mode=requestedMode||(centerRoles.includes(actor.role)?'center':'employer');
     if(mode!=='center'&&mode!=='employer')throw new BadRequestException('Некорректный кабинет партнёрств');
-    let universityId:string|undefined;let scopedCompanyIds:string[]=[];
+    let organizationId:string|undefined;let scopedCompanyIds:string[]=[];
     if(mode==='center'){
-      universityId=requireUniversityId(actor);
-      await this.center(actor,universityId);
+      organizationId=requireOrganizationId(actor);
+      await this.center(actor,organizationId);
     }else{
       const memberships=await this.repo(CareerMembership).find({where:{userId:actor.id,revokedAt:IsNull()}});
       scopedCompanyIds=memberships.filter(membership=>membership.companyId&&['company_owner','company_member'].includes(membership.role)).map(membership=>membership.companyId!);
     }
     const builder=this.repo(CareerPartnership).createQueryBuilder('partnership')
       .innerJoin(CareerCompany,'company','company.id = partnership.companyId')
-      .innerJoin(University,'university','university.id = partnership.universityId');
+      .innerJoin(University,'university','university.id = partnership.organizationId');
     if(mode==='center'){
-      builder.where('partnership.universityId = :universityId',{universityId});
+      builder.where('partnership.organizationId = :organizationId',{organizationId});
     }else{
       if(scopedCompanyIds.length)builder.where('partnership.companyId IN (:...companyIds)',{companyIds:scopedCompanyIds});else builder.where('1 = 0');
     }
@@ -299,80 +299,80 @@ export class CareerService {
     if(search)builder.andWhere('(LOWER(company.name) LIKE :partnershipSearch OR LOWER(university.name) LIKE :partnershipSearch)',{partnershipSearch:`%${search}%`});
     builder.orderBy('partnership.createdAt','DESC').addOrderBy('partnership.id','DESC').skip(offset).take(limit);
     const [items,total]=await builder.getManyAndCount();
-    const companyIds=[...new Set(items.map(item=>item.companyId))];const universityIds=[...new Set(items.map(item=>item.universityId))];
+    const companyIds=[...new Set(items.map(item=>item.companyId))];const organizationIds=[...new Set(items.map(item=>item.organizationId))];
     const [companies,universities]=await Promise.all([
       companyIds.length?this.repo(CareerCompany).find({where:{id:In(companyIds)},select:{id:true,name:true}}):Promise.resolve([] as CareerCompany[]),
-      universityIds.length?this.repo(University).find({where:{id:In(universityIds)},select:{id:true,name:true}}):Promise.resolve([] as University[]),
+      organizationIds.length?this.repo(University).find({where:{id:In(organizationIds)},select:{id:true,name:true}}):Promise.resolve([] as University[]),
     ]);
-    return {items:items.map(item=>({...item,companyName:companies.find(company=>company.id===item.companyId)?.name||'Компания',universityName:universities.find(university=>university.id===item.universityId)?.name||'Вуз'})),total,offset,limit,hasMore:offset+items.length<total};
+    return {items:items.map(item=>({...item,companyName:companies.find(company=>company.id===item.companyId)?.name||'Компания',universityName:universities.find(university=>university.id===item.organizationId)?.name||'Вуз'})),total,offset,limit,hasMore:offset+items.length<total};
   }
-  async checkPartnershipEligibility(actor:Actor,companyId:string,universityId:string) {
+  async checkPartnershipEligibility(actor:Actor,companyId:string,organizationId:string) {
     await this.company(actor,companyId);
-    await this.university(universityId);
-    const partnership=await this.repo(CareerPartnership).findOneBy({companyId,universityId});
-    return {companyId,universityId,eligible:partnership?.state==='verified',state:partnership?.state||'missing'};
+    await this.university(organizationId);
+    const partnership=await this.repo(CareerPartnership).findOneBy({companyId,organizationId});
+    return {companyId,organizationId,eligible:partnership?.state==='verified',state:partnership?.state||'missing'};
   }
   async saveProfile(actor:Actor,dto:CareerProfileDto) {
-    const universityId=this.student(actor);
+    const organizationId=this.student(actor);
     const existing=await this.repo(CareerProfile).findOneBy({studentId:actor.id});
     if (!dto.headline.trim()) throw new BadRequestException('Заполните профессиональный профиль');
-    return this.repo(CareerProfile).save({...existing,...dto,headline:dto.headline.trim(),skills:[...new Set(dto.skills.map(s=>s.trim()).filter(Boolean))],studentId:actor.id,universityId,verification:'pending'});
+    return this.repo(CareerProfile).save({...existing,...dto,headline:dto.headline.trim(),skills:[...new Set(dto.skills.map(s=>s.trim()).filter(Boolean))],studentId:actor.id,organizationId,verification:'pending'});
   }
   async verifyProfile(actor:Actor,id:string,dto:CareerDecisionDto) {
     const profile=await this.repo(CareerProfile).findOneBy({id}); if(!profile) throw new NotFoundException();
-    await this.center(actor,profile.universityId); if(!['approved','rejected'].includes(dto.decision)) throw new BadRequestException();
+    await this.center(actor,profile.organizationId); if(!['approved','rejected'].includes(dto.decision)) throw new BadRequestException();
     profile.verification=dto.decision==='approved'?'verified':'rejected'; return this.repo(CareerProfile).save(profile);
   }
   async requestAdmission(actor:Actor,dto:CareerAdmissionDto) {
-    const universityId=this.student(actor);const skill=dto.skill.trim().toLowerCase();
+    const organizationId=this.student(actor);const skill=dto.skill.trim().toLowerCase();
     if (!skill) throw new BadRequestException('Укажите направление');
     const old=await this.repo(CareerAdmission).findOneBy({studentId:actor.id,skill});
-    return this.repo(CareerAdmission).save({...old,studentId:actor.id,universityId,skill,evidence:dto.evidence.trim(),state:'pending',reason:'',basis:'unspecified'});
+    return this.repo(CareerAdmission).save({...old,studentId:actor.id,organizationId,skill,evidence:dto.evidence.trim(),state:'pending',reason:'',basis:'unspecified'});
   }
   async decideAdmission(actor:Actor,id:string,dto:CareerDecisionDto) {
     const admission=await this.repo(CareerAdmission).findOneBy({id}); if(!admission) throw new NotFoundException();
-    await this.center(actor,admission.universityId);if(!['approved','rejected'].includes(dto.decision)||!dto.reason.trim()) throw new BadRequestException('Укажите решение и основание');
+    await this.center(actor,admission.organizationId);if(!['approved','rejected'].includes(dto.decision)||!dto.reason.trim()) throw new BadRequestException('Укажите решение и основание');
     admission.state=dto.decision;admission.basis=dto.decision==='approved'?'center':'unspecified';admission.reason=dto.reason;return this.repo(CareerAdmission).save(admission);
   }
   async createCompany(actor:Actor,dto:CareerCompanyDto) {
-    if ([UserRole.STUDENT,UserRole.DEVELOPER,UserRole.SUPERADMIN].includes(actor.role)) throw new ForbiddenException('Нужен рабочий аккаунт работодателя');await this.university(dto.universityId);
+    if ([UserRole.STUDENT,UserRole.DEVELOPER,UserRole.SUPERADMIN].includes(actor.role)) throw new ForbiddenException('Нужен рабочий аккаунт работодателя');await this.university(dto.organizationId);
     if (!dto.name.trim()) throw new BadRequestException('Укажите компанию');
     if (!this.registry) throw new ServiceUnavailableException('Проверка реестра не подключена');
     const record = await this.registry.lookup(dto.inn);
     return this.db.transaction(async m=>{const company=await this.repo(CareerCompany,m).save(this.repo(CareerCompany,m).create({name:dto.name.trim(),description:dto.description,createdBy:actor.id,
       inn:record.inn,registryStatus:record.status,registryCheckedAt:record.checkedAt,registryRequestedAt:record.checkedAt,
-      registryLegalName:record.legalName,registryOgrn:record.ogrn,registryReason:record.reason}));await this.repo(CareerMembership,m).save({userId:actor.id,companyId:company.id,universityId:null,role:'company_owner'});await this.repo(CareerPartnership,m).save({companyId:company.id,universityId:dto.universityId,state:'pending'});return company;});
+      registryLegalName:record.legalName,registryOgrn:record.ogrn,registryReason:record.reason}));await this.repo(CareerMembership,m).save({userId:actor.id,companyId:company.id,organizationId:null,role:'company_owner'});await this.repo(CareerPartnership,m).save({companyId:company.id,organizationId:dto.organizationId,state:'pending'});return company;});
   }
-  async addPartnership(actor:Actor,companyId:string,universityId:string) {await this.company(actor,companyId,true);await this.university(universityId);if(await this.repo(CareerPartnership).existsBy({companyId,universityId})) throw new ConflictException('Заявка уже существует');return this.repo(CareerPartnership).save({companyId,universityId,state:'pending'});}
+  async addPartnership(actor:Actor,companyId:string,organizationId:string) {await this.company(actor,companyId,true);await this.university(organizationId);if(await this.repo(CareerPartnership).existsBy({companyId,organizationId})) throw new ConflictException('Заявка уже существует');return this.repo(CareerPartnership).save({companyId,organizationId,state:'pending'});}
   async verifyPartnership(actor:Actor,id:string,dto:CareerDecisionDto) {
-    const item=await this.repo(CareerPartnership).findOneBy({id});if(!item) throw new NotFoundException();await this.center(actor,item.universityId);if(await this.repo(CareerMembership).existsBy({userId:actor.id,companyId:item.companyId,revokedAt:IsNull()}))throw new ForbiddenException('Нельзя подтверждать собственную компанию');
+    const item=await this.repo(CareerPartnership).findOneBy({id});if(!item) throw new NotFoundException();await this.center(actor,item.organizationId);if(await this.repo(CareerMembership).existsBy({userId:actor.id,companyId:item.companyId,revokedAt:IsNull()}))throw new ForbiddenException('Нельзя подтверждать собственную компанию');
     if(!['approved','rejected'].includes(dto.decision)) throw new BadRequestException();item.state=dto.decision==='approved'?'verified':'rejected';return this.repo(CareerPartnership).save(item);
   }
   async addMembership(actor:Actor,dto:CareerMembershipDto) {
-    if(dto.companyId){await this.company(actor,dto.companyId,true);if(dto.identityConfirmed!==true)throw new BadRequestException('Подтвердите, что проверили аккаунт сотрудника');}else{await this.center(actor,requireUniversityId(actor),true);}
+    if(dto.companyId){await this.company(actor,dto.companyId,true);if(dto.identityConfirmed!==true)throw new BadRequestException('Подтвердите, что проверили аккаунт сотрудника');}else{await this.center(actor,requireOrganizationId(actor),true);}
     if(Boolean(dto.userId)===Boolean(dto.email))throw new BadRequestException('Укажите сотрудника');
     const lookup = () => dto.userId ? this.repo(User).findOneBy({id:dto.userId,isActive:true}) : this.repo(User).createQueryBuilder('u').where('LOWER(u.email) = :email AND u.isActive = true',{email:dto.email!.trim().toLowerCase()}).getOne();
     const user = dto.companyId
       ? await this.tenant.runWithDatabaseAccess({ authentication: dto.userId ? { id: dto.userId } : { email: dto.email!.trim() } }, lookup)
       : await lookup();
     if(!user) throw new NotFoundException('Аккаунт не найден');
-    if(dto.companyId){await this.company(actor,dto.companyId,true);if(dto.role!=='company_member'||[UserRole.STUDENT,UserRole.DEVELOPER,UserRole.SUPERADMIN].includes(user.role)) throw new BadRequestException('Нужен рабочий аккаунт сотрудника');const old=await this.repo(CareerMembership).findOneBy({userId:user.id,companyId:dto.companyId});if(old?.revokedAt===null)throw new ConflictException('Сотрудник уже имеет доступ к компании');return this.repo(CareerMembership).save({...old,userId:user.id,companyId:dto.companyId,universityId:null,role:dto.role,revokedAt:null,revokedBy:null});}
-    const universityId=requireUniversityId(actor);await this.center(actor,universityId,true);
-    if(user.universityId!==universityId||[UserRole.STUDENT,UserRole.EMPLOYER,UserRole.DEVELOPER,UserRole.SUPERADMIN].includes(user.role)||!['career_staff','career_admin'].includes(dto.role)||dto.role==='career_admin'&&actor.role!==UserRole.UNIVERSITY_ADMIN) throw new ForbiddenException('Недоступное назначение');
-    const old=await this.repo(CareerMembership).findOneBy({userId:user.id,universityId});return this.repo(CareerMembership).save({...old,userId:user.id,companyId:null,universityId,role:dto.role,revokedAt:null,revokedBy:null});
+    if(dto.companyId){await this.company(actor,dto.companyId,true);if(dto.role!=='company_member'||[UserRole.STUDENT,UserRole.DEVELOPER,UserRole.SUPERADMIN].includes(user.role)) throw new BadRequestException('Нужен рабочий аккаунт сотрудника');const old=await this.repo(CareerMembership).findOneBy({userId:user.id,companyId:dto.companyId});if(old?.revokedAt===null)throw new ConflictException('Сотрудник уже имеет доступ к компании');return this.repo(CareerMembership).save({...old,userId:user.id,companyId:dto.companyId,organizationId:null,role:dto.role,revokedAt:null,revokedBy:null});}
+    const organizationId=requireOrganizationId(actor);await this.center(actor,organizationId,true);
+    if(user.organizationId!==organizationId||[UserRole.STUDENT,UserRole.EMPLOYER,UserRole.DEVELOPER,UserRole.SUPERADMIN].includes(user.role)||!['career_staff','career_admin'].includes(dto.role)||dto.role==='career_admin'&&actor.role!==UserRole.UNIVERSITY_ADMIN) throw new ForbiddenException('Недоступное назначение');
+    const old=await this.repo(CareerMembership).findOneBy({userId:user.id,organizationId});return this.repo(CareerMembership).save({...old,userId:user.id,companyId:null,organizationId,role:dto.role,revokedAt:null,revokedBy:null});
   }
   async createTask(actor:Actor,dto:CareerTaskDto) {
-    await this.company(actor,dto.companyId);await this.university(dto.universityId);
-    if(!await this.repo(CareerPartnership).existsBy({companyId:dto.companyId,universityId:dto.universityId,state:'verified'})) throw new ForbiddenException('Сначала карьерный центр должен подтвердить компанию');
+    await this.company(actor,dto.companyId);await this.university(dto.organizationId);
+    if(!await this.repo(CareerPartnership).existsBy({companyId:dto.companyId,organizationId:dto.organizationId,state:'verified'})) throw new ForbiddenException('Сначала карьерный центр должен подтвердить компанию');
     if(dto.title.trim().length<5||dto.description.trim().length<20||dto.criteria.trim().length<10)throw new BadRequestException('Опишите задачу и критерии приёмки');
     if(dto.profiled&&!dto.skill.trim()) throw new BadRequestException('Для профильной задачи требуется направление');
     if(!Number.isFinite(Date.parse(dto.deadline))||new Date(dto.deadline).toISOString().slice(0,10)!==dto.deadline||dto.deadline<new Date().toISOString().slice(0,10)) throw new BadRequestException('Нужна существующая будущая дата');
     return this.repo(CareerTask).save({...dto,title:dto.title.trim(),skill:dto.skill.trim().toLowerCase(),level:dto.level||'standard',requirements:dto.requirements?.trim()||'',state:'draft'});
   }
   async apply(actor:Actor,id:string,dto:CareerMessageDto) {
-    const universityId=this.student(actor);
+    const organizationId=this.student(actor);
     return this.db.transaction(async manager=>{
-      const task=await this.task(id,manager,true);if(task.universityId!==universityId) throw new ForbiddenException('Задача другого вуза');assertCareerTransition(task.state,['open']);
+      const task=await this.task(id,manager,true);if(task.organizationId!==organizationId) throw new ForbiddenException('Задача другого вуза');assertCareerTransition(task.state,['open']);
       if(['suspended','pending','rejected'].includes(task.moderationStatus)) throw new ConflictException('Задача ограничена модерацией');
       if(task.deadline<new Date().toISOString().slice(0,10)) throw new ConflictException('Срок задачи истёк');
       if(!await this.repo(CareerProfile,manager).existsBy({studentId:actor.id,verification:'verified'})) throw new ForbiddenException('Подтвердите профессиональный профиль в карьерном центре');
@@ -383,7 +383,7 @@ export class CareerService {
   }
   async select(actor:Actor,id:string) {
     return this.db.transaction(async m=>{const application=await this.repo(CareerApplication,m).findOneBy({id});if(!application) throw new NotFoundException();const task=await this.task(application.taskId,m,true);await this.company(actor,task.companyId,false,m);if(['suspended','pending','rejected'].includes(task.moderationStatus))throw new ConflictException('Задача ограничена модерацией');if(task.deadline<new Date().toISOString().slice(0,10))throw new ConflictException('Срок задачи уже истёк');assertCareerTransition(task.state,['open']);assertCareerTransition(application.state,['pending']);
-      await m.query('SELECT pg_advisory_xact_lock(hashtext($1))',[`career-work:${application.studentId}`]);if(await this.repo(CareerWork,m).countBy({studentId:application.studentId,state:In(['in_progress','revision','submitted'])})>=3)throw new ConflictException('У студента уже три активные работы');const candidate=await this.repo(User,m).findOneBy({id:application.studentId,role:UserRole.STUDENT,isActive:true,universityId:task.universityId});if(!candidate||!await this.repo(CareerProfile,m).existsBy({studentId:candidate.id,verification:'verified'})||task.profiled&&!await this.repo(CareerAdmission,m).existsBy({studentId:candidate.id,skill:task.skill,state:'approved'}))throw new ForbiddenException('Допуск кандидата изменился');task.state='assigned';await this.repo(CareerApplication,m).update({taskId:task.id,state:'pending'},{state:'not_selected'});application.state='selected';await this.repo(CareerTask,m).save(task);await this.repo(CareerApplication,m).save(application);await this.notify(m,application.studentId,'Вы выбраны исполнителем',task.title);return this.repo(CareerWork,m).save({taskId:task.id,studentId:application.studentId,state:'in_progress'});});
+      await m.query('SELECT pg_advisory_xact_lock(hashtext($1))',[`career-work:${application.studentId}`]);if(await this.repo(CareerWork,m).countBy({studentId:application.studentId,state:In(['in_progress','revision','submitted'])})>=3)throw new ConflictException('У студента уже три активные работы');const candidate=await this.repo(User,m).findOneBy({id:application.studentId,role:UserRole.STUDENT,isActive:true,organizationId:task.organizationId});if(!candidate||!await this.repo(CareerProfile,m).existsBy({studentId:candidate.id,verification:'verified'})||task.profiled&&!await this.repo(CareerAdmission,m).existsBy({studentId:candidate.id,skill:task.skill,state:'approved'}))throw new ForbiddenException('Допуск кандидата изменился');task.state='assigned';await this.repo(CareerApplication,m).update({taskId:task.id,state:'pending'},{state:'not_selected'});application.state='selected';await this.repo(CareerTask,m).save(task);await this.repo(CareerApplication,m).save(application);await this.notify(m,application.studentId,'Вы выбраны исполнителем',task.title);return this.repo(CareerWork,m).save({taskId:task.id,studentId:application.studentId,state:'in_progress'});});
   }
   async submit(actor:Actor,id:string,dto:CareerSubmissionDto) {
     this.student(actor);assertCareerResultUrl(dto.resultUrl);
@@ -423,19 +423,19 @@ export class CareerService {
   }
 
   async listStudentAdmissions(actor:Actor,query:CareerStudentAdmissionQuery) {
-    const universityId=this.student(actor);
+    const organizationId=this.student(actor);
     const offset=query.offset===undefined?0:Number(query.offset);const limit=query.limit===undefined?20:Number(query.limit);
     if(!Number.isSafeInteger(offset)||offset<0||offset>1_000_000)throw new BadRequestException('Некорректное смещение списка допусков');
     if(!Number.isSafeInteger(limit)||limit<1||limit>50)throw new BadRequestException('Размер страницы допусков должен быть от 1 до 50');
     const state=query.state||'all';if(!['all','pending','approved','rejected'].includes(state))throw new BadRequestException('Некорректный статус допуска');
     const repository=this.repo(CareerAdmission);
-    const builder=repository.createQueryBuilder('admission').where('admission.studentId = :studentId AND admission.universityId = :universityId',{studentId:actor.id,universityId});
+    const builder=repository.createQueryBuilder('admission').where('admission.studentId = :studentId AND admission.organizationId = :organizationId',{studentId:actor.id,organizationId});
     if(state!=='all')builder.andWhere('admission.state = :state',{state});
     const search=query.q?.trim().slice(0,160).toLocaleLowerCase('ru-RU');
     if(search)builder.andWhere('(LOWER(admission.skill) LIKE :search OR LOWER(admission.evidence) LIKE :search)',{search:`%${search}%`});
     builder.orderBy('admission.createdAt','DESC').addOrderBy('admission.id','DESC').skip(offset).take(limit);
     const [items,total]=await builder.getManyAndCount();
-    const approved=await repository.find({where:{studentId:actor.id,universityId,state:'approved'},select:{skill:true}});
+    const approved=await repository.find({where:{studentId:actor.id,organizationId,state:'approved'},select:{skill:true}});
     const approvedSkills=[...new Set(approved.map(item=>item.skill))].sort((a,b)=>a.localeCompare(b,'ru-RU'));
     return {items:items.map(({id,skill,evidence,state,reason,createdAt})=>({id,skill,evidence,state,reason,createdAt})),approvedSkills,total,offset,limit,hasMore:offset+items.length<total};
   }
@@ -506,19 +506,19 @@ export class CareerService {
 
   async tests(actor:Actor, query?:CareerTestListQuery) {
     if(actor.role===UserRole.EMPLOYER)throw new ForbiddenException('Работодателю недоступны тесты допуска');
-    const universityId=requireUniversityId(actor);
+    const organizationId=requireOrganizationId(actor);
     if(actor.role===UserRole.STUDENT)this.student(actor);
-    else await this.center(actor,universityId);
+    else await this.center(actor,organizationId);
     const toPublicTest=(test:CareerTest)=>({id:test.id,title:test.title,skill:test.skill,passingPercent:test.passingPercent,questions:test.questions.map(question=>({prompt:question.prompt,options:question.options}))});
     const options=query||{};const hasPageParams=query!==undefined&&(options.offset!==undefined||options.limit!==undefined||options.q!==undefined);
     if(!hasPageParams){
-      const tests=await this.repo(CareerTest).find({where:{universityId},order:{createdAt:'DESC',id:'DESC'},take:100});
+      const tests=await this.repo(CareerTest).find({where:{organizationId},order:{createdAt:'DESC',id:'DESC'},take:100});
       return tests.map(toPublicTest);
     }
     const offset=options.offset===undefined?0:Number(options.offset);const limit=options.limit===undefined?20:Number(options.limit);
     if(!Number.isSafeInteger(offset)||offset<0||offset>1_000_000)throw new BadRequestException('Некорректное смещение списка тестов');
     if(!Number.isSafeInteger(limit)||limit<1||limit>50)throw new BadRequestException('Размер страницы тестов должен быть от 1 до 50');
-    const builder=this.repo(CareerTest).createQueryBuilder('test').where('test.universityId = :universityId',{universityId});
+    const builder=this.repo(CareerTest).createQueryBuilder('test').where('test.organizationId = :organizationId',{organizationId});
     const search=options.q?.trim().slice(0,160).toLocaleLowerCase('ru-RU');
     if(search)builder.andWhere('(LOWER(test.title) LIKE :testSearch OR LOWER(test.skill) LIKE :testSearch)',{testSearch:`%${search}%`});
     builder.orderBy('test.createdAt','DESC').addOrderBy('test.id','DESC').skip(offset).take(limit);
@@ -547,22 +547,22 @@ export class CareerService {
     return {items,total,offset,limit,hasMore:offset+tests.length<total};
   }
   async createTest(actor:Actor,dto:CareerTestDto) {
-    const universityId=requireUniversityId(actor);await this.center(actor,universityId,true);
+    const organizationId=requireOrganizationId(actor);await this.center(actor,organizationId,true);
     const skill=dto.skill.trim().toLowerCase();if(dto.questions.some(q=>q.answer>=q.options.length||new Set(q.options.map(o=>o.trim())).size!==q.options.length||q.options.some(o=>!o.trim())))throw new BadRequestException('Укажите существующий правильный вариант');
-    if(await this.repo(CareerTest).existsBy({universityId,skill}))throw new ConflictException('Тест направления уже существует');
-    const test=await this.repo(CareerTest).save({...dto,skill,universityId});return {id:test.id,title:test.title};
+    if(await this.repo(CareerTest).existsBy({organizationId,skill}))throw new ConflictException('Тест направления уже существует');
+    const test=await this.repo(CareerTest).save({...dto,skill,organizationId});return {id:test.id,title:test.title};
   }
   async attempt(actor:Actor,id:string,dto:CareerAttemptDto) {
-    const universityId=this.student(actor);
+    const organizationId=this.student(actor);
     if(!await this.repo(CareerProfile).existsBy({studentId:actor.id,verification:'verified'}))throw new ForbiddenException('Сначала подтвердите профессиональный профиль');
     return this.db.transaction(async m=>{
       await m.query('SELECT pg_advisory_xact_lock(hashtext($1))',[`career-test:${actor.id}`]);
-      const test=await this.repo(CareerTest,m).findOneBy({id,universityId});if(!test)throw new NotFoundException();
+      const test=await this.repo(CareerTest,m).findOneBy({id,organizationId});if(!test)throw new NotFoundException();
       if(dto.answers.length!==test.questions.length||dto.answers.some((a,i)=>a>=test.questions[i].options.length))throw new BadRequestException('Ответьте на каждый вопрос');
       if(await this.repo(CareerTestAttempt,m).countBy({studentId:actor.id,testId:id,createdAt:MoreThanOrEqual(new Date(Date.now()-86400000))})>=3)throw new ConflictException('Доступно три попытки за 24 часа');
       const score=Math.round(test.questions.filter((q,i)=>q.answer===dto.answers[i]).length*100/test.questions.length);const passed=score>=test.passingPercent;
       const attempt=await this.repo(CareerTestAttempt,m).save({testId:id,studentId:actor.id,score,passed});
-      if(passed){const old=await this.repo(CareerAdmission,m).findOneBy({studentId:actor.id,skill:test.skill});await this.repo(CareerAdmission,m).save({...old,studentId:actor.id,universityId,skill:test.skill,evidence:`Тест: ${test.title}`,state:'approved',basis:'test',reason:`Подтверждено тестированием: ${score}%`});}
+      if(passed){const old=await this.repo(CareerAdmission,m).findOneBy({studentId:actor.id,skill:test.skill});await this.repo(CareerAdmission,m).save({...old,studentId:actor.id,organizationId,skill:test.skill,evidence:`Тест: ${test.title}`,state:'approved',basis:'test',reason:`Подтверждено тестированием: ${score}%`});}
       return {id:attempt.id,score,passed};
     });
   }
@@ -595,12 +595,12 @@ export class CareerService {
   }
 
   async listAssignableStaff(actor:Actor,query:CareerLookupQuery) {
-    if(!actor.universityId)throw new ForbiddenException('У пользователя не указан вуз');
-    await this.center(actor,actor.universityId,true);
+    if(!actor.organizationId)throw new ForbiddenException('У пользователя не указан вуз');
+    await this.center(actor,actor.organizationId,true);
     const offset=query.offset===undefined?0:Number(query.offset);const limit=query.limit===undefined?20:Number(query.limit);
     if(!Number.isSafeInteger(offset)||offset<0||offset>1_000_000)throw new BadRequestException('Некорректное смещение списка сотрудников');
     if(!Number.isSafeInteger(limit)||limit<1||limit>50)throw new BadRequestException('Размер страницы сотрудников должен быть от 1 до 50');
-    const builder=this.repo(User).createQueryBuilder('user').where('user.universityId = :universityId',{universityId:actor.universityId}).andWhere('user.isActive = true').andWhere('user.role NOT IN (:...blockedRoles)',{blockedRoles:[UserRole.STUDENT,UserRole.EMPLOYER,UserRole.DEVELOPER,UserRole.SUPERADMIN]});
+    const builder=this.repo(User).createQueryBuilder('user').where('user.organizationId = :organizationId',{organizationId:actor.organizationId}).andWhere('user.isActive = true').andWhere('user.role NOT IN (:...blockedRoles)',{blockedRoles:[UserRole.STUDENT,UserRole.EMPLOYER,UserRole.DEVELOPER,UserRole.SUPERADMIN]});
     const search=query.q?.trim().toLocaleLowerCase();if(search)builder.andWhere('(LOWER(user.firstName) LIKE :search OR LOWER(user.lastName) LIKE :search)',{search:`%${search}%`});
     builder.select(['user.id','user.firstName','user.lastName','user.role']).orderBy('user.lastName','ASC').addOrderBy('user.firstName','ASC').addOrderBy('user.id','ASC').skip(offset).take(limit);
     const [users,total]=await builder.getManyAndCount();const items=users.map(({id,firstName,lastName,role})=>({id,firstName,lastName,role}));

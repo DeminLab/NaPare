@@ -53,7 +53,7 @@ export interface PublishEventInput<TPayload extends JsonObject = JsonObject> {
   /** Stable command/event key used to make retried publishes idempotent. */
   idempotencyKey?: string;
   actor?: EventActor;
-  universityId: string;
+  organizationId: string;
   target: EventTarget;
   payload: TPayload;
   priority?: EventPriority;

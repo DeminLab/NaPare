@@ -38,8 +38,8 @@ const ranges = [
 export default function DeveloperOverviewPage() {
   const [days, setDays] = useState(30);
   const [granularity, setGranularity] = useState<Granularity>('day');
-  const [universityId, setUniversityId] = useState('');
-  const path = useMemo(() => overviewPath(days, granularity, universityId || undefined), [days, granularity, universityId]);
+  const [organizationId, setOrganizationId] = useState('');
+  const path = useMemo(() => overviewPath(days, granularity, organizationId || undefined), [days, granularity, organizationId]);
   const overview = useResource<AnalyticsOverview>(path, 60_000);
   const access = useResource<Access>('/platform/access');
   const universities = useResource<Page<{ id: string; name: string; city: string }>>('/platform/universities?limit=100');
@@ -88,7 +88,7 @@ export default function DeveloperOverviewPage() {
             {!!universities.data?.data.length && (
               <>
                 <label className="sr-only" htmlFor="university">Университет</label>
-                <select id="university" value={universityId} onChange={event => setUniversityId(event.target.value)} className="min-h-9 max-w-[16rem] rounded-lg border border-[var(--color-border-strong)] bg-white px-3 text-xs font-medium text-[var(--color-text)] outline-none focus:border-[var(--color-brand)] focus:ring-2 focus:ring-[var(--color-brand-soft)]">
+                <select id="university" value={organizationId} onChange={event => setOrganizationId(event.target.value)} className="min-h-9 max-w-[16rem] rounded-lg border border-[var(--color-border-strong)] bg-white px-3 text-xs font-medium text-[var(--color-text)] outline-none focus:border-[var(--color-brand)] focus:ring-2 focus:ring-[var(--color-brand-soft)]">
                   <option value="">Все доступные вузы</option>
                   {universities.data.data.map(university => <option key={university.id} value={university.id}>{university.name}</option>)}
                 </select>

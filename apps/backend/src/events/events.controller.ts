@@ -17,7 +17,7 @@ export class EventsController {
   async list(@Request() req, @Query('since') since?: string) {
     return this.eventBus.listSince(
       req.user.id,
-      req.user.universityId,
+      req.user.organizationId,
       parseSince(since),
     );
   }
@@ -26,7 +26,7 @@ export class EventsController {
   stream(@Request() req, @Query('since') since?: string): Observable<EventStreamMessage> {
     return this.eventBus.stream(
       req.user.id,
-      req.user.universityId,
+      req.user.organizationId,
       parseSince(since),
     );
   }

@@ -31,14 +31,14 @@ export class UsersService {
 
   async create(createUserDto: CreateUserDto): Promise<User> {
     if (this.tenantContext.getUser() && [UserRole.DEVELOPER, UserRole.SUPERADMIN].includes(createUserDto.role)) await this.platform?.requireOwner();
-    this.tenantContext.assertAccess(createUserDto.universityId);
+    this.tenantContext.assertAccess(createUserDto.organizationId);
     const user = this.usersRepository.create(createUserDto);
     return this.usersRepository.save(user);
   }
 
   async findById(id: string): Promise<User | null> {
     const user = await this.usersRepository.findOne({ where: { id } });
-    if (user && this.tenantContext.getUser()?.id !== id) this.tenantContext.assertAccess(user.universityId);
+    if (user && this.tenantContext.getUser()?.id !== id) this.tenantContext.assertAccess(user.organizationId);
     return user;
   }
 
@@ -134,14 +134,14 @@ export class UsersService {
     throw new ConflictException("Для этого аккаунта уже привязан другой MAX");
   }
 
-  async findByUniversityId(
-    universityId: string,
+  async findByOrganizationId(
+    organizationId: string,
     pagination: PaginationQueryDto = new PaginationQueryDto(),
     roles?: UserRole[],
   ): Promise<PaginatedResponse<User>> {
-    this.tenantContext.assertAccess(universityId);
+    this.tenantContext.assertAccess(organizationId);
     const [data, total] = await this.usersRepository.findAndCount({
-      where: { universityId, ...(roles?.length ? { role: In(roles) } : {}) },
+      where: { organizationId, ...(roles?.length ? { role: In(roles) } : {}) },
       order: { createdAt: "DESC" },
       skip: (pagination.page - 1) * pagination.limit,
       take: pagination.limit,
@@ -151,12 +151,12 @@ export class UsersService {
 
   async findByGroupId(
     groupId: string,
-    universityId: string,
+    organizationId: string,
     pagination: PaginationQueryDto,
   ): Promise<PaginatedResponse<User>> {
-    this.tenantContext.assertAccess(universityId);
+    this.tenantContext.assertAccess(organizationId);
     const [data, total] = await this.usersRepository.findAndCount({
-      where: { groupId, universityId },
+      where: { groupId, organizationId },
       order: { lastName: "ASC", firstName: "ASC" },
       skip: (pagination.page - 1) * pagination.limit,
       take: pagination.limit,
@@ -164,28 +164,28 @@ export class UsersService {
     return toPaginatedResponse(data, total, pagination);
   }
 
-  async findActiveByUniversityId(universityId: string): Promise<User[]> {
-    this.tenantContext.assertAccess(universityId);
+  async findActiveByOrganizationId(organizationId: string): Promise<User[]> {
+    this.tenantContext.assertAccess(organizationId);
     return this.usersRepository.find({
-      where: { universityId, isActive: true },
+      where: { organizationId, isActive: true },
       order: { lastName: "ASC", firstName: "ASC" },
     });
   }
 
   async findActiveByGroupId(
-    universityId: string,
+    organizationId: string,
     groupId: string,
   ): Promise<User[]> {
-    this.tenantContext.assertAccess(universityId);
+    this.tenantContext.assertAccess(organizationId);
     return this.usersRepository.find({
-      where: { universityId, groupId, isActive: true },
+      where: { organizationId, groupId, isActive: true },
       order: { lastName: "ASC", firstName: "ASC" },
     });
   }
 
   async update(id: string, updateData: Partial<User>): Promise<User> {
     if (updateData.role && [UserRole.DEVELOPER, UserRole.SUPERADMIN].includes(updateData.role)) await this.platform?.requireOwner();
-    if (['role', 'isActive', 'passwordHash', 'email', 'universityId'].some(key => key in updateData)) await this.platform?.protectLegacyMutation(id);
+    if (['role', 'isActive', 'passwordHash', 'email', 'organizationId'].some(key => key in updateData)) await this.platform?.protectLegacyMutation(id);
     if (updateData.role !== undefined) await this.platform?.clearLegacyGrant(id);
     const user = await this.findById(id);
 
@@ -200,7 +200,7 @@ export class UsersService {
   async bindGroup(id: string, groupId: string): Promise<User> {
     const user = await this.findById(id);
     if (!user) throw new NotFoundException('Аккаунт недоступен');
-    if (!user.universityId || !this.groups || !await this.groups.findOne({ where: { id: groupId, universityId: user.universityId } })) {
+    if (!user.organizationId || !this.groups || !await this.groups.findOne({ where: { id: groupId, organizationId: user.organizationId } })) {
       throw new NotFoundException('Группа своего университета не найдена');
     }
     return this.update(id, { groupId });

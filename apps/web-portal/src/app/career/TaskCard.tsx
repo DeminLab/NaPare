@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 import s from './career.module.css';
 
-export type CareerTaskView = {id:string;title:string;companyId:string;universityId:string;description:string;criteria:string;requirements:string;level:string;skill:string;profiled:boolean;rewardKopecks:number;hours:number;deadline:string;state:string;moderationStatus?:string;moderationReason?:string;moderationContentVersion?:number};
+export type CareerTaskView = {id:string;title:string;companyId:string;organizationId:string;description:string;criteria:string;requirements:string;level:string;skill:string;profiled:boolean;rewardKopecks:number;hours:number;deadline:string;state:string;moderationStatus?:string;moderationReason?:string;moderationContentVersion?:number};
 type Fit = {fit:'fits'|'tight'|'unknown'|'blocked';reasons:string[]};
 const fits = {fits:'Совместима с планом',tight:'Не помещается в план',unknown:'Время не подтверждено',blocked:'Нужен допуск'};
 const levels = {starter:'Стартовая',standard:'Обычная',advanced:'Сложная'};

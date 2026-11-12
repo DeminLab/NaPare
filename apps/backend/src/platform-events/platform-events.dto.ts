@@ -13,7 +13,7 @@ export class PlatformEventsQueryDto extends PaginationQueryDto {
 
   @ApiPropertyOptional()
   @IsOptional() @IsUUID()
-  universityId?: string;
+  organizationId?: string;
 
   @ApiPropertyOptional({ maxLength: 100 })
   @IsOptional() @IsString() @MaxLength(100)

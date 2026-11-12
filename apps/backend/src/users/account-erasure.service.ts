@@ -63,8 +63,8 @@ export class AccountErasureService {
     const steps = await runner.query(`SELECT s.id FROM request_steps s JOIN student_requests r ON r.id=s."requestId"
       WHERE s."assigneeId"=$1 AND s.state='pending' AND r.status IN ('submitted','in_review','needs_changes') LIMIT 1`, [actor.id]);
     if (steps.length) result.push({ code: 'pending_approval', message: 'Передайте незавершённые согласования: администратор может переназначить этапы.' });
-    if (actor.role === UserRole.UNIVERSITY_ADMIN && actor.universityId) {
-      const [others] = await runner.query('SELECT count(*)::int AS count FROM users WHERE "universityId"=$1 AND role=$2 AND "isActive"=true AND id<>$3', [actor.universityId, UserRole.UNIVERSITY_ADMIN, actor.id]);
+    if (actor.role === UserRole.UNIVERSITY_ADMIN && actor.organizationId) {
+      const [others] = await runner.query('SELECT count(*)::int AS count FROM users WHERE "organizationId"=$1 AND role=$2 AND "isActive"=true AND id<>$3', [actor.organizationId, UserRole.UNIVERSITY_ADMIN, actor.id]);
       if (!others.count) result.push({ code: 'university_admin', message: 'Сначала назначьте другого администратора вуза через владельца платформы.' });
     }
     return result;
@@ -97,11 +97,11 @@ export class AccountErasureService {
         // Shared with existing owner/grant changes; acquire it before any user row lock.
         await runner.query('SELECT pg_advisory_xact_lock(707247126)');
         // Same lock/order as office assignment, route and decision mutations: no new stage can target this account after the check.
-        if (actor.universityId) await runner.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))', [`office:${actor.universityId}`]);
-        const [user] = await runner.query('SELECT id, "passwordHash", "isActive", "personalDataDeletedAt",role,"universityId","sessionVersion" FROM users WHERE id=$1 FOR UPDATE', [actor.id]);
+        if (actor.organizationId) await runner.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))', [`office:${actor.organizationId}`]);
+        const [user] = await runner.query('SELECT id, "passwordHash", "isActive", "personalDataDeletedAt",role,"organizationId","sessionVersion" FROM users WHERE id=$1 FOR UPDATE', [actor.id]);
         if (!user?.isActive || user.personalDataDeletedAt) throw new UnauthorizedException();
         if (actor.sessionVersion !== undefined && user.sessionVersion !== actor.sessionVersion) throw new UnauthorizedException('Сессия отозвана. Войдите заново.');
-        if (user.role !== actor.role || user.universityId !== actor.universityId) throw new ConflictException('Учётная запись изменилась. Заново откройте экран подтверждения.');
+        if (user.role !== actor.role || user.organizationId !== actor.organizationId) throw new ConflictException('Учётная запись изменилась. Заново откройте экран подтверждения.');
         if (typeof dto.currentPassword !== 'string' || !await bcrypt.compare(dto.currentPassword, user.passwordHash)) throw new UnauthorizedException('Пароль не подтверждён');
         const blocked = await this.blockers(runner, true);
         if (blocked.length) throw new ConflictException({ message: 'Сначала передайте действующие обязанности.', blockers: blocked });

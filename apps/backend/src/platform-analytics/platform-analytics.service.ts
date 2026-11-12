@@ -52,26 +52,26 @@ export class PlatformAnalyticsService {
     private readonly telemetry: TelemetryService,
   ) {}
 
-  private async analyticsAccess(universityId?: string): Promise<Access> {
+  private async analyticsAccess(organizationId?: string): Promise<Access> {
     const access = await this.platform.require('analytics.read');
-    if (universityId) this.platform.assertUniversityScope(access, universityId);
+    if (organizationId) this.platform.assertUniversityScope(access, organizationId);
     return access;
   }
 
-  private async telemetryAccess(universityId?: string): Promise<Access> {
+  private async telemetryAccess(organizationId?: string): Promise<Access> {
     const access = await this.platform.require('telemetry.read');
-    if (universityId) this.platform.assertUniversityScope(access, universityId);
+    if (organizationId) this.platform.assertUniversityScope(access, organizationId);
     return access;
   }
 
   async overview(query: AnalyticsOverviewQueryDto) {
-    const access = await this.analyticsAccess(query.universityId);
+    const access = await this.analyticsAccess(query.organizationId);
     const range = rangeOf(query.from, query.to, query.granularity);
-    const from = range.from, to = range.to, uni = query.universityId ?? null;
-    const uniFilter = uni ? ' AND "universityId"=$3' : '';
+    const from = range.from, to = range.to, uni = query.organizationId ?? null;
+    const uniFilter = uni ? ' AND "organizationId"=$3' : '';
     const base = [from, to, ...(uni ? [uni] : [])];
     const seriesParams = [from, to, range.granularity, ...(uni ? [uni] : [])];
-    const seriesUni = uni ? ' AND "universityId"=$4' : '';
+    const seriesUni = uni ? ' AND "organizationId"=$4' : '';
 
     const [series, totals, dimensions, roles, universities, features, paths, categories, funnel, collection] = await Promise.all([
       this.db.query(`
@@ -138,12 +138,12 @@ export class PlatformAnalyticsService {
         ORDER BY dimension, sessions DESC`, base),
       // Roles are a whole-population distribution: only the university scope is
       // a bind parameter, the date range has no placeholder in this query.
-      this.db.query(`SELECT role AS key, count(*)::int AS users FROM users WHERE true${uni ? ' AND "universityId"=$1' : ''} GROUP BY role ORDER BY users DESC`, uni ? [uni] : []),
+      this.db.query(`SELECT role AS key, count(*)::int AS users FROM users WHERE true${uni ? ' AND "organizationId"=$1' : ''} GROUP BY role ORDER BY users DESC`, uni ? [uni] : []),
       this.db.query(`
         SELECT u.id, u.name, u.city, count(DISTINCT s."userId")::int AS users, count(s.id)::int AS sessions,
           max(s."lastSeenAt") AS "lastSeenAt"
         FROM universities u
-        LEFT JOIN user_sessions s ON s."universityId"=u.id AND s."createdAt">=$1 AND s."createdAt"<$2
+        LEFT JOIN user_sessions s ON s."organizationId"=u.id AND s."createdAt">=$1 AND s."createdAt"<$2
         WHERE ($3::uuid IS NULL OR u.id=$3)
         GROUP BY u.id, u.name, u.city HAVING count(s.id)>0
         ORDER BY sessions DESC LIMIT 50`, [from, to, uni]),
@@ -243,16 +243,16 @@ export class PlatformAnalyticsService {
         'Удаление аккаунта удаляет его сессии и технические события; агрегаты прошлых периодов могут измениться.',
         'Технические события хранятся 180 дней, входы и сессии — 400 дней, затем удаляются автоматически.',
       ],
-      scope: { universityIds: access.universityIds },
+      scope: { organizationIds: access.organizationIds },
     };
   }
 
   async events(query: TelemetryEventQueryDto) {
-    await this.telemetryAccess(query.universityId);
+    await this.telemetryAccess(query.organizationId);
     const range = rangeOf(query.from, query.to);
     const params: unknown[] = [range.from, range.to];
     const filters: string[] = ['e."createdAt">=$1', 'e."createdAt"<$2'];
-    if (query.universityId) { params.push(query.universityId); filters.push(`e."universityId"=$${params.length}`); }
+    if (query.organizationId) { params.push(query.organizationId); filters.push(`e."organizationId"=$${params.length}`); }
     for (const [column, value] of [['category', query.category], ['source', query.source], ['severity', query.severity], ['name', query.name], ['userId', query.userId]] as const) {
       if (!value) continue;
       params.push(value);
@@ -267,7 +267,7 @@ export class PlatformAnalyticsService {
     const totalRows = await this.db.query(`SELECT count(*)::int AS total FROM platform_events e WHERE ${where}`, countParams);
     params.push(query.limit, (query.page - 1) * query.limit);
     const rows = await this.db.query(`
-      SELECT e.id, e.source, e.category, e.name, e.severity, e."userId", e."universityId", e."sessionId",
+      SELECT e.id, e.source, e.category, e.name, e.severity, e."userId", e."organizationId", e."sessionId",
         e.method, e.path, e."statusCode", e."durationMs", e.ip, e."userAgent", e.metadata, e."createdAt",
         u.email, u."firstName", u."lastName", u.role
       FROM platform_events e LEFT JOIN users u ON u.id=e."userId"
@@ -277,7 +277,7 @@ export class PlatformAnalyticsService {
     return {
       data: rows.map((row: Record<string, unknown>) => ({
         id: row.id, source: row.source, category: row.category, name: row.name, severity: row.severity,
-        userId: row.userId, universityId: row.universityId, sessionId: row.sessionId,
+        userId: row.userId, organizationId: row.organizationId, sessionId: row.sessionId,
         method: row.method, path: row.path, statusCode: row.statusCode, durationMs: row.durationMs,
         ip: row.ip, userAgent: row.userAgent, metadata: row.metadata, createdAt: iso(row.createdAt),
         user: row.email ? { id: row.userId, email: row.email, firstName: row.firstName, lastName: row.lastName, role: row.role } : null,
@@ -287,11 +287,11 @@ export class PlatformAnalyticsService {
   }
 
   async eventFacets(query: TelemetryEventQueryDto) {
-    await this.telemetryAccess(query.universityId);
+    await this.telemetryAccess(query.organizationId);
     const range = rangeOf(query.from, query.to);
     const params: unknown[] = [range.from, range.to];
     const filters = ['"createdAt">=$1', '"createdAt"<$2'];
-    if (query.universityId) { params.push(query.universityId); filters.push(`"universityId"=$${params.length}`); }
+    if (query.organizationId) { params.push(query.organizationId); filters.push(`"organizationId"=$${params.length}`); }
     const where = filters.join(' AND ');
     const [categories, sources, severities, names] = await Promise.all([
       this.db.query(`SELECT category AS key, count(*)::int AS count FROM platform_events WHERE ${where} GROUP BY category ORDER BY count DESC`, params),
@@ -303,7 +303,7 @@ export class PlatformAnalyticsService {
   }
 
   async users(query: MonitoredUserQueryDto) {
-    const access = await this.telemetryAccess(query.universityId);
+    const access = await this.telemetryAccess(query.organizationId);
     const params: unknown[] = [];
     const filters: string[] = ['1=1'];
     if (query.q?.trim()) {
@@ -312,21 +312,21 @@ export class PlatformAnalyticsService {
     }
     if (query.role) { params.push(query.role); filters.push(`u.role=$${params.length}`); }
     if (query.status) filters.push(query.status === 'active' ? 'u."isActive"' : 'NOT u."isActive"');
-    if (query.universityId) { params.push(query.universityId); filters.push(`u."universityId"=$${params.length}`); }
-    if (access.universityIds !== null) {
-      if (!access.universityIds.length) filters.push('1=0');
-      else { params.push(access.universityIds); filters.push(`u."universityId"=ANY($${params.length}::uuid[])`); }
+    if (query.organizationId) { params.push(query.organizationId); filters.push(`u."organizationId"=$${params.length}`); }
+    if (access.organizationIds !== null) {
+      if (!access.organizationIds.length) filters.push('1=0');
+      else { params.push(access.organizationIds); filters.push(`u."organizationId"=ANY($${params.length}::uuid[])`); }
     }
     const where = filters.join(' AND ');
     const countRows = await this.db.query(`SELECT count(*)::int AS total FROM users u WHERE ${where}`, params);
     const listParams = [...params, query.limit, (query.page - 1) * query.limit];
     const rows = await this.db.query(`
-      SELECT u.id, u.email, u."firstName", u."lastName", u.phone, u.role, u."universityId", u."isActive",
+      SELECT u.id, u.email, u."firstName", u."lastName", u.phone, u.role, u."organizationId", u."isActive",
         u."lastLoginAt", u."createdAt", un.name AS "universityName", un.city AS "universityCity",
         s."lastSeenAt", COALESCE(s."activeSessions",0)::int AS "activeSessions", COALESCE(s."sessionCount",0)::int AS "sessionCount",
         COALESCE(a."loginCount",0)::int AS "loginCount", a."lastAuthAt"
       FROM users u
-      LEFT JOIN universities un ON un.id=u."universityId"
+      LEFT JOIN universities un ON un.id=u."organizationId"
       LEFT JOIN LATERAL (
         SELECT max("lastSeenAt") AS "lastSeenAt",
           count(*) FILTER (WHERE "revokedAt" IS NULL AND "expiresAt">now())::int AS "activeSessions",
@@ -344,7 +344,7 @@ export class PlatformAnalyticsService {
     return {
       data: rows.map((row: Record<string, unknown>) => ({
         id: row.id, email: row.email, firstName: row.firstName, lastName: row.lastName, phone: row.phone,
-        role: row.role, universityId: row.universityId, isActive: row.isActive,
+        role: row.role, organizationId: row.organizationId, isActive: row.isActive,
         lastLoginAt: iso(row.lastLoginAt), createdAt: iso(row.createdAt),
         university: row.universityName ? { name: row.universityName, city: row.universityCity } : null,
         lastSeenAt: iso(row.lastSeenAt), lastAuthAt: iso(row.lastAuthAt),
@@ -357,11 +357,11 @@ export class PlatformAnalyticsService {
   async userActivity(id: string) {
     const access = await this.telemetryAccess();
     const [user] = await this.db.query(`
-      SELECT u.id, u.email, u."firstName", u."lastName", u.phone, u.role, u."universityId", u."isActive",
+      SELECT u.id, u.email, u."firstName", u."lastName", u.phone, u.role, u."organizationId", u."isActive",
         u."lastLoginAt", u."createdAt", u."updatedAt", un.name AS "universityName", un.city AS "universityCity"
-      FROM users u LEFT JOIN universities un ON un.id=u."universityId" WHERE u.id=$1`, [id]);
+      FROM users u LEFT JOIN universities un ON un.id=u."organizationId" WHERE u.id=$1`, [id]);
     if (!user) throw new NotFoundException('Аккаунт не найден.');
-    this.platform.assertUniversityScope(access, user.universityId);
+    this.platform.assertUniversityScope(access, user.organizationId);
     const [sessions, authEvents, events, summary] = await Promise.all([
       this.db.query(`SELECT id, client, device, os, browser, ip, "userAgent", "createdAt", "lastSeenAt", "expiresAt", "revokedAt", "revokeReason"
         FROM user_sessions WHERE "userId"=$1 ORDER BY "lastSeenAt" DESC LIMIT 50`, [id]),
@@ -384,7 +384,7 @@ export class PlatformAnalyticsService {
     return {
       user: {
         id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, phone: user.phone,
-        role: user.role, universityId: user.universityId, isActive: user.isActive,
+        role: user.role, organizationId: user.organizationId, isActive: user.isActive,
         lastLoginAt: iso(user.lastLoginAt), createdAt: iso(user.createdAt), updatedAt: iso(user.updatedAt),
         university: user.universityName ? { name: user.universityName, city: user.universityCity } : null,
       },
@@ -402,17 +402,17 @@ export class PlatformAnalyticsService {
   }
 
   async sessions(query: SessionQueryDto) {
-    const access = await this.telemetryAccess(query.universityId);
+    const access = await this.telemetryAccess(query.organizationId);
     const params: unknown[] = [];
     const filters = ['1=1'];
     if (query.userId) { params.push(query.userId); filters.push(`s."userId"=$${params.length}`); }
     if (query.client) { params.push(query.client); filters.push(`s.client=$${params.length}`); }
-    if (query.universityId) { params.push(query.universityId); filters.push(`s."universityId"=$${params.length}`); }
+    if (query.organizationId) { params.push(query.organizationId); filters.push(`s."organizationId"=$${params.length}`); }
     if (query.active === 'true') filters.push(`s."revokedAt" IS NULL AND s."expiresAt">now()`);
     if (query.active === 'false') filters.push(`(s."revokedAt" IS NOT NULL OR s."expiresAt"<=now())`);
-    if (access.universityIds !== null) {
-      if (!access.universityIds.length) filters.push('1=0');
-      else { params.push(access.universityIds); filters.push(`s."universityId"=ANY($${params.length}::uuid[])`); }
+    if (access.organizationIds !== null) {
+      if (!access.organizationIds.length) filters.push('1=0');
+      else { params.push(access.organizationIds); filters.push(`s."organizationId"=ANY($${params.length}::uuid[])`); }
     }
     const where = filters.join(' AND ');
     const countRows = await this.db.query(`SELECT count(*)::int AS total FROM user_sessions s WHERE ${where}`, params);
@@ -436,19 +436,19 @@ export class PlatformAnalyticsService {
 
   async revokeSession(id: string, reason: string, context: { ip?: string; userAgent?: string }) {
     const access = await this.platform.require('accounts.write');
-    const [session] = await this.db.query('SELECT id, "userId", "universityId" FROM user_sessions WHERE id=$1', [id]);
+    const [session] = await this.db.query('SELECT id, "userId", "organizationId" FROM user_sessions WHERE id=$1', [id]);
     if (!session) throw new NotFoundException('Сессия не найдена.');
-    this.platform.assertUniversityScope(access, session.universityId);
+    this.platform.assertUniversityScope(access, session.organizationId);
     const changed = await this.telemetry.revokeSession(id, access.actorId, reason);
     if (changed) {
       await this.db.getRepository(AuditLog).save({
         userId: access.actorId, action: 'platform.session.revoked', entity: 'platform', entityId: session.userId,
-        newValues: { sessionId: id, targetUserId: session.userId, universityId: session.universityId ?? null, reason: reason.trim(), result: 'session_revoked' },
+        newValues: { sessionId: id, targetUserId: session.userId, organizationId: session.organizationId ?? null, reason: reason.trim(), result: 'session_revoked' },
         ...(context.ip ? { ip: context.ip } : {}), ...(context.userAgent ? { userAgent: context.userAgent.slice(0, 512) } : {}),
       });
       await this.telemetry.recordEvent({
         source: 'backend', category: 'admin', name: 'admin.session_revoked', severity: 'warning',
-        userId: access.actorId, universityId: session.universityId ?? null, sessionId: id,
+        userId: access.actorId, organizationId: session.organizationId ?? null, sessionId: id,
         ip: context.ip ?? null, userAgent: context.userAgent ?? null,
         metadata: { targetUserId: session.userId, reason: reason.trim() },
       });
@@ -458,18 +458,18 @@ export class PlatformAnalyticsService {
 
   async revokeUserSessions(userId: string, reason: string, context: { ip?: string; userAgent?: string }) {
     const access = await this.platform.require('accounts.write');
-    const [user] = await this.db.query('SELECT id, "universityId" FROM users WHERE id=$1', [userId]);
+    const [user] = await this.db.query('SELECT id, "organizationId" FROM users WHERE id=$1', [userId]);
     if (!user) throw new NotFoundException('Аккаунт не найден.');
-    this.platform.assertUniversityScope(access, user.universityId);
+    this.platform.assertUniversityScope(access, user.organizationId);
     const revoked = await this.telemetry.revokeAllForUser(userId, access.actorId, reason);
     await this.db.getRepository(AuditLog).save({
       userId: access.actorId, action: 'platform.account.sessions_revoked', entity: 'platform', entityId: userId,
-      newValues: { targetUserId: userId, universityId: user.universityId ?? null, reason: reason.trim(), result: 'sessions_revoked', revoked },
+      newValues: { targetUserId: userId, organizationId: user.organizationId ?? null, reason: reason.trim(), result: 'sessions_revoked', revoked },
       ...(context.ip ? { ip: context.ip } : {}), ...(context.userAgent ? { userAgent: context.userAgent.slice(0, 512) } : {}),
     });
     await this.telemetry.recordEvent({
       source: 'backend', category: 'admin', name: 'admin.sessions_revoked', severity: 'warning',
-      userId: access.actorId, universityId: user.universityId ?? null,
+      userId: access.actorId, organizationId: user.organizationId ?? null,
       ip: context.ip ?? null, userAgent: context.userAgent ?? null,
       metadata: { targetUserId: userId, reason: reason.trim(), revoked },
     });

@@ -37,7 +37,7 @@ export interface User {
   firstName: string;
   lastName: string;
   role: string;
-  universityId: string;
+  organizationId: string;
   isActive: boolean;
 }
 

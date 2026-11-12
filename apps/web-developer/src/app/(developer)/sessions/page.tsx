@@ -35,7 +35,7 @@ export default function PlatformSessionsPage() {
   const [search, setSearch] = useState('');
   const [client, setClient] = useState('');
   const [active, setActive] = useState('true');
-  const [universityId, setUniversityId] = useState('');
+  const [organizationId, setOrganizationId] = useState('');
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<UserSession | null>(null);
   const [reason, setReason] = useState('');
@@ -62,9 +62,9 @@ export default function PlatformSessionsPage() {
     if (effectiveUserId) params.set('userId', effectiveUserId);
     if (client) params.set('client', client);
     if (active) params.set('active', active);
-    if (universityId) params.set('universityId', universityId);
+    if (organizationId) params.set('organizationId', organizationId);
     return `/platform/sessions?${params.toString()}`;
-  }, [active, client, effectiveUserId, page, universityId]);
+  }, [active, client, effectiveUserId, page, organizationId]);
 
   const sessions = useResource<SessionPage>(path, 30_000);
   const forbidden = sessions.error.toLowerCase().includes('доступ') || sessions.error.toLowerCase().includes('разреш');
@@ -145,7 +145,7 @@ export default function PlatformSessionsPage() {
             <option value="">Все</option>
             <option value="false">Завершённые</option>
           </Select>
-          {!!universities.data?.data.length && <Select label="Университет" value={universityId} onChange={event => { setUniversityId(event.target.value); setPage(1); }}><option value="">Все доступные</option>{universities.data.data.map(university => <option key={university.id} value={university.id}>{university.name}</option>)}</Select>}
+          {!!universities.data?.data.length && <Select label="Университет" value={organizationId} onChange={event => { setOrganizationId(event.target.value); setPage(1); }}><option value="">Все доступные</option>{universities.data.data.map(university => <option key={university.id} value={university.id}>{university.name}</option>)}</Select>}
         </div>
 
         {notice && <p role="status" className="rounded-lg border border-[var(--color-border)] bg-[var(--color-brand-soft)] p-3 text-sm text-[var(--color-brand-strong)]">{notice}</p>}

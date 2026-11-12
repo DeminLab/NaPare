@@ -39,13 +39,13 @@ const writeTables: Partial<Record<PlatformPermission, string[]>> = {
 
 export const PLATFORM_TENANT_TABLES = [...new Set(Object.values(readTables).flat())];
 
-export function platformDatabaseGrants(permission: PlatformPermission, universityIds: string[] | null): TenantDatabaseGrant[] {
+export function platformDatabaseGrants(permission: PlatformPermission, organizationIds: string[] | null): TenantDatabaseGrant[] {
   const domain = permission.slice(0, permission.lastIndexOf('.'));
   const readingPermission = `${domain}.read` as PlatformPermission;
   const reading = readTables[permission] ?? readTables[readingPermission] ?? [];
   const writing = writeTables[permission] ?? [];
   return [
-    ...(reading.length ? [{ tables: reading, universityIds, replaceActor: true }] : []),
-    ...(writing.length ? [{ tables: writing, universityIds, write: true, replaceActor: true }] : []),
+    ...(reading.length ? [{ tables: reading, organizationIds, replaceActor: true }] : []),
+    ...(writing.length ? [{ tables: writing, organizationIds, write: true, replaceActor: true }] : []),
   ];
 }

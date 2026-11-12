@@ -12,7 +12,7 @@ export class ProductAnalyticsInterceptor implements NestInterceptor {
     if(context.getType()!=='http')return next.handle();
     const request=context.switchToHttp().getRequest<{user?:AuthenticatedUser;originalUrl?:string;url?:string}>();
     const actor=request.user;
-    if(!actor?.universityId||!qualifiesForProductActivity(request.originalUrl||request.url||'',actor.role)||!this.analytics.enabledFor(actor.universityId))return next.handle();
+    if(!actor?.organizationId||!qualifiesForProductActivity(request.originalUrl||request.url||'',actor.role)||!this.analytics.enabledFor(actor.organizationId))return next.handle();
     return next.handle().pipe(mergeMap(async value=>{
       const response=context.switchToHttp().getResponse<{statusCode:number}>();
       if(response.statusCode<200||response.statusCode>=300)return value;

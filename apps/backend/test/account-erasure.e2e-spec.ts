@@ -44,23 +44,23 @@ suite('Account erasure: local private data removed, individual archive retained'
     }
     await f.db.getRepository(User).update(f.users.student.id, { phone: '+70000000000', avatarUrl: 'https://example.test/private-avatar.png', maxUserId: 'private-max-id', telegramUserId: 'private-telegram-id', sourceTeacherId: 'private-source-teacher' });
     // A reserved/predictable email must not let another account prevent self-erasure.
-    await f.db.getRepository(User).save({ email: `deleted-${f.users.student.id}@account.invalid`, passwordHash: f.users.peer.passwordHash, firstName: 'Синтетический', lastName: 'Резерв', role: UserRole.EMPLOYER, universityId: null });
+    await f.db.getRepository(User).save({ email: `deleted-${f.users.student.id}@account.invalid`, passwordHash: f.users.peer.passwordHash, firstName: 'Синтетический', lastName: 'Резерв', role: UserRole.EMPLOYER, organizationId: null });
     await f.db.getRepository(PersonalLessonNote).save([
-      { userId: f.users.student.id, universityId: f.uni.id, pairSpaceId: randomUUID(), content: 'OWN_PRIVATE_NOTE' },
-      { userId: f.users.student.id, universityId: f.otherUni.id, pairSpaceId: randomUUID(), content: 'OWN_OLD_UNIVERSITY_NOTE' },
-      { userId: f.users.peer.id, universityId: f.uni.id, pairSpaceId: randomUUID(), content: 'KEEP_PEER_NOTE' },
+      { userId: f.users.student.id, organizationId: f.uni.id, pairSpaceId: randomUUID(), content: 'OWN_PRIVATE_NOTE' },
+      { userId: f.users.student.id, organizationId: f.otherUni.id, pairSpaceId: randomUUID(), content: 'OWN_OLD_UNIVERSITY_NOTE' },
+      { userId: f.users.peer.id, organizationId: f.uni.id, pairSpaceId: randomUUID(), content: 'KEEP_PEER_NOTE' },
     ]);
     await f.db.getRepository(DeviceToken).save({ userId: f.users.student.id, token: 'synthetic-private-push-token', platform: 'android', provider: 'rustore' });
-    const space = await f.db.getRepository(PairSpace).save({ universityId: f.uni.id, lessonId: f.lesson.id, subject: 'Учебный архив', date: new Date(), pairNumber: 1 });
+    const space = await f.db.getRepository(PairSpace).save({ organizationId: f.uni.id, lessonId: f.lesson.id, subject: 'Учебный архив', date: new Date(), pairNumber: 1 });
     await f.db.getRepository(DiscussionMessage).save([
       { pairSpaceId: space.id, userId: f.users.student.id, text: 'PRIVATE_CONTACT_IN_CHAT' },
       { pairSpaceId: space.id, userId: f.users.peer.id, text: 'KEEP_PEER_MESSAGE' },
     ]);
     await f.db.getRepository(FileAttachment).save({ pairSpaceId: space.id, uploadedBy: f.users.student.id, fileUrl: 'https://example.test/private-name.pdf', fileName: 'private-name.pdf', fileType: 'pdf', size: 10 });
-    await f.db.getRepository(AcademicIdentity).save({ universityId: f.otherUni.id, userId: f.users.student.id, sourceBaseUrl: 'https://moodle.example.test/', externalUserId: '100', linkedBy: f.users.admin.id });
+    await f.db.getRepository(AcademicIdentity).save({ organizationId: f.otherUni.id, userId: f.users.student.id, sourceBaseUrl: 'https://moodle.example.test/', externalUserId: '100', linkedBy: f.users.admin.id });
     absenceId = (await f.makeAbsence(f.users.student)).id;
-    await f.db.getRepository(EventRecord).save({ id: randomUUID(), universityId: f.otherUni.id, type: 'absence.created', actor: { id: f.users.student.id, type: 'user' }, timestamp: new Date(), target: { type: 'absence', id: absenceId }, payload: { privateText: 'PRIVATE_EVENT_SENTINEL' }, priority: 'normal' });
-    await f.db.getRepository(AttendanceRecord).save({ universityId: f.uni.id, studentId: f.users.student.id, lessonId: f.lesson.id, status: 'present', markedById: f.users.teacher.id });
+    await f.db.getRepository(EventRecord).save({ id: randomUUID(), organizationId: f.otherUni.id, type: 'absence.created', actor: { id: f.users.student.id, type: 'user' }, timestamp: new Date(), target: { type: 'absence', id: absenceId }, payload: { privateText: 'PRIVATE_EVENT_SENTINEL' }, priority: 'normal' });
+    await f.db.getRepository(AttendanceRecord).save({ organizationId: f.uni.id, studentId: f.users.student.id, lessonId: f.lesson.id, status: 'present', markedById: f.users.teacher.id });
   }, 90000);
   afterAll(async () => { await f?.app.close(); }, 30000);
 
@@ -105,17 +105,17 @@ suite('Account erasure: local private data removed, individual archive retained'
     expect(await f.db.getRepository(PersonalLessonNote).countBy({ userId: f.users.peer.id })).toBe(1);
     expect(await f.db.getRepository(Absence).findOneBy({ id: absenceId })).toMatchObject({ studentId: user.id });
     expect(await f.db.getRepository(AttendanceRecord).findOneBy({ studentId: user.id })).toMatchObject({ status: 'present' });
-    expect(await f.db.getRepository(EventRecord).findOneBy({ universityId: f.otherUni.id })).toMatchObject({ actor: { type: 'user', id: user.id }, payload: { redacted: true } });
+    expect(await f.db.getRepository(EventRecord).findOneBy({ organizationId: f.otherUni.id })).toMatchObject({ actor: { type: 'user', id: user.id }, payload: { redacted: true } });
     await http().get('/api/v1/users/me').auth(tokens.student, { type: 'bearer' }).expect(401);
     await http().post('/api/v1/auth/refresh').send({ refreshToken: refresh.student }).expect(401);
     await http().post('/api/v1/auth/login').send({ email: f.users.student.email, password: f.password }).expect(401);
   });
   it('cannot reactivate the tombstone or recreate private data through a stale actor or background write', async () => {
     await expect(f.db.getRepository(User).update(f.users.student.id, { isActive: true })).rejects.toMatchObject({ driverError: { code: '42501' } });
-    await expect(f.db.getRepository(PersonalLessonNote).save({ userId: f.users.student.id, universityId: f.uni.id, pairSpaceId: randomUUID(), content: 'MUST_NOT_RETURN' })).rejects.toMatchObject({ driverError: { code: '42501' } });
+    await expect(f.db.getRepository(PersonalLessonNote).save({ userId: f.users.student.id, organizationId: f.uni.id, pairSpaceId: randomUUID(), content: 'MUST_NOT_RETURN' })).rejects.toMatchObject({ driverError: { code: '42501' } });
     const tenant = f.app.get(TenantContext), source = f.app.get(DataSource);
     await tenant.runInRequest(async () => {
-      tenant.setUser({ id: f.users.student.id, email: f.users.student.email, role: UserRole.STUDENT, universityId: f.uni.id });
+      tenant.setUser({ id: f.users.student.id, email: f.users.student.email, role: UserRole.STUDENT, organizationId: f.uni.id });
       await expect(source.query('UPDATE absences SET comment=$1 WHERE id=$2', ['STALE_ACTOR_WRITE', absenceId])).rejects.toMatchObject({ driverError: { code: '42501' } });
     });
     const runner = f.db.createQueryRunner();
@@ -162,13 +162,13 @@ suite('Account erasure: local private data removed, individual archive retained'
     await preview('legacy').expect(200).expect(({ body }) => expect(body.blockers).toEqual([]));
   });
   it('blocks deleting the sole company owner and permits a career member to delete their own account', async () => {
-    await f.db.getRepository(User).update(f.users.outsider.id, { role: UserRole.EMPLOYER, universityId: null });
-    await f.db.getRepository(User).update(f.users.otherStudent.id, { role: UserRole.EMPLOYER, universityId: null });
+    await f.db.getRepository(User).update(f.users.outsider.id, { role: UserRole.EMPLOYER, organizationId: null });
+    await f.db.getRepository(User).update(f.users.otherStudent.id, { role: UserRole.EMPLOYER, organizationId: null });
     for (const actor of ['outsider', 'otherStudent']) tokens[actor] = (await http().post('/api/v1/auth/login').send({ email: f.users[actor].email, password: f.password }).expect(200)).body.accessToken;
     const company = await f.db.getRepository(CareerCompany).save({ name: 'Синтетическая компания', createdBy: f.users.outsider.id });
     await f.db.getRepository(CareerMembership).save([
-      { companyId: company.id, universityId: null, userId: f.users.outsider.id, role: 'company_owner' },
-      { companyId: company.id, universityId: null, userId: f.users.otherStudent.id, role: 'company_member' },
+      { companyId: company.id, organizationId: null, userId: f.users.outsider.id, role: 'company_owner' },
+      { companyId: company.id, organizationId: null, userId: f.users.otherStudent.id, role: 'company_member' },
     ]);
     // Synthetic stored payment only: no bank call, charge or refund occurs in this suite.
     const payment = await f.db.getRepository(CareerPayment).save({ companyId: company.id, createdBy: f.users.otherStudent.id, idempotencyKey: randomUUID(), product: 'company_basic', receiptEmail: 'member@finance.example.test', amountMinor: 100, currency: 'RUB', state: 'succeeded' });
@@ -184,10 +184,10 @@ suite('Account erasure: local private data removed, individual archive retained'
     const writer = source.createQueryRunner();
     let deletion: Promise<request.Response> | undefined;
     await tenant.runInRequest(async () => {
-      tenant.setUser({ id: f.users.peer.id, email: f.users.peer.email, role: UserRole.STUDENT, universityId: f.uni.id });
+      tenant.setUser({ id: f.users.peer.id, email: f.users.peer.email, role: UserRole.STUDENT, organizationId: f.uni.id });
       try {
         await writer.connect(); await writer.startTransaction();
-        await writer.query('INSERT INTO personal_lesson_notes ("universityId","pairSpaceId","userId",content) VALUES ($1,$2,$3,$4)', [f.uni.id, randomUUID(), f.users.peer.id, 'IN_FLIGHT_PRIVATE_NOTE']);
+        await writer.query('INSERT INTO personal_lesson_notes ("organizationId","pairSpaceId","userId",content) VALUES ($1,$2,$3,$4)', [f.uni.id, randomUUID(), f.users.peer.id, 'IN_FLIGHT_PRIVATE_NOTE']);
         deletion = remove('peer', confirmed()).then(response => response);
         let blocked = false;
         for (let attempt = 0; attempt < 100; attempt++) {

@@ -46,23 +46,23 @@ export class PlatformRecordsService {
   async users(query: PlatformPersonalRecordsQueryDto, context: RequestAuditContext = {}) {
     const access = await this.platform.require('personal-data.read');
     const qb = this.db.getRepository(User).createQueryBuilder('u')
-      .leftJoin(University, 'university', 'university.id = u.universityId')
+      .leftJoin(University, 'university', 'university.id = u.organizationId')
       .select('u.id', 'id')
       .addSelect('u.email', 'email')
       .addSelect('u.firstName', 'firstName')
       .addSelect('u.lastName', 'lastName')
       .addSelect('u.role', 'role')
-      .addSelect('u.universityId', 'universityId')
+      .addSelect('u.organizationId', 'organizationId')
       .addSelect('university.name', 'universityName')
       .addSelect('u.groupId', 'groupId')
       .addSelect('u.isActive', 'isActive');
-    if (query.universityId) {
-      this.platform.assertUniversityScope(access, query.universityId);
-      qb.andWhere('u.universityId = :universityId', { universityId: query.universityId });
+    if (query.organizationId) {
+      this.platform.assertUniversityScope(access, query.organizationId);
+      qb.andWhere('u.organizationId = :organizationId', { organizationId: query.organizationId });
     }
-    if (!access.owner && access.universityIds !== null) {
-      if (!access.universityIds.length) qb.andWhere('1 = 0');
-      else qb.andWhere('u.universityId IN (:...allowedUniversityIds)', { allowedUniversityIds: access.universityIds });
+    if (!access.owner && access.organizationIds !== null) {
+      if (!access.organizationIds.length) qb.andWhere('1 = 0');
+      else qb.andWhere('u.organizationId IN (:...allowedOrganizationIds)', { allowedOrganizationIds: access.organizationIds });
     }
     if (query.role) qb.andWhere('u.role = :role', { role: query.role });
     if (query.q?.trim()) this.applySearch(qb, query.q.trim());
@@ -75,7 +75,7 @@ export class PlatformRecordsService {
       entity: 'personal_data_user_search',
       entityId: 'search',
       newValues: {
-        universityId: query.universityId ?? null,
+        organizationId: query.organizationId ?? null,
         filters: { queryPresent: Boolean(query.q?.trim()), role: query.role ?? null, page: query.page, limit: query.limit },
         total,
         resultCount: data.length,
@@ -93,54 +93,54 @@ export class PlatformRecordsService {
     return this.db.transaction(async manager => {
       const user = await manager.findOne(User, {
         where: { id: userId },
-        select: ['id', 'email', 'firstName', 'lastName', 'role', 'universityId', 'groupId', 'isActive', 'createdAt', 'updatedAt'],
+        select: ['id', 'email', 'firstName', 'lastName', 'role', 'organizationId', 'groupId', 'isActive', 'createdAt', 'updatedAt'],
       });
       if (!user) throw new NotFoundException('Пользователь не найден.');
-      this.platform.assertUniversityScope(access, user.universityId);
+      this.platform.assertUniversityScope(access, user.organizationId);
 
       const [university, group, preferences, favorites, lessonNotes, homeworkProgress] = await Promise.all([
-        user.universityId ? manager.findOne(University, { where: { id: user.universityId }, select: ['id', 'name', 'city'] }) : null,
-        user.universityId && user.groupId
+        user.organizationId ? manager.findOne(University, { where: { id: user.organizationId }, select: ['id', 'name', 'city'] }) : null,
+        user.organizationId && user.groupId
           ? manager.getRepository(Group).createQueryBuilder('g').select(['g.id', 'g.name', 'g.externalId'])
-            .where('g.universityId = :universityId AND (g.id::text = :groupId OR g."externalId" = :groupId)', { universityId: user.universityId, groupId: user.groupId }).getOne()
+            .where('g.organizationId = :organizationId AND (g.id::text = :groupId OR g."externalId" = :groupId)', { organizationId: user.organizationId, groupId: user.groupId }).getOne()
           : null,
         manager.getRepository(NotificationPreference).createQueryBuilder('preference')
-          .innerJoin(University, 'university', 'university.id = preference.universityId')
+          .innerJoin(University, 'university', 'university.id = preference.organizationId')
           .where('preference.userId = :userId', { userId })
-          .andWhere(access.owner || access.universityIds === null ? '1 = 1' : access.universityIds.length ? 'preference.universityId IN (:...allowedUniversityIds)' : '1 = 0', { allowedUniversityIds: access.universityIds ?? [] })
+          .andWhere(access.owner || access.organizationIds === null ? '1 = 1' : access.organizationIds.length ? 'preference.organizationId IN (:...allowedOrganizationIds)' : '1 = 0', { allowedOrganizationIds: access.organizationIds ?? [] })
           .orderBy('preference.updatedAt', 'DESC').addOrderBy('preference.id', 'ASC').getMany(),
         manager.getRepository(Favorite).createQueryBuilder('favorite')
-          .innerJoin(University, 'university', 'university.id = favorite.universityId')
+          .innerJoin(University, 'university', 'university.id = favorite.organizationId')
           .where('favorite.userId = :userId', { userId })
-          .andWhere(access.owner || access.universityIds === null ? '1 = 1' : access.universityIds.length ? 'favorite.universityId IN (:...allowedUniversityIds)' : '1 = 0', { allowedUniversityIds: access.universityIds ?? [] })
+          .andWhere(access.owner || access.organizationIds === null ? '1 = 1' : access.organizationIds.length ? 'favorite.organizationId IN (:...allowedOrganizationIds)' : '1 = 0', { allowedOrganizationIds: access.organizationIds ?? [] })
           .orderBy('favorite.kind', 'ASC').addOrderBy('favorite.label', 'ASC').addOrderBy('favorite.id', 'ASC').getMany(),
         manager.getRepository(PersonalLessonNote).createQueryBuilder('note')
-          .innerJoin(PairSpace, 'pairSpace', 'pairSpace.id = note.pairSpaceId AND pairSpace.universityId = note.universityId')
-          .innerJoin(University, 'university', 'university.id = note.universityId')
-          .innerJoin(Lesson, 'lesson', 'lesson.id = pairSpace.lessonId AND lesson.universityId = pairSpace.universityId')
+          .innerJoin(PairSpace, 'pairSpace', 'pairSpace.id = note.pairSpaceId AND pairSpace.organizationId = note.organizationId')
+          .innerJoin(University, 'university', 'university.id = note.organizationId')
+          .innerJoin(Lesson, 'lesson', 'lesson.id = pairSpace.lessonId AND lesson.organizationId = pairSpace.organizationId')
           .where('note.userId = :userId', { userId })
-          .andWhere(access.owner || access.universityIds === null ? '1 = 1' : access.universityIds.length ? 'note.universityId IN (:...allowedUniversityIds)' : '1 = 0', { allowedUniversityIds: access.universityIds ?? [] })
-          .select('note.id', 'id').addSelect('note.universityId', 'universityId').addSelect('university.name', 'universityName').addSelect('note.pairSpaceId', 'pairSpaceId')
+          .andWhere(access.owner || access.organizationIds === null ? '1 = 1' : access.organizationIds.length ? 'note.organizationId IN (:...allowedOrganizationIds)' : '1 = 0', { allowedOrganizationIds: access.organizationIds ?? [] })
+          .select('note.id', 'id').addSelect('note.organizationId', 'organizationId').addSelect('university.name', 'universityName').addSelect('note.pairSpaceId', 'pairSpaceId')
           .addSelect('note.content', 'content').addSelect('note.createdAt', 'createdAt').addSelect('note.updatedAt', 'updatedAt')
           .addSelect('lesson.id', 'lessonId').addSelect('lesson.subject', 'lessonSubject').addSelect('lesson.startDate', 'lessonDate').addSelect('lesson.pairNumber', 'lessonPairNumber')
           .orderBy('note.updatedAt', 'DESC').addOrderBy('note.id', 'ASC').getRawMany<{
-            id: string; universityId: string; universityName: string; pairSpaceId: string; content: string; createdAt: Date; updatedAt: Date;
+            id: string; organizationId: string; universityName: string; pairSpaceId: string; content: string; createdAt: Date; updatedAt: Date;
             lessonId: string; lessonSubject: string; lessonDate: Date; lessonPairNumber: number;
           }>(),
         manager.getRepository(HomeworkProgress).createQueryBuilder('progress')
           .innerJoin(Homework, 'homework', 'homework.id = progress.homeworkId')
           .innerJoin(PairSpace, 'pairSpace', 'pairSpace.id = homework.pairSpaceId')
-          .innerJoin(Lesson, 'lesson', 'lesson.id = pairSpace.lessonId AND lesson.universityId = pairSpace.universityId')
-          .where('progress.studentId = :userId AND pairSpace.universityId = :universityId', { userId, universityId: user.universityId ?? '' })
-          .andWhere(access.owner || access.universityIds === null ? '1 = 1' : access.universityIds.length ? 'pairSpace.universityId IN (:...allowedUniversityIds)' : '1 = 0', { allowedUniversityIds: access.universityIds ?? [] })
+          .innerJoin(Lesson, 'lesson', 'lesson.id = pairSpace.lessonId AND lesson.organizationId = pairSpace.organizationId')
+          .where('progress.studentId = :userId AND pairSpace.organizationId = :organizationId', { userId, organizationId: user.organizationId ?? '' })
+          .andWhere(access.owner || access.organizationIds === null ? '1 = 1' : access.organizationIds.length ? 'pairSpace.organizationId IN (:...allowedOrganizationIds)' : '1 = 0', { allowedOrganizationIds: access.organizationIds ?? [] })
           .select('progress.id', 'id').addSelect('progress.homeworkId', 'homeworkId').addSelect('progress.state', 'state')
           .addSelect('progress.subtasks', 'subtasks').addSelect('progress.createdAt', 'createdAt').addSelect('progress.updatedAt', 'updatedAt')
           .addSelect('homework.title', 'homeworkTitle').addSelect('homework.deadline', 'homeworkDeadline')
-          .addSelect('pairSpace.id', 'pairSpaceId').addSelect('pairSpace.universityId', 'pairSpaceUniversityId')
+          .addSelect('pairSpace.id', 'pairSpaceId').addSelect('pairSpace.organizationId', 'pairSpaceOrganizationId')
           .addSelect('pairSpace.subject', 'pairSpaceSubject').addSelect('pairSpace.date', 'pairSpaceDate').addSelect('pairSpace.pairNumber', 'pairSpacePairNumber')
           .orderBy('progress.updatedAt', 'DESC').addOrderBy('progress.id', 'ASC').getRawMany<{
             id: string; homeworkId: string; state: HomeworkProgressState; subtasks: HomeworkProgressSubtask[]; createdAt: Date; updatedAt: Date;
-            homeworkTitle: string; homeworkDeadline: Date | null; pairSpaceId: string; pairSpaceUniversityId: string;
+            homeworkTitle: string; homeworkDeadline: Date | null; pairSpaceId: string; pairSpaceOrganizationId: string;
             pairSpaceSubject: string; pairSpaceDate: Date; pairSpacePairNumber: number;
           }>(),
       ]);
@@ -148,12 +148,12 @@ export class PlatformRecordsService {
       const normalizedNotes = lessonNotes.map(({ lessonId, lessonSubject, lessonDate, lessonPairNumber, ...note }) => ({
         ...note, lesson: { id: lessonId, subject: lessonSubject, date: lessonDate, pairNumber: lessonPairNumber },
       }));
-      const validProgress = homeworkProgress.map(({ homeworkTitle, homeworkDeadline, pairSpaceId, pairSpaceUniversityId, pairSpaceSubject, pairSpaceDate, pairSpacePairNumber, ...progress }) => ({
+      const validProgress = homeworkProgress.map(({ homeworkTitle, homeworkDeadline, pairSpaceId, pairSpaceOrganizationId, pairSpaceSubject, pairSpaceDate, pairSpacePairNumber, ...progress }) => ({
         ...progress,
         homework: { id: progress.homeworkId, title: homeworkTitle, deadline: homeworkDeadline },
-        pairSpace: { id: pairSpaceId, universityId: pairSpaceUniversityId, subject: pairSpaceSubject, date: pairSpaceDate, pairNumber: pairSpacePairNumber },
+        pairSpace: { id: pairSpaceId, organizationId: pairSpaceOrganizationId, subject: pairSpaceSubject, date: pairSpaceDate, pairNumber: pairSpacePairNumber },
       }));
-      const settings = preferences.map(({ id, userId: ownerId, universityId, updatedAt, ...values }) => ({ id, userId: ownerId, universityId, updatedAt, settings: values }));
+      const settings = preferences.map(({ id, userId: ownerId, organizationId, updatedAt, ...values }) => ({ id, userId: ownerId, organizationId, updatedAt, settings: values }));
 
       await manager.save(AuditLog, manager.create(AuditLog, {
         userId: access.actorId,
@@ -162,7 +162,7 @@ export class PlatformRecordsService {
         entityId: userId,
         newValues: {
           targetUserId: userId,
-          universityId: user.universityId,
+          organizationId: user.organizationId,
           sections,
           recordCounts: {
             notificationPreferences: preferences.length,
@@ -178,7 +178,7 @@ export class PlatformRecordsService {
       return {
         user: {
           id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role,
-          universityId: user.universityId, groupId: user.groupId, isActive: user.isActive,
+          organizationId: user.organizationId, groupId: user.groupId, isActive: user.isActive,
           createdAt: user.createdAt, updatedAt: user.updatedAt,
           university: university ? { id: university.id, name: university.name, city: university.city } : null,
           group: group ? { id: group.id, name: group.name, externalId: group.externalId } : user.groupId ? { id: null, name: user.groupId, externalId: user.groupId } : null,
@@ -211,15 +211,15 @@ export class PlatformRecordsService {
     this.assertTimeZone(patch.timeZone as string | null | undefined);
     return this.db.transaction(async manager => {
       const user = await this.lockUser(manager, userId);
-      await this.assertUserUniversity(manager, user, dto.universityId);
+      await this.assertUserUniversity(manager, user, dto.organizationId);
       const repository = manager.getRepository(NotificationPreference);
-      let record = await repository.findOne({ where: { userId, universityId: dto.universityId }, lock: { mode: 'pessimistic_write' } });
+      let record = await repository.findOne({ where: { userId, organizationId: dto.organizationId }, lock: { mode: 'pessimistic_write' } });
       const oldValues = record ? this.snapshot(record, Object.keys(patch)) : null;
-      if (!record) record = repository.create({ userId, universityId: dto.universityId });
+      if (!record) record = repository.create({ userId, organizationId: dto.organizationId });
       Object.assign(record, patch);
       this.assertQuietHours(record);
       record = await repository.save(record);
-      await this.audit(manager, access.actorId, 'notification_preferences', record.id, oldValues, { ...this.snapshot(record, Object.keys(patch)), reason: dto.reason.trim(), result: oldValues ? 'updated' : 'created', targetUserId: userId }, record.universityId, context);
+      await this.audit(manager, access.actorId, 'notification_preferences', record.id, oldValues, { ...this.snapshot(record, Object.keys(patch)), reason: dto.reason.trim(), result: oldValues ? 'updated' : 'created', targetUserId: userId }, record.organizationId, context);
       return this.preferenceResponse(record);
     });
   }
@@ -235,12 +235,12 @@ export class PlatformRecordsService {
       const user = await this.lockUser(manager, userId);
       const record = await manager.findOne(NotificationPreference, { where: { id, userId }, lock: { mode: 'pessimistic_write' } });
       if (!record) throw new NotFoundException('Настройки уведомлений не найдены.');
-      await this.assertStoredUniversity(manager, record.universityId);
+      await this.assertStoredUniversity(manager, record.organizationId);
       const oldValues = this.snapshot(record, Object.keys(patch));
       Object.assign(record, patch);
       this.assertQuietHours(record);
       const updated = await manager.save(NotificationPreference, record);
-      await this.audit(manager, access.actorId, 'notification_preferences', id, oldValues, { ...this.snapshot(updated, Object.keys(patch)), reason: dto.reason.trim(), result: 'updated', targetUserId: userId }, updated.universityId, context);
+      await this.audit(manager, access.actorId, 'notification_preferences', id, oldValues, { ...this.snapshot(updated, Object.keys(patch)), reason: dto.reason.trim(), result: 'updated', targetUserId: userId }, updated.organizationId, context);
       return this.preferenceResponse(updated);
     });
   }
@@ -252,10 +252,10 @@ export class PlatformRecordsService {
       const user = await this.lockUser(manager, userId);
       const record = await manager.findOne(NotificationPreference, { where: { id, userId }, lock: { mode: 'pessimistic_write' } });
       if (!record) throw new NotFoundException('Настройки уведомлений не найдены.');
-      await this.assertStoredUniversity(manager, record.universityId);
+      await this.assertStoredUniversity(manager, record.organizationId);
       const oldValues = this.snapshot(record, [...PREFERENCE_FIELDS]);
       await manager.remove(NotificationPreference, record);
-      await this.audit(manager, access.actorId, 'notification_preferences', id, oldValues, { reason: dto.reason.trim(), result: 'deleted', targetUserId: userId }, record.universityId, context);
+      await this.audit(manager, access.actorId, 'notification_preferences', id, oldValues, { reason: dto.reason.trim(), result: 'deleted', targetUserId: userId }, record.organizationId, context);
       return { deleted: true, id };
     });
   }
@@ -266,14 +266,14 @@ export class PlatformRecordsService {
     const values = this.normalizeFavorite(dto.kind, dto.externalId, dto.label);
     return this.db.transaction(async manager => {
       const user = await this.lockUser(manager, userId);
-      const universityId = await this.requireCurrentUniversity(manager, user);
+      const organizationId = await this.requireCurrentUniversity(manager, user);
       const repository = manager.getRepository(Favorite);
-      let record = await repository.findOne({ where: { userId, universityId, kind: dto.kind, externalId: values.externalId }, lock: { mode: 'pessimistic_write' } });
+      let record = await repository.findOne({ where: { userId, organizationId, kind: dto.kind, externalId: values.externalId }, lock: { mode: 'pessimistic_write' } });
       const oldValues = record ? this.snapshot(record, ['kind', 'externalId', 'label']) : null;
-      if (!record) record = repository.create({ userId, universityId, kind: dto.kind, ...values });
+      if (!record) record = repository.create({ userId, organizationId, kind: dto.kind, ...values });
       else Object.assign(record, values);
       record = await repository.save(record);
-      await this.audit(manager, access.actorId, 'favorite', record.id, oldValues, { ...this.snapshot(record, ['kind', 'externalId', 'label']), reason: dto.reason.trim(), result: oldValues ? 'updated' : 'created', targetUserId: userId }, record.universityId, context);
+      await this.audit(manager, access.actorId, 'favorite', record.id, oldValues, { ...this.snapshot(record, ['kind', 'externalId', 'label']), reason: dto.reason.trim(), result: oldValues ? 'updated' : 'created', targetUserId: userId }, record.organizationId, context);
       return record;
     });
   }
@@ -288,17 +288,17 @@ export class PlatformRecordsService {
       const user = await this.lockUser(manager, userId);
       const record = await manager.findOne(Favorite, { where: { id, userId }, lock: { mode: 'pessimistic_write' } });
       if (!record) throw new NotFoundException('Запись избранного не найдена.');
-      const universityId = record.universityId;
-      await this.assertStoredUniversity(manager, universityId);
+      const organizationId = record.organizationId;
+      await this.assertStoredUniversity(manager, organizationId);
       const kind = (supplied.kind ?? record.kind) as FavoriteKind;
       const normalized = this.normalizeFavorite(kind, String(supplied.externalId ?? record.externalId), String(supplied.label ?? record.label));
       const duplicate = await manager.getRepository(Favorite).createQueryBuilder('favorite')
-        .where('favorite.userId = :userId AND favorite.universityId = :universityId AND favorite.kind = :kind AND favorite.externalId = :externalId AND favorite.id != :id', { userId, universityId, kind, externalId: normalized.externalId, id }).getExists();
+        .where('favorite.userId = :userId AND favorite.organizationId = :organizationId AND favorite.kind = :kind AND favorite.externalId = :externalId AND favorite.id != :id', { userId, organizationId, kind, externalId: normalized.externalId, id }).getExists();
       if (duplicate) throw new ConflictException('Такой элемент уже есть в избранном пользователя.');
       const oldValues = this.snapshot(record, Object.keys(supplied));
       Object.assign(record, { kind, ...normalized });
       const updated = await manager.save(Favorite, record);
-      await this.audit(manager, access.actorId, 'favorite', id, oldValues, { ...this.snapshot(updated, Object.keys(supplied)), reason: dto.reason.trim(), result: 'updated', targetUserId: userId }, updated.universityId, context);
+      await this.audit(manager, access.actorId, 'favorite', id, oldValues, { ...this.snapshot(updated, Object.keys(supplied)), reason: dto.reason.trim(), result: 'updated', targetUserId: userId }, updated.organizationId, context);
       return updated;
     });
   }
@@ -310,11 +310,11 @@ export class PlatformRecordsService {
       const user = await this.lockUser(manager, userId);
       const record = await manager.findOne(Favorite, { where: { id, userId }, lock: { mode: 'pessimistic_write' } });
       if (!record) throw new NotFoundException('Запись избранного не найдена.');
-      const universityId = record.universityId;
-      await this.assertStoredUniversity(manager, universityId);
-      const oldValues = this.snapshot(record, ['universityId', 'kind', 'externalId', 'label']);
+      const organizationId = record.organizationId;
+      await this.assertStoredUniversity(manager, organizationId);
+      const oldValues = this.snapshot(record, ['organizationId', 'kind', 'externalId', 'label']);
       await manager.remove(Favorite, record);
-      await this.audit(manager, access.actorId, 'favorite', id, oldValues, { reason: dto.reason.trim(), result: 'deleted', targetUserId: userId }, record.universityId, context);
+      await this.audit(manager, access.actorId, 'favorite', id, oldValues, { reason: dto.reason.trim(), result: 'deleted', targetUserId: userId }, record.organizationId, context);
       return { deleted: true, id };
     });
   }
@@ -326,12 +326,12 @@ export class PlatformRecordsService {
       const user = await this.lockUser(manager, userId);
       const pairSpace = await this.assertUserPairSpace(manager, user, pairSpaceId);
       const repository = manager.getRepository(PersonalLessonNote);
-      let record = await repository.findOne({ where: { userId, pairSpaceId, universityId: pairSpace.universityId }, lock: { mode: 'pessimistic_write' } });
+      let record = await repository.findOne({ where: { userId, pairSpaceId, organizationId: pairSpace.organizationId }, lock: { mode: 'pessimistic_write' } });
       const oldValues = record ? this.snapshot(record, ['content']) : null;
-      if (!record) record = repository.create({ userId, universityId: pairSpace.universityId, pairSpaceId, content: dto.content });
+      if (!record) record = repository.create({ userId, organizationId: pairSpace.organizationId, pairSpaceId, content: dto.content });
       else record.content = dto.content;
       record = await repository.save(record);
-      await this.audit(manager, access.actorId, 'personal_lesson_note', record.id, oldValues, { content: record.content, reason: dto.reason.trim(), result: oldValues ? 'updated' : 'created', targetUserId: userId }, record.universityId, context);
+      await this.audit(manager, access.actorId, 'personal_lesson_note', record.id, oldValues, { content: record.content, reason: dto.reason.trim(), result: oldValues ? 'updated' : 'created', targetUserId: userId }, record.organizationId, context);
       return { ...record, lesson: await this.lessonSummary(manager, pairSpace) };
     });
   }
@@ -343,11 +343,11 @@ export class PlatformRecordsService {
       const user = await this.lockUser(manager, userId);
       const record = await manager.findOne(PersonalLessonNote, { where: { id, userId }, lock: { mode: 'pessimistic_write' } });
       if (!record) throw new NotFoundException('Личная заметка не найдена.');
-      const pairSpace = await this.assertStoredPairSpace(manager, record.pairSpaceId, record.universityId);
+      const pairSpace = await this.assertStoredPairSpace(manager, record.pairSpaceId, record.organizationId);
       const oldValues = this.snapshot(record, ['content']);
       record.content = dto.content;
       const updated = await manager.save(PersonalLessonNote, record);
-      await this.audit(manager, access.actorId, 'personal_lesson_note', id, oldValues, { content: updated.content, reason: dto.reason.trim(), result: 'updated', targetUserId: userId }, updated.universityId, context);
+      await this.audit(manager, access.actorId, 'personal_lesson_note', id, oldValues, { content: updated.content, reason: dto.reason.trim(), result: 'updated', targetUserId: userId }, updated.organizationId, context);
       return { ...updated, lesson: await this.lessonSummary(manager, pairSpace) };
     });
   }
@@ -359,10 +359,10 @@ export class PlatformRecordsService {
       const user = await this.lockUser(manager, userId);
       const record = await manager.findOne(PersonalLessonNote, { where: { id, userId }, lock: { mode: 'pessimistic_write' } });
       if (!record) throw new NotFoundException('Личная заметка не найдена.');
-      await this.assertStoredPairSpace(manager, record.pairSpaceId, record.universityId);
-      const oldValues = this.snapshot(record, ['universityId', 'pairSpaceId', 'content']);
+      await this.assertStoredPairSpace(manager, record.pairSpaceId, record.organizationId);
+      const oldValues = this.snapshot(record, ['organizationId', 'pairSpaceId', 'content']);
       await manager.remove(PersonalLessonNote, record);
-      await this.audit(manager, access.actorId, 'personal_lesson_note', id, oldValues, { reason: dto.reason.trim(), result: 'deleted', targetUserId: userId }, record.universityId, context);
+      await this.audit(manager, access.actorId, 'personal_lesson_note', id, oldValues, { reason: dto.reason.trim(), result: 'deleted', targetUserId: userId }, record.organizationId, context);
       return { deleted: true, id };
     });
   }
@@ -380,7 +380,7 @@ export class PlatformRecordsService {
       if (!record) record = repository.create({ studentId: userId, homeworkId, state: dto.state, subtasks: dto.subtasks });
       else Object.assign(record, { state: dto.state, subtasks: dto.subtasks });
       record = await repository.save(record);
-      await this.audit(manager, access.actorId, 'homework_progress', record.id, oldValues, { state: record.state, subtasks: record.subtasks as unknown as JsonValue, reason: dto.reason.trim(), result: oldValues ? 'updated' : 'created', targetUserId: userId }, user.universityId ?? undefined, context);
+      await this.audit(manager, access.actorId, 'homework_progress', record.id, oldValues, { state: record.state, subtasks: record.subtasks as unknown as JsonValue, reason: dto.reason.trim(), result: oldValues ? 'updated' : 'created', targetUserId: userId }, user.organizationId ?? undefined, context);
       return { ...record, homework: this.homeworkSummary(homework), pairSpace: this.pairSpaceSummary(homework.pairSpace) };
     });
   }
@@ -400,7 +400,7 @@ export class PlatformRecordsService {
       const oldValues = this.snapshot(record, Object.keys(patch));
       Object.assign(record, patch);
       const updated = await manager.save(HomeworkProgress, record);
-      await this.audit(manager, access.actorId, 'homework_progress', id, oldValues, { ...this.snapshot(updated, Object.keys(patch)), reason: dto.reason.trim(), result: 'updated', targetUserId: userId }, user.universityId ?? undefined, context);
+      await this.audit(manager, access.actorId, 'homework_progress', id, oldValues, { ...this.snapshot(updated, Object.keys(patch)), reason: dto.reason.trim(), result: 'updated', targetUserId: userId }, user.organizationId ?? undefined, context);
       return { ...updated, homework: this.homeworkSummary(homework), pairSpace: this.pairSpaceSummary(homework.pairSpace) };
     });
   }
@@ -415,7 +415,7 @@ export class PlatformRecordsService {
       await this.assertStoredHomework(manager, record.homeworkId);
       const oldValues = this.snapshot(record, ['homeworkId', 'state', 'subtasks']);
       await manager.remove(HomeworkProgress, record);
-      await this.audit(manager, access.actorId, 'homework_progress', id, oldValues, { reason: dto.reason.trim(), result: 'deleted', targetUserId: userId }, user.universityId ?? undefined, context);
+      await this.audit(manager, access.actorId, 'homework_progress', id, oldValues, { reason: dto.reason.trim(), result: 'deleted', targetUserId: userId }, user.organizationId ?? undefined, context);
       return { deleted: true, id };
     });
   }
@@ -424,35 +424,35 @@ export class PlatformRecordsService {
     const user = await manager.findOne(User, { where: { id: userId }, lock: { mode: 'pessimistic_write' } });
     if (!user) throw new NotFoundException('Пользователь не найден.');
     const access = await this.platform.access();
-    this.platform.assertUniversityScope(access, user.universityId);
+    this.platform.assertUniversityScope(access, user.organizationId);
     return user;
   }
 
-  private async assertUserUniversity(manager: EntityManager, user: User, universityId: string): Promise<void> {
-    const university = await manager.findOne(University, { where: { id: universityId }, select: ['id'] });
-    if (!university || user.universityId !== universityId) throw new BadRequestException('Университет записи не совпадает с университетом пользователя.');
+  private async assertUserUniversity(manager: EntityManager, user: User, organizationId: string): Promise<void> {
+    const university = await manager.findOne(University, { where: { id: organizationId }, select: ['id'] });
+    if (!university || user.organizationId !== organizationId) throw new BadRequestException('Университет записи не совпадает с университетом пользователя.');
   }
 
-  private async assertStoredUniversity(manager: EntityManager, universityId: string): Promise<void> {
+  private async assertStoredUniversity(manager: EntityManager, organizationId: string): Promise<void> {
     const access = await this.platform.access();
-    this.platform.assertUniversityScope(access, universityId);
-    if (!await manager.getRepository(University).existsBy({ id: universityId })) throw new BadRequestException('Университет сохранённой записи больше не существует.');
+    this.platform.assertUniversityScope(access, organizationId);
+    if (!await manager.getRepository(University).existsBy({ id: organizationId })) throw new BadRequestException('Университет сохранённой записи больше не существует.');
   }
 
   private async requireCurrentUniversity(manager: EntityManager, user: User): Promise<string> {
-    if (!user.universityId) throw new BadRequestException('У пользователя не указан университет.');
-    await this.assertUserUniversity(manager, user, user.universityId);
-    return user.universityId;
+    if (!user.organizationId) throw new BadRequestException('У пользователя не указан университет.');
+    await this.assertUserUniversity(manager, user, user.organizationId);
+    return user.organizationId;
   }
 
-  private async assertUserPairSpace(manager: EntityManager, user: User, pairSpaceId: string, expectedUniversityId?: string): Promise<PairSpace> {
+  private async assertUserPairSpace(manager: EntityManager, user: User, pairSpaceId: string, expectedOrganizationId?: string): Promise<PairSpace> {
     const pairSpace = await manager.findOne(PairSpace, { where: { id: pairSpaceId }, lock: { mode: 'pessimistic_read' } });
     if (!pairSpace) throw new NotFoundException('Пространство пары не найдено.');
-    await this.assertUserUniversity(manager, user, pairSpace.universityId);
+    await this.assertUserUniversity(manager, user, pairSpace.organizationId);
     const access = await this.platform.access();
-    this.platform.assertUniversityScope(access, pairSpace.universityId);
-    if (expectedUniversityId && expectedUniversityId !== pairSpace.universityId) throw new BadRequestException('Университет заметки не совпадает с университетом пространства пары.');
-    const lesson = await manager.findOne(Lesson, { where: { id: pairSpace.lessonId, universityId: pairSpace.universityId }, select: ['id', 'groupId', 'teacherId', 'subject', 'startDate', 'pairNumber'] });
+    this.platform.assertUniversityScope(access, pairSpace.organizationId);
+    if (expectedOrganizationId && expectedOrganizationId !== pairSpace.organizationId) throw new BadRequestException('Университет заметки не совпадает с университетом пространства пары.');
+    const lesson = await manager.findOne(Lesson, { where: { id: pairSpace.lessonId, organizationId: pairSpace.organizationId }, select: ['id', 'groupId', 'teacherId', 'subject', 'startDate', 'pairNumber'] });
     if (!lesson) throw new BadRequestException('Пространство пары не связано с занятием этого университета.');
     if (user.role === UserRole.STUDENT && !await this.studentMatchesLessonGroup(manager, user, lesson.groupId)) {
       throw new BadRequestException('Занятие не относится к учебной группе пользователя.');
@@ -460,17 +460,17 @@ export class PlatformRecordsService {
     if (user.role === UserRole.TEACHER && lesson.teacherId !== user.id) throw new BadRequestException('Занятие не принадлежит преподавателю.');
     if (user.role === UserRole.CURATOR) {
       const assignment = await manager.getRepository(CuratorAssignment).createQueryBuilder('assignment')
-        .where('assignment.userId = :userId AND assignment.universityId = :universityId AND assignment.groupId = :groupId AND assignment.revokedAt IS NULL', { userId: user.id, universityId: pairSpace.universityId, groupId: lesson.groupId }).getExists();
+        .where('assignment.userId = :userId AND assignment.organizationId = :organizationId AND assignment.groupId = :groupId AND assignment.revokedAt IS NULL', { userId: user.id, organizationId: pairSpace.organizationId, groupId: lesson.groupId }).getExists();
       if (!assignment) throw new BadRequestException('У пользователя нет активного назначения на группу занятия.');
     }
     return pairSpace;
   }
 
-  private async assertStoredPairSpace(manager: EntityManager, pairSpaceId: string, expectedUniversityId: string): Promise<PairSpace> {
+  private async assertStoredPairSpace(manager: EntityManager, pairSpaceId: string, expectedOrganizationId: string): Promise<PairSpace> {
     const pairSpace = await manager.findOne(PairSpace, { where: { id: pairSpaceId }, lock: { mode: 'pessimistic_read' } });
-    if (!pairSpace || pairSpace.universityId !== expectedUniversityId) throw new BadRequestException('Заметка не связана с сохранённым пространством пары.');
-    await this.assertStoredUniversity(manager, expectedUniversityId);
-    const lesson = await manager.findOne(Lesson, { where: { id: pairSpace.lessonId, universityId: expectedUniversityId }, select: ['id'] });
+    if (!pairSpace || pairSpace.organizationId !== expectedOrganizationId) throw new BadRequestException('Заметка не связана с сохранённым пространством пары.');
+    await this.assertStoredUniversity(manager, expectedOrganizationId);
+    const lesson = await manager.findOne(Lesson, { where: { id: pairSpace.lessonId, organizationId: expectedOrganizationId }, select: ['id'] });
     if (!lesson) throw new BadRequestException('Пространство пары не связано с занятием этого университета.');
     return pairSpace;
   }
@@ -482,7 +482,7 @@ export class PlatformRecordsService {
       .setLock('pessimistic_read', undefined, ['homework', 'pairSpace'])
       .where('homework.id = :homeworkId', { homeworkId }).getOne() as (Homework & { pairSpace: PairSpace }) | null;
     if (!homework?.pairSpace) throw new NotFoundException('Подготовка к занятию не найдена.');
-    await this.assertUserPairSpace(manager, user, homework.pairSpace.id, homework.pairSpace.universityId);
+    await this.assertUserPairSpace(manager, user, homework.pairSpace.id, homework.pairSpace.organizationId);
     return homework;
   }
 
@@ -492,8 +492,8 @@ export class PlatformRecordsService {
       .setLock('pessimistic_read', undefined, ['homework', 'pairSpace'])
       .where('homework.id = :homeworkId', { homeworkId }).getOne() as (Homework & { pairSpace: PairSpace }) | null;
     if (!homework?.pairSpace) throw new NotFoundException('Подготовка к занятию не найдена.');
-    await this.assertStoredUniversity(manager, homework.pairSpace.universityId);
-    const lesson = await manager.findOne(Lesson, { where: { id: homework.pairSpace.lessonId, universityId: homework.pairSpace.universityId }, select: ['id'] });
+    await this.assertStoredUniversity(manager, homework.pairSpace.organizationId);
+    const lesson = await manager.findOne(Lesson, { where: { id: homework.pairSpace.lessonId, organizationId: homework.pairSpace.organizationId }, select: ['id'] });
     if (!lesson) throw new BadRequestException('Подготовка не связана с занятием этого университета.');
     return homework;
   }
@@ -501,18 +501,18 @@ export class PlatformRecordsService {
   private async studentMatchesLessonGroup(manager: EntityManager, user: User, lessonGroupId: string): Promise<boolean> {
     if (!user.groupId) return false;
     if (user.groupId === lessonGroupId) return true;
-    if (!user.universityId || !/^\d+$/.test(user.groupId)) return false;
-    const group = await manager.findOne(Group, { where: { universityId: user.universityId, externalId: user.groupId }, select: ['id'] });
+    if (!user.organizationId || !/^\d+$/.test(user.groupId)) return false;
+    const group = await manager.findOne(Group, { where: { organizationId: user.organizationId, externalId: user.groupId }, select: ['id'] });
     return group?.id === lessonGroupId;
   }
 
   private async lessonSummary(manager: EntityManager, pairSpace: PairSpace) {
-    const lesson = await manager.findOne(Lesson, { where: { id: pairSpace.lessonId, universityId: pairSpace.universityId }, select: ['id', 'subject', 'startDate', 'pairNumber'] });
+    const lesson = await manager.findOne(Lesson, { where: { id: pairSpace.lessonId, organizationId: pairSpace.organizationId }, select: ['id', 'subject', 'startDate', 'pairNumber'] });
     return lesson ? { id: lesson.id, subject: lesson.subject, date: lesson.startDate, pairNumber: lesson.pairNumber } : null;
   }
 
   private homeworkSummary(homework: Homework) { return { id: homework.id, title: homework.title, deadline: homework.deadline }; }
-  private pairSpaceSummary(pairSpace: PairSpace) { return { id: pairSpace.id, universityId: pairSpace.universityId, subject: pairSpace.subject, date: pairSpace.date, pairNumber: pairSpace.pairNumber }; }
+  private pairSpaceSummary(pairSpace: PairSpace) { return { id: pairSpace.id, organizationId: pairSpace.organizationId, subject: pairSpace.subject, date: pairSpace.date, pairNumber: pairSpace.pairNumber }; }
   private preferenceResponse(record: NotificationPreference) {
     const { userId, ...preference } = record;
     return preference;
@@ -576,7 +576,7 @@ export class PlatformRecordsService {
     return String(value);
   }
 
-  private async audit(manager: EntityManager, actorId: string, entity: string, entityId: string, oldValues: JsonObject | null, newValues: JsonObject, universityId?: string, context: RequestAuditContext = {}): Promise<void> {
+  private async audit(manager: EntityManager, actorId: string, entity: string, entityId: string, oldValues: JsonObject | null, newValues: JsonObject, organizationId?: string, context: RequestAuditContext = {}): Promise<void> {
     const result = newValues.result;
     await manager.save(AuditLog, manager.create(AuditLog, {
       userId: actorId,
@@ -584,7 +584,7 @@ export class PlatformRecordsService {
       entity: `personal_data.${entity}`,
       entityId,
       oldValues: oldValues ?? undefined,
-      newValues: universityId ? { ...newValues, universityId } : newValues,
+      newValues: organizationId ? { ...newValues, organizationId } : newValues,
       ip: context.ip,
       userAgent: context.userAgent?.slice(0, 512),
     }));

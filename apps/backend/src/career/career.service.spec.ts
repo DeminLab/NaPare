@@ -7,27 +7,27 @@ import { CareerTask, CareerProfile, CareerMembership, CareerAdmission, CareerTes
 import { User } from '../users/entities/user.entity';
 import { University } from '../users/entities/university.entity';
 
-const student={id:'student-a',email:'student@test',role:UserRole.STUDENT,universityId:'university-a'};
+const student={id:'student-a',email:'student@test',role:UserRole.STUDENT,organizationId:'university-a'};
 describe('Career resource boundaries',()=>{
   it('rejects unsafe result URLs and accepts HTTPS only',()=>{for(const url of ['javascript:alert(1)','http://example.com','https://secret:pass@example.com'])expect(()=>assertCareerResultUrl(url)).toThrow(BadRequestException);expect(()=>assertCareerResultUrl('https://example.com/work')).not.toThrow();});
   it('does not accept a work or select a student twice',()=>{expect(()=>assertCareerTransition('accepted',['submitted'])).toThrow(ConflictException);expect(()=>assertCareerTransition('assigned',['open'])).toThrow(ConflictException);});
   it('denies an application to a task at another university before reading a profile',async()=>{
-    const getRepository=jest.fn(()=>({findOne:jest.fn().mockResolvedValue({id:'task-a',universityId:'university-b',state:'open'})}));
+    const getRepository=jest.fn(()=>({findOne:jest.fn().mockResolvedValue({id:'task-a',organizationId:'university-b',state:'open'})}));
     const service=new CareerService({manager:{getRepository},transaction:async callback=>callback({getRepository})} as unknown as DataSource,{} as AuthService);
     await expect(service.apply(student,'task-a',{message:'I am a qualified applicant'})).rejects.toThrow(ForbiddenException);expect(getRepository).toHaveBeenCalledTimes(1);
   });
   it('requires verified professional profile before an application',async()=>{
-    const getRepository=jest.fn(entity=>entity===CareerTask?{findOne:jest.fn().mockResolvedValue({universityId:'university-a',state:'open',deadline:'2099-12-01'})}:{existsBy:jest.fn().mockResolvedValue(false)});
+    const getRepository=jest.fn(entity=>entity===CareerTask?{findOne:jest.fn().mockResolvedValue({organizationId:'university-a',state:'open',deadline:'2099-12-01'})}:{existsBy:jest.fn().mockResolvedValue(false)});
     const service=new CareerService({manager:{getRepository},transaction:async callback=>callback({getRepository})} as unknown as DataSource,{} as AuthService);
     await expect(service.apply(student,'task-a',{message:'I am a qualified applicant'})).rejects.toThrow('Подтвердите профессиональный профиль');expect(getRepository).toHaveBeenCalledWith(CareerProfile);
   });
   it('requires admission for the exact profiled direction',async()=>{
-    const getRepository=jest.fn(entity=>entity===CareerTask?{findOne:jest.fn().mockResolvedValue({universityId:'university-a',state:'open',deadline:'2099-12-01',profiled:true,skill:'design'})}:entity===CareerProfile?{existsBy:jest.fn().mockResolvedValue(true)}:{existsBy:jest.fn().mockResolvedValue(false)});
+    const getRepository=jest.fn(entity=>entity===CareerTask?{findOne:jest.fn().mockResolvedValue({organizationId:'university-a',state:'open',deadline:'2099-12-01',profiled:true,skill:'design'})}:entity===CareerProfile?{existsBy:jest.fn().mockResolvedValue(true)}:{existsBy:jest.fn().mockResolvedValue(false)});
     const service=new CareerService({manager:{getRepository},transaction:async callback=>callback({getRepository})} as unknown as DataSource,{} as AuthService);
     await expect(service.apply(student,'task-a',{message:'I am a qualified applicant'})).rejects.toThrow('Нет допуска');expect(getRepository).toHaveBeenCalledWith(CareerAdmission);
   });
   it('does not allow a student to verify their own profile',async()=>{
-    const getRepository=jest.fn(entity=>entity===CareerProfile?{findOneBy:jest.fn().mockResolvedValue({universityId:'university-a'})}:{existsBy:jest.fn().mockResolvedValue(false)});
+    const getRepository=jest.fn(entity=>entity===CareerProfile?{findOneBy:jest.fn().mockResolvedValue({organizationId:'university-a'})}:{existsBy:jest.fn().mockResolvedValue(false)});
     const service=new CareerService({manager:{getRepository}} as unknown as DataSource,{} as AuthService);
     await expect(service.verifyProfile(student,'profile-a',{decision:'approved',reason:''})).rejects.toThrow(ForbiddenException);expect(getRepository).toHaveBeenCalledWith(CareerMembership);
   });
@@ -38,14 +38,14 @@ describe('Career resource boundaries',()=>{
   });
   it('does not allow an employer to answer a student admission test',async()=>{
     const service=new CareerService({} as DataSource,{} as AuthService);
-    await expect(service.attempt({...student,role:UserRole.EMPLOYER,universityId:null},'test-a',{answers:[0,0,0]})).rejects.toThrow(ForbiddenException);
+    await expect(service.attempt({...student,role:UserRole.EMPLOYER,organizationId:null},'test-a',{answers:[0,0,0]})).rejects.toThrow(ForbiddenException);
   });
 
 });
 
 describe('Career test list pagination',()=>{
   const center={...student,id:'center-a',role:UserRole.CAREER_STAFF};
-  const makeHarness=(actor:{id:string;email:string;role:UserRole;universityId:string|null},items:Array<any>,total:number,membershipAllowed=false)=>{
+  const makeHarness=(actor:{id:string;email:string;role:UserRole;organizationId:string|null},items:Array<any>,total:number,membershipAllowed=false)=>{
     const query:any={where:jest.fn(function(){return this;}),andWhere:jest.fn(function(){return this;}),orderBy:jest.fn(function(){return this;}),addOrderBy:jest.fn(function(){return this;}),skip:jest.fn(function(){return this;}),take:jest.fn(function(){return this;}),getManyAndCount:jest.fn().mockResolvedValue([items,total])};
     const attemptQuery:any={select:jest.fn(function(){return this;}),addSelect:jest.fn(function(){return this;}),where:jest.fn(function(){return this;}),andWhere:jest.fn(function(){return this;}),groupBy:jest.fn(function(){return this;}),getRawMany:jest.fn().mockResolvedValue([])};
     const queryBuilder=jest.fn(()=>query);const find=jest.fn().mockResolvedValue(items);const membershipExists=jest.fn().mockResolvedValue(membershipAllowed);
@@ -60,12 +60,12 @@ describe('Career test list pagination',()=>{
   ])('returns $name with accurate metadata',async({items,total,offset,hasMore})=>{
     const {service,query}=makeHarness(student,items,total);
     await expect(service.tests(student,{offset,limit:'20'})).resolves.toMatchObject({items,total,offset:Number(offset),limit:20,hasMore});
-    expect(query.where).toHaveBeenCalledWith('test.universityId = :universityId',{universityId:student.universityId});
+    expect(query.where).toHaveBeenCalledWith('test.organizationId = :organizationId',{organizationId:student.organizationId});
     expect(query.skip).toHaveBeenCalledWith(Number(offset));expect(query.take).toHaveBeenCalledWith(20);
     expect(query.orderBy).toHaveBeenCalledWith('test.createdAt','DESC');expect(query.addOrderBy).toHaveBeenCalledWith('test.id','DESC');
   });
   it('searches title and skill and strips answer keys from paged student rows',async()=>{
-    const record={id:'test-a',universityId:'university-a',title:'Design basics',skill:'design',passingPercent:70,createdAt:new Date(),questions:[{prompt:'Question',options:['One','Two'],answer:1}]};
+    const record={id:'test-a',organizationId:'university-a',title:'Design basics',skill:'design',passingPercent:70,createdAt:new Date(),questions:[{prompt:'Question',options:['One','Two'],answer:1}]};
     const {service,query}=makeHarness(student,[record],1);
     const result=await service.tests(student,{offset:'0',limit:'20',q:' DESIGN '});
     expect(query.andWhere).toHaveBeenCalledWith('(LOWER(test.title) LIKE :testSearch OR LOWER(test.skill) LIKE :testSearch)',{testSearch:'%design%'});
@@ -98,19 +98,19 @@ describe('Career test list pagination',()=>{
     const {service,find,queryBuilder}=makeHarness(student,[record],1);
     const result=await service.tests(student);
     expect(result).toEqual([{id:'test-a',title:'Test',skill:'design',passingPercent:70,questions:[{prompt:'Question',options:['One','Two']}]}]);
-    expect(find).toHaveBeenCalledWith({where:{universityId:'university-a'},order:{createdAt:'DESC',id:'DESC'},take:100});expect(queryBuilder).not.toHaveBeenCalled();
+    expect(find).toHaveBeenCalledWith({where:{organizationId:'university-a'},order:{createdAt:'DESC',id:'DESC'},take:100});expect(queryBuilder).not.toHaveBeenCalled();
   });
   it('requires and scopes a center membership to the actor university before reading tests',async()=>{
     const staff={...student,id:'staff-a',role:UserRole.TEACHER};const allowed=makeHarness(staff,[],0,true);
     await allowed.service.tests(staff,{offset:'0'});
-    expect(allowed.membershipExists).toHaveBeenCalledWith({userId:'staff-a',universityId:'university-a',role:In(['career_admin','career_staff']),revokedAt:expect.anything()});
-    expect(allowed.query.where).toHaveBeenCalledWith('test.universityId = :universityId',{universityId:'university-a'});
+    expect(allowed.membershipExists).toHaveBeenCalledWith({userId:'staff-a',organizationId:'university-a',role:In(['career_admin','career_staff']),revokedAt:expect.anything()});
+    expect(allowed.query.where).toHaveBeenCalledWith('test.organizationId = :organizationId',{organizationId:'university-a'});
     const revoked=makeHarness(staff,[],0,false);
     await expect(revoked.service.tests(staff,{offset:'0'})).rejects.toThrow(ForbiddenException);
     expect(revoked.getRepository).not.toHaveBeenCalledWith(CareerTest);
   });
   it('denies employers before reading any tests',async()=>{
-    const employer={...student,id:'employer-a',role:UserRole.EMPLOYER,universityId:null};const {service,getRepository}=makeHarness(employer,[],0);
+    const employer={...student,id:'employer-a',role:UserRole.EMPLOYER,organizationId:null};const {service,getRepository}=makeHarness(employer,[],0);
     await expect(service.tests(employer,{offset:'0'})).rejects.toThrow(ForbiddenException);
     expect(getRepository).not.toHaveBeenCalledWith(CareerTest);
   });
@@ -172,7 +172,7 @@ describe('Career case descriptions',()=>{
 });
 
 describe('Career task list pagination',()=>{
-  const makeHarness=(actor:{id:string;email:string;role:UserRole;universityId:string|null},items:Array<{id:string}>,total:number,memberships:Array<Record<string,unknown>>=[],applications:Array<{taskId:string}>=[])=>{
+  const makeHarness=(actor:{id:string;email:string;role:UserRole;organizationId:string|null},items:Array<{id:string}>,total:number,memberships:Array<Record<string,unknown>>=[],applications:Array<{taskId:string}>=[])=>{
     const query:any={where:jest.fn(function(){return this;}),andWhere:jest.fn(function(){return this;}),orderBy:jest.fn(function(){return this;}),addOrderBy:jest.fn(function(){return this;}),skip:jest.fn(function(){return this;}),take:jest.fn(function(){return this;}),getManyAndCount:jest.fn().mockResolvedValue([items,total])};
     const getRepository=jest.fn(entity=>entity===CareerMembership?{find:jest.fn().mockResolvedValue(memberships),existsBy:jest.fn().mockResolvedValue(false)}:entity===CareerApplication?{find:jest.fn().mockResolvedValue(applications)}:entity===CareerTask?{createQueryBuilder:jest.fn(()=>query)}:entity===CareerCompany?{find:jest.fn().mockResolvedValue([])}:{});
     return {service:new CareerService({manager:{getRepository}} as unknown as DataSource,{} as AuthService),query,getRepository};
@@ -191,19 +191,19 @@ describe('Career task list pagination',()=>{
   it('keeps student lists inside their university and includes already-applied task ids',async()=>{
     const applied={id:'applied-task'};const {service,query}=makeHarness(student,[applied],1,[],[{taskId:applied.id}]);
     const result=await service.listTasks(student,'student',{offset:'0'});
-    expect(query.where).toHaveBeenCalledWith('task.universityId = :universityId',{universityId:'university-a'});
+    expect(query.where).toHaveBeenCalledWith('task.organizationId = :organizationId',{organizationId:'university-a'});
     expect(query.andWhere).toHaveBeenCalledWith('(task.state = :openState OR task.id IN (:...applicationTaskIds))',{openState:'open',applicationTaskIds:[applied.id]});
     expect(result.appliedTaskIds).toEqual([applied.id]);
   });
   it('limits employer and center queries to their current company or university scope',async()=>{
-    const employer={...student,id:'employer-a',role:UserRole.EMPLOYER,universityId:null};
+    const employer={...student,id:'employer-a',role:UserRole.EMPLOYER,organizationId:null};
     const companyScope=makeHarness(employer,[],0,[{companyId:'company-a',role:'company_owner'},{companyId:'company-b',role:'company_member'},{companyId:'company-denied',role:'career_staff'}]);
     await companyScope.service.listTasks(employer,'employer',{offset:'0'});
     expect(companyScope.query.where).toHaveBeenCalledWith('task.companyId IN (:...companyIds)',{companyIds:['company-a','company-b']});
     const center={...student,id:'center-a',role:UserRole.CAREER_STAFF};
     const universityScope=makeHarness(center,[],0);
     await universityScope.service.listTasks(center,'center',{offset:'0'});
-    expect(universityScope.query.where).toHaveBeenCalledWith('task.universityId = :universityId',{universityId:'university-a'});
+    expect(universityScope.query.where).toHaveBeenCalledWith('task.organizationId = :organizationId',{organizationId:'university-a'});
   });
   it('applies search, category and workflow state filters on the server',async()=>{
     const center={...student,id:'center-a',role:UserRole.CAREER_STAFF};const {service,query}=makeHarness(center,[],0);
@@ -213,7 +213,7 @@ describe('Career task list pagination',()=>{
     expect(query.andWhere).toHaveBeenCalledWith('(LOWER(task.title) LIKE :taskSearch OR LOWER(task.description) LIKE :taskSearch OR LOWER(task.skill) LIKE :taskSearch)',{taskSearch:'%дизайн%'});
   });
   it('does not infer center access from an unrelated university membership role',async()=>{
-    const teacher={...student,id:'teacher-a',role:UserRole.TEACHER};const {service}=makeHarness(teacher,[],0,[{universityId:'university-a',role:'company_member'}]);
+    const teacher={...student,id:'teacher-a',role:UserRole.TEACHER};const {service}=makeHarness(teacher,[],0,[{organizationId:'university-a',role:'company_member'}]);
     await expect(service.listTasks(teacher,'center',{offset:'0'})).rejects.toThrow(ForbiddenException);
   });
   it('rejects invalid pagination without querying task records',async()=>{
@@ -224,7 +224,7 @@ describe('Career task list pagination',()=>{
 });
 
 describe('Career workflow pagination',()=>{
-  const makeHarness=(actor:{id:string;email:string;role:UserRole;universityId:string|null},kind:'applications'|'works',records:Array<Record<string,any>>,total:number,memberships:Array<Record<string,unknown>>=[],taskRows:Array<Record<string,any>>=[])=>{
+  const makeHarness=(actor:{id:string;email:string;role:UserRole;organizationId:string|null},kind:'applications'|'works',records:Array<Record<string,any>>,total:number,memberships:Array<Record<string,unknown>>=[],taskRows:Array<Record<string,any>>=[])=>{
     const query:any={innerJoin:jest.fn(function(){return this;}),leftJoin:jest.fn(function(){return this;}),where:jest.fn(function(){return this;}),andWhere:jest.fn(function(){return this;}),orderBy:jest.fn(function(){return this;}),addOrderBy:jest.fn(function(){return this;}),skip:jest.fn(function(){return this;}),take:jest.fn(function(){return this;}),getManyAndCount:jest.fn().mockResolvedValue([records,total])};
     const entity=kind==='applications'?CareerApplication:CareerWork;
     const membershipFind=jest.fn().mockResolvedValue(memberships);
@@ -236,34 +236,34 @@ describe('Career workflow pagination',()=>{
     {name:'exactly 100 results',records:Array.from({length:20},(_,index)=>({id:`record-${index}`,taskId:'task-a',studentId:student.id,state:'pending',createdAt:new Date('2026-01-01')})),total:100,offset:'80',hasMore:false},
     {name:'101st result remains reachable',records:[{id:'record-101',taskId:'task-a',studentId:student.id,state:'pending',createdAt:new Date('2025-01-01')}],total:101,offset:'100',hasMore:false},
   ])('returns $name with stable page metadata',async({records,total,offset,hasMore})=>{
-    const task={id:'task-a',companyId:'company-a',universityId:'university-a',title:'Task'};const {service,query}=makeHarness(student,'applications',records,total,[],records.length?[task]:[]);
+    const task={id:'task-a',companyId:'company-a',organizationId:'university-a',title:'Task'};const {service,query}=makeHarness(student,'applications',records,total,[],records.length?[task]:[]);
     await expect(service.listWorkflows(student,'student',{kind:'applications',offset,limit:'20'})).resolves.toMatchObject({items:records.map(record=>expect.objectContaining({task,company:'Работодатель'})),total,offset:Number(offset),limit:20,hasMore});
     expect(query.skip).toHaveBeenCalledWith(Number(offset));expect(query.take).toHaveBeenCalledWith(20);expect(query.orderBy).toHaveBeenCalledWith('application.createdAt','DESC');expect(query.addOrderBy).toHaveBeenCalledWith('application.id','DESC');
   });
   it('keeps student history scoped to the actor and their university',async()=>{
-    const record={id:'application-a',taskId:'task-a',studentId:student.id,state:'selected',createdAt:new Date()};const task={id:'task-a',companyId:'company-a',universityId:'university-a'};const {service,query}=makeHarness(student,'applications',[record],1,[],[task]);
+    const record={id:'application-a',taskId:'task-a',studentId:student.id,state:'selected',createdAt:new Date()};const task={id:'task-a',companyId:'company-a',organizationId:'university-a'};const {service,query}=makeHarness(student,'applications',[record],1,[],[task]);
     await service.listWorkflows(student,'student',{kind:'applications'});
-    expect(query.where).toHaveBeenCalledWith('application.studentId = :studentId',{studentId:student.id});expect(query.andWhere).toHaveBeenCalledWith('task.universityId = :universityId',{universityId:'university-a'});
+    expect(query.where).toHaveBeenCalledWith('application.studentId = :studentId',{studentId:student.id});expect(query.andWhere).toHaveBeenCalledWith('task.organizationId = :organizationId',{organizationId:'university-a'});
   });
   it('restricts employer records to active company owner/member memberships',async()=>{
-    const employer={...student,id:'employer-a',role:UserRole.EMPLOYER,universityId:null};const memberships=[{companyId:'company-a',role:'company_owner',revokedAt:null},{companyId:'company-b',role:'company_member',revokedAt:null},{companyId:'company-denied',role:'career_staff',revokedAt:null}];const {service,query,membershipFind}=makeHarness(employer,'works',[],0,memberships);
+    const employer={...student,id:'employer-a',role:UserRole.EMPLOYER,organizationId:null};const memberships=[{companyId:'company-a',role:'company_owner',revokedAt:null},{companyId:'company-b',role:'company_member',revokedAt:null},{companyId:'company-denied',role:'career_staff',revokedAt:null}];const {service,query,membershipFind}=makeHarness(employer,'works',[],0,memberships);
     await service.listWorkflows(employer,'employer',{kind:'works'});
     expect(query.where).toHaveBeenCalledWith('task.companyId IN (:...companyIds)',{companyIds:['company-a','company-b']});
     expect(membershipFind).toHaveBeenCalledWith({where:{userId:employer.id,revokedAt:expect.anything()}});
     expect((query.innerJoin.mock.calls[0] as unknown[])[0]).toBe(CareerTask);
   });
   it('fails closed without company scope and rejects center workflow access',async()=>{
-    const employer={...student,id:'employer-a',role:UserRole.EMPLOYER,universityId:null};const empty=makeHarness(employer,'works',[],0);await empty.service.listWorkflows(employer,'employer',{kind:'works'});expect(empty.query.where).toHaveBeenCalledWith('1 = 0');
+    const employer={...student,id:'employer-a',role:UserRole.EMPLOYER,organizationId:null};const empty=makeHarness(employer,'works',[],0);await empty.service.listWorkflows(employer,'employer',{kind:'works'});expect(empty.query.where).toHaveBeenCalledWith('1 = 0');
     const center={...student,id:'center-a',role:UserRole.CAREER_STAFF};const centerHarness=makeHarness(center,'works',[],0);await expect(centerHarness.service.listWorkflows(center,'center',{kind:'works'})).rejects.toThrow(ForbiddenException);
   });
   it('searches applications on task and applicant professional fields and exposes only approved exact task skills',async()=>{
-    const employer={...student,id:'employer-a',role:UserRole.EMPLOYER,universityId:null};const record={id:'application-a',taskId:'task-a',studentId:'student-a',state:'pending',createdAt:new Date()};const task={id:'task-a',companyId:'company-a',universityId:'university-a',profiled:true,skill:'design',title:'Design'};
+    const employer={...student,id:'employer-a',role:UserRole.EMPLOYER,organizationId:null};const record={id:'application-a',taskId:'task-a',studentId:'student-a',state:'pending',createdAt:new Date()};const task={id:'task-a',companyId:'company-a',organizationId:'university-a',profiled:true,skill:'design',title:'Design'};
     const query:any={innerJoin:jest.fn(function(){return this;}),leftJoin:jest.fn(function(){return this;}),where:jest.fn(function(){return this;}),andWhere:jest.fn(function(){return this;}),orderBy:jest.fn(function(){return this;}),addOrderBy:jest.fn(function(){return this;}),skip:jest.fn(function(){return this;}),take:jest.fn(function(){return this;}),getManyAndCount:jest.fn().mockResolvedValue([[record],1])};
-    const user={id:'student-a',firstName:'A',lastName:'B',role:UserRole.STUDENT,isActive:true};const profile={studentId:'student-a',headline:'Designer',skills:['design','writing']};const admission={studentId:'student-a',universityId:'university-a',skill:'design',basis:'center'};const profileFind=jest.fn().mockResolvedValue([profile]);const userFind=jest.fn().mockResolvedValue([user]);const admissionFind=jest.fn().mockResolvedValue([admission]);
+    const user={id:'student-a',firstName:'A',lastName:'B',role:UserRole.STUDENT,isActive:true};const profile={studentId:'student-a',headline:'Designer',skills:['design','writing']};const admission={studentId:'student-a',organizationId:'university-a',skill:'design',basis:'center'};const profileFind=jest.fn().mockResolvedValue([profile]);const userFind=jest.fn().mockResolvedValue([user]);const admissionFind=jest.fn().mockResolvedValue([admission]);
     const getRepository=jest.fn(repo=>repo===CareerMembership?{find:jest.fn().mockResolvedValue([{companyId:'company-a',role:'company_owner'}])}:repo===CareerApplication?{createQueryBuilder:jest.fn(()=>query)}:repo===CareerTask?{find:jest.fn().mockResolvedValue([task])}:repo===CareerCompany?{find:jest.fn().mockResolvedValue([{id:'company-a',name:'Company'}])}:repo===CareerProfile?{find:profileFind}:repo===User?{find:userFind}:repo===CareerAdmission?{find:admissionFind}:{});
     const service=new CareerService({manager:{getRepository}} as unknown as DataSource,{} as AuthService);const result=await service.listWorkflows(employer,'employer',{kind:'applications',q:'designer'});
     expect(query.andWhere).toHaveBeenCalledWith(expect.stringContaining('applicantProfile.headline'),{workflowSearch:'%designer%'});expect(result.items[0]).toMatchObject({candidate:{studentId:'student-a',approvedSkills:[{skill:'design',basis:'center'}]}});
-    expect(profileFind).toHaveBeenCalledWith({where:{studentId:In(['student-a'])},select:{studentId:true,headline:true,skills:true}});expect(userFind).toHaveBeenCalledWith({where:{id:In(['student-a']),role:UserRole.STUDENT,isActive:true},select:{id:true,firstName:true,lastName:true}});expect(admissionFind).toHaveBeenCalledWith({where:{studentId:In(['student-a']),universityId:In(['university-a']),state:'approved'},select:{studentId:true,universityId:true,skill:true,basis:true}});
+    expect(profileFind).toHaveBeenCalledWith({where:{studentId:In(['student-a'])},select:{studentId:true,headline:true,skills:true}});expect(userFind).toHaveBeenCalledWith({where:{id:In(['student-a']),role:UserRole.STUDENT,isActive:true},select:{id:true,firstName:true,lastName:true}});expect(admissionFind).toHaveBeenCalledWith({where:{studentId:In(['student-a']),organizationId:In(['university-a']),state:'approved'},select:{studentId:true,organizationId:true,skill:true,basis:true}});
   });
 });
 
@@ -287,22 +287,22 @@ describe('Career center review queues',()=>{
   it('requires center permission before reading a queue and rejects a revoked delegated membership',async()=>{
     const teacher={...student,id:'teacher-a',role:UserRole.TEACHER};const {service,getRepository,membershipExists}=makeHarness('profiles',[],0,[],false);
     await expect(service.listCenterReviews(teacher,{kind:'profiles'})).rejects.toThrow(ForbiddenException);
-    expect(membershipExists).toHaveBeenCalledWith(expect.objectContaining({userId:teacher.id,universityId:teacher.universityId,revokedAt:expect.anything()}));
+    expect(membershipExists).toHaveBeenCalledWith(expect.objectContaining({userId:teacher.id,organizationId:teacher.organizationId,revokedAt:expect.anything()}));
     expect(getRepository).not.toHaveBeenCalledWith(CareerProfile);expect(getRepository).not.toHaveBeenCalledWith(CareerAdmission);
   });
   it('uses only the actor university and active student accounts for queue rows',async()=>{
-    const records=[{id:'profile-a',studentId:'student-a',universityId:'university-a',headline:'Designer',verification:'pending',createdAt:new Date()}];const {service,query,studentFind}=makeHarness('profiles',records,1,[{id:'student-a',firstName:'Ada',lastName:'Lovelace'}]);
+    const records=[{id:'profile-a',studentId:'student-a',organizationId:'university-a',headline:'Designer',verification:'pending',createdAt:new Date()}];const {service,query,studentFind}=makeHarness('profiles',records,1,[{id:'student-a',firstName:'Ada',lastName:'Lovelace'}]);
     const result=await service.listCenterReviews(center,{kind:'profiles',q:'Ada'});
-    expect(query.where).toHaveBeenCalledWith('profile.universityId = :universityId',{universityId:'university-a'});expect(query.andWhere).toHaveBeenCalledWith('student.universityId = :universityId',{universityId:'university-a'});expect(query.andWhere).toHaveBeenCalledWith('student.role = :studentRole',{studentRole:UserRole.STUDENT});expect(query.andWhere).toHaveBeenCalledWith('student.isActive = true');expect(query.andWhere).toHaveBeenCalledWith(expect.stringContaining('student.firstName'),{reviewSearch:'%ada%'});
-    expect(studentFind).toHaveBeenCalledWith({where:{id:In(['student-a']),universityId:'university-a',role:UserRole.STUDENT,isActive:true},select:{id:true,firstName:true,lastName:true}});expect(result.items[0]).toMatchObject({studentName:'Ada Lovelace'});
+    expect(query.where).toHaveBeenCalledWith('profile.organizationId = :organizationId',{organizationId:'university-a'});expect(query.andWhere).toHaveBeenCalledWith('student.organizationId = :organizationId',{organizationId:'university-a'});expect(query.andWhere).toHaveBeenCalledWith('student.role = :studentRole',{studentRole:UserRole.STUDENT});expect(query.andWhere).toHaveBeenCalledWith('student.isActive = true');expect(query.andWhere).toHaveBeenCalledWith(expect.stringContaining('student.firstName'),{reviewSearch:'%ada%'});
+    expect(studentFind).toHaveBeenCalledWith({where:{id:In(['student-a']),organizationId:'university-a',role:UserRole.STUDENT,isActive:true},select:{id:true,firstName:true,lastName:true}});expect(result.items[0]).toMatchObject({studentName:'Ada Lovelace'});
   });
   it('returns admissions independently even when no professional profile exists',async()=>{
-    const admission={id:'admission-a',studentId:'student-a',universityId:'university-a',skill:'design',evidence:'Portfolio',state:'pending',reason:'',basis:'unspecified',createdAt:new Date()};const {service,getRepository,query}=makeHarness('admissions',[admission],1,[{id:'student-a',firstName:'Ada',lastName:'Lovelace'}]);
+    const admission={id:'admission-a',studentId:'student-a',organizationId:'university-a',skill:'design',evidence:'Portfolio',state:'pending',reason:'',basis:'unspecified',createdAt:new Date()};const {service,getRepository,query}=makeHarness('admissions',[admission],1,[{id:'student-a',firstName:'Ada',lastName:'Lovelace'}]);
     const result=await service.listCenterReviews(center,{kind:'admissions',state:'pending'});
-    expect(result.items).toMatchObject([{id:'admission-a',skill:'design',studentName:'Ada Lovelace'}]);expect(query.where).toHaveBeenCalledWith('admission.universityId = :universityId',{universityId:'university-a'});expect(getRepository).not.toHaveBeenCalledWith(CareerProfile);
+    expect(result.items).toMatchObject([{id:'admission-a',skill:'design',studentName:'Ada Lovelace'}]);expect(query.where).toHaveBeenCalledWith('admission.organizationId = :organizationId',{organizationId:'university-a'});expect(getRepository).not.toHaveBeenCalledWith(CareerProfile);
   });
   it('keeps admission decision authorization and updates its decision basis',async()=>{
-    const admission={id:'admission-a',universityId:'university-a',state:'pending',basis:'unspecified',reason:''};const save=jest.fn(async value=>value);const getRepository=jest.fn(repo=>repo===CareerAdmission?{findOneBy:jest.fn().mockResolvedValue(admission),save}:{});
+    const admission={id:'admission-a',organizationId:'university-a',state:'pending',basis:'unspecified',reason:''};const save=jest.fn(async value=>value);const getRepository=jest.fn(repo=>repo===CareerAdmission?{findOneBy:jest.fn().mockResolvedValue(admission),save}:{});
     const service=new CareerService({manager:{getRepository}} as unknown as DataSource,{} as AuthService);
     await expect(service.decideAdmission(center,'admission-a',{decision:'approved',reason:'Проверено карьерным центром'})).resolves.toMatchObject({state:'approved',basis:'center',reason:'Проверено карьерным центром'});
     expect(save).toHaveBeenCalledWith(admission);
@@ -311,8 +311,8 @@ describe('Career center review queues',()=>{
 
 describe('Career partnership pagination and eligibility',()=>{
   const center={...student,id:'center-a',role:UserRole.CAREER_STAFF};
-  const employer={...student,id:'employer-a',role:UserRole.EMPLOYER,universityId:null};
-  const makeHarness=(actor:{id:string;email:string;role:UserRole;universityId:string|null},items:Array<Record<string,any>>,total:number,memberships:Array<Record<string,unknown>>=[])=>{
+  const employer={...student,id:'employer-a',role:UserRole.EMPLOYER,organizationId:null};
+  const makeHarness=(actor:{id:string;email:string;role:UserRole;organizationId:string|null},items:Array<Record<string,any>>,total:number,memberships:Array<Record<string,unknown>>=[])=>{
     const query:any={innerJoin:jest.fn(function(){return this;}),where:jest.fn(function(){return this;}),andWhere:jest.fn(function(){return this;}),orderBy:jest.fn(function(){return this;}),addOrderBy:jest.fn(function(){return this;}),skip:jest.fn(function(){return this;}),take:jest.fn(function(){return this;}),getManyAndCount:jest.fn().mockResolvedValue([items,total])};
     const membershipFind=jest.fn().mockResolvedValue(memberships);
     const getRepository=jest.fn(repo=>repo===CareerMembership?{find:membershipFind,existsBy:jest.fn().mockResolvedValue(false)}:repo===CareerPartnership?{createQueryBuilder:jest.fn(()=>query)}:repo===CareerCompany?{find:jest.fn().mockResolvedValue([{id:'company-a',name:'Company A'}])}:repo===University?{find:jest.fn().mockResolvedValue([{id:'university-a',name:'University A'}])}:{});
@@ -320,15 +320,15 @@ describe('Career partnership pagination and eligibility',()=>{
   };
   it.each([
     {name:'empty list',items:[],total:0,offset:'0',hasMore:false},
-    {name:'100 partnerships',items:Array.from({length:20},(_,index)=>({id:`pair-${index}`,companyId:'company-a',universityId:'university-a',state:'pending',createdAt:new Date('2026-01-01')})),total:100,offset:'80',hasMore:false},
-    {name:'partnership after record 100',items:[{id:'pair-101',companyId:'company-a',universityId:'university-a',state:'pending',createdAt:new Date('2025-01-01')}],total:101,offset:'100',hasMore:false},
+    {name:'100 partnerships',items:Array.from({length:20},(_,index)=>({id:`pair-${index}`,companyId:'company-a',organizationId:'university-a',state:'pending',createdAt:new Date('2026-01-01')})),total:100,offset:'80',hasMore:false},
+    {name:'partnership after record 100',items:[{id:'pair-101',companyId:'company-a',organizationId:'university-a',state:'pending',createdAt:new Date('2025-01-01')}],total:101,offset:'100',hasMore:false},
   ])('returns accurate metadata for $name',async({items,total,offset,hasMore})=>{
     const {service,query}=makeHarness(center,items,total);
     await expect(service.listPartnerships(center,'center',{offset,limit:'20'})).resolves.toMatchObject({total,offset:Number(offset),limit:20,hasMore});
     expect(query.skip).toHaveBeenCalledWith(Number(offset));expect(query.take).toHaveBeenCalledWith(20);expect(query.orderBy).toHaveBeenCalledWith('partnership.createdAt','DESC');expect(query.addOrderBy).toHaveBeenCalledWith('partnership.id','DESC');
   });
   it('scopes center to its university and employers to active owner/member companies',async()=>{
-    const centerPage=makeHarness(center,[],0);await centerPage.service.listPartnerships(center,'center',{});expect(centerPage.query.where).toHaveBeenCalledWith('partnership.universityId = :universityId',{universityId:'university-a'});
+    const centerPage=makeHarness(center,[],0);await centerPage.service.listPartnerships(center,'center',{});expect(centerPage.query.where).toHaveBeenCalledWith('partnership.organizationId = :organizationId',{organizationId:'university-a'});
     const employerPage=makeHarness(employer,[],0,[{companyId:'company-a',role:'company_owner'},{companyId:'company-b',role:'company_member'},{companyId:'company-denied',role:'career_staff'}]);await employerPage.service.listPartnerships(employer,'employer',{});expect(employerPage.membershipFind).toHaveBeenCalledWith({where:{userId:employer.id,revokedAt:expect.anything()}});expect(employerPage.query.where).toHaveBeenCalledWith('partnership.companyId IN (:...companyIds)',{companyIds:['company-a','company-b']});
   });
   it('denies a student requesting the center queue before creating a partnership query',async()=>{
@@ -336,25 +336,25 @@ describe('Career partnership pagination and eligibility',()=>{
     await expect(service.listPartnerships(student,'center',{})).rejects.toThrow(ForbiddenException);expect(query.getManyAndCount).not.toHaveBeenCalled();
   });
   it('checks the exact pair directly, including verified partnerships beyond the first 100',async()=>{
-    const records=Array.from({length:101},(_,index)=>({companyId:'company-a',universityId:`university-${index}`,state:'pending'}));records.push({companyId:'company-a',universityId:'university-target',state:'verified'});
-    const findOneBy=jest.fn(async(where:{companyId:string;universityId:string})=>records.find(record=>record.companyId===where.companyId&&record.universityId===where.universityId)||null);
+    const records=Array.from({length:101},(_,index)=>({companyId:'company-a',organizationId:`university-${index}`,state:'pending'}));records.push({companyId:'company-a',organizationId:'university-target',state:'verified'});
+    const findOneBy=jest.fn(async(where:{companyId:string;organizationId:string})=>records.find(record=>record.companyId===where.companyId&&record.organizationId===where.organizationId)||null);
     const getRepository=jest.fn(repo=>repo===CareerMembership?{existsBy:jest.fn().mockResolvedValue(true)}:repo===University?{existsBy:jest.fn().mockResolvedValue(true)}:repo===CareerPartnership?{findOneBy}:{});
     const service=new CareerService({manager:{getRepository}} as unknown as DataSource,{} as AuthService);
-    await expect(service.checkPartnershipEligibility(employer,'company-a','university-target')).resolves.toEqual({companyId:'company-a',universityId:'university-target',eligible:true,state:'verified'});
-    await expect(service.checkPartnershipEligibility(employer,'company-a','university-unrelated')).resolves.toEqual({companyId:'company-a',universityId:'university-unrelated',eligible:false,state:'missing'});
-    expect(findOneBy).toHaveBeenNthCalledWith(1,{companyId:'company-a',universityId:'university-target'});expect(findOneBy).toHaveBeenNthCalledWith(2,{companyId:'company-a',universityId:'university-unrelated'});
+    await expect(service.checkPartnershipEligibility(employer,'company-a','university-target')).resolves.toEqual({companyId:'company-a',organizationId:'university-target',eligible:true,state:'verified'});
+    await expect(service.checkPartnershipEligibility(employer,'company-a','university-unrelated')).resolves.toEqual({companyId:'company-a',organizationId:'university-unrelated',eligible:false,state:'missing'});
+    expect(findOneBy).toHaveBeenNthCalledWith(1,{companyId:'company-a',organizationId:'university-target'});expect(findOneBy).toHaveBeenNthCalledWith(2,{companyId:'company-a',organizationId:'university-unrelated'});
   });
   it('rejects task creation unless that exact company/university pair is verified',async()=>{
     const membershipExists=jest.fn().mockResolvedValue(true);const partnershipExists=jest.fn().mockResolvedValue(false);
     const getRepository=jest.fn(repo=>repo===CareerMembership?{existsBy:membershipExists}:repo===University?{existsBy:jest.fn().mockResolvedValue(true)}:repo===CareerPartnership?{existsBy:partnershipExists}:{});
     const service=new CareerService({manager:{getRepository}} as unknown as DataSource,{} as AuthService);
-    await expect(service.createTask(employer,{companyId:'company-a',universityId:'university-target',title:'A clear task',description:'A detailed description that is long enough',criteria:'An accepted result description',skill:'design',profiled:false,deadline:'2099-01-01',rewardKopecks:100,hours:2} as any)).rejects.toThrow(ForbiddenException);
-    expect(partnershipExists).toHaveBeenCalledWith({companyId:'company-a',universityId:'university-target',state:'verified'});
+    await expect(service.createTask(employer,{companyId:'company-a',organizationId:'university-target',title:'A clear task',description:'A detailed description that is long enough',criteria:'An accepted result description',skill:'design',profiled:false,deadline:'2099-01-01',rewardKopecks:100,hours:2} as any)).rejects.toThrow(ForbiddenException);
+    expect(partnershipExists).toHaveBeenCalledWith({companyId:'company-a',organizationId:'university-target',state:'verified'});
   });
 });
 
 describe('Career selector pagination and authorization',()=>{
-  const employer={...student,id:'employer-a',role:UserRole.EMPLOYER,universityId:null};
+  const employer={...student,id:'employer-a',role:UserRole.EMPLOYER,organizationId:null};
   const admin={...student,id:'center-admin',role:UserRole.CAREER_ADMIN};
   const makeQuery=(items:Array<Record<string,any>>,total:number)=>{
     const query:any={select:jest.fn(function(){return this;}),where:jest.fn(function(){return this;}),andWhere:jest.fn(function(){return this;}),orderBy:jest.fn(function(){return this;}),addOrderBy:jest.fn(function(){return this;}),skip:jest.fn(function(){return this;}),take:jest.fn(function(){return this;}),getManyAndCount:jest.fn().mockResolvedValue([items,total])};return query;
@@ -380,17 +380,17 @@ describe('Career selector pagination and authorization',()=>{
   ])('returns accurate staff metadata for $name',async({items,total,offset,hasMore})=>{
     const query=makeQuery(items,total);const getRepository=jest.fn(repo=>repo===User?{createQueryBuilder:jest.fn(()=>query)}:{});const service=new CareerService({manager:{getRepository}} as unknown as DataSource,{} as AuthService);
     await expect(service.listAssignableStaff(admin,{offset,limit:'20'})).resolves.toMatchObject({items,total,offset:Number(offset),limit:20,hasMore});
-    expect(query.where).toHaveBeenCalledWith('user.universityId = :universityId',{universityId:admin.universityId});expect(query.andWhere).toHaveBeenNthCalledWith(1,'user.isActive = true');expect(query.andWhere).toHaveBeenNthCalledWith(2,'user.role NOT IN (:...blockedRoles)',{blockedRoles:[UserRole.STUDENT,UserRole.EMPLOYER,UserRole.DEVELOPER,UserRole.SUPERADMIN]});expect(query.orderBy).toHaveBeenCalledWith('user.lastName','ASC');expect(query.addOrderBy).toHaveBeenCalledWith('user.firstName','ASC');expect(query.addOrderBy).toHaveBeenCalledWith('user.id','ASC');
+    expect(query.where).toHaveBeenCalledWith('user.organizationId = :organizationId',{organizationId:admin.organizationId});expect(query.andWhere).toHaveBeenNthCalledWith(1,'user.isActive = true');expect(query.andWhere).toHaveBeenNthCalledWith(2,'user.role NOT IN (:...blockedRoles)',{blockedRoles:[UserRole.STUDENT,UserRole.EMPLOYER,UserRole.DEVELOPER,UserRole.SUPERADMIN]});expect(query.orderBy).toHaveBeenCalledWith('user.lastName','ASC');expect(query.addOrderBy).toHaveBeenCalledWith('user.firstName','ASC');expect(query.addOrderBy).toHaveBeenCalledWith('user.id','ASC');
   });
   it('requires strict center-admin access before querying users; career staff cannot promote themselves or others',async()=>{
     const query=makeQuery([],0);const membershipExists=jest.fn().mockResolvedValue(false);const getRepository=jest.fn(repo=>repo===CareerMembership?{existsBy:membershipExists}:repo===User?{createQueryBuilder:jest.fn(()=>query)}:{});const service=new CareerService({manager:{getRepository}} as unknown as DataSource,{} as AuthService);
     const delegated={...student,id:'delegated-staff',role:UserRole.CAREER_STAFF};
-    await expect(service.listAssignableStaff(delegated,{})).rejects.toThrow(ForbiddenException);expect(getRepository).toHaveBeenCalledWith(CareerMembership);expect(membershipExists).toHaveBeenCalledWith({userId:delegated.id,universityId:delegated.universityId,role:In(['career_admin']),revokedAt:expect.anything()});expect(getRepository).not.toHaveBeenCalledWith(User);
+    await expect(service.listAssignableStaff(delegated,{})).rejects.toThrow(ForbiddenException);expect(getRepository).toHaveBeenCalledWith(CareerMembership);expect(membershipExists).toHaveBeenCalledWith({userId:delegated.id,organizationId:delegated.organizationId,role:In(['career_admin']),revokedAt:expect.anything()});expect(getRepository).not.toHaveBeenCalledWith(User);
     await expect(service.addMembership(delegated,{userId:'target',role:'career_admin'} as any)).rejects.toThrow(ForbiddenException);expect(getRepository).not.toHaveBeenCalledWith(User);
   });
   it('keeps staff lookup constrained to active same-university accounts and searches names',async()=>{
     const query=makeQuery([],0);const getRepository=jest.fn(repo=>repo===User?{createQueryBuilder:jest.fn(()=>query)}:{});const service=new CareerService({manager:{getRepository}} as unknown as DataSource,{} as AuthService);
-    await service.listAssignableStaff(admin,{q:'Ada Lovelace'});expect(query.where).toHaveBeenCalledWith('user.universityId = :universityId',{universityId:admin.universityId});expect(query.andWhere).toHaveBeenCalledWith('(LOWER(user.firstName) LIKE :search OR LOWER(user.lastName) LIKE :search)',{search:'%ada lovelace%'});
+    await service.listAssignableStaff(admin,{q:'Ada Lovelace'});expect(query.where).toHaveBeenCalledWith('user.organizationId = :organizationId',{organizationId:admin.organizationId});expect(query.andWhere).toHaveBeenCalledWith('(LOWER(user.firstName) LIKE :search OR LOWER(user.lastName) LIKE :search)',{search:'%ada lovelace%'});
   });
 });
 
@@ -409,9 +409,9 @@ describe('Career student admissions and portfolio',()=>{
     const {service,query,find}=makeAdmissionHarness(items,total,[{skill:'design'},{skill:'backend'},{skill:'design'}]);
     const result=await service.listStudentAdmissions(student,{offset,limit:'20'});
     expect(result).toMatchObject({items,total,offset:Number(offset),limit:20,hasMore,approvedSkills:['backend','design']});
-    expect(query.where).toHaveBeenCalledWith('admission.studentId = :studentId AND admission.universityId = :universityId',{studentId:student.id,universityId:student.universityId});
+    expect(query.where).toHaveBeenCalledWith('admission.studentId = :studentId AND admission.organizationId = :organizationId',{studentId:student.id,organizationId:student.organizationId});
     expect(query.orderBy).toHaveBeenCalledWith('admission.createdAt','DESC');expect(query.addOrderBy).toHaveBeenCalledWith('admission.id','DESC');expect(query.skip).toHaveBeenCalledWith(Number(offset));expect(query.take).toHaveBeenCalledWith(20);
-    expect(find).toHaveBeenCalledWith({where:{studentId:student.id,universityId:student.universityId,state:'approved'},select:{skill:true}});
+    expect(find).toHaveBeenCalledWith({where:{studentId:student.id,organizationId:student.organizationId,state:'approved'},select:{skill:true}});
   });
   it('searches and filters admission items, but denies other roles before admission reads',async()=>{
     const {service,query}=makeAdmissionHarness([],0);await service.listStudentAdmissions(student,{q:' Design ',state:'pending'});

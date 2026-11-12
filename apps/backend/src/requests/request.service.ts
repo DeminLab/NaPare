@@ -30,21 +30,21 @@ export class RequestService {
   constructor(private readonly db: DataSource, private readonly access: OfficeAccessService, private readonly reports: OfficeReportService) {}
   private async lock(manager: EntityManager) {
     // Grant revocation, route changes and decisions have a single ordering per university.
-    await manager.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [`office:${this.access.actor().universityId}`]);
+    await manager.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [`office:${this.access.actor().organizationId}`]);
   }
   private async audit(manager: EntityManager, action: string, id: string, values: JsonObject) {
-    await manager.save(AuditLog, manager.create(AuditLog, { userId: this.access.actor().id, action, entity: 'academic-office', entityId: id, newValues: { universityId: this.access.actor().universityId, ...values } }));
+    await manager.save(AuditLog, manager.create(AuditLog, { userId: this.access.actor().id, action, entity: 'academic-office', entityId: id, newValues: { organizationId: this.access.actor().organizationId, ...values } }));
   }
   async context() {
     const actor = this.access.actor(), manager = this.db.manager;
     const scope = await this.access.scope(manager), assignments = scope.assignments;
     const allowedIds = new Set([...scope.office, ...scope.methodologist, ...scope.curator_or_dean, ...scope.dispatcher]);
     const allowed = scope.groups.filter(group => actor.role === UserRole.UNIVERSITY_ADMIN || allowedIds.has(group.id));
-    const faculties = allowed.length ? await manager.findBy(Faculty, { id: In([...new Set(allowed.map(group => group.facultyId))]), universityId: actor.universityId }) : [];
-    const grants = allowed.length ? await manager.findBy(OfficeAssignment, { universityId: actor.universityId, revokedAt: IsNull() }) : [];
-    const curators = allowed.length ? await manager.findBy(CuratorAssignment, { universityId: actor.universityId, groupId: In(allowed.map(group => group.id)), revokedAt: IsNull() }) : [];
+    const faculties = allowed.length ? await manager.findBy(Faculty, { id: In([...new Set(allowed.map(group => group.facultyId))]), organizationId: actor.organizationId }) : [];
+    const grants = allowed.length ? await manager.findBy(OfficeAssignment, { organizationId: actor.organizationId, revokedAt: IsNull() }) : [];
+    const curators = allowed.length ? await manager.findBy(CuratorAssignment, { organizationId: actor.organizationId, groupId: In(allowed.map(group => group.id)), revokedAt: IsNull() }) : [];
     const peopleIds = [...new Set([...grants.filter(row => allowed.some(group => this.access.covers(row, group))).map(row => row.userId), ...curators.map(row => row.userId), ...faculties.flatMap(row => row.deanUserId ? [row.deanUserId] : [])])];
-    const assignees = peopleIds.length ? await manager.find(User, { where: { id: In(peopleIds), universityId: actor.universityId, isActive: true }, select: ['id', 'firstName', 'lastName'] }) : [];
+    const assignees = peopleIds.length ? await manager.find(User, { where: { id: In(peopleIds), organizationId: actor.organizationId, isActive: true }, select: ['id', 'firstName', 'lastName'] }) : [];
     return { canManage: actor.role === UserRole.UNIVERSITY_ADMIN, canCreateForStudents: assignments.some(row => row.duty === 'office' && row.canCreateForStudents), groups: allowed.map(({ id, name, facultyId }) => ({ id, name, facultyId })), faculties: faculties.map(({ id, name }) => ({ id, name })), assignees, assignments, debtSource: await this.reports.sourceStatus(allowed) };
   }
   async candidates(query: RequestQueryDto) {
@@ -55,13 +55,13 @@ export class RequestService {
       if (!await this.access.hasDuty(this.db.manager, group, 'office')) throw new ForbiddenException('Нет назначения учебного офиса этой группы.');
     }
     const qb = this.db.getRepository(User).createQueryBuilder('u').select(['u.id', 'u.firstName', 'u.lastName', 'u.role'])
-      .where('u.universityId = :uni AND u.isActive = true AND u.role IN (:...roles)', { uni: actor.universityId, roles: group ? [...OFFICE_STAFF_ROLES, UserRole.STUDENT] : OFFICE_STAFF_ROLES });
+      .where('u.organizationId = :uni AND u.isActive = true AND u.role IN (:...roles)', { uni: actor.organizationId, roles: group ? [...OFFICE_STAFF_ROLES, UserRole.STUDENT] : OFFICE_STAFF_ROLES });
     if (query.q) qb.andWhere("concat_ws(' ', u.firstName, u.lastName) ILIKE :q", { q: `%${query.q}%` });
     if (group) {
       const [grants, curators, faculty] = await Promise.all([
-        this.db.manager.findBy(OfficeAssignment, { universityId: actor.universityId, revokedAt: IsNull() }),
-        this.db.manager.findBy(CuratorAssignment, { universityId: actor.universityId, groupId: group.id, revokedAt: IsNull() }),
-        this.db.manager.findOneBy(Faculty, { universityId: actor.universityId, id: group.facultyId }),
+        this.db.manager.findBy(OfficeAssignment, { organizationId: actor.organizationId, revokedAt: IsNull() }),
+        this.db.manager.findBy(CuratorAssignment, { organizationId: actor.organizationId, groupId: group.id, revokedAt: IsNull() }),
+        this.db.manager.findOneBy(Faculty, { organizationId: actor.organizationId, id: group.facultyId }),
       ]);
       const staffIds = grants.filter(row => ['office', 'methodologist'].includes(row.duty) && this.access.covers(row, group)).map(row => row.userId);
       const curatorIds = curators.map(row => row.userId);
@@ -80,7 +80,7 @@ export class RequestService {
     const group = await this.access.group(this.db.manager, query.groupId);
     if (!await this.access.hasDuty(this.db.manager, group, 'office', undefined, true)) throw new ForbiddenException('Не разрешена подача от имени студента этой группы.');
     const qb = this.db.getRepository(User).createQueryBuilder('u').select(['u.id', 'u.firstName', 'u.lastName'])
-      .where('u.universityId = :uni AND u.role = :role AND u.isActive = true AND u.groupId IN (:...ids)', { uni: group.universityId, role: UserRole.STUDENT, ids: [group.id, ...(group.externalId ? [group.externalId] : [])] });
+      .where('u.organizationId = :uni AND u.role = :role AND u.isActive = true AND u.groupId IN (:...ids)', { uni: group.organizationId, role: UserRole.STUDENT, ids: [group.id, ...(group.externalId ? [group.externalId] : [])] });
     if (query.q) qb.andWhere("concat_ws(' ', u.firstName, u.lastName) ILIKE :q", { q: `%${query.q}%` });
     const [rows, total] = await qb.orderBy('u.lastName', 'ASC').addOrderBy('u.id', 'ASC').skip((query.page - 1) * query.limit).take(query.limit).getManyAndCount();
     return toPaginatedResponse(rows, total, query);
@@ -94,13 +94,13 @@ export class RequestService {
     const start = new Date(query.startDate), end = new Date(query.endDate);
     if (end < start || end.getTime() - start.getTime() > 31 * 86400000) throw new BadRequestException('Период должен быть от 1 до 32 дней.');
     end.setUTCDate(end.getUTCDate() + 1);
-    const [rows, total] = await this.db.getRepository(Lesson).createQueryBuilder('lesson').where('lesson.universityId = :uni AND lesson.groupId = :groupId AND lesson.startDate >= :start AND lesson.startDate < :end', { uni: group.universityId, groupId: group.id, start, end })
+    const [rows, total] = await this.db.getRepository(Lesson).createQueryBuilder('lesson').where('lesson.organizationId = :uni AND lesson.groupId = :groupId AND lesson.startDate >= :start AND lesson.startDate < :end', { uni: group.organizationId, groupId: group.id, start, end })
       .orderBy('lesson.startDate', 'ASC').addOrderBy('lesson.pairNumber', 'ASC').skip((query.page - 1) * query.limit).take(query.limit).getManyAndCount();
     return toPaginatedResponse(rows.map(({ id, subject, teacherName, startDate, endDate, startTime, endTime, room, building, changeDescription }) => ({ id, subject, teacherName, startDate, endDate, startTime, endTime, room, building, changeDescription })), total, query);
   }
   async assignments() {
-    const actor = this.access.admin(), rows = await this.db.manager.find(OfficeAssignment, { where: { universityId: actor.universityId }, order: { createdAt: 'DESC' } });
-    const people = rows.length ? await this.db.manager.find(User, { where: { universityId: actor.universityId, id: In([...new Set(rows.map(row => row.userId))]) }, select: ['id', 'firstName', 'lastName'] }) : [];
+    const actor = this.access.admin(), rows = await this.db.manager.find(OfficeAssignment, { where: { organizationId: actor.organizationId }, order: { createdAt: 'DESC' } });
+    const people = rows.length ? await this.db.manager.find(User, { where: { organizationId: actor.organizationId, id: In([...new Set(rows.map(row => row.userId))]) }, select: ['id', 'firstName', 'lastName'] }) : [];
     return rows.map(row => { const user = people.find(person => person.id === row.userId); return { ...row, userName: user ? `${user.lastName} ${user.firstName}` : 'Недоступный аккаунт' }; });
   }
   async assign(dto: OfficeAssignmentDto) {
@@ -108,13 +108,13 @@ export class RequestService {
     return this.db.transaction(async manager => {
       await this.lock(manager); await this.access.staff(manager, dto.userId);
       for (const id of dto.groupIds) await this.access.group(manager, id);
-      for (const id of dto.facultyIds) if (!await manager.findOneBy(Faculty, { id, universityId: actor.universityId })) throw new BadRequestException('Факультет другого вуза или недоступен.');
+      for (const id of dto.facultyIds) if (!await manager.findOneBy(Faculty, { id, organizationId: actor.organizationId })) throw new BadRequestException('Факультет другого вуза или недоступен.');
       if (dto.canCreateForStudents && dto.duty !== 'office') throw new BadRequestException('Подача от имени студента доступна только учебному офису.');
       const sameScope = (a: string[], b: string[]) => JSON.stringify([...a].sort()) === JSON.stringify([...b].sort());
-      const active = await manager.findBy(OfficeAssignment, { universityId: actor.universityId, userId: dto.userId, duty: dto.duty, revokedAt: IsNull() });
+      const active = await manager.findBy(OfficeAssignment, { organizationId: actor.organizationId, userId: dto.userId, duty: dto.duty, revokedAt: IsNull() });
       const previous = active.find(row => sameScope(row.groupIds, dto.groupIds) && sameScope(row.facultyIds, dto.facultyIds) && row.canCreateForStudents === !!dto.canCreateForStudents);
       if (previous) return previous;
-      const assignment = await manager.save(OfficeAssignment, manager.create(OfficeAssignment, { ...dto, universityId: actor.universityId, assignedBy: actor.id }));
+      const assignment = await manager.save(OfficeAssignment, manager.create(OfficeAssignment, { ...dto, organizationId: actor.organizationId, assignedBy: actor.id }));
       await this.audit(manager, 'office.assignment.granted', assignment.id, { userId: dto.userId, duty: dto.duty, facultyIds: dto.facultyIds, groupIds: dto.groupIds, canCreateForStudents: !!dto.canCreateForStudents });
       return assignment;
     });
@@ -123,30 +123,30 @@ export class RequestService {
     const actor = this.access.admin();
     return this.db.transaction(async manager => {
       await this.lock(manager);
-      const row = await manager.findOneBy(OfficeAssignment, { id, universityId: actor.universityId });
+      const row = await manager.findOneBy(OfficeAssignment, { id, organizationId: actor.organizationId });
       if (!row) throw new NotFoundException('Назначение недоступно.');
       if (!row.revokedAt) { row.revokedAt = new Date(); row.revokedBy = actor.id; await manager.save(row); await this.audit(manager, 'office.assignment.revoked', id, { userId: row.userId }); }
       return row;
     });
   }
-  async routes() { const actor = this.access.admin(); return this.db.manager.findBy(OfficeRoute, { universityId: actor.universityId }); }
+  async routes() { const actor = this.access.admin(); return this.db.manager.findBy(OfficeRoute, { organizationId: actor.organizationId }); }
   async configureRoute(dto: OfficeRouteDto) {
     const actor = this.access.admin();
     return this.db.transaction(async manager => {
       await this.lock(manager);
       const group = await this.access.group(manager, dto.groupId);
       await this.access.validateRoute(manager, group, dto.type, dto.assigneeIds);
-      const existing = await manager.findOneBy(OfficeRoute, { universityId: actor.universityId, groupId: group.id, type: dto.type });
+      const existing = await manager.findOneBy(OfficeRoute, { organizationId: actor.organizationId, groupId: group.id, type: dto.type });
       if ((existing?.version ?? 0) !== dto.version) throw new ConflictException('Маршрут изменён. Обновите страницу.');
-      const route = await manager.save(OfficeRoute, manager.create(OfficeRoute, { ...existing, ...dto, universityId: actor.universityId, configuredBy: actor.id, version: dto.version + 1 }));
+      const route = await manager.save(OfficeRoute, manager.create(OfficeRoute, { ...existing, ...dto, organizationId: actor.organizationId, configuredBy: actor.id, version: dto.version + 1 }));
       await this.audit(manager, 'office.route.configured', route.id, { groupId: group.id, type: dto.type, version: route.version, assigneeIds: route.assigneeIds, dueDays: route.dueDays });
       return route;
     });
   }
   private async studentGroup(manager: EntityManager, studentId: string) {
-    const student = await manager.findOneBy(User, { id: studentId, universityId: this.access.actor().universityId, role: UserRole.STUDENT, isActive: true });
+    const student = await manager.findOneBy(User, { id: studentId, organizationId: this.access.actor().organizationId, role: UserRole.STUDENT, isActive: true });
     if (!student?.groupId) throw new BadRequestException('Студент или его учебная группа недоступны.');
-    const group = await manager.getRepository(Group).createQueryBuilder('g').where('g.universityId = :uni AND (g.id::text = :id OR g.externalId = :id)', { uni: student.universityId, id: student.groupId }).getOne();
+    const group = await manager.getRepository(Group).createQueryBuilder('g').where('g.organizationId = :uni AND (g.id::text = :id OR g.externalId = :id)', { uni: student.organizationId, id: student.groupId }).getOne();
     if (!group) throw new BadRequestException('Сначала привяжите студента к существующей группе своего вуза.');
     return group;
   }
@@ -157,22 +157,22 @@ export class RequestService {
       await this.lock(manager);
       const studentId = dto.studentId ?? actor.id, group = await this.studentGroup(manager, studentId);
       if (!(actor.role === UserRole.STUDENT && studentId === actor.id) && !await this.access.hasDuty(manager, group, 'office', actor.id, true)) throw new ForbiddenException('Не разрешена подача от имени этого студента.');
-      const payloadHash = hash(dto), previous = await manager.findOneBy(StudentRequest, { universityId: actor.universityId, createdBy: actor.id, createKey: dto.idempotencyKey });
+      const payloadHash = hash(dto), previous = await manager.findOneBy(StudentRequest, { organizationId: actor.organizationId, createdBy: actor.id, createKey: dto.idempotencyKey });
       if (previous) { if (previous.createHash !== payloadHash) throw new ConflictException('Ключ уже использован для другого заявления.'); await this.access.assertRead(manager, previous); return ack(previous); }
       for (const attachmentId of dto.attachmentIds ?? []) {
         const file = await manager.findOneBy(FileAttachment, { id: attachmentId, uploadedBy: studentId, revokedAt: IsNull() });
-        const space = file ? await manager.findOneBy(PairSpace, { id: file.pairSpaceId, universityId: actor.universityId }) : null;
+        const space = file ? await manager.findOneBy(PairSpace, { id: file.pairSpaceId, organizationId: actor.organizationId }) : null;
         if (!space) throw new BadRequestException('Документ недоступен или не принадлежит студенту в этом вузе.');
       }
-      const row = await manager.save(StudentRequest, manager.create(StudentRequest, { universityId: actor.universityId, studentId, groupId: group.id, facultyId: group.facultyId, type: dto.type, title: dto.title.trim(), description: dto.description.trim(), createdBy: actor.id, createKey: dto.idempotencyKey, createHash: payloadHash }));
-      for (const attachmentId of dto.attachmentIds ?? []) await manager.save(RequestDocument, manager.create(RequestDocument, { universityId: actor.universityId, requestId: row.id, attachmentId, addedBy: actor.id }));
+      const row = await manager.save(StudentRequest, manager.create(StudentRequest, { organizationId: actor.organizationId, studentId, groupId: group.id, facultyId: group.facultyId, type: dto.type, title: dto.title.trim(), description: dto.description.trim(), createdBy: actor.id, createKey: dto.idempotencyKey, createHash: payloadHash }));
+      for (const attachmentId of dto.attachmentIds ?? []) await manager.save(RequestDocument, manager.create(RequestDocument, { organizationId: actor.organizationId, requestId: row.id, attachmentId, addedBy: actor.id }));
       await this.audit(manager, 'office.request.created', row.id, { studentId, createdBy: actor.id, type: row.type });
       return ack(row);
     });
   }
   async list(query: RequestQueryDto) {
     const actor = this.access.actor(), manager = this.db.manager;
-    const qb = manager.getRepository(StudentRequest).createQueryBuilder('r').where('r.universityId = :uni', { uni: actor.universityId })
+    const qb = manager.getRepository(StudentRequest).createQueryBuilder('r').where('r.organizationId = :uni', { uni: actor.organizationId })
       .andWhere("(r.status != 'draft' OR r.studentId = :actor OR r.createdBy = :actor)", { actor: actor.id });
     if (actor.role !== UserRole.UNIVERSITY_ADMIN) {
       const permissions = await this.access.scope(manager);
@@ -192,14 +192,14 @@ export class RequestService {
   }
   async get(id: string) {
     const actor = this.access.actor(), manager = this.db.manager;
-    const row = await manager.findOneBy(StudentRequest, { id, universityId: actor.universityId });
+    const row = await manager.findOneBy(StudentRequest, { id, organizationId: actor.organizationId });
     if (!row) throw new NotFoundException('Заявление недоступно.');
     await this.access.assertRead(manager, row);
-    const steps = await manager.find(RequestStep, { where: { requestId: id, universityId: actor.universityId }, order: { sequence: 'ASC' } });
-    const history = await manager.find(RequestDecision, { where: { requestId: id, universityId: actor.universityId }, order: { createdAt: 'ASC', id: 'ASC' } });
-    const documents = await manager.find(RequestDocument, { where: { requestId: id, universityId: actor.universityId } });
+    const steps = await manager.find(RequestStep, { where: { requestId: id, organizationId: actor.organizationId }, order: { sequence: 'ASC' } });
+    const history = await manager.find(RequestDecision, { where: { requestId: id, organizationId: actor.organizationId }, order: { createdAt: 'ASC', id: 'ASC' } });
+    const documents = await manager.find(RequestDocument, { where: { requestId: id, organizationId: actor.organizationId } });
     const ids = [...new Set([row.studentId, row.createdBy, ...steps.map(step => step.assigneeId), ...history.map(item => item.actorId)])];
-    const people = await manager.find(User, { where: { universityId: actor.universityId, id: In(ids) }, select: ['id', 'firstName', 'lastName'] });
+    const people = await manager.find(User, { where: { organizationId: actor.organizationId, id: In(ids) }, select: ['id', 'firstName', 'lastName'] });
     const name = (userId: string) => { const user = people.find(person => person.id === userId); return user ? `${user.lastName} ${user.firstName}` : 'Недоступный аккаунт'; };
     const { createKey, createHash, ...request } = row;
     const group = await this.access.group(manager, row.groupId), office = await this.access.hasDuty(manager, group, 'office');
@@ -218,7 +218,7 @@ export class RequestService {
     const actor = this.access.actor();
     return this.db.transaction(async manager => {
       await this.lock(manager);
-      const row = await manager.findOne(StudentRequest, { where: { id, universityId: actor.universityId }, lock: { mode: 'pessimistic_write' } });
+      const row = await manager.findOne(StudentRequest, { where: { id, organizationId: actor.organizationId }, lock: { mode: 'pessimistic_write' } });
       if (!row) throw new NotFoundException('Заявление недоступно.');
       await this.access.assertRead(manager, row);
       const payloadHash = hash(dto), prior = await manager.findOneBy(RequestDecision, { requestId: id, actorId: actor.id, idempotencyKey: dto.idempotencyKey });
@@ -243,12 +243,12 @@ export class RequestService {
         requireAuthor(); inState('draft');
         const currentGroup = await this.studentGroup(manager, row.studentId);
         if (currentGroup.id !== group.id) throw new ConflictException('Группа студента изменилась. Создайте новое заявление.');
-        const route = await manager.findOneBy(OfficeRoute, { universityId: actor.universityId, groupId: group.id, type: row.type });
+        const route = await manager.findOneBy(OfficeRoute, { organizationId: actor.organizationId, groupId: group.id, type: row.type });
         const assignees = route?.assigneeIds ?? await this.access.defaultAssignees(manager, group, row.type, row.studentId);
         await this.access.validateRoute(manager, group, row.type, assignees, row.studentId);
         row.workflowVersion = route?.version ?? 1; row.submittedAt = new Date(); row.status = 'submitted';
         const dueDays = route?.dueDays ?? 5;
-        for (let sequence = 0; sequence < assignees.length; sequence++) await manager.save(RequestStep, manager.create(RequestStep, { universityId: actor.universityId, requestId: id, sequence, duty: routeDuties(row.type)[sequence], assigneeId: assignees[sequence], dueAt: new Date(Date.now() + dueDays * (sequence + 1) * 86400000) }));
+        for (let sequence = 0; sequence < assignees.length; sequence++) await manager.save(RequestStep, manager.create(RequestStep, { organizationId: actor.organizationId, requestId: id, sequence, duty: routeDuties(row.type)[sequence], assigneeId: assignees[sequence], dueAt: new Date(Date.now() + dueDays * (sequence + 1) * 86400000) }));
         row.assignedTo = assignees[0]; row.dueAt = new Date(Date.now() + dueDays * 86400000);
       } else if (dto.action === 'accept') {
         requireOffice(); inState('submitted'); row.status = 'in_review';
@@ -281,7 +281,7 @@ export class RequestService {
       }
       row.version++; await manager.save(row);
       const response = ack(row);
-      await manager.save(RequestDecision, manager.create(RequestDecision, { universityId: actor.universityId, requestId: id, stepId: decisionStepId, actorId: actor.id, action: dto.action, fromStatus, toStatus: row.status, reason: dto.reason?.trim() || '', idempotencyKey: dto.idempotencyKey, payloadHash, response, details }));
+      await manager.save(RequestDecision, manager.create(RequestDecision, { organizationId: actor.organizationId, requestId: id, stepId: decisionStepId, actorId: actor.id, action: dto.action, fromStatus, toStatus: row.status, reason: dto.reason?.trim() || '', idempotencyKey: dto.idempotencyKey, payloadHash, response, details }));
       await this.audit(manager, `office.request.${dto.action}`, id, { fromStatus, toStatus: row.status, version: row.version, workflowVersion: row.workflowVersion, ...details });
       return response;
     });

@@ -48,37 +48,37 @@ export class ScheduleImportService implements OnModuleInit, OnModuleDestroy, Sch
   }
   onModuleDestroy() { if (this.timer) clearInterval(this.timer); }
 
-  async submit(universityId: string, dto: ImportScheduleDto) {
-    this.tenant.assertAccess(universityId);
+  async submit(organizationId: string, dto: ImportScheduleDto) {
+    this.tenant.assertAccess(organizationId);
     const actor = this.tenant.getUser();
-    if (!actor || ![UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN].includes(actor.role) || !universityId) throw new ForbiddenException('Нужны права администратора вуза.');
-    const university = await this.universities.findOneBy({ id: universityId });
+    if (!actor || ![UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN].includes(actor.role) || !organizationId) throw new ForbiddenException('Нужны права администратора вуза.');
+    const university = await this.universities.findOneBy({ id: organizationId });
     if (!university) throw new NotFoundException('Вуз не найден.');
     const payload = await this.prepare(university, dto);
     const payloadHash = createHash('sha256').update(JSON.stringify(payload)).digest('hex');
     const idempotencyKey = dto.idempotencyKey || randomUUID();
-    await this.jobs.createQueryBuilder().insert().values({ universityId, actorId: actor.id, idempotencyKey, payloadHash, payload, status: 'queued', nextAttemptAt: new Date() }).orIgnore().execute();
-    let job = await this.jobs.findOneByOrFail({ universityId, idempotencyKey });
+    await this.jobs.createQueryBuilder().insert().values({ organizationId, actorId: actor.id, idempotencyKey, payloadHash, payload, status: 'queued', nextAttemptAt: new Date() }).orIgnore().execute();
+    let job = await this.jobs.findOneByOrFail({ organizationId, idempotencyKey });
     if (job.payloadHash !== payloadHash) throw new ConflictException('Этот idempotencyKey уже использован для другого содержимого.');
     if (!dto.queued && job.status === 'queued') {
       await this.processJob(job.id);
-      job = await this.jobs.findOneByOrFail({ id: job.id, universityId });
+      job = await this.jobs.findOneByOrFail({ id: job.id, organizationId });
     }
     if (!dto.queued && job.status === 'failed') throw new BadRequestException(job.lastError || 'Импорт отклонён.');
     return job.status === 'completed' ? { ...job.result!, jobId: job.id, status: job.status } : this.jobView(job);
   }
 
-  async getJob(universityId: string, id: string) {
-    this.tenant.assertAccess(universityId);
-    const job = await this.jobs.findOneBy({ id, universityId });
+  async getJob(organizationId: string, id: string) {
+    this.tenant.assertAccess(organizationId);
+    const job = await this.jobs.findOneBy({ id, organizationId });
     if (!job) throw new NotFoundException('Задание импорта не найдено.');
     return this.jobView(job);
   }
 
-  async getChanges(universityId: string, id: string, pagination: PaginationQueryDto) {
-    await this.getJob(universityId, id);
+  async getChanges(organizationId: string, id: string, pagination: PaginationQueryDto) {
+    await this.getJob(organizationId, id);
     const [data, total] = await this.db.getRepository(ScheduleChange).createQueryBuilder('change')
-      .where('change.universityId = :universityId', { universityId }).andWhere(`"change"."newValue"->>'importJobId' = :id`, { id })
+      .where('change.organizationId = :organizationId', { organizationId }).andWhere(`"change"."newValue"->>'importJobId' = :id`, { id })
       .orderBy('change.timestamp', 'DESC').addOrderBy('change.id', 'ASC').skip((pagination.page - 1) * pagination.limit).take(pagination.limit).getManyAndCount();
     return toPaginatedResponse(data, total, pagination);
   }
@@ -123,7 +123,7 @@ export class ScheduleImportService implements OnModuleInit, OnModuleDestroy, Sch
   processJob(id: string): Promise<boolean> { return this.process(id); }
 
   private async process(id?: string): Promise<boolean> {
-    let claimed: { id: string; universityId: string } | undefined;
+    let claimed: { id: string; organizationId: string } | undefined;
     return this.databaseAccess(['schedule_import_jobs'], null, true, async () => {
       try {
         return await this.db.transaction(async manager => {
@@ -132,9 +132,9 @@ export class ScheduleImportService implements OnModuleInit, OnModuleDestroy, Sch
           else query.andWhere('job.nextAttemptAt <= :now', { now: new Date() });
           const job = await query.getOne();
           if (!job) return false;
-          claimed = { id: job.id, universityId: job.universityId };
+          claimed = { id: job.id, organizationId: job.organizationId };
           if (!job.payload) throw new BadRequestException('Нет содержимого задания.');
-          const result = await this.databaseAccess(TABLES, [job.universityId], true, () => this.apply(manager, job));
+          const result = await this.databaseAccess(TABLES, [job.organizationId], true, () => this.apply(manager, job));
           job.status = 'completed'; job.result = result; job.payload = null; job.attempts++; job.lastError = null;
           await manager.getRepository(ScheduleImportJob).save(job);
           return true;
@@ -146,23 +146,23 @@ export class ScheduleImportService implements OnModuleInit, OnModuleDestroy, Sch
           attempts: () => 'attempts + 1',
           status: () => terminal ? "'failed'" : "CASE WHEN attempts + 1 >= 3 THEN 'failed' ELSE 'queued' END",
           nextAttemptAt: new Date(Date.now() + 30000), lastError: terminal ? error.message.slice(0, 500) : 'Временная ошибка импорта. Повторная попытка будет выполнена автоматически.',
-        }).where('id = :id AND "universityId" = :universityId AND status = :status', { ...claimed, status: 'queued' }).execute();
+        }).where('id = :id AND "organizationId" = :organizationId AND status = :status', { ...claimed, status: 'queued' }).execute();
         return true;
       }
     });
   }
 
   /** Adapts to the explicit trusted-capability API introduced by the independent RLS block. */
-  private databaseAccess<T>(tables: string[], universityIds: string[] | null, write: boolean, callback: () => Promise<T>): Promise<T> {
-    return this.tenant.runWithDatabaseAccess({ tables, universityIds, write }, callback);
+  private databaseAccess<T>(tables: string[], organizationIds: string[] | null, write: boolean, callback: () => Promise<T>): Promise<T> {
+    return this.tenant.runWithDatabaseAccess({ tables, organizationIds, write }, callback);
   }
 
   private async apply(manager: EntityManager, job: ScheduleImportJob): Promise<ScheduleImportSummary> {
     const payload = job.payload!;
-    const actor = await manager.getRepository(User).findOneBy({ id: job.actorId, universityId: job.universityId, isActive: true });
+    const actor = await manager.getRepository(User).findOneBy({ id: job.actorId, organizationId: job.organizationId, isActive: true });
     if (!actor || ![UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN].includes(actor.role)) throw new ForbiddenException('Автор задания больше не имеет права импортировать расписание этого вуза.');
-    await manager.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [`schedule-import:${job.universityId}:${payload.source}`]);
-    const groups = await manager.getRepository(Group).find({ where: { universityId: job.universityId } });
+    await manager.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [`schedule-import:${job.organizationId}:${payload.source}`]);
+    const groups = await manager.getRepository(Group).find({ where: { organizationId: job.organizationId } });
     if (new Set(groups.map(group => normalizeName(group.name))).size !== groups.length || new Set(groups.filter(group => group.externalId).map(group => group.externalId)).size !== groups.filter(group => group.externalId).length) throw new BadRequestException('Неоднозначные имена или внешние ID групп: исправьте структуру вуза.');
     const byName = new Map(groups.map(group => [normalizeName(group.name), group]));
     const bySource = new Map(groups.filter(group => group.externalId).map(group => [group.externalId!, group]));
@@ -170,8 +170,8 @@ export class ScheduleImportService implements OnModuleInit, OnModuleDestroy, Sch
     const resolved = payload.lessons.map(lesson => ({ lesson, group: lesson.groupExternalId ? bySource.get(lesson.groupExternalId) : byName.get(normalizeName(lesson.groupName)) }));
     if (resolved.some(item => !item.group)) throw new BadRequestException('Не все группы источника сопоставлены с группами этого вуза.');
     const repository = manager.getRepository(Lesson);
-    const existing = await repository.find({ where: { universityId: job.universityId, source: payload.source }, withDeleted: true });
-    const legacy = payload.lessons.some(lesson => lesson.externalId.startsWith(payload.fileName + ':')) ? await repository.find({ where: { universityId: job.universityId, source: 'university-import' }, withDeleted: true }) : [];
+    const existing = await repository.find({ where: { organizationId: job.organizationId, source: payload.source }, withDeleted: true });
+    const legacy = payload.lessons.some(lesson => lesson.externalId.startsWith(payload.fileName + ':')) ? await repository.find({ where: { organizationId: job.organizationId, source: 'university-import' }, withDeleted: true }) : [];
     const identity = (externalId: string, groupId: string) => payload.groupScopedIdentity ? `${externalId}::${groupId}` : externalId;
     const current = new Map(existing.map(lesson => [identity(lesson.externalId, lesson.groupId), lesson]));
     for (const lesson of legacy) if (payload.lessons.some(row => row.externalId === lesson.externalId) && !current.has(lesson.externalId)) current.set(lesson.externalId, lesson);
@@ -187,7 +187,7 @@ export class ScheduleImportService implements OnModuleInit, OnModuleDestroy, Sch
         continue;
       }
       const values = {
-        universityId: job.universityId, groupId: group!.id, groupName: group!.name, subject: input.subject,
+        organizationId: job.organizationId, groupId: group!.id, groupName: group!.name, subject: input.subject,
         startDate: new Date(input.startDate), endDate: new Date(input.endDate), startTime: input.startTime, endTime: input.endTime,
         dayOfWeek: new Date(input.localDate + 'T00:00:00Z').getUTCDay(), pairNumber: input.pairNumber, weekType: 'both',
         teacherName: input.teacherName || '', room: input.room || '', sourceTeacherId: input.sourceTeacherId || null,
@@ -228,6 +228,6 @@ export class ScheduleImportService implements OnModuleInit, OnModuleDestroy, Sch
   }
 
   private async record(manager: EntityManager, job: ScheduleImportJob, lessonId: string, changeType: string, originalValue: JsonObject, newValue: JsonObject) {
-    await manager.getRepository(ScheduleChange).save({ universityId: job.universityId, legacyLessonId: lessonId, occurrenceId: null, actorId: job.actorId, source: job.payload!.source, timestamp: new Date(), reason: `Импорт: ${changeType}`, originalValue, newValue: { ...newValue, changeType, importJobId: job.id } });
+    await manager.getRepository(ScheduleChange).save({ organizationId: job.organizationId, legacyLessonId: lessonId, occurrenceId: null, actorId: job.actorId, source: job.payload!.source, timestamp: new Date(), reason: `Импорт: ${changeType}`, originalValue, newValue: { ...newValue, changeType, importJobId: job.id } });
   }
 }

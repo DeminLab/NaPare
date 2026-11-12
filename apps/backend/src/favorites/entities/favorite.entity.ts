@@ -4,8 +4,8 @@ export const FAVORITE_KINDS = ['group', 'teacher'] as const;
 export type FavoriteKind = typeof FAVORITE_KINDS[number];
 
 @Entity('user_favorites')
-@Index('UQ_user_favorites_owner_kind_external', ['userId', 'universityId', 'kind', 'externalId'], { unique: true })
-@Index('IDX_user_favorites_tenant_owner', ['universityId', 'userId'])
+@Index('UQ_user_favorites_owner_kind_external', ['userId', 'organizationId', 'kind', 'externalId'], { unique: true })
+@Index('IDX_user_favorites_tenant_owner', ['organizationId', 'userId'])
 export class Favorite {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -14,7 +14,7 @@ export class Favorite {
   userId: string;
 
   @Column({ type: 'uuid' })
-  universityId: string;
+  organizationId: string;
 
   @Column({ type: 'varchar', length: 16 })
   kind: FavoriteKind;

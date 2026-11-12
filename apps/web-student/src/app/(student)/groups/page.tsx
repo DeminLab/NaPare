@@ -66,9 +66,9 @@ function favoriteGroupsKey(): string | null {
     const base64 = encodedClaims.replace(/-/g, '+').replace(/_/g, '/');
     const binary = window.atob(base64.padEnd(Math.ceil(base64.length / 4) * 4, '='));
     const bytes = Uint8Array.from(binary, character => character.charCodeAt(0));
-    const claims = JSON.parse(new TextDecoder().decode(bytes)) as { sub?: unknown; universityId?: unknown };
-    if (typeof claims.sub !== 'string' || typeof claims.universityId !== 'string') return null;
-    return `napare:student-favorite-groups:${encodeURIComponent(claims.universityId)}:${encodeURIComponent(claims.sub)}`;
+    const claims = JSON.parse(new TextDecoder().decode(bytes)) as { sub?: unknown; organizationId?: unknown };
+    if (typeof claims.sub !== 'string' || typeof claims.organizationId !== 'string') return null;
+    return `napare:student-favorite-groups:${encodeURIComponent(claims.organizationId)}:${encodeURIComponent(claims.sub)}`;
   } catch {
     return null;
   }

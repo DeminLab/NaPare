@@ -22,7 +22,7 @@ export default function MonitoredUsersPage() {
   const [search, setSearch] = useState('');
   const [role, setRole] = useState('');
   const [status, setStatus] = useState('');
-  const [universityId, setUniversityId] = useState('');
+  const [organizationId, setOrganizationId] = useState('');
   const [page, setPage] = useState(1);
   const access = useResource<Access>('/platform/access');
   const universities = useResource<Page<{ id: string; name: string; city: string }>>('/platform/universities?limit=100');
@@ -37,9 +37,9 @@ export default function MonitoredUsersPage() {
     if (search) params.set('q', search);
     if (role) params.set('role', role);
     if (status) params.set('status', status);
-    if (universityId) params.set('universityId', universityId);
+    if (organizationId) params.set('organizationId', organizationId);
     return `/platform/monitored-users?${params.toString()}`;
-  }, [page, search, role, status, universityId]);
+  }, [page, search, role, status, organizationId]);
   const users = useResource<UserPage>(path, 60_000);
   const forbidden = users.error.toLowerCase().includes('доступ') || users.error.toLowerCase().includes('разреш');
 
@@ -122,7 +122,7 @@ export default function MonitoredUsersPage() {
           </div>
           {!!universities.data?.data.length && (
             <div className="w-full sm:w-64">
-              <Select label="Университет" value={universityId} onChange={event => { setUniversityId(event.target.value); setPage(1); }}>
+              <Select label="Университет" value={organizationId} onChange={event => { setOrganizationId(event.target.value); setPage(1); }}>
                 <option value="">Все доступные</option>
                 {universities.data.data.map(university => <option key={university.id} value={university.id}>{university.name}</option>)}
               </Select>
@@ -141,7 +141,7 @@ export default function MonitoredUsersPage() {
           <div className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[var(--color-text-secondary)]">
               <span>{users.data ? `Найдено ${formatNumber(users.data.meta.total)} аккаунтов` : 'Загрузка…'}</span>
-              {access.data && !access.data.owner && access.data.universityIds !== null && <span>Доступ ограничен {formatNumber(access.data.universityIds.length)} вузами</span>}
+              {access.data && !access.data.owner && access.data.organizationIds !== null && <span>Доступ ограничен {formatNumber(access.data.organizationIds.length)} вузами</span>}
             </div>
             <DataTable
               columns={columns}

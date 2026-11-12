@@ -13,7 +13,7 @@ export class PlatformPersonalRecordsQueryDto extends PaginationQueryDto {
 
   @ApiPropertyOptional({ format: 'uuid' })
   @IsOptional() @IsUUID()
-  universityId?: string;
+  organizationId?: string;
 
   @ApiPropertyOptional({ enum: UserRole })
   @IsOptional() @IsIn(Object.values(UserRole))
@@ -29,7 +29,7 @@ export class PlatformPersonalRecordReasonDto {
 export class PlatformNotificationPreferencesDto extends PlatformPersonalRecordReasonDto {
   @ApiProperty({ format: 'uuid' })
   @IsUUID()
-  universityId: string;
+  organizationId: string;
 
   @ApiPropertyOptional() @IsOptional() @IsBoolean() scheduleChanges?: boolean;
   @ApiPropertyOptional() @IsOptional() @IsBoolean() cancellations?: boolean;

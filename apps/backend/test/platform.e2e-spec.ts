@@ -37,7 +37,7 @@ suite('Platform owner and explicitly delegated rights: real PostgreSQL/JWT/HTTP'
   it('lists accounts across universities without credentials and requires explicit delegation',async()=>{
     await get('/platform/accounts','developer').expect(403);
     const list=await get('/platform/accounts?limit=100').expect(200);
-    expect(list.body.data.some((user:User)=>user.universityId===f.otherUni.id)).toBe(true);
+    expect(list.body.data.some((user:User)=>user.organizationId===f.otherUni.id)).toBe(true);
     expect(JSON.stringify(list.body)).not.toMatch(/passwordHash|telegramUserId|sessionVersion/);
     await grant(['accounts.read']).expect(200);
     await get('/platform/accounts','developer').expect(200);
@@ -60,7 +60,7 @@ suite('Platform owner and explicitly delegated rights: real PostgreSQL/JWT/HTTP'
     await grant([]).expect(200);
     const uni=await http().post('/api/v1/platform/universities').auth(tokens.owner,{type:'bearer'}).send({name:'Тестовый вуз',city:'Омск',status:'pending'}).expect(201);
     await http().put('/api/v1/platform/universities/'+uni.body.id).auth(tokens.owner,{type:'bearer'}).send({name:'Тестовый вуз',city:'Омск',status:'active'}).expect(200);
-    const account={email:'new-user@platform.example.test',firstName:'Новый',lastName:'Студент',role:'student',universityId:uni.body.id,password:'test-created-account-123'};
+    const account={email:'new-user@platform.example.test',firstName:'Новый',lastName:'Студент',role:'student',organizationId:uni.body.id,password:'test-created-account-123'};
     await http().post('/api/v1/platform/accounts').send(account).expect(401);
     await http().post('/api/v1/platform/accounts').auth(tokens.developer,{type:'bearer'}).send(account).expect(403);
     const created=await http().post('/api/v1/platform/accounts').auth(tokens.owner,{type:'bearer'}).set('User-Agent','platform-audit-test').send(account).expect(201);

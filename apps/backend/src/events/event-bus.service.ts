@@ -16,7 +16,7 @@ import {
 
 interface EventStream {
   userId: string;
-  universityId: string;
+  organizationId: string;
   subscriber: (message: EventStreamMessage) => void;
   heartbeat: ReturnType<typeof setInterval>;
 }
@@ -35,7 +35,7 @@ export class EventBusService {
   async publish<TPayload extends JsonObject>(input: PublishEventInput<TPayload>): Promise<EventEnvelope<TPayload>> {
     if (input.idempotencyKey) {
       const existing = await this.eventRepository.findOne({
-        where: { universityId: input.universityId, idempotencyKey: input.idempotencyKey },
+        where: { organizationId: input.organizationId, idempotencyKey: input.idempotencyKey },
       });
       if (existing) return this.toEnvelope(existing) as EventEnvelope<TPayload>;
     }
@@ -46,7 +46,7 @@ export class EventBusService {
       type: input.type,
       actor: input.actor ?? { type: 'system' },
       timestamp: timestamp.toISOString(),
-      university: { id: input.universityId },
+      university: { id: input.organizationId },
       target: input.target,
       payload: input.payload,
       priority: input.priority ?? 'normal',
@@ -58,7 +58,7 @@ export class EventBusService {
       type: envelope.type,
       actor: envelope.actor,
       timestamp,
-      universityId: input.universityId,
+      organizationId: input.organizationId,
       idempotencyKey: input.idempotencyKey ?? null,
       target: envelope.target,
       payload: envelope.payload,
@@ -73,12 +73,12 @@ export class EventBusService {
 
   async listSince(
     userId: string,
-    universityId: string,
+    organizationId: string,
     since?: Date,
     limit = 100,
   ): Promise<EventEnvelope[]> {
     const records = await this.eventRepository.find({
-      where: { universityId, ...(since ? { timestamp: MoreThan(since) } : {}) },
+      where: { organizationId, ...(since ? { timestamp: MoreThan(since) } : {}) },
       order: { timestamp: 'ASC' },
       take: Math.min(Math.max(limit, 1), 500),
     });
@@ -88,12 +88,12 @@ export class EventBusService {
       .map((record) => this.toEnvelope(record));
   }
 
-  stream(userId: string, universityId: string, since?: Date): Observable<EventStreamMessage> {
+  stream(userId: string, organizationId: string, since?: Date): Observable<EventStreamMessage> {
     return new Observable<EventStreamMessage>((subscriber) => {
       const seenEventIds = new Set<string>();
       const stream: EventStream = {
         userId,
-        universityId,
+        organizationId,
         subscriber: (message) => {
           if (message.type !== 'heartbeat' && seenEventIds.has(message.id)) return;
           if (message.type !== 'heartbeat') seenEventIds.add(message.id);
@@ -107,7 +107,7 @@ export class EventBusService {
       };
       this.streams.add(stream);
 
-      void this.listSince(userId, universityId, since, 100).then((events) => {
+      void this.listSince(userId, organizationId, since, 100).then((events) => {
         for (const event of events) {
           stream.subscriber(toSafeStreamMessage(event));
         }
@@ -125,7 +125,7 @@ export class EventBusService {
 
   private dispatch(event: EventEnvelope): void {
     for (const stream of this.streams) {
-      if (stream.universityId !== event.university.id) continue;
+      if (stream.organizationId !== event.university.id) continue;
       if (event.recipients?.length && !event.recipients.includes(stream.userId)) continue;
       stream.subscriber(toSafeStreamMessage(event));
     }
@@ -137,7 +137,7 @@ export class EventBusService {
       type: record.type,
       actor: record.actor,
       timestamp: record.timestamp.toISOString(),
-      university: { id: record.universityId },
+      university: { id: record.organizationId },
       target: record.target,
       payload: record.payload,
       priority: record.priority,

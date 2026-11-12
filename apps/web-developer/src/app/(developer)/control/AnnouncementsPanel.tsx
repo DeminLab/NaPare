@@ -4,7 +4,7 @@ import { apiFetch } from '@/lib/api';
 import { type Access, type Page, Button, Notice, Pager, errorText, inputClass, panelClass, useResource } from './control-ui';
 
 interface Announcement {
-  id: string; pairSpaceId: string; lessonId: string; universityId: string; universityName: string; subject: string; groupName: string;
+  id: string; pairSpaceId: string; lessonId: string; organizationId: string; universityName: string; subject: string; groupName: string;
   authorId: string; authorName: string; authorEmail: string; text: string; isPinned: boolean; createdAt: string; updatedAt: string;
 }
 interface University { id: string; name: string; city: string }
@@ -12,7 +12,7 @@ const dateLabel = (value: string) => new Date(value).toLocaleString('ru-RU');
 
 export default function AnnouncementsPanel({ access }: { access: Access }) {
   const [query, setQuery] = useState('');
-  const [universityId, setUniversityId] = useState('');
+  const [organizationId, setOrganizationId] = useState('');
   const [page, setPage] = useState(1);
   const [selectedId, setSelectedId] = useState('');
   const [text, setText] = useState('');
@@ -25,9 +25,9 @@ export default function AnnouncementsPanel({ access }: { access: Access }) {
   const universities = useResource<Page<University>>(access.permissions.includes('universities.read') ? '/platform/universities?page=1&limit=100' : null);
   const filters = useMemo(() => {
     const params = new URLSearchParams({ q: query.slice(0, 100), page: String(page), limit: '20' });
-    if (universityId) params.set('universityId', universityId);
+    if (organizationId) params.set('organizationId', organizationId);
     return params.toString();
-  }, [query, universityId, page]);
+  }, [query, organizationId, page]);
   const list = useResource<Page<Announcement>>(`/platform-pair-space/announcements?${filters}`);
   const detail = useResource<Announcement>(selectedId ? `/platform-pair-space/announcements/${selectedId}` : null);
   const selected = detail.data?.id === selectedId ? detail.data : null;
@@ -61,7 +61,7 @@ export default function AnnouncementsPanel({ access }: { access: Access }) {
     {(error || list.error || detail.error || universities.error) && <Notice error>{error || list.error || detail.error || universities.error}</Notice>}{notice && <Notice>{notice}</Notice>}
     <div className="grid gap-3 sm:grid-cols-2">
       <label className="block text-sm">Поиск<input className={inputClass} type="search" maxLength={100} value={query} onChange={event => filterChanged(() => setQuery(event.target.value))} placeholder="Текст, автор, группа, предмет или ID" /></label>
-      <label className="block text-sm">Университет<select className={inputClass} value={universityId} onChange={event => filterChanged(() => setUniversityId(event.target.value))}><option value="">Все университеты</option>{(universities.data?.data ?? []).map(university => <option key={university.id} value={university.id}>{university.name} · {university.city}</option>)}</select></label>
+      <label className="block text-sm">Университет<select className={inputClass} value={organizationId} onChange={event => filterChanged(() => setOrganizationId(event.target.value))}><option value="">Все университеты</option>{(universities.data?.data ?? []).map(university => <option key={university.id} value={university.id}>{university.name} · {university.city}</option>)}</select></label>
     </div>
     {list.loading && <p role="status" className="text-sm text-slate-400">Ищем объявления…</p>}
     <div className="grid gap-4 lg:grid-cols-[minmax(17rem,0.9fr)_minmax(0,1.1fr)]">
@@ -77,7 +77,7 @@ export default function AnnouncementsPanel({ access }: { access: Access }) {
         {selectedId && detail.loading && <p role="status" className="text-sm text-slate-400">Открываем объявление…</p>}
         {selected && <article className={`${panelClass} space-y-4`}>
           <div><h3 className="font-semibold">{selected.subject}</h3><p className="mt-1 text-sm text-slate-400">{selected.universityName} · {selected.groupName}</p></div>
-          <dl className="grid gap-2 text-xs text-[var(--color-text-muted)] sm:grid-cols-2"><div><dt>Автор</dt><dd className="mt-1 break-all text-slate-300">{selected.authorName || 'Имя не указано'} · {selected.authorEmail}</dd><dd className="break-all">{selected.authorId}</dd></div><div><dt>Опубликовано / обновлено</dt><dd className="mt-1 text-slate-300">{dateLabel(selected.createdAt)} · {dateLabel(selected.updatedAt)}</dd></div><div><dt>Занятие / пространство</dt><dd className="mt-1 break-all text-slate-400">{selected.lessonId} · {selected.pairSpaceId}</dd></div><div><dt>Университет</dt><dd className="mt-1 break-all text-slate-400">{selected.universityId}</dd></div></dl>
+          <dl className="grid gap-2 text-xs text-[var(--color-text-muted)] sm:grid-cols-2"><div><dt>Автор</dt><dd className="mt-1 break-all text-slate-300">{selected.authorName || 'Имя не указано'} · {selected.authorEmail}</dd><dd className="break-all">{selected.authorId}</dd></div><div><dt>Опубликовано / обновлено</dt><dd className="mt-1 text-slate-300">{dateLabel(selected.createdAt)} · {dateLabel(selected.updatedAt)}</dd></div><div><dt>Занятие / пространство</dt><dd className="mt-1 break-all text-slate-400">{selected.lessonId} · {selected.pairSpaceId}</dd></div><div><dt>Университет</dt><dd className="mt-1 break-all text-slate-400">{selected.organizationId}</dd></div></dl>
           {canWrite ? <form className="space-y-3 border-t border-slate-700 pt-4" onSubmit={event => { event.preventDefault(); void save(); }}><label className="block text-sm">Текст объявления<textarea className={`${inputClass} min-h-40`} required maxLength={20000} value={text} onChange={event => setText(event.target.value)} /></label><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={isPinned} onChange={event => setIsPinned(event.target.checked)} />Закрепить в пространстве пары</label><label className="block text-sm">Причина изменения<textarea className={`${inputClass} min-h-20`} required minLength={3} maxLength={500} value={reason} onChange={event => setReason(event.target.value)} /></label><Button type="submit" disabled={busy || reason.trim().length < 3 || (text === selected.text && isPinned === selected.isPinned)}>{busy ? 'Сохраняем…' : 'Сохранить исправление'}</Button></form> : <p className="text-xs text-[var(--color-text-muted)]">Для исправления требуется `pairspace-content.write`.</p>}
         </article>}
       </div>

@@ -1,7 +1,7 @@
 export interface Group {
   id: string;
   facultyId: string;
-  universityId: string;
+  organizationId: string;
   name: string;
   curriculumYear: number;
   specialization?: string;

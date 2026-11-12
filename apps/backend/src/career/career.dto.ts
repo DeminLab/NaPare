@@ -12,7 +12,7 @@ export class CareerCompanyDto {
   @ApiProperty() @IsString() @Matches(/^(?:\d{10}|\d{12})$/) inn: string;
   @ApiProperty() @IsString() @MinLength(2) @MaxLength(160) name: string;
   @ApiProperty() @IsString() @MaxLength(4000) description: string;
-  @ApiProperty() @IsUUID() universityId: string;
+  @ApiProperty() @IsUUID() organizationId: string;
 }
 export class CompanyRegistryCheckDto {
   @ApiProperty({required:false}) @IsOptional() @IsString() @Matches(/^(?:\d{10}|\d{12})$/) inn?: string;
@@ -30,7 +30,7 @@ export class CareerTaskDto {
   @ApiProperty({required:false}) @IsOptional() @IsIn(['starter','standard','advanced']) level?:string;
   @ApiProperty({required:false}) @IsOptional() @IsString() @MaxLength(2000) requirements?:string;
   @ApiProperty() @IsUUID() companyId: string;
-  @ApiProperty() @IsUUID() universityId: string;
+  @ApiProperty() @IsUUID() organizationId: string;
   @ApiProperty() @IsString() @MinLength(5) @MaxLength(180) title: string;
   @ApiProperty() @IsString() @MinLength(20) @MaxLength(10000) description: string;
   @ApiProperty() @IsString() @MinLength(10) @MaxLength(4000) criteria: string;
@@ -62,7 +62,7 @@ export class CareerMembershipDto {
   @ApiProperty() @IsOptional() @IsUUID() companyId?: string;
   @ApiProperty() @IsIn(['career_staff','career_admin','company_member']) role: string;
 }
-export class CareerPartnershipDto { @ApiProperty() @IsUUID() universityId: string; }
+export class CareerPartnershipDto { @ApiProperty() @IsUUID() organizationId: string; }
 
 export class CareerQuestionDto {
   @ApiProperty() @IsString() @MinLength(10) @MaxLength(2000) prompt:string;

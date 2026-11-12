@@ -17,18 +17,18 @@ suite('Career moderation, student complaints and tenant isolation with real JWT/
   const http=()=>request(f.app.getHttpServer());
   const post=(path:string,actor:string,body:object={})=>http().post('/api/v1/career/'+path).auth(tokens[actor],{type:'bearer'}).set('X-Forwarded-For',`192.0.2.${++ip}`).send(body);
   const get=(path:string,actor:string)=>http().get('/api/v1/career/'+path).auth(tokens[actor],{type:'bearer'});
-  const draft=(extra:object={})=>({companyId,universityId:f.uni.id,title:'Макет учебного проекта',description:'Подготовить доступный макет трёх страниц для согласования',criteria:'Передать исходники и размеры макета',requirements:'',level:'standard',rewardKopecks:100000,hours:10,deadline:'2099-12-01',profiled:false,skill:'',...extra});
+  const draft=(extra:object={})=>({companyId,organizationId:f.uni.id,title:'Макет учебного проекта',description:'Подготовить доступный макет трёх страниц для согласования',criteria:'Передать исходники и размеры макета',requirements:'',level:'standard',rewardKopecks:100000,hours:10,deadline:'2099-12-01',profiled:false,skill:'',...extra});
   const create=async(extra:object={})=>(await post('tasks','employer',draft(extra)).expect(201)).body;
   beforeAll(async()=>{
     f=await createCurationFixture(process.env.CAREER_MODERATION_TEST_DATABASE_URL!);f.app.getHttpAdapter().getInstance().set('trust proxy',true);
     const runner=f.db.createQueryRunner();try{await new PersonalDataRead1700000000037().up(runner);await new AccountErasure1700000000038().up(runner);await new CareerModeration1700000000040().up(runner);}finally{await runner.release();}
     await f.db.getRepository(User).update(f.users.outsider.id,{role:UserRole.CAREER_STAFF});
-    const employer=await f.db.getRepository(User).save({email:'moderation-employer@example.test',firstName:'Синтетический',lastName:'Работодатель',passwordHash:f.users.student.passwordHash,role:UserRole.EMPLOYER,universityId:null});
-    const foreignStudent=await f.db.getRepository(User).save({email:'moderation-foreign@example.test',firstName:'Синтетический',lastName:'Студент',passwordHash:f.users.student.passwordHash,role:UserRole.STUDENT,universityId:f.otherUni.id,groupId:f.groups[3].id});
+    const employer=await f.db.getRepository(User).save({email:'moderation-employer@example.test',firstName:'Синтетический',lastName:'Работодатель',passwordHash:f.users.student.passwordHash,role:UserRole.EMPLOYER,organizationId:null});
+    const foreignStudent=await f.db.getRepository(User).save({email:'moderation-foreign@example.test',firstName:'Синтетический',lastName:'Студент',passwordHash:f.users.student.passwordHash,role:UserRole.STUDENT,organizationId:f.otherUni.id,groupId:f.groups[3].id});
     companyId=(await f.db.getRepository(CareerCompany).save({name:'Синтетическая компания',createdBy:employer.id})).id;
-    await f.db.getRepository(CareerMembership).save([{userId:employer.id,companyId,role:'company_owner',universityId:null},{userId:f.users.teacher.id,companyId,role:'company_member',universityId:null},{userId:f.users.teacher.id,companyId:null,universityId:f.uni.id,role:'career_staff'}]);
-    await f.db.getRepository(CareerPartnership).save({companyId,universityId:f.uni.id,state:'verified'});
-    await f.db.getRepository(CareerProfile).save({studentId:f.users.student.id,universityId:f.uni.id,headline:'Синтетический профиль',about:'',skills:[],verification:'verified'});
+    await f.db.getRepository(CareerMembership).save([{userId:employer.id,companyId,role:'company_owner',organizationId:null},{userId:f.users.teacher.id,companyId,role:'company_member',organizationId:null},{userId:f.users.teacher.id,companyId:null,organizationId:f.uni.id,role:'career_staff'}]);
+    await f.db.getRepository(CareerPartnership).save({companyId,organizationId:f.uni.id,state:'verified'});
+    await f.db.getRepository(CareerProfile).save({studentId:f.users.student.id,organizationId:f.uni.id,headline:'Синтетический профиль',about:'',skills:[],verification:'verified'});
     for(const actor of ['employer','student','peer','admin','teacher','outsider','foreignStudent']){const user=actor==='employer'?employer:actor==='foreignStudent'?foreignStudent:f.users[actor];const login=await http().post('/api/v1/auth/login').send({email:user.email,password:f.password}).expect(200);tokens[actor]=login.body.accessToken;}
   });
   afterAll(async()=>{await f?.app.close();});
@@ -53,7 +53,7 @@ suite('Career moderation, student complaints and tenant isolation with real JWT/
     await post(`moderation/tasks/${flaggedId}/decision`,'admin',{decision:'approve',expectedVersion:1}).expect(400);
     expect((await post(`moderation/tasks/${flaggedId}/decision`,'admin',{decision:'reject',expectedVersion:1,reason:'Уберите оплату доступа и уточните условия задачи'}).expect(201)).body.state).toBe('draft');
     await post(`tasks/${flaggedId}/publish`,'employer').expect(409);
-    const {companyId:ignoredCompany,universityId:ignoredUniversity,...revision}=draft({description:'Исправленный доступный макет без оплаты доступа со стороны исполнителя'});void ignoredCompany;void ignoredUniversity;
+    const {companyId:ignoredCompany,organizationId:ignoredUniversity,...revision}=draft({description:'Исправленный доступный макет без оплаты доступа со стороны исполнителя'});void ignoredCompany;void ignoredUniversity;
     const edit=await http().patch(`/api/v1/career/tasks/${flaggedId}`).auth(tokens.employer,{type:'bearer'}).send({...revision,expectedVersion:1}).expect(200);expect(edit.body.moderationContentVersion).toBe(2);
     await http().patch(`/api/v1/career/tasks/${flaggedId}`).auth(tokens.employer,{type:'bearer'}).send({...revision,expectedVersion:1}).expect(409);
     await post(`tasks/${flaggedId}/publish`,'employer').expect(201);
@@ -122,11 +122,11 @@ suite('Career moderation, student complaints and tenant isolation with real JWT/
     expect((await pending!).status).toBe(409);expect(await f.db.getRepository(CareerApplication).countBy({taskId:id})).toBe(0);
   });
   it('rejects a complaint whose university differs from the referenced task even with maintenance capability',async()=>{
-    await expect(f.db.getRepository(CareerTaskComplaint).save({universityId:f.otherUni.id,taskId:ordinaryId,studentId:f.users.student.id,category:'other',details:'Synthetic impossible relation'})).rejects.toThrow();
+    await expect(f.db.getRepository(CareerTaskComplaint).save({organizationId:f.otherUni.id,taskId:ordinaryId,studentId:f.users.student.id,category:'other',details:'Synthetic impossible relation'})).rejects.toThrow();
   });
   it('exports old-university own complaints and scrubs their text on actual account deletion',async()=>{
-    const task=await f.db.getRepository(CareerTask).save({...draft(),universityId:f.otherUni.id,state:'open'});
-    const old=await f.db.getRepository(CareerTaskComplaint).save({universityId:f.otherUni.id,taskId:task.id,studentId:f.users.student.id,category:'other',details:'OWN_OLD_UNIVERSITY_COMPLAINT'});
+    const task=await f.db.getRepository(CareerTask).save({...draft(),organizationId:f.otherUni.id,state:'open'});
+    const old=await f.db.getRepository(CareerTaskComplaint).save({organizationId:f.otherUni.id,taskId:task.id,studentId:f.users.student.id,category:'other',details:'OWN_OLD_UNIVERSITY_COMPLAINT'});
     const exported=await http().get('/api/v1/users/me/export').auth(tokens.student,{type:'bearer'}).expect(200);
     expect(exported.body.complete).toBe(true);expect(JSON.stringify(exported.body.datasets.career_task_complaint)).toContain('OWN_OLD_UNIVERSITY_COMPLAINT');
     await http().delete('/api/v1/users/me').auth(tokens.student,{type:'bearer'}).send({expectedUserId:f.users.student.id,currentPassword:f.password,confirmed:true,acknowledgeRetention:true}).expect(200);

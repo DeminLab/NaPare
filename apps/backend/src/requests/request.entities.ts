@@ -10,10 +10,10 @@ export type OfficeDuty = typeof OFFICE_DUTIES[number];
 export type StepDuty = 'office' | 'methodologist' | 'curator_or_dean' | 'dean';
 
 @Entity('office_assignments')
-@Index('IDX_office_assignment_actor', ['universityId', 'userId'])
+@Index('IDX_office_assignment_actor', ['organizationId', 'userId'])
 export class OfficeAssignment {
   @PrimaryGeneratedColumn('uuid') id: string;
-  @Column('uuid') universityId: string;
+  @Column('uuid') organizationId: string;
   @Column('uuid') userId: string;
   @Column('varchar') duty: OfficeDuty;
   @Column('uuid', { array: true, default: '{}' }) facultyIds: string[];
@@ -26,10 +26,10 @@ export class OfficeAssignment {
 }
 
 @Entity('office_routes')
-@Index('UQ_office_route_group_type', ['universityId', 'groupId', 'type'], { unique: true })
+@Index('UQ_office_route_group_type', ['organizationId', 'groupId', 'type'], { unique: true })
 export class OfficeRoute {
   @PrimaryGeneratedColumn('uuid') id: string;
-  @Column('uuid') universityId: string;
+  @Column('uuid') organizationId: string;
   @Column('uuid') groupId: string;
   @Column('varchar') type: RequestType;
   @Column('uuid', { array: true }) assigneeIds: string[];
@@ -40,11 +40,11 @@ export class OfficeRoute {
 }
 
 @Entity('student_requests')
-@Index('UQ_student_request_create_key', ['universityId', 'createdBy', 'createKey'], { unique: true })
-@Index('IDX_student_request_queue', ['universityId', 'groupId', 'status'])
+@Index('UQ_student_request_create_key', ['organizationId', 'createdBy', 'createKey'], { unique: true })
+@Index('IDX_student_request_queue', ['organizationId', 'groupId', 'status'])
 export class StudentRequest {
   @PrimaryGeneratedColumn('uuid') id: string;
-  @Column('uuid') universityId: string;
+  @Column('uuid') organizationId: string;
   @Column('uuid') studentId: string;
   @Column('uuid') groupId: string;
   @Column('uuid') facultyId: string;
@@ -70,7 +70,7 @@ export class StudentRequest {
 @Index('UQ_request_step_sequence', ['requestId', 'sequence'], { unique: true })
 export class RequestStep {
   @PrimaryGeneratedColumn('uuid') id: string;
-  @Column('uuid') universityId: string;
+  @Column('uuid') organizationId: string;
   @Column('uuid') requestId: string;
   @Column('integer') sequence: number;
   @Column('varchar') duty: StepDuty;
@@ -86,7 +86,7 @@ export class RequestStep {
 @Index('UQ_request_decision_command', ['requestId', 'actorId', 'idempotencyKey'], { unique: true })
 export class RequestDecision {
   @PrimaryGeneratedColumn('uuid') id: string;
-  @Column('uuid') universityId: string;
+  @Column('uuid') organizationId: string;
   @Column('uuid') requestId: string;
   @Column('uuid', { nullable: true }) stepId: string | null;
   @Column('uuid') actorId: string;
@@ -105,7 +105,7 @@ export class RequestDecision {
 @Index('UQ_request_document_attachment', ['requestId', 'attachmentId'], { unique: true })
 export class RequestDocument {
   @PrimaryGeneratedColumn('uuid') id: string;
-  @Column('uuid') universityId: string;
+  @Column('uuid') organizationId: string;
   @Column('uuid') requestId: string;
   @Column('uuid') attachmentId: string;
   @Column('uuid') addedBy: string;

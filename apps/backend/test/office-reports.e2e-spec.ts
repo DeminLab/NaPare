@@ -5,6 +5,7 @@ import { createCurationFixture } from './curation.fixture';
 import { OfficeAssignment } from '../src/requests/request.entities';
 import { OfficeDebtRecord, OfficeDebtSnapshot } from '../src/requests/office-report.entities';
 import { OfficeReports1700000000042 } from '../src/migrations/1700000000042-OfficeReports';
+import { TenantOrganizationAlias1700000000046 } from '../src/migrations/1700000000046-TenantOrganizationAlias';
 import { Group } from '../src/users/entities/group.entity';
 import { Faculty } from '../src/users/entities/faculty.entity';
 import { User } from '../src/users/entities/user.entity';
@@ -24,14 +25,14 @@ suite('Office reports: actual HTTP, confirmed sources and PostgreSQL RLS', () =>
     f = await createCurationFixture(process.env.OFFICE_REPORT_TEST_DATABASE_URL!);
     await f.db.query('DROP TABLE office_debt_records, office_debt_snapshots');
     const runner = f.db.createQueryRunner();
-    try { await new OfficeReports1700000000042().up(runner); } finally { await runner.release(); }
-    await f.db.getRepository(OfficeAssignment).save({ universityId: f.uni.id, userId: f.users.teacher.id, duty: 'office', facultyIds: [], groupIds: [f.groups[0].id], assignedBy: f.users.admin.id });
-    await f.db.getRepository(OfficeAssignment).save({ universityId: f.uni.id, userId: f.users.legacy.id, duty: 'dispatcher', facultyIds: [], groupIds: [f.groups[0].id], assignedBy: f.users.admin.id });
+    try { await new OfficeReports1700000000042().up(runner); await new TenantOrganizationAlias1700000000046().up(runner); } finally { await runner.release(); }
+    await f.db.getRepository(OfficeAssignment).save({ organizationId: f.uni.id, userId: f.users.teacher.id, duty: 'office', facultyIds: [], groupIds: [f.groups[0].id], assignedBy: f.users.admin.id });
+    await f.db.getRepository(OfficeAssignment).save({ organizationId: f.uni.id, userId: f.users.legacy.id, duty: 'dispatcher', facultyIds: [], groupIds: [f.groups[0].id], assignedBy: f.users.admin.id });
     await f.db.getRepository(Faculty).update(f.groups[0].facultyId, { deanUserId: f.users.dean.id });
-    const secondFaculty = await f.db.getRepository(Faculty).save({ universityId: f.uni.id, name: 'Другой факультет отчётов', code: 'ОТЧ2' });
+    const secondFaculty = await f.db.getRepository(Faculty).save({ organizationId: f.uni.id, name: 'Другой факультет отчётов', code: 'ОТЧ2' });
     await f.db.getRepository(Group).update(f.groups[2].id, { facultyId: secondFaculty.id });
-    foreignStudent = await f.db.getRepository(User).save({ universityId: f.otherUni.id, groupId: f.groups[3].id, role: UserRole.STUDENT, firstName: 'Чужой', lastName: 'Студент', email: 'student@foreign-reports.test', passwordHash: f.users.student.passwordHash });
-    foreignAdmin = await f.db.getRepository(User).save({ universityId: f.otherUni.id, role: UserRole.UNIVERSITY_ADMIN, firstName: 'Чужой', lastName: 'Администратор', email: 'admin@foreign-reports.test', passwordHash: f.users.student.passwordHash });
+    foreignStudent = await f.db.getRepository(User).save({ organizationId: f.otherUni.id, groupId: f.groups[3].id, role: UserRole.STUDENT, firstName: 'Чужой', lastName: 'Студент', email: 'student@foreign-reports.test', passwordHash: f.users.student.passwordHash });
+    foreignAdmin = await f.db.getRepository(User).save({ organizationId: f.otherUni.id, role: UserRole.UNIVERSITY_ADMIN, firstName: 'Чужой', lastName: 'Администратор', email: 'admin@foreign-reports.test', passwordHash: f.users.student.passwordHash });
     for (const [key, user] of Object.entries({ ...f.users, foreignAdmin, foreignStudent })) {
       if (!user.isActive) continue;
       tokens[key] = (await http().post('/api/v1/auth/login').send({ email: user.email, password: f.password }).expect(200)).body.accessToken;
@@ -93,7 +94,7 @@ suite('Office reports: actual HTTP, confirmed sources and PostgreSQL RLS', () =>
     await post(dto, 'foreignAdmin').expect(201);
     const positive = await get('reports/debts', 'foreignAdmin').expect(200);
     expect(positive.body.meta.total).toBe(1); expect(positive.text).toContain('FOREIGN_ONLY_SUBJECT');
-    const before = await f.db.getRepository(OfficeDebtRecord).countBy({ universityId: f.otherUni.id });
+    const before = await f.db.getRepository(OfficeDebtRecord).countBy({ organizationId: f.otherUni.id });
     await get(`reports/debts?groupId=${f.groups[3].id}`).expect(404);
     await get(`reports/contingent?groupId=${f.groups[3].id}`).expect(404);
     await get(`reports/contingent?facultyId=${f.groups[3].facultyId}`).expect(404);
@@ -104,17 +105,17 @@ suite('Office reports: actual HTTP, confirmed sources and PostgreSQL RLS', () =>
     const adminExport = await http().get('/api/v1/users/me/export').auth(tokens.admin, { type: 'bearer' }).expect(200);
     expect(adminExport.body.datasets.office_debt_snapshots).toHaveLength(1);
     expect(adminExport.body.datasets.office_debt_snapshots.every(row => row.verifiedBy === f.users.admin.id)).toBe(true);
-    expect(await f.db.getRepository(OfficeDebtRecord).countBy({ universityId: f.otherUni.id })).toBe(before);
-    await get('reports/debts?universityId=' + f.otherUni.id).expect(400);
+    expect(await f.db.getRepository(OfficeDebtRecord).countBy({ organizationId: f.otherUni.id })).toBe(before);
+    await get('reports/debts?organizationId=' + f.otherUni.id).expect(400);
   });
   it('retains prior snapshots, rejects older replacements and exposes only the current complete snapshot', async () => {
-    const before = await f.db.getRepository(OfficeDebtRecord).countBy({ universityId: f.uni.id });
+    const before = await f.db.getRepository(OfficeDebtRecord).countBy({ organizationId: f.uni.id });
     await post(payload({ asOfDate: '2026-10-19', records: [] })).expect(409);
     await post(payload({ asOfDate: '2026-10-21', records: [] })).expect(201);
     const own = await get(`students/${f.users.student.id}/debts`, 'student').expect(200);
     expect(own.body.available).toBe(true); expect(own.body.records).toEqual([]);
-    expect(await f.db.getRepository(OfficeDebtRecord).countBy({ universityId: f.uni.id })).toBe(before);
-    expect(await f.db.getRepository(OfficeDebtSnapshot).countBy({ universityId: f.uni.id })).toBe(2);
+    expect(await f.db.getRepository(OfficeDebtRecord).countBy({ organizationId: f.uni.id })).toBe(before);
+    expect(await f.db.getRepository(OfficeDebtSnapshot).countBy({ organizationId: f.uni.id })).toBe(2);
   });
   it('paginates rows in SQL and excludes moved students without exposing their former register to a new group', async () => {
     const rows = Array.from({ length: 105 }, (_, index) => ({ ...payload().records[0], subject: `Дисциплина ${index}` }));
@@ -146,12 +147,12 @@ suite('Office reports: actual HTTP, confirmed sources and PostgreSQL RLS', () =>
     expect(role).toEqual({ rolsuper: false, rolbypassrls: false });
     const tenant = f.app.get(TenantContext), db = f.app.get(DataSource);
     await tenant.runInRequest(async () => {
-      tenant.setUser({ id: f.users.admin.id, email: f.users.admin.email, role: UserRole.UNIVERSITY_ADMIN, universityId: f.uni.id });
-      expect(await db.query('SELECT id FROM office_debt_records WHERE "universityId"=$1', [f.otherUni.id])).toEqual([]);
-      await expect(db.query('INSERT INTO office_debt_records ("universityId","groupId","snapshotId","studentId",subject,period,basis) VALUES ($1,$2,$3,$4,$5,$6,$7)', [f.otherUni.id, f.groups[3].id, randomUUID(), foreignStudent.id, 'invalid', 'invalid', 'invalid'])).rejects.toThrow(/row-level security/i);
+      tenant.setUser({ id: f.users.admin.id, email: f.users.admin.email, role: UserRole.UNIVERSITY_ADMIN, organizationId: f.uni.id });
+      expect(await db.query('SELECT id FROM office_debt_records WHERE "organizationId"=$1', [f.otherUni.id])).toEqual([]);
+      await expect(db.query('INSERT INTO office_debt_records ("organizationId","groupId","snapshotId","studentId",subject,period,basis) VALUES ($1,$2,$3,$4,$5,$6,$7)', [f.otherUni.id, f.groups[3].id, randomUUID(), foreignStudent.id, 'invalid', 'invalid', 'invalid'])).rejects.toThrow(/row-level security/i);
     });
-    const previousUniversitySource = await f.db.getRepository(OfficeDebtSnapshot).findOneByOrFail({ universityId: f.otherUni.id });
-    await f.db.getRepository(OfficeDebtRecord).save({ universityId: f.otherUni.id, groupId: f.groups[3].id, snapshotId: previousUniversitySource.id, studentId: f.users.student.id, subject: 'OWN_PREVIOUS_UNIVERSITY', period: 'Прошлый семестр', basis: 'Синтетический архив до перевода' });
+    const previousUniversitySource = await f.db.getRepository(OfficeDebtSnapshot).findOneByOrFail({ organizationId: f.otherUni.id });
+    await f.db.getRepository(OfficeDebtRecord).save({ organizationId: f.otherUni.id, groupId: f.groups[3].id, snapshotId: previousUniversitySource.id, studentId: f.users.student.id, subject: 'OWN_PREVIOUS_UNIVERSITY', period: 'Прошлый семестр', basis: 'Синтетический архив до перевода' });
     const own = await http().get('/api/v1/users/me/export').auth(tokens.student, { type: 'bearer' }).expect(200);
     expect(own.body.datasets.office_debt_records).toHaveLength(107);
     expect(own.text).toContain('OWN_PREVIOUS_UNIVERSITY');

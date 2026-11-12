@@ -29,16 +29,16 @@ export class OfficeReportService {
     return { allGroups: scope.groups, groups: groups.filter(group => (!query.groupId || group.id === query.groupId) && (!query.facultyId || group.facultyId === query.facultyId)) };
   }
   private async activeStudents(manager: EntityManager, groupKeys: string[]) {
-    return manager.find(User, { where: { universityId: this.access.actor().universityId, role: UserRole.STUDENT, isActive: true, groupId: In(groupKeys) }, select: ['id', 'groupId'] });
+    return manager.find(User, { where: { organizationId: this.access.actor().organizationId, role: UserRole.STUDENT, isActive: true, groupId: In(groupKeys) }, select: ['id', 'groupId'] });
   }
   private async snapshots(manager: EntityManager, groups: Group[]): Promise<OfficeDebtSnapshot[]> {
-    return groups.length ? manager.findBy(OfficeDebtSnapshot, { universityId: this.access.actor().universityId, groupId: In(groups.map(group => group.id)), supersededAt: IsNull() }) : [];
+    return groups.length ? manager.findBy(OfficeDebtSnapshot, { organizationId: this.access.actor().organizationId, groupId: In(groups.map(group => group.id)), supersededAt: IsNull() }) : [];
   }
   async contingent(query: OfficeReportQueryDto) {
     return this.db.transaction('REPEATABLE READ', async manager => {
       const actor = this.access.actor(), { allGroups, groups } = await this.allowed(manager, query);
       const students = await manager.getRepository(User).createQueryBuilder('u').select('u.groupId', 'groupId').addSelect('COUNT(*)::int', 'total')
-        .where('u.universityId = :uni AND u.role = :role AND u.isActive = true', { uni: actor.universityId, role: UserRole.STUDENT })
+        .where('u.organizationId = :uni AND u.role = :role AND u.isActive = true', { uni: actor.organizationId, role: UserRole.STUDENT })
         .groupBy('u.groupId').getRawMany<{ groupId: string | null; total: number }>();
       const sources = await this.snapshots(manager, groups);
       const counts = new Map(groups.map(group => [group.id, 0]));
@@ -50,7 +50,7 @@ export class OfficeReportService {
       }
       const rows = groups.map(group => ({ groupId: group.id, groupName: group.name, facultyId: group.facultyId,
         activeStudents: counts.get(group.id)!, debtSource: this.sourceInfo(sources.find(source => source.groupId === group.id)) }));
-      return { universityId: actor.universityId, generatedAt: new Date().toISOString(), basis: 'current_active_platform_student_accounts',
+      return { organizationId: actor.organizationId, generatedAt: new Date().toISOString(), basis: 'current_active_platform_student_accounts',
         totalActiveStudents: rows.reduce((sum, row) => sum + row.activeStudents, 0),
         unresolvedStudentGroups: actor.role === UserRole.UNIVERSITY_ADMIN && !query.groupId && !query.facultyId ? unresolved : null,
         ...toPaginatedResponse(rows.slice((query.page - 1) * query.limit, query.page * query.limit), rows.length, query),
@@ -72,10 +72,10 @@ export class OfficeReportService {
       const { groups } = await this.allowed(manager, query), sources = await this.snapshots(manager, groups);
       // Keep pagination/counting in SQL; never fetch a university's complete individual register.
       const [rows, total] = sources.length ? await manager.getRepository(OfficeDebtRecord).createQueryBuilder('debt')
-        .innerJoin(User, 'student', 'student.id = debt.studentId AND student.universityId = debt.universityId AND student.isActive = true AND student.role = :role', { role: UserRole.STUDENT })
-        .innerJoin(Group, 'g', 'g.id = debt.groupId AND g.universityId = debt.universityId AND (student.groupId = g.id::text OR student.groupId = g.externalId)')
-        .where('debt.universityId = :uni AND debt.snapshotId IN (:...sources)', { uni: this.access.actor().universityId, sources: sources.map(source => source.id) })
-        .andWhere('NOT EXISTS (SELECT 1 FROM groups ambiguous WHERE ambiguous."universityId" = debt."universityId" AND ambiguous.id <> g.id AND (student."groupId" = ambiguous.id::text OR student."groupId" = ambiguous."externalId"))')
+        .innerJoin(User, 'student', 'student.id = debt.studentId AND student.organizationId = debt.organizationId AND student.isActive = true AND student.role = :role', { role: UserRole.STUDENT })
+        .innerJoin(Group, 'g', 'g.id = debt.groupId AND g.organizationId = debt.organizationId AND (student.groupId = g.id::text OR student.groupId = g.externalId)')
+        .where('debt.organizationId = :uni AND debt.snapshotId IN (:...sources)', { uni: this.access.actor().organizationId, sources: sources.map(source => source.id) })
+        .andWhere('NOT EXISTS (SELECT 1 FROM groups ambiguous WHERE ambiguous."organizationId" = debt."organizationId" AND ambiguous.id <> g.id AND (student."groupId" = ambiguous.id::text OR student."groupId" = ambiguous."externalId"))')
         .orderBy('debt.groupId', 'ASC').addOrderBy('debt.studentId', 'ASC').addOrderBy('debt.subject', 'ASC').addOrderBy('debt.id', 'ASC')
         .skip((query.page - 1) * query.limit).take(query.limit).getManyAndCount() : [[], 0] as [OfficeDebtRecord[], number];
       return { generatedAt: new Date().toISOString(), sourceCoverage: groups.map(group => ({ groupId: group.id, ...this.sourceInfo(sources.find(source => source.groupId === group.id)) })),
@@ -85,14 +85,14 @@ export class OfficeReportService {
   }
   async studentDebts(studentId: string) {
     return this.db.transaction('REPEATABLE READ', async manager => {
-      const actor = this.access.actor(), student = await manager.findOneBy(User, { id: studentId, universityId: actor.universityId, role: UserRole.STUDENT, isActive: true });
+      const actor = this.access.actor(), student = await manager.findOneBy(User, { id: studentId, organizationId: actor.organizationId, role: UserRole.STUDENT, isActive: true });
       if (!student) throw new NotFoundException('Студент недоступен.');
-      const groups = await manager.findBy(Group, { universityId: actor.universityId }), matches = this.matches(groups, student.groupId);
+      const groups = await manager.findBy(Group, { organizationId: actor.organizationId }), matches = this.matches(groups, student.groupId);
       if (matches.length !== 1) throw new BadRequestException('Нужна однозначная привязка к учебной группе.');
       const group = matches[0];
       if (studentId !== actor.id && actor.role !== UserRole.UNIVERSITY_ADMIN && !await this.access.hasDuty(manager, group, 'office') && !await this.access.canPerform(manager, group, 'curator_or_dean', actor.id)) throw new ForbiddenException('Нет доступа к этому студенту.');
       const source = (await this.snapshots(manager, [group]))[0];
-      const records = source ? await manager.find(OfficeDebtRecord, { where: { universityId: actor.universityId, snapshotId: source.id, studentId }, select: ['id', 'subject', 'period', 'basis'], order: { subject: 'ASC', id: 'ASC' } }) : [];
+      const records = source ? await manager.find(OfficeDebtRecord, { where: { organizationId: actor.organizationId, snapshotId: source.id, studentId }, select: ['id', 'subject', 'period', 'basis'], order: { subject: 'ASC', id: 'ASC' } }) : [];
       return { studentId, ...this.sourceInfo(source), records, message: source ? 'Полный реестр группы подтверждён администратором на указанную дату; более поздние изменения не проверены.' : 'Вуз не подключил подтверждённый источник оценок и академических задолженностей.' };
     });
   }
@@ -106,28 +106,28 @@ export class OfficeReportService {
     const digest = createHash('sha256').update(JSON.stringify({ groupId: dto.groupId, source: dto.source.trim(), reference: dto.reference.trim(), asOfDate: dto.asOfDate, records })).digest('hex');
     if (new Set(records.map(row => JSON.stringify([row.studentId, row.subject, row.period]))).size !== records.length) throw new BadRequestException('Дубли студента, дисциплины и периода в реестре.');
     return this.db.transaction(async manager => {
-      await manager.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))', [`office-debts:${actor.universityId}`]);
+      await manager.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))', [`office-debts:${actor.organizationId}`]);
       const validatedGroup = await this.access.group(manager, dto.groupId);
-      const previous = await manager.findOneBy(OfficeDebtSnapshot, { universityId: actor.universityId, requestId: dto.requestId });
+      const previous = await manager.findOneBy(OfficeDebtSnapshot, { organizationId: actor.organizationId, requestId: dto.requestId });
       if (previous) {
         if (previous.digest !== digest) throw new ConflictException('Этот идентификатор импорта уже использован с другими данными.');
-        return { id: previous.id, count: await manager.countBy(OfficeDebtRecord, { universityId: actor.universityId, snapshotId: previous.id }), replay: true };
+        return { id: previous.id, count: await manager.countBy(OfficeDebtRecord, { organizationId: actor.organizationId, snapshotId: previous.id }), replay: true };
       }
-      const groups = await manager.findBy(Group, { universityId: actor.universityId });
+      const groups = await manager.findBy(Group, { organizationId: actor.organizationId });
       const group = validatedGroup;
       const keys = [...new Set([group.id, ...(group.externalId ? [group.externalId] : [])])].filter(key => this.matches(groups, key).length === 1);
       const students = await this.activeStudents(manager, keys);
       const allowed = new Set(students.filter(student => { const matches = this.matches(groups, student.groupId); return matches.length === 1 && matches[0].id === dto.groupId; }).map(student => student.id));
       if (records.some(row => !allowed.has(row.studentId))) throw new BadRequestException('Все записи должны принадлежать действующим студентам выбранной группы своего вуза.');
-      const current = await manager.findOneBy(OfficeDebtSnapshot, { universityId: actor.universityId, groupId: dto.groupId, supersededAt: IsNull() });
+      const current = await manager.findOneBy(OfficeDebtSnapshot, { organizationId: actor.organizationId, groupId: dto.groupId, supersededAt: IsNull() });
       if (current && current.asOfDate > dto.asOfDate) throw new ConflictException('Нельзя заменить текущий реестр более старой датой.');
-      if (current) await manager.update(OfficeDebtSnapshot, { id: current.id, universityId: actor.universityId }, { supersededAt: new Date() });
+      if (current) await manager.update(OfficeDebtSnapshot, { id: current.id, organizationId: actor.organizationId }, { supersededAt: new Date() });
       const snapshot = await manager.save(OfficeDebtSnapshot, manager.create(OfficeDebtSnapshot, {
-        universityId: actor.universityId, groupId: dto.groupId, requestId: dto.requestId, digest,
+        organizationId: actor.organizationId, groupId: dto.groupId, requestId: dto.requestId, digest,
         source: dto.source.trim(), reference: dto.reference.trim(), asOfDate: dto.asOfDate, verifiedBy: actor.id,
       }));
-      if (records.length) await manager.insert(OfficeDebtRecord, records.map(row => ({ ...row, universityId: actor.universityId, groupId: dto.groupId, snapshotId: snapshot.id })));
-      await manager.save(AuditLog, manager.create(AuditLog, { userId: actor.id, action: 'office.debt-source.confirmed', entity: 'academic-office', entityId: snapshot.id, newValues: { universityId: actor.universityId, groupId: dto.groupId, count: records.length, asOfDate: dto.asOfDate } }));
+      if (records.length) await manager.insert(OfficeDebtRecord, records.map(row => ({ ...row, organizationId: actor.organizationId, groupId: dto.groupId, snapshotId: snapshot.id })));
+      await manager.save(AuditLog, manager.create(AuditLog, { userId: actor.id, action: 'office.debt-source.confirmed', entity: 'academic-office', entityId: snapshot.id, newValues: { organizationId: actor.organizationId, groupId: dto.groupId, count: records.length, asOfDate: dto.asOfDate } }));
       return { id: snapshot.id, count: records.length, replay: false };
     });
   }

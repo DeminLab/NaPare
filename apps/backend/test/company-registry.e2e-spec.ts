@@ -16,7 +16,7 @@ suite('Company registry registration and recheck with real JWT/PostgreSQL', () =
   let wait: Promise<void> | undefined, entered: (() => void) | undefined;
   const http = () => request(f.app.getHttpServer());
   const create = (actor = 'owner', extra: object = {}) => http().post('/api/v1/career/companies').auth(tokens[actor], { type: 'bearer' })
-    .set('X-Forwarded-For', `192.0.2.${++ip}`).send({ name: 'Синтетическая компания', description: 'Проверка регистрации', universityId: f.uni.id, inn, ...extra });
+    .set('X-Forwarded-For', `192.0.2.${++ip}`).send({ name: 'Синтетическая компания', description: 'Проверка регистрации', organizationId: f.uni.id, inn, ...extra });
   const check = (actor = 'owner', body: object = {}) => http().post(`/api/v1/career/companies/${companyId}/registry-check`)
     .auth(tokens[actor], { type: 'bearer' }).set('X-Forwarded-For', `192.0.2.${++ip}`).send(body);
   const ready = () => f.db.getRepository(CareerCompany).update(companyId, { registryRequestedAt: new Date(0) });
@@ -71,7 +71,7 @@ suite('Company registry registration and recheck with real JWT/PostgreSQL', () =
     expect(await f.db.getRepository(CareerMembership).existsBy({ companyId, userId: ownerId, role: 'company_owner' })).toBe(true);
   });
   it('denies foreign owners and ordinary company members before lookup; enforces company cooldown', async () => {
-    await f.db.getRepository(CareerMembership).save({ companyId, userId: memberId, role: 'company_member', universityId: null });
+    await f.db.getRepository(CareerMembership).save({ companyId, userId: memberId, role: 'company_member', organizationId: null });
     const before = fetchMock.mock.calls.length;
     await http().post(`/api/v1/career/companies/${companyId}/registry-check`).send({}).expect(401);
     await check('foreign').expect(403); await check('member').expect(403); await check().expect(409);

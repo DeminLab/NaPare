@@ -21,7 +21,7 @@ export class AnalyticsOverviewQueryDto {
 
   @ApiPropertyOptional()
   @IsOptional() @IsUUID()
-  universityId?: string;
+  organizationId?: string;
 }
 
 export class TelemetryEventQueryDto extends PaginationQueryDto {
@@ -31,7 +31,7 @@ export class TelemetryEventQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional() @IsOptional() @IsIn(['debug', 'info', 'warning', 'error', 'critical']) severity?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(120) name?: string;
   @ApiPropertyOptional() @IsOptional() @IsUUID() userId?: string;
-  @ApiPropertyOptional() @IsOptional() @IsUUID() universityId?: string;
+  @ApiPropertyOptional() @IsOptional() @IsUUID() organizationId?: string;
   @ApiPropertyOptional() @IsOptional() @IsISO8601() from?: string;
   @ApiPropertyOptional() @IsOptional() @IsISO8601() to?: string;
 }
@@ -40,14 +40,14 @@ export class MonitoredUserQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(100) q?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(40) role?: string;
   @ApiPropertyOptional() @IsOptional() @IsIn(['active', 'blocked']) status?: 'active' | 'blocked';
-  @ApiPropertyOptional() @IsOptional() @IsUUID() universityId?: string;
+  @ApiPropertyOptional() @IsOptional() @IsUUID() organizationId?: string;
 }
 
 export class SessionQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional() @IsOptional() @IsUUID() userId?: string;
   @ApiPropertyOptional() @IsOptional() @IsIn(['web', 'android', 'max', 'api', 'backend']) client?: string;
   @ApiPropertyOptional() @IsOptional() @IsIn(['true', 'false']) active?: string;
-  @ApiPropertyOptional() @IsOptional() @IsUUID() universityId?: string;
+  @ApiPropertyOptional() @IsOptional() @IsUUID() organizationId?: string;
 }
 
 export class RevokeSessionDto {

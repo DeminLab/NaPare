@@ -18,7 +18,7 @@ export class MyDayController {
   async getMyDay(@Request() req, @Query('timeZone') timeZone?: string) {
     return this.myDayService.getMyDay(
       req.user.id,
-      req.user.universityId,
+      req.user.organizationId,
       req.user.role,
       req.user.groupId,
       timeZone,

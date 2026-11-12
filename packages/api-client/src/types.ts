@@ -8,7 +8,7 @@ export interface RegisterDto {
   password: string;
   firstName: string;
   lastName: string;
-  universityId: string;
+  organizationId: string;
 }
 
 export interface AuthResponse {
@@ -31,7 +31,7 @@ export interface User {
   phone?: string;
   avatarUrl?: string;
   role: string;
-  universityId: string;
+  organizationId: string;
   isActive: boolean;
   lastLoginAt?: string;
   createdAt: string;
@@ -40,7 +40,7 @@ export interface User {
 
 export interface Lesson {
   id: string;
-  universityId: string;
+  organizationId: string;
   date: string;
   pairNumber: number;
   startTime: string;
@@ -66,7 +66,7 @@ export interface Lesson {
 
 export interface PairSpace {
   id: string;
-  universityId: string;
+  organizationId: string;
   lessonId: string;
   subject: string;
   date: string;
@@ -106,7 +106,7 @@ export interface Homework {
 
 export interface Absence {
   id: string;
-  universityId: string;
+  organizationId: string;
   studentId: string;
   lessonId?: string;
   date: string;
@@ -126,7 +126,7 @@ export interface Absence {
 export interface Notification {
   id: string;
   userId: string;
-  universityId: string;
+  organizationId: string;
   title: string;
   body: string;
   data?: Record<string, unknown>;
@@ -164,7 +164,7 @@ export interface EventEnvelope<TPayload extends Record<string, unknown> = Record
 export interface NotificationPreference {
   id: string;
   userId: string;
-  universityId: string;
+  organizationId: string;
   scheduleChanges: boolean;
   cancellations: boolean;
   roomChanges: boolean;
@@ -182,7 +182,7 @@ export interface InboxItem {
   id: string;
   eventId?: string;
   userId: string;
-  universityId: string;
+  organizationId: string;
   type: string;
   title: string;
   description: string;
@@ -202,7 +202,7 @@ export interface AcademicPage<T> {
 
 export interface Course {
   id: string;
-  universityId: string;
+  organizationId: string;
   facultyId?: string;
   code: string;
   name: string;
@@ -219,7 +219,7 @@ export interface Course {
 
 export interface LessonSeries {
   id: string;
-  universityId: string;
+  organizationId: string;
   courseId: string;
   groupId: string;
   teacherId?: string;
@@ -243,7 +243,7 @@ export interface LessonSeries {
 
 export interface LessonOccurrence {
   id: string;
-  universityId: string;
+  organizationId: string;
   seriesId: string;
   courseId: string;
   groupId: string;
@@ -263,7 +263,7 @@ export interface LessonOccurrence {
 
 export interface CourseSpace {
   id: string;
-  universityId: string;
+  organizationId: string;
   courseId: string;
   name: string;
   isActive: boolean;
@@ -273,7 +273,7 @@ export interface CourseSpace {
 
 export interface LessonSpace {
   id: string;
-  universityId: string;
+  organizationId: string;
   courseSpaceId: string;
   occurrenceId: string;
   name: string;
@@ -286,7 +286,7 @@ export type AcademicEventType = 'lesson' | 'homework' | 'exam' | 'announcement' 
 
 export interface AcademicEvent {
   id: string;
-  universityId: string;
+  organizationId: string;
   type: AcademicEventType;
   courseId?: string;
   groupId?: string;
@@ -307,7 +307,7 @@ export interface AcademicEvent {
 
 export interface ScheduleChange {
   id: string;
-  universityId: string;
+  organizationId: string;
   occurrenceId?: string;
   legacyLessonId?: string;
   originalValue: Record<string, unknown>;

@@ -30,7 +30,7 @@ suite('First-party product analytics with real JWT/HTTP/PostgreSQL',()=>{
   const metric=(body:any,id:string)=>body.metrics.find((item:{id:string})=>item.id===id);
   beforeAll(async()=>{
     process.env.PRODUCT_ANALYTICS_ENABLED='true';process.env.PRODUCT_ANALYTICS_UNIVERSITY_IDS=ids[0];
-    f=await createCurationFixture(process.env.ANALYTICS_TEST_DATABASE_URL!,{universityIds:ids});
+    f=await createCurationFixture(process.env.ANALYTICS_TEST_DATABASE_URL!,{organizationIds:ids});
     const runner=f.db.createQueryRunner();try{await new PersonalDataRead1700000000037().up(runner);await new AccountErasure1700000000038().up(runner);await new CareerModeration1700000000040().up(runner);await new ProductAnalytics1700000000041().up(runner);}finally{await runner.release();}
     await f.db.getRepository(User).update(f.users.outsider.id,{role:UserRole.UNIVERSITY_ADMIN});
     for(const actor of ['admin','student','peer','teacher','outsider']){const response=await http().post('/api/v1/auth/login').send({email:f.users[actor].email,password:f.password}).expect(200);tokens[actor]=response.body.accessToken;}
@@ -63,22 +63,22 @@ suite('First-party product analytics with real JWT/HTTP/PostgreSQL',()=>{
   it('requires university administrator, validates periods and rejects client-supplied tenant selectors',async()=>{
     await http().get('/api/v1/analytics/report?'+query).expect(401);
     for(const actor of ['student','teacher'])await get(actor).expect(403);
-    await get('admin','&universityId='+ids[1]).expect(400);
+    await get('admin','&organizationId='+ids[1]).expect(400);
     await get('admin','&semesterEnd=not-a-date').expect(400);
     await http().post('/api/v1/analytics/onboarding-observation').auth(tokens.admin,{type:'bearer'}).send({startDate:'2026-10-12T00:00:00Z',endDate:'2026-10-12T00:00:00Z'}).expect(400);
     await http().post('/api/v1/analytics/onboarding-observation').auth(tokens.student,{type:'bearer'}).send({startDate:'2026-10-12',endDate:'2026-10-18'}).expect(403);
   });
   it('computes nine scoped metrics and real retention cohorts',async()=>{
-    await f.db.getRepository(ProductAnalyticsState).save({universityId:ids[0],collectionStartedAt:new Date('2026-07-01T00:00:00Z')});
-    for(const [actor,day] of [['student','2026-08-02'],['peer','2026-08-03'],['student','2026-09-28'],['student','2026-10-12'],['peer','2026-10-13'],['teacher','2026-10-14'],['outsider','2026-10-14']])await f.db.getRepository(ProductActivityDay).save({universityId:actor==='outsider'?ids[1]:ids[0],userId:f.users[actor].id,day,role:actor==='teacher'?'teacher':'student'});
+    await f.db.getRepository(ProductAnalyticsState).save({organizationId:ids[0],collectionStartedAt:new Date('2026-07-01T00:00:00Z')});
+    for(const [actor,day] of [['student','2026-08-02'],['peer','2026-08-03'],['student','2026-09-28'],['student','2026-10-12'],['peer','2026-10-13'],['teacher','2026-10-14'],['outsider','2026-10-14']])await f.db.getRepository(ProductActivityDay).save({organizationId:actor==='outsider'?ids[1]:ids[0],userId:f.users[actor].id,day,role:actor==='teacher'?'teacher':'student'});
     const at=new Date('2026-10-14T12:00:00Z');
-    for(const records of [2,6])await f.db.getRepository(EventRecord).save({id:randomUUID(),universityId:ids[0],type:'attendance.updated',timestamp:at,actor:{type:'user',id:f.users.teacher.id},target:{type:'lesson',id:f.lesson.id},payload:{source:'manual',records,privateText:'NEVER_RETURN_EVENT_PAYLOAD'},priority:'normal'});
-    for(let i=0;i<2;i++)await f.db.getRepository(EventRecord).save({id:randomUUID(),universityId:ids[0],type:'homework.created',timestamp:at,actor:{type:'system'},target:{type:'homework',id:randomUUID()},payload:{},priority:'normal'});
-    await f.db.getRepository(EventRecord).save({id:randomUUID(),universityId:ids[1],type:'attendance.updated',timestamp:at,actor:{type:'system'},target:{type:'lesson',id:f.lesson.id},payload:{source:'manual',records:1000},priority:'normal'});
-    for(const status of ['completed','completed','failed','queued'] as const){const job=await f.db.getRepository(ScheduleImportJob).save({universityId:ids[0],actorId:f.users.admin.id,idempotencyKey:randomUUID(),payloadHash:randomUUID(),status});await f.db.query('UPDATE schedule_import_jobs SET "updatedAt"=$1 WHERE id=$2',[at,job.id]);}
-    for(const dueAt of [new Date('2026-10-15T00:00:00Z'),new Date('2026-10-13T00:00:00Z')])await f.db.getRepository(StudentRequest).save({universityId:ids[0],studentId:f.users.student.id,groupId:f.groups[0].id,facultyId:f.groups[0].facultyId,type:'absence',status:'closed',title:'Синтетическое заявление',description:'НЕ ВОЗВРАЩАТЬ ТЕКСТ ЗАЯВЛЕНИЯ',createdBy:f.users.student.id,createKey:randomUUID(),createHash:'synthetic',dueAt,closedAt:at});
+    for(const records of [2,6])await f.db.getRepository(EventRecord).save({id:randomUUID(),organizationId:ids[0],type:'attendance.updated',timestamp:at,actor:{type:'user',id:f.users.teacher.id},target:{type:'lesson',id:f.lesson.id},payload:{source:'manual',records,privateText:'NEVER_RETURN_EVENT_PAYLOAD'},priority:'normal'});
+    for(let i=0;i<2;i++)await f.db.getRepository(EventRecord).save({id:randomUUID(),organizationId:ids[0],type:'homework.created',timestamp:at,actor:{type:'system'},target:{type:'homework',id:randomUUID()},payload:{},priority:'normal'});
+    await f.db.getRepository(EventRecord).save({id:randomUUID(),organizationId:ids[1],type:'attendance.updated',timestamp:at,actor:{type:'system'},target:{type:'lesson',id:f.lesson.id},payload:{source:'manual',records:1000},priority:'normal'});
+    for(const status of ['completed','completed','failed','queued'] as const){const job=await f.db.getRepository(ScheduleImportJob).save({organizationId:ids[0],actorId:f.users.admin.id,idempotencyKey:randomUUID(),payloadHash:randomUUID(),status});await f.db.query('UPDATE schedule_import_jobs SET "updatedAt"=$1 WHERE id=$2',[at,job.id]);}
+    for(const dueAt of [new Date('2026-10-15T00:00:00Z'),new Date('2026-10-13T00:00:00Z')])await f.db.getRepository(StudentRequest).save({organizationId:ids[0],studentId:f.users.student.id,groupId:f.groups[0].id,facultyId:f.groups[0].facultyId,type:'absence',status:'closed',title:'Синтетическое заявление',description:'НЕ ВОЗВРАЩАТЬ ТЕКСТ ЗАЯВЛЕНИЯ',createdBy:f.users.student.id,createKey:randomUUID(),createHash:'synthetic',dueAt,closedAt:at});
     const company=await f.db.getRepository(CareerCompany).save({name:'Синтетическая компания',createdBy:f.users.admin.id});
-    const task=await f.db.getRepository(CareerTask).save({companyId:company.id,universityId:ids[0],title:'Синтетическая задача',description:'Условия тестовой задачи',criteria:'Тестовые критерии',rewardKopecks:100000,hours:10,deadline:'2026-12-31'});
+    const task=await f.db.getRepository(CareerTask).save({companyId:company.id,organizationId:ids[0],title:'Синтетическая задача',description:'Условия тестовой задачи',criteria:'Тестовые критерии',rewardKopecks:100000,hours:10,deadline:'2026-12-31'});
     for(const [index,state] of ['accepted','in_progress'].entries()){const workTask=index?await f.db.getRepository(CareerTask).save({...task,id:randomUUID()}):task;const work=await f.db.getRepository(CareerWork).save({taskId:workTask.id,studentId:index?f.users.peer.id:f.users.student.id,state});await f.db.query('UPDATE career_work SET "createdAt"=$1 WHERE id=$2',[at,work.id]);}
     await f.db.getRepository(Lesson).save({...f.lesson,id:randomUUID(),startDate:at,endDate:new Date(at.getTime()+3600000)});
     const response=await get().expect(200),body=response.body;
@@ -111,17 +111,17 @@ suite('First-party product analytics with real JWT/HTTP/PostgreSQL',()=>{
     expect(metric((await get().expect(200)).body,'onboarding_hours').value).toBeGreaterThanOrEqual(0);
   });
   it('purges expired daily activity only in configured universities',async()=>{
-    await f.db.getRepository(ProductActivityDay).save([{universityId:ids[0],userId:f.users.peer.id,day:'2024-01-01',role:'student'},{universityId:ids[1],userId:f.users.outsider.id,day:'2024-01-01',role:'teacher'}]);
+    await f.db.getRepository(ProductActivityDay).save([{organizationId:ids[0],userId:f.users.peer.id,day:'2024-01-01',role:'student'},{organizationId:ids[1],userId:f.users.outsider.id,day:'2024-01-01',role:'teacher'}]);
     const previous=process.env.PRODUCT_ANALYTICS_ENABLED;let cleaner:ProductAnalyticsService;
     try{process.env.PRODUCT_ANALYTICS_ENABLED='false';cleaner=new ProductAnalyticsService(f.app.get(DataSource),new ConfigService(),f.app.get(TenantContext));}finally{process.env.PRODUCT_ANALYTICS_ENABLED=previous;}
     expect(cleaner.enabledFor(ids[0])).toBe(false);await cleaner.purgeExpired();
-    expect(await f.db.getRepository(ProductActivityDay).countBy({universityId:ids[0],day:'2024-01-01'})).toBe(0);
-    expect(await f.db.getRepository(ProductActivityDay).countBy({universityId:ids[1],day:'2024-01-01'})).toBe(1);
+    expect(await f.db.getRepository(ProductActivityDay).countBy({organizationId:ids[0],day:'2024-01-01'})).toBe(0);
+    expect(await f.db.getRepository(ProductActivityDay).countBy({organizationId:ids[1],day:'2024-01-01'})).toBe(1);
   });
   it('exports old-university activity, erases only own rows and prevents a stale writer',async()=>{
-    await f.db.getRepository(ProductActivityDay).save({universityId:ids[1],userId:f.users.student.id,day:'2026-10-10',role:'student'});
+    await f.db.getRepository(ProductActivityDay).save({organizationId:ids[1],userId:f.users.student.id,day:'2026-10-10',role:'student'});
     const exported=await http().get('/api/v1/users/me/export').auth(tokens.student,{type:'bearer'}).expect(200);
-    expect(exported.body.complete).toBe(true);expect(exported.body.datasets.product_activity_days.some((row:{universityId:string})=>row.universityId===ids[1])).toBe(true);
+    expect(exported.body.complete).toBe(true);expect(exported.body.datasets.product_activity_days.some((row:{organizationId:string})=>row.organizationId===ids[1])).toBe(true);
     const peerCount=await f.db.getRepository(ProductActivityDay).countBy({userId:f.users.peer.id});
     await http().delete('/api/v1/users/me').auth(tokens.student,{type:'bearer'}).send({expectedUserId:f.users.student.id,currentPassword:f.password,confirmed:true,acknowledgeRetention:true}).expect(200);
     expect(await f.db.getRepository(ProductActivityDay).countBy({userId:f.users.student.id})).toBe(0);

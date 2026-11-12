@@ -10,6 +10,7 @@ import { ScheduleChange } from '../src/academic/entities/schedule-change.entity'
 import { ScheduleImportService } from '../src/schedule/connectors/schedule-import.service';
 import { ScheduleImportJob } from '../src/schedule/connectors/schedule-import-job.entity';
 import { ScheduleImportJobs1700000000033 } from '../src/migrations/1700000000033-ScheduleImportJobs';
+import { TenantOrganizationAlias1700000000046 } from '../src/migrations/1700000000046-TenantOrganizationAlias';
 import { PaginationQueryDto } from '../src/common/dto/pagination-query.dto';
 import { SibitScheduleConnector } from '../src/schedule/connectors/external-schedule-connectors';
 import { normalizeScheduleRow } from '../src/schedule/connectors/file-schedule-connectors';
@@ -27,7 +28,7 @@ suite('Queued schedule import: real HTTP/JWT/PostgreSQL FORCE RLS', () => {
     f = await createCurationFixture(process.env.SCHEDULE_IMPORT_TEST_DATABASE_URL!);
     const runner = f.db.createQueryRunner();
     await runner.connect();
-    try { await runner.query('DROP TABLE schedule_import_jobs'); await new ScheduleImportJobs1700000000033().up(runner); } finally { await runner.release(); }
+    try { await runner.query('DROP TABLE schedule_import_jobs'); await new ScheduleImportJobs1700000000033().up(runner); await new TenantOrganizationAlias1700000000046().up(runner); } finally { await runner.release(); }
     service = f.app.get(ScheduleImportService);
     await f.db.getRepository(User).update(f.users.outsider.id, { role: UserRole.UNIVERSITY_ADMIN });
     for (const actor of ['admin', 'student', 'outsider']) {
@@ -44,7 +45,7 @@ suite('Queued schedule import: real HTTP/JWT/PostgreSQL FORCE RLS', () => {
     await submit({ ...data, content: JSON.stringify([row('first', { subject: 'Другой' })]) }).expect(409);
     const lesson = await f.db.getRepository(Lesson).findOneByOrFail({ source: 'university-import:first' });
     expect(lesson.startDate.toISOString()).toBe('2026-10-21T19:00:00.000Z'); expect(lesson.dayOfWeek).toBe(4);
-    await f.app.get(TenantContext).runWithDatabaseAccess({ tables: ['schedule_import_jobs', 'academic_schedule_changes'], universityIds: [f.uni.id] }, () => service.getChanges(f.uni.id, first.body.jobId, new PaginationQueryDto()));
+    await f.app.get(TenantContext).runWithDatabaseAccess({ tables: ['schedule_import_jobs', 'academic_schedule_changes'], organizationIds: [f.uni.id] }, () => service.getChanges(f.uni.id, first.body.jobId, new PaginationQueryDto()));
     const journal = await http().get(`/api/v1/admin/schedule/imports/${first.body.jobId}/changes`).auth(tokens.admin, { type: 'bearer' }).expect(200);
     expect(journal.body.meta.total).toBe(1); expect(journal.body.data[0].newValue.changeType).toBe('added');
     await submit(payload('first')).expect(201).expect(({ body }) => expect(body.unchanged).toBe(1));
@@ -69,9 +70,9 @@ suite('Queued schedule import: real HTTP/JWT/PostgreSQL FORCE RLS', () => {
     await http().get('/api/v1/admin/schedule/imports/not-a-uuid').auth(tokens.admin, { type: 'bearer' }).expect(400);
     await submit(payload('duplicate', { content: JSON.stringify([row('same'), row('same')]) })).expect(400);
     await submit(payload('foreign', { content: JSON.stringify([row('foreign', { group: f.groups[3].name })]) })).expect(400);
-    const job = await f.db.getRepository(ScheduleImportJob).findOneByOrFail({ universityId: f.uni.id });
+    const job = await f.db.getRepository(ScheduleImportJob).findOneByOrFail({ organizationId: f.uni.id });
     for (const suffix of ['', '/changes']) await http().get(`/api/v1/admin/schedule/imports/${job.id}${suffix}`).auth(tokens.outsider, { type: 'bearer' }).expect(404);
-    const foreignCount = await f.db.getRepository(Lesson).countBy({ universityId: f.otherUni.id }); expect(foreignCount).toBe(0);
+    const foreignCount = await f.db.getRepository(Lesson).countBy({ organizationId: f.otherUni.id }); expect(foreignCount).toBe(0);
   });
   it('processes durable queued jobs once across two concurrent workers and denies raw unscoped access', async () => {
     const response = await submit(payload('queued', { queued: true })).expect(201);

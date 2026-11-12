@@ -94,9 +94,9 @@ function currentAccountCacheScope(): string | null {
     const normalized = encodedClaims.replace(/-/g, '+').replace(/_/g, '/');
     const binary = window.atob(normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '='));
     const bytes = Uint8Array.from(binary, character => character.charCodeAt(0));
-    const claims = JSON.parse(new TextDecoder().decode(bytes)) as { sub?: unknown; universityId?: unknown };
-    if (typeof claims.sub !== 'string' || typeof claims.universityId !== 'string') return null;
-    return `${encodeURIComponent(claims.universityId)}:${encodeURIComponent(claims.sub)}`;
+    const claims = JSON.parse(new TextDecoder().decode(bytes)) as { sub?: unknown; organizationId?: unknown };
+    if (typeof claims.sub !== 'string' || typeof claims.organizationId !== 'string') return null;
+    return `${encodeURIComponent(claims.organizationId)}:${encodeURIComponent(claims.sub)}`;
   } catch {
     return null;
   }

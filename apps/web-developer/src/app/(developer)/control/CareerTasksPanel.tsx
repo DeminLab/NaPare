@@ -4,7 +4,7 @@ import { apiFetch } from '@/lib/api';
 import { type Access, type Page, Button, Notice, Pager, errorText, inputClass, panelClass, useResource } from './control-ui';
 
 interface Task {
-  id: string; companyId: string; companyName: string; universityId: string; universityName: string;
+  id: string; companyId: string; companyName: string; organizationId: string; universityName: string;
   title: string; description?: string; descriptionPreview?: string; criteria?: string; criteriaPreview?: string;
   requirements?: string; state: string; rewardKopecks: number; hours: number; deadline: string;
   profiled: boolean; skill: string; level: string; canEdit?: boolean;
@@ -16,13 +16,13 @@ type Draft = { title: string; description: string; criteria: string; requirement
 const toDraft = (item: Task): Draft => ({ title: item.title, description: item.description || '', criteria: item.criteria || '', requirements: item.requirements || '', rewardKopecks: Number(item.rewardKopecks), hours: Number(item.hours), deadline: String(item.deadline).slice(0, 10), profiled: item.profiled, skill: item.skill || '', level: item.level || 'standard' });
 
 export default function CareerTasksPanel({ access }: { access: Access }) {
-  const [query, setQuery] = useState(''), [state, setState] = useState(''), [universityId, setUniversityId] = useState(''), [page, setPage] = useState(1);
+  const [query, setQuery] = useState(''), [state, setState] = useState(''), [organizationId, setOrganizationId] = useState(''), [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Task | null>(null), [draft, setDraft] = useState<Draft | null>(null), [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false), [error, setError] = useState(''), [notice, setNotice] = useState('');
   const canWrite = access.permissions.includes('career-data.write');
   const universities = useResource<Page<UniversityOption>>(access.permissions.includes('universities.read') ? '/platform/universities?limit=100' : null);
   const params = new URLSearchParams({ page: String(page), limit: '20' });
-  if (query.trim()) params.set('q', query.trim()); if (state) params.set('state', state); if (universityId) params.set('universityId', universityId);
+  if (query.trim()) params.set('q', query.trim()); if (state) params.set('state', state); if (organizationId) params.set('organizationId', organizationId);
   const list = useResource<Page<Task>>(`/platform-career/tasks?${params.toString()}`);
   const close = () => { setSelected(null); setDraft(null); setReason(''); };
   const open = async (item: Task) => { setBusy(true); setError(''); setNotice(''); try { const full = await apiFetch<Task>(`/platform-career/tasks/${item.id}`); setSelected(full); setDraft(full.canEdit && canWrite ? toDraft(full) : null); setReason(''); } catch (cause) { setError(errorText(cause)); } finally { setBusy(false); } };
@@ -30,7 +30,7 @@ export default function CareerTasksPanel({ access }: { access: Access }) {
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) => setDraft(current => current ? { ...current, [key]: value } : current);
   return <section className="space-y-4">
     <div><h2 className="text-lg font-semibold">Карьерные задачи</h2><p className="mt-1 text-sm text-slate-400">Все задачи доступны для поиска и просмотра. Исправлять можно только черновики без откликов и работ; их переходы и связи остаются неизменными.</p></div>
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><label className="block text-sm">Поиск<input className={inputClass} type="search" maxLength={100} value={query} onChange={event => { setQuery(event.target.value); setPage(1); }} placeholder="Задача, компания, описание или ID" /></label>{universities.data && <label className="block text-sm">Университет<select className={inputClass} value={universityId} onChange={event => { setUniversityId(event.target.value); setPage(1); }}><option value="">Все университеты</option>{universities.data.data.map(university => <option key={university.id} value={university.id}>{university.name} · {university.city}</option>)}</select></label>}<label className="block text-sm">Состояние<select className={inputClass} value={state} onChange={event => { setState(event.target.value); setPage(1); }}><option value="">Любое</option>{Object.entries(states).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label></div>
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><label className="block text-sm">Поиск<input className={inputClass} type="search" maxLength={100} value={query} onChange={event => { setQuery(event.target.value); setPage(1); }} placeholder="Задача, компания, описание или ID" /></label>{universities.data && <label className="block text-sm">Университет<select className={inputClass} value={organizationId} onChange={event => { setOrganizationId(event.target.value); setPage(1); }}><option value="">Все университеты</option>{universities.data.data.map(university => <option key={university.id} value={university.id}>{university.name} · {university.city}</option>)}</select></label>}<label className="block text-sm">Состояние<select className={inputClass} value={state} onChange={event => { setState(event.target.value); setPage(1); }}><option value="">Любое</option>{Object.entries(states).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label></div>
     {(error || list.error || universities.error) && <Notice error>{error || list.error || universities.error}</Notice>}{notice && <Notice>{notice}</Notice>}{list.loading && <p role="status" className="text-sm text-slate-400">Загружаем задачи…</p>}
     <div className="divide-y divide-slate-700 rounded-xl border border-slate-700">{list.data?.data.map(item => <article key={item.id} className="flex flex-wrap items-start justify-between gap-3 p-4"><div className="min-w-0"><p className="font-semibold">{item.title}</p><p className="mt-1 text-xs text-slate-400">{item.companyName} · {item.universityName} · {item.deadline}</p><p className="mt-1 text-sm text-slate-300">{item.descriptionPreview}</p><p className="mt-1 text-xs text-cyan-200">{states[item.state] || item.state} · {levels[item.level] || item.level} · {(Number(item.rewardKopecks) / 100).toLocaleString('ru-RU')} ₽ · {item.hours} ч.</p></div><Button disabled={busy} onClick={() => void open(item)}>Открыть</Button></article>)}</div>
     {list.data?.data.length === 0 && <p className="text-sm text-slate-400">Задач по этому запросу нет.</p>}{list.data && <Pager page={page} totalPages={list.data.meta.totalPages} onChange={setPage} />}

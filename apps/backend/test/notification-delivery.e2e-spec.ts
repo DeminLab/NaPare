@@ -14,6 +14,7 @@ import { DeviceToken } from '../src/notifications/entities/device-token.entity';
 import { NotificationDelivery1700000000034 } from '../src/migrations/1700000000034-NotificationDelivery';
 import { PersonalDataRead1700000000037 } from '../src/migrations/1700000000037-PersonalDataRead';
 import { AccountErasure1700000000038 } from '../src/migrations/1700000000038-AccountErasure';
+import { TenantOrganizationAlias1700000000046 } from '../src/migrations/1700000000046-TenantOrganizationAlias';
 
 const databaseUrl = process.env.NOTIFICATION_TEST_DATABASE_URL;
 const redisUrl = process.env.NOTIFICATION_TEST_REDIS_URL;
@@ -38,7 +39,7 @@ integration('Notification delivery with real PostgreSQL RLS and Redis/BullMQ', (
     return tenant.runInRequest(() => { tenant.setUser(fixture.users[key]); return callback(); });
   }
   async function create(eventId = randomUUID()) {
-    return asUser('student', () => service.persist({ universityId: fixture.uni.id, userId: fixture.users.student.id,
+    return asUser('student', () => service.persist({ organizationId: fixture.uni.id, userId: fixture.users.student.id,
       title: 'Synthetic notification', body: 'Runtime proof only', eventId }));
   }
   async function deliveries(id: string) { return fixture.db.getRepository(NotificationDelivery).find({ where: { notificationId: id } }); }
@@ -73,6 +74,13 @@ integration('Notification delivery with real PostgreSQL RLS and Redis/BullMQ', (
       await new NotificationDelivery1700000000034().up(runner);
       await new PersonalDataRead1700000000037().up(runner);
       await new AccountErasure1700000000038().up(runner);
+      // Migration 34 re-runs migration 29, which recreates the helper
+      // functions and every tenant policy with the legacy text (ADR-0008
+      // "dev/test paths"): canonicalize around the historic tail exactly like
+      // the fixture does, or the renamed capability key (organizationIds)
+      // stops matching the legacy capability key (universityIds) and the
+      // recipient lookup inside napare_check_active_writer finds no rows.
+      await new TenantOrganizationAlias1700000000046().up(runner);
     } finally { await runner.release(); }
     const [security] = await db.query("SELECT relrowsecurity,relforcerowsecurity FROM pg_class WHERE relname='notification_deliveries'");
     expect(security).toEqual({ relrowsecurity: true, relforcerowsecurity: true });
@@ -137,7 +145,7 @@ integration('Notification delivery with real PostgreSQL RLS and Redis/BullMQ', (
 
   it('denies foreign tenant creation, read and state mutation under FORCE RLS', async () => {
     const notification = await create();
-    await expect(asUser('outsider', () => service.persist({ universityId: fixture.uni.id, userId: fixture.users.student.id, title: 'Forbidden', body: 'Forbidden' }))).rejects.toThrow();
+    await expect(asUser('outsider', () => service.persist({ organizationId: fixture.uni.id, userId: fixture.users.student.id, title: 'Forbidden', body: 'Forbidden' }))).rejects.toThrow();
     const db = fixture.app.get(DataSource);
     await asUser('outsider', async () => {
       expect(await db.getRepository(NotificationDelivery).find({ where: { notificationId: notification.id } })).toEqual([]);
@@ -149,7 +157,7 @@ integration('Notification delivery with real PostgreSQL RLS and Redis/BullMQ', (
   it('rolls back device revocation when the terminal delivery write fails', async () => {
     const notification = await create();
     const [row] = await deliveries(notification.id);
-    const job = { deliveryId: row.id, universityId: row.universityId };
+    const job = { deliveryId: row.id, organizationId: row.organizationId };
     await fixture.db.query(`ALTER TABLE notification_deliveries ADD CONSTRAINT synthetic_terminal_reject CHECK (status <> 'dead') NOT VALID`);
     try {
       await expect(service.transition(job, 'dead', 'provider_http_410', false, true)).rejects.toThrow();
@@ -174,10 +182,10 @@ integration('Notification delivery with real PostgreSQL RLS and Redis/BullMQ', (
     await service.dispatch();
     const [row] = await awaitStatus(notification.id, 'delivered');
     const before = providerSend.mock.calls.length;
-    await service.process({ data: { deliveryId: row.id, universityId: row.universityId }, attemptsMade: 0 });
+    await service.process({ data: { deliveryId: row.id, organizationId: row.organizationId }, attemptsMade: 0 });
     expect(providerSend.mock.calls.length).toBe(before);
     expect((await deliveries(notification.id))[0].attempts).toBe(1);
-    expect((await queue.getJob(row.id))?.data).toEqual({ deliveryId: row.id, universityId: row.universityId });
+    expect((await queue.getJob(row.id))?.data).toEqual({ deliveryId: row.id, organizationId: row.organizationId });
     expect(noOutbound).not.toHaveBeenCalled();
   });
 
@@ -217,7 +225,7 @@ integration('Notification delivery with real PostgreSQL RLS and Redis/BullMQ', (
       expect(row.history.filter(item => item.status === 'sending')).toHaveLength(5);
       const calls = providerSend.mock.calls.length;
       await service.dispatch();
-      await service.process({ data: { deliveryId: row.id, universityId: row.universityId }, attemptsMade: 0 });
+      await service.process({ data: { deliveryId: row.id, organizationId: row.organizationId }, attemptsMade: 0 });
       expect(providerSend.mock.calls.length).toBe(calls);
       expect(noOutbound).not.toHaveBeenCalled();
     } finally { providerSend.mockResolvedValue(undefined); }
@@ -230,7 +238,7 @@ integration('Notification delivery with real PostgreSQL RLS and Redis/BullMQ', (
     await fixture.db.getRepository(NotificationDelivery).update(row.id, { attempts: 5, status: 'queued' });
     configure('NOTIFICATIONS_DELIVERY_ENABLED', 'true');
     const before = providerSend.mock.calls.length;
-    await expect(service.process({ data: { deliveryId: row.id, universityId: row.universityId }, attemptsMade: 0 })).rejects.toThrow('queue_attempts_exhausted');
+    await expect(service.process({ data: { deliveryId: row.id, organizationId: row.organizationId }, attemptsMade: 0 })).rejects.toThrow('queue_attempts_exhausted');
     expect(providerSend.mock.calls.length).toBe(before);
     expect((await deliveries(notification.id))[0]).toMatchObject({ attempts: 5, status: 'dead', lastError: 'queue_attempts_exhausted' });
   });

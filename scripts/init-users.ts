@@ -95,7 +95,7 @@ async function main() {
       firstName: userData.firstName,
       lastName: userData.lastName,
       role: userData.role,
-      universityId: savedUniversity.id,
+      organizationId: savedUniversity.id,
       isActive: true,
     });
 

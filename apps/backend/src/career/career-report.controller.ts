@@ -24,7 +24,7 @@ export class CareerReportController {
     response.set({ 'Cache-Control': 'no-store, private',
       'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'Content-Disposition': 'attachment; filename="napare-career-report.xlsx"',
-      'X-NaPare-University-Id': report.universityId,
+      'X-NaPare-University-Id': report.organizationId,
       'X-Content-Type-Options': 'nosniff' });
     response.send(buffer);
   }

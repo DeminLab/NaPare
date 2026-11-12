@@ -1,6 +1,6 @@
 export interface Faculty {
   id: string;
-  universityId: string;
+  organizationId: string;
   name: string;
   code: string;
   deanUserId?: string;

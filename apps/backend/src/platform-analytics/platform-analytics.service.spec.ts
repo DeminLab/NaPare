@@ -14,7 +14,7 @@ function create(queryResult: (sql: string, params: unknown[]) => unknown[]) {
     getRepository: () => ({ save: jest.fn(), find: jest.fn().mockResolvedValue([]) }),
   };
   const platform = {
-    require: jest.fn().mockResolvedValue({ owner: true, permissions: ['analytics.read', 'telemetry.read'], universityIds: null, actorId: 'actor-1' }),
+    require: jest.fn().mockResolvedValue({ owner: true, permissions: ['analytics.read', 'telemetry.read'], organizationIds: null, actorId: 'actor-1' }),
     assertUniversityScope: jest.fn(),
   };
   const telemetry = { revokeSession: jest.fn(), revokeAllForUser: jest.fn(), recordEvent: jest.fn() };

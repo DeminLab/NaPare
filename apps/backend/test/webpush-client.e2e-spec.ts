@@ -32,7 +32,7 @@ suite('WebPush client contract: real JWT/HTTP/PostgreSQL, no outbound provider',
   const first = subscription(), second = subscription(), peer = subscription();
   const login = async (actor: string) => { tokens[actor] = (await http().post('/api/v1/auth/login').send({ email: f.users[actor].email, password: f.password }).expect(200)).body.accessToken; };
   async function notification() {
-    return tenant.runInRequest(() => { tenant.setUser(f.users.student); return delivery.persist({ userId: f.users.student.id, universityId: f.uni.id,
+    return tenant.runInRequest(() => { tenant.setUser(f.users.student); return delivery.persist({ userId: f.users.student.id, organizationId: f.uni.id,
       eventId: randomUUID(), type: 'system', title: 'PRIVATE_FIXTURE_TITLE', body: 'PRIVATE_FIXTURE_BODY', deepLink: '/student/notifications' }); });
   }
   beforeAll(async () => {
@@ -96,7 +96,7 @@ suite('WebPush client contract: real JWT/HTTP/PostgreSQL, no outbound provider',
     expect(rows).toHaveLength(1);
     const firstDevice = await f.db.getRepository(DeviceToken).findOneByOrFail({ userId: f.users.student.id, webPushConsentVersion: WEBPUSH_CONSENT_VERSION });
     expect(rows[0].targetId).toBe(firstDevice.id);
-    await delivery.process({ data: { deliveryId: rows[0].id, universityId: f.uni.id }, attemptsMade: 0 });
+    await delivery.process({ data: { deliveryId: rows[0].id, organizationId: f.uni.id }, attemptsMade: 0 });
     expect(send).toHaveBeenCalledTimes(1);
     expect((await f.db.getRepository(NotificationDelivery).findOneByOrFail({ id: rows[0].id })).status).toBe('delivered');
   });
@@ -128,13 +128,13 @@ suite('WebPush client contract: real JWT/HTTP/PostgreSQL, no outbound provider',
     await revoke(first).expect(200); await revoke(first).expect(200);
     await http().post('/api/v1/devices/token').auth(tokens.student, { type: 'bearer' }).send({ token: (await f.db.getRepository(DeviceToken).findOneByOrFail({ id: row.targetId })).token, platform: 'web', provider: 'webpush' }).expect(201);
     expect((await f.db.getRepository(DeviceToken).findOneByOrFail({ id: row.targetId })).isActive).toBe(true);
-    await expect(delivery.process({ data: { deliveryId: row.id, universityId: f.uni.id }, attemptsMade: 0 })).rejects.toThrow('target_revoked');
+    await expect(delivery.process({ data: { deliveryId: row.id, organizationId: f.uni.id }, attemptsMade: 0 })).rejects.toThrow('target_revoked');
     expect(send).toHaveBeenCalledTimes(1);
     expect((await get().expect(200)).body.registeredEndpoints).toEqual([]);
     expect((await f.db.getRepository(DeviceToken).findOneByOrFail({ id: row.targetId })).webPushRevokedAt).toBeTruthy();
   });
   it('allows career accounts to configure only their own WebPush without opening academic/device-token routes', async () => {
-    await f.db.getRepository(User).update(f.users.peer.id, { role: UserRole.EMPLOYER, universityId: null }); await login('peer');
+    await f.db.getRepository(User).update(f.users.peer.id, { role: UserRole.EMPLOYER, organizationId: null }); await login('peer');
     await get('peer').expect(200); await post(peer, 'peer').expect(201);
     await http().get('/api/v1/schedule').auth(tokens.peer, { type: 'bearer' }).expect(403);
     await http().post('/api/v1/devices/token').auth(tokens.peer, { type: 'bearer' }).send({ token: 'opaque-token', platform: 'web' }).expect(403);

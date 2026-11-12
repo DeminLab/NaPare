@@ -4,7 +4,7 @@ const vm = require('node:vm');
 const { test } = require('node:test');
 const { loadTypeScript } = require('./load-typescript.cjs');
 const source = path.resolve(__dirname, '../src/app/(student)');
-const token = (sub = 'student-a', universityId = 'university-a') => `x.${Buffer.from(JSON.stringify({ sub, universityId, role: 'student' })).toString('base64url')}.x`;
+const token = (sub = 'student-a', organizationId = 'university-a') => `x.${Buffer.from(JSON.stringify({ sub, organizationId, role: 'student' })).toString('base64url')}.x`;
 
 async function fixture() {
   const worker = await loadTypeScript(path.join(source, 'sw.js/route.ts')).GET().text();

@@ -7,7 +7,7 @@ export const INBOX_ITEM_STATUSES = ['open', 'snoozed', 'done'] as const;
 export type InboxItemStatus = (typeof INBOX_ITEM_STATUSES)[number];
 
 @Entity('inbox_items')
-@Index('IDX_inbox_items_user_university_status', ['userId', 'universityId', 'status'])
+@Index('IDX_inbox_items_user_university_status', ['userId', 'organizationId', 'status'])
 @Index('IDX_inbox_items_event_user', ['eventId', 'userId'])
 @Index('UQ_inbox_items_event_user_type', ['eventId', 'userId', 'type'], { unique: true })
 export class InboxItem {
@@ -21,7 +21,7 @@ export class InboxItem {
   userId: string;
 
   @Column({ type: 'uuid' })
-  universityId: string;
+  organizationId: string;
 
   @Column()
   type: string;

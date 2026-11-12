@@ -99,27 +99,27 @@ export class AdminService {
   ) {}
 
   async getUniversityUsers(
-    universityId: string,
+    organizationId: string,
     pagination: PaginationQueryDto,
     requesterRole: UserRole,
   ): Promise<PaginatedResponse<User>> {
-    this.tenantContext.assertAccess(universityId);
-    return this.usersService.findByUniversityId(
-      universityId,
+    this.tenantContext.assertAccess(organizationId);
+    return this.usersService.findByOrganizationId(
+      organizationId,
       pagination,
       this.getVisibleUserRoles(requesterRole),
     );
   }
 
-  async getSibitTeachers(universityId: string) {
-    this.tenantContext.assertAccess(universityId);
-    const university = await this.universityRepository.findOne({ where: { id: universityId } });
+  async getSibitTeachers(organizationId: string) {
+    this.tenantContext.assertAccess(organizationId);
+    const university = await this.universityRepository.findOne({ where: { id: organizationId } });
     if (!university || university.connectorType !== "rasp-sano") {
       throw new BadRequestException("Каталог преподавателей СИБИТ недоступен для этого университета");
     }
     const teachers = await this.sibitConnectorService.getTeachers();
     const linkedUsers = await this.userRepository.find({
-      where: { universityId, role: UserRole.TEACHER },
+      where: { organizationId, role: UserRole.TEACHER },
       select: ["id", "firstName", "lastName", "sourceTeacherId"],
     });
     const links = new Map(linkedUsers.filter((user) => user.sourceTeacherId).map((user) => [user.sourceTeacherId!, user]));
@@ -133,19 +133,19 @@ export class AdminService {
   }
 
   async getGroupStudents(
-    universityId: string,
+    organizationId: string,
     groupId: string,
     pagination: PaginationQueryDto,
     requesterId?: string,
     requesterRole?: UserRole,
   ): Promise<PaginatedResponse<User>> {
-    this.tenantContext.assertAccess(universityId);
+    this.tenantContext.assertAccess(organizationId);
     if (requesterRole === UserRole.CURATOR && this.curation) {
       await this.curation.assertGroup(groupId);
     }
     if (requesterRole === UserRole.TEACHER && requesterId) {
       const groupIds = await this.scheduleService.getTeacherGroupIds(
-        universityId,
+        organizationId,
         requesterId,
       );
       if (!groupIds.includes(groupId)) {
@@ -154,11 +154,11 @@ export class AdminService {
         );
       }
     }
-    return this.usersService.findByGroupId(groupId, universityId, pagination);
+    return this.usersService.findByGroupId(groupId, organizationId, pagination);
   }
 
   async updateUserRole(
-    universityId: string,
+    organizationId: string,
     userId: string,
     updateUserRoleDto: UpdateUserRoleDto,
     requesterRole: UserRole,
@@ -172,7 +172,7 @@ export class AdminService {
 
     const user = await this.usersService.findById(userId);
 
-    if (!user || user.universityId !== universityId) {
+    if (!user || user.organizationId !== organizationId) {
       throw new ForbiddenException("User not found in this university");
     }
 
@@ -184,11 +184,11 @@ export class AdminService {
   }
 
   async createUniversityUser(
-    universityId: string,
+    organizationId: string,
     data: CreateUniversityUserDto,
     requesterRole: UserRole,
   ): Promise<User> {
-    this.tenantContext.assertAccess(universityId);
+    this.tenantContext.assertAccess(organizationId);
     if (data.role === UserRole.CURATOR) throw new BadRequestException('Создайте аккаунт студента или сотрудника и назначьте ему кураторские группы.');
     if (!this.canManageRole(requesterRole, data.role))
       throw new ForbiddenException(
@@ -201,13 +201,13 @@ export class AdminService {
         if (data.role !== UserRole.STUDENT) {
           throw new BadRequestException("Внешний ID учебной группы назначается аккаунту студента.");
         }
-        const university = await this.getUniversity(universityId);
+        const university = await this.getUniversity(organizationId);
         if (university.name !== SIBIT_UNIVERSITY.name || university.city !== SIBIT_UNIVERSITY.city || university.connectorType !== "rasp-sano" || !await this.raspScraperService.isValidGroup(data.groupId)) {
           throw new BadRequestException("Выберите группу из каталога СИБИТ для этого университета.");
         }
       } else {
         const group = await this.groupRepository.findOne({
-          where: { id: data.groupId, universityId },
+          where: { id: data.groupId, organizationId },
         });
         if (!group)
           throw new BadRequestException(
@@ -217,11 +217,11 @@ export class AdminService {
     }
     if (data.sourceTeacherId) {
       if (data.role !== UserRole.TEACHER) throw new BadRequestException("Внешний ID преподавателя можно назначить только учётной записи преподавателя.");
-      const university = await this.getUniversity(universityId);
+      const university = await this.getUniversity(organizationId);
       if (university.connectorType !== "rasp-sano" || !(await this.sibitConnectorService.getTeachers()).some((teacher) => teacher.id === data.sourceTeacherId)) {
         throw new BadRequestException("Преподаватель не найден в каталоге расписания СИБИТа.");
       }
-      const existingLink = await this.userRepository.findOne({ where: { universityId, sourceTeacherId: data.sourceTeacherId } });
+      const existingLink = await this.userRepository.findOne({ where: { organizationId, sourceTeacherId: data.sourceTeacherId } });
       if (existingLink) throw new ConflictException("Этот преподаватель СИБИТа уже связан с учётной записью.");
     }
     const created = await this.usersService.create({
@@ -232,33 +232,33 @@ export class AdminService {
       role: data.role,
       groupId: data.groupId,
       sourceTeacherId: data.sourceTeacherId || null,
-      universityId,
+      organizationId,
     });
     if (data.sourceTeacherId) {
-      await this.syncSchedule(universityId);
+      await this.syncSchedule(organizationId);
     }
     return created;
   }
 
-  async linkSibitTeacher(universityId: string, userId: string, sourceTeacherId: string | null) {
-    this.tenantContext.assertAccess(universityId);
-    const user = await this.userRepository.findOne({ where: { id: userId, universityId } });
+  async linkSibitTeacher(organizationId: string, userId: string, sourceTeacherId: string | null) {
+    this.tenantContext.assertAccess(organizationId);
+    const user = await this.userRepository.findOne({ where: { id: userId, organizationId } });
     if (!user || user.role !== UserRole.TEACHER) throw new NotFoundException("Учётная запись преподавателя не найдена.");
     if (sourceTeacherId) {
-      const university = await this.getUniversity(universityId);
+      const university = await this.getUniversity(organizationId);
       if (university.connectorType !== "rasp-sano" || !(await this.sibitConnectorService.getTeachers()).some((teacher) => teacher.id === sourceTeacherId)) {
         throw new BadRequestException("Преподаватель не найден в каталоге расписания СИБИТа.");
       }
-      const existingLink = await this.userRepository.findOne({ where: { universityId, sourceTeacherId } });
+      const existingLink = await this.userRepository.findOne({ where: { organizationId, sourceTeacherId } });
       if (existingLink && existingLink.id !== userId) throw new ConflictException("Этот преподаватель СИБИТа уже связан с другой учётной записью.");
     }
     user.sourceTeacherId = sourceTeacherId;
     await this.userRepository.save(user);
     if (sourceTeacherId) {
-      await this.syncSchedule(universityId);
+      await this.syncSchedule(organizationId);
     } else {
       await this.lessonRepository.update(
-        { universityId, source: "sibit", teacherId: userId },
+        { organizationId, source: "sibit", teacherId: userId },
         { teacherId: null },
       );
     }
@@ -266,7 +266,7 @@ export class AdminService {
   }
 
   async updateUniversityUserStatus(
-    universityId: string,
+    organizationId: string,
     userId: string,
     data: UpdateUniversityUserStatusDto,
     requesterId: string,
@@ -277,7 +277,7 @@ export class AdminService {
         "Нельзя изменить статус собственной учётной записи",
       );
     const user = await this.usersService.findById(userId);
-    if (!user || user.universityId !== universityId)
+    if (!user || user.organizationId !== organizationId)
       throw new ForbiddenException("User not found in this university");
     if (!this.canManageRole(requesterRole, user.role))
       throw new ForbiddenException(
@@ -291,14 +291,14 @@ export class AdminService {
   }
 
   async resetUniversityUserPassword(
-    universityId: string,
+    organizationId: string,
     userId: string,
     data: ResetUniversityUserPasswordDto,
     requesterRole: UserRole,
   ): Promise<User> {
-    this.tenantContext.assertAccess(universityId);
+    this.tenantContext.assertAccess(organizationId);
     const user = await this.usersService.findById(userId);
-    if (!user || user.universityId !== universityId) {
+    if (!user || user.organizationId !== organizationId) {
       throw new ForbiddenException("User not found in this university");
     }
     if (!this.canManageRole(requesterRole, user.role)) {
@@ -313,11 +313,11 @@ export class AdminService {
     return updatedUser;
   }
 
-  importSchedule(universityId: string, importScheduleDto: ImportScheduleDto) {
-    return this.scheduleImports.submit(universityId, importScheduleDto);
+  importSchedule(organizationId: string, importScheduleDto: ImportScheduleDto) {
+    return this.scheduleImports.submit(organizationId, importScheduleDto);
   }
 
-  async syncSchedule(universityId: string): Promise<{
+  async syncSchedule(organizationId: string): Promise<{
     status: string;
     timestamp: string;
     groups: number;
@@ -327,15 +327,15 @@ export class AdminService {
     updated: number;
     studentsLinked: number;
   }> {
-    this.tenantContext.assertAccess(universityId);
-    const university = await this.getUniversity(universityId);
+    this.tenantContext.assertAccess(organizationId);
+    const university = await this.getUniversity(organizationId);
     if (!connectorCapabilities(university.connectorType || "").scheduleSync) {
       throw new BadRequestException(
         "Для этого ВУЗа не настроен источник расписания с поддержкой синхронизации.",
       );
     }
     const { catalog, ...summary } = await this.sibitConnectorService.sync();
-    const persisted = await this.persistSibitCatalog(universityId, catalog);
+    const persisted = await this.persistSibitCatalog(organizationId, catalog);
     const timestamp = new Date().toISOString();
     university.connectorConfig = {
       ...(university.connectorConfig || {}),
@@ -361,16 +361,16 @@ export class AdminService {
    * external ids, so running the sync twice is safe.
    */
   private async persistSibitCatalog(
-    universityId: string,
+    organizationId: string,
     catalog: RaspCatalog,
   ): Promise<{ imported: number; updated: number; studentsLinked: number }> {
     const [existingFaculties, existingGroups, users, existingLessons] =
       await Promise.all([
-        this.facultyRepository.find({ where: { universityId } }),
-        this.groupRepository.find({ where: { universityId } }),
-        this.userRepository.find({ where: { universityId } }),
+        this.facultyRepository.find({ where: { organizationId } }),
+        this.groupRepository.find({ where: { organizationId } }),
+        this.userRepository.find({ where: { organizationId } }),
         this.lessonRepository.find({
-          where: { universityId, source: "sibit" },
+          where: { organizationId, source: "sibit" },
         }),
       ]);
 
@@ -396,7 +396,7 @@ export class AdminService {
       if (!faculty) {
         faculty = await this.facultyRepository.save(
           this.facultyRepository.create({
-            universityId,
+            organizationId,
             name: sourceGroup.faculty || "Не указан",
             code: `sibit-${sourceGroup.facultyId}`,
           }),
@@ -422,7 +422,7 @@ export class AdminService {
       } else {
         group = await this.groupRepository.save(
           this.groupRepository.create({
-            universityId,
+            organizationId,
             facultyId: faculty.id,
             name: sourceGroup.name,
             externalId: sourceGroup.groupId,
@@ -462,7 +462,7 @@ export class AdminService {
       const key = sibitLessonKey(sourceLesson.lessonId, group.id);
       const existing = lessonBySourceKey.get(key);
       const source = {
-        universityId,
+        organizationId,
         groupId: group.id,
         teacherId: resolveTeacherId(sourceLesson.teacher, sourceLesson.teacherId, teachers),
         sourceTeacherId: sourceLesson.teacherId ?? null,
@@ -504,7 +504,7 @@ export class AdminService {
           const saved = await this.lessonRepository.save(existing);
           await this.eventBus?.publish({
             type: eventType,
-            universityId,
+            organizationId,
             actor: { type: "system" },
             target: { type: "lesson", id: saved.id },
             payload: {
@@ -528,8 +528,8 @@ export class AdminService {
     return { imported, updated, studentsLinked };
   }
 
-  async getUniversityStats(universityId: string): Promise<UniversityStats> {
-    this.tenantContext.assertAccess(universityId);
+  async getUniversityStats(organizationId: string): Promise<UniversityStats> {
+    this.tenantContext.assertAccess(organizationId);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const [
@@ -539,16 +539,16 @@ export class AdminService {
       totalLessons,
       activeToday,
     ] = await Promise.all([
-      this.userRepository.count({ where: { universityId } }),
+      this.userRepository.count({ where: { organizationId } }),
       this.userRepository.count({
-        where: { universityId, role: UserRole.STUDENT },
+        where: { organizationId, role: UserRole.STUDENT },
       }),
       this.userRepository.count({
-        where: { universityId, role: UserRole.TEACHER },
+        where: { organizationId, role: UserRole.TEACHER },
       }),
-      this.lessonRepository.count({ where: { universityId } }),
+      this.lessonRepository.count({ where: { organizationId } }),
       this.userRepository.count({
-        where: { universityId, lastLoginAt: MoreThanOrEqual(today) },
+        where: { organizationId, lastLoginAt: MoreThanOrEqual(today) },
       }),
     ]);
     return {
@@ -560,15 +560,15 @@ export class AdminService {
     };
   }
 
-  async getUniversity(universityId: string): Promise<University> {
-    this.tenantContext.assertAccess(universityId);
+  async getUniversity(organizationId: string): Promise<University> {
+    this.tenantContext.assertAccess(organizationId);
     const university = await this.universityRepository.findOne({
-      where: { id: universityId },
+      where: { id: organizationId },
     });
 
     if (!university) {
       throw new NotFoundException(
-        `University with id ${universityId} not found`,
+        `University with id ${organizationId} not found`,
       );
     }
 
@@ -576,21 +576,21 @@ export class AdminService {
   }
 
   async updateUniversity(
-    universityId: string,
+    organizationId: string,
     updateData: UpdateUniversityDto,
   ): Promise<University> {
-    const university = await this.getUniversity(universityId);
+    const university = await this.getUniversity(organizationId);
     Object.assign(university, updateData);
     return this.universityRepository.save(university);
   }
 
   async getFaculties(
-    universityId: string,
+    organizationId: string,
     pagination: PaginationQueryDto,
   ): Promise<PaginatedResponse<Faculty>> {
-    this.tenantContext.assertAccess(universityId);
+    this.tenantContext.assertAccess(organizationId);
     const [data, total] = await this.facultyRepository.findAndCount({
-      where: { universityId },
+      where: { organizationId },
       order: { name: "ASC" },
       skip: (pagination.page - 1) * pagination.limit,
       take: pagination.limit,
@@ -599,14 +599,14 @@ export class AdminService {
   }
 
   async createFaculty(
-    universityId: string,
+    organizationId: string,
     data: CreateFacultyDto,
   ): Promise<Faculty> {
-    this.tenantContext.assertAccess(universityId);
-    if (data.deanUserId) await this.assertFacultyDean(universityId, data.deanUserId);
+    this.tenantContext.assertAccess(organizationId);
+    if (data.deanUserId) await this.assertFacultyDean(organizationId, data.deanUserId);
     const faculty = this.facultyRepository.create({
       ...data,
-      universityId,
+      organizationId,
     });
     return this.facultyRepository.save(faculty);
   }
@@ -617,19 +617,19 @@ export class AdminService {
     if (!faculty) {
       throw new NotFoundException(`Faculty with id ${id} not found`);
     }
-    this.tenantContext.assertAccess(faculty.universityId);
+    this.tenantContext.assertAccess(faculty.organizationId);
 
     if (data.deanUserId !== undefined && data.deanUserId !== null) {
-      await this.assertFacultyDean(faculty.universityId, data.deanUserId);
+      await this.assertFacultyDean(faculty.organizationId, data.deanUserId);
     }
 
     Object.assign(faculty, data);
     return this.facultyRepository.save(faculty) as Promise<Faculty>;
   }
 
-  private async assertFacultyDean(universityId: string, deanUserId: string): Promise<void> {
+  private async assertFacultyDean(organizationId: string, deanUserId: string): Promise<void> {
     const dean = await this.userRepository.findOne({
-      where: { id: deanUserId, universityId, role: UserRole.FACULTY_DEAN, isActive: true },
+      where: { id: deanUserId, organizationId, role: UserRole.FACULTY_DEAN, isActive: true },
       select: { id: true },
     });
     if (!dean) {
@@ -640,12 +640,12 @@ export class AdminService {
   }
 
   async getGroups(
-    universityId: string,
+    organizationId: string,
     pagination: PaginationQueryDto,
   ): Promise<PaginatedResponse<Group>> {
-    this.tenantContext.assertAccess(universityId);
+    this.tenantContext.assertAccess(organizationId);
     const [data, total] = await this.groupRepository.findAndCount({
-      where: { universityId },
+      where: { organizationId },
       order: { name: "ASC" },
       skip: (pagination.page - 1) * pagination.limit,
       take: pagination.limit,
@@ -654,27 +654,27 @@ export class AdminService {
   }
 
   async getAttendanceGroups(
-    universityId: string,
+    organizationId: string,
     requesterId: string,
     requesterRole: UserRole,
     pagination: PaginationQueryDto,
   ): Promise<PaginatedResponse<Group>> {
-    this.tenantContext.assertAccess(universityId);
+    this.tenantContext.assertAccess(organizationId);
     if (requesterRole === UserRole.CURATOR && this.curation) {
       const result = await this.curation.groups(pagination);
       const ids = result.data.map(group => group.id);
-      const data = ids.length ? await this.groupRepository.find({ where: { id: In(ids), universityId }, order: { name: 'ASC' } }) : [];
+      const data = ids.length ? await this.groupRepository.find({ where: { id: In(ids), organizationId }, order: { name: 'ASC' } }) : [];
       return { ...result, data };
     }
     if (requesterRole !== UserRole.TEACHER)
-      return this.getGroups(universityId, pagination);
+      return this.getGroups(organizationId, pagination);
     const groupIds = await this.scheduleService.getTeacherGroupIds(
-      universityId,
+      organizationId,
       requesterId,
     );
     if (!groupIds.length) return toPaginatedResponse([], 0, pagination);
     const [data, total] = await this.groupRepository.findAndCount({
-      where: { universityId, id: In(groupIds) },
+      where: { organizationId, id: In(groupIds) },
       order: { name: "ASC" },
       skip: (pagination.page - 1) * pagination.limit,
       take: pagination.limit,
@@ -683,18 +683,18 @@ export class AdminService {
   }
 
   async createGroup(
-    universityId: string,
+    organizationId: string,
     data: CreateGroupDto,
   ): Promise<Group> {
-    this.tenantContext.assertAccess(universityId);
+    this.tenantContext.assertAccess(organizationId);
     if (data.curatorId) throw new BadRequestException('Назначьте кураторов через управление кураторством после создания группы.');
-    await this.assertFacultyInUniversity(data.facultyId, universityId);
+    await this.assertFacultyInUniversity(data.facultyId, organizationId);
     const group = this.groupRepository.create({
       name: data.name,
       specialization: data.specialization,
       facultyId: data.facultyId,
       curatorId: data.curatorId,
-      universityId,
+      organizationId,
       curriculumYear: Number(data.curriculumYear),
     });
     return this.groupRepository.save(group);
@@ -707,16 +707,16 @@ export class AdminService {
     if (!group) {
       throw new NotFoundException(`Group with id ${id} not found`);
     }
-    this.tenantContext.assertAccess(group.universityId);
+    this.tenantContext.assertAccess(group.organizationId);
 
-    if (data.facultyId !== undefined) await this.assertFacultyInUniversity(data.facultyId, group.universityId);
+    if (data.facultyId !== undefined) await this.assertFacultyInUniversity(data.facultyId, group.organizationId);
 
     Object.assign(group, data);
     return this.groupRepository.save(group) as Promise<Group>;
   }
 
-  private async assertFacultyInUniversity(facultyId: string | undefined, universityId: string): Promise<void> {
-    if (facultyId && !await this.facultyRepository.findOne({ where: { id: facultyId, universityId } })) {
+  private async assertFacultyInUniversity(facultyId: string | undefined, organizationId: string): Promise<void> {
+    if (facultyId && !await this.facultyRepository.findOne({ where: { id: facultyId, organizationId } })) {
       throw new NotFoundException('Факультет своего университета не найден');
     }
   }
@@ -736,14 +736,14 @@ export class AdminService {
   }
 
   async getAuditLog(
-    universityId: string,
+    organizationId: string,
     pagination: PaginationQueryDto,
   ): Promise<PaginatedResponse<AuditLog & { source: string }>> {
-    this.tenantContext.assertAccess(universityId);
+    this.tenantContext.assertAccess(organizationId);
     const [data, total] = await this.auditLogRepository
       .createQueryBuilder("auditLog")
       .innerJoin(User, "auditUser", "auditUser.id = auditLog.userId")
-      .where("auditUser.universityId = :universityId", { universityId })
+      .where("auditUser.organizationId = :organizationId", { organizationId })
       .orderBy("auditLog.createdAt", "DESC")
       .skip((pagination.page - 1) * pagination.limit)
       .take(pagination.limit)
@@ -759,7 +759,7 @@ export class AdminService {
   }
 
   async getConnectors(
-    universityId: string,
+    organizationId: string,
     pagination: PaginationQueryDto,
   ): Promise<
     PaginatedResponse<
@@ -770,7 +770,7 @@ export class AdminService {
       }
     >
   > {
-    const university = await this.getUniversity(universityId);
+    const university = await this.getUniversity(organizationId);
     if (!university.connectorType)
       return toPaginatedResponse([], 0, pagination);
     const config = university.connectorConfig || {};
@@ -800,11 +800,11 @@ export class AdminService {
   }
 
   async updateConnector(
-    universityId: string,
+    organizationId: string,
     id: string,
     updateData: UpdateConnectorDto,
   ): Promise<ConnectorResponseDto & { updatedAt: string }> {
-    const university = await this.getUniversity(universityId);
+    const university = await this.getUniversity(organizationId);
     if (
       !university.connectorType ||
       connectorId(university.connectorType) !== id
@@ -829,10 +829,10 @@ export class AdminService {
   }
 
   async configureMoodleConnector(
-    universityId: string,
+    organizationId: string,
     dto: ConfigureMoodleConnectorDto,
   ): Promise<{ baseUrl: string; tokenConfigured: true; updatedAt: string }> {
-    const university = await this.getMoodleUniversity(universityId);
+    const university = await this.getMoodleUniversity(organizationId);
     const connection = this.moodleConnectorService.configure(
       dto.baseUrl,
       dto.token,
@@ -849,7 +849,7 @@ export class AdminService {
     return { baseUrl: connection.baseUrl, tokenConfigured: true, updatedAt };
   }
 
-  async testMoodleConnector(universityId: string): Promise<{
+  async testMoodleConnector(organizationId: string): Promise<{
     status: "active";
     baseUrl: string;
     siteName: string | null;
@@ -857,7 +857,7 @@ export class AdminService {
     release: string | null;
     verifiedAt: string;
   }> {
-    const university = await this.getMoodleUniversity(universityId);
+    const university = await this.getMoodleUniversity(organizationId);
     const config = readMoodleConnectionConfig(university.connectorConfig);
     try {
       const info = await this.moodleConnectorService.testConnection(config);
@@ -888,9 +888,9 @@ export class AdminService {
     }
   }
 
-  private async getMoodleUniversity(universityId: string): Promise<University> {
-    this.tenantContext.assertAccess(universityId);
-    const university = await this.getUniversity(universityId);
+  private async getMoodleUniversity(organizationId: string): Promise<University> {
+    this.tenantContext.assertAccess(organizationId);
+    const university = await this.getUniversity(organizationId);
     if (university.connectorType !== "moodle") {
       throw new BadRequestException(
         "Для этого ВУЗа Moodle-коннектор не настроен.",

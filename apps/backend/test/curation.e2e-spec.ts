@@ -36,7 +36,7 @@ suite('Curation: real PostgreSQL, HTTP and existing JWT sessions', () => {
   });
   it('requires authentication and rejects unknown query fields', async () => {
     await http().get('/api/v1/curation/context').expect(401);
-    await get('/curation/groups?universityId=' + fixture.otherUni.id).expect(400);
+    await get('/curation/groups?organizationId=' + fixture.otherUni.id).expect(400);
     await get('/curation/groups/not-a-uuid/students').expect(400);
   });
   it('only the deanery/admin can grant; blocked or foreign accounts cannot be assigned', async () => {

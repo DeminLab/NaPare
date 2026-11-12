@@ -29,8 +29,8 @@ export default function OnboardingPage() {
         setOwner(access.owner); setAllowed(access.owner);
         if (access.owner) { setUniversities(await apiFetchAllPages<University>('/platform/universities')); setUncertain(false); }
       } else {
-        setOwner(false); setAllowed(actor.role === 'university_admin' && !!actor.universityId);
-        if (actor.role === 'university_admin' && actor.universityId) setUniversity(await apiFetch<University>('/admin/university'));
+        setOwner(false); setAllowed(actor.role === 'university_admin' && !!actor.organizationId);
+        if (actor.role === 'university_admin' && actor.organizationId) setUniversity(await apiFetch<University>('/admin/university'));
       }
     } catch (cause) { setError(errorMessage(cause)); } finally { setLoading(false); }
   }, []);
@@ -38,7 +38,7 @@ export default function OnboardingPage() {
   const reload = useCallback(async () => {
     if (!university) return;
     const id = university.id, current = ++generation.current;
-    const suffix = owner ? `?universityId=${id}` : '';
+    const suffix = owner ? `?organizationId=${id}` : '';
     const [nextFaculties, nextGroups, nextUsers] = await Promise.all([
       apiFetchAllPages<Faculty>(owner ? `/platform/organization/faculties${suffix}` : '/admin/faculties'),
       apiFetchAllPages<Group>(owner ? `/platform/organization/groups${suffix}` : '/admin/groups'),
@@ -73,7 +73,7 @@ export default function OnboardingPage() {
       {!university && <form onSubmit={event => void createUniversity(event)} className="mt-5 grid max-w-xl gap-4"><label className="grid gap-2 text-sm font-semibold">Название вуза<input required maxLength={200} className={fieldClass} value={form.name} onChange={event => setForm(current => ({ ...current, name: event.target.value }))} /></label><label className="grid gap-2 text-sm font-semibold">Город<input required maxLength={100} className={fieldClass} value={form.city} onChange={event => setForm(current => ({ ...current, city: event.target.value }))} /></label><p className="text-sm text-slate-600">Статус новой записи — «Ожидает активации». Сначала завершите учебную и эксплуатационную проверку.</p><Button type="submit" loading={busy} disabled={busy || uncertain || !form.name.trim() || !form.city.trim()}>Создать вуз</Button></form>}
     </> : <p className="mt-4">{university?.name} · {university?.city}. Для исправления откройте <Link href="/university" className="font-semibold text-indigo-700 underline">настройки</Link>. Новый вуз создаёт владелец платформы.</p>}</Card>}
     {university && step > 0 && !dataReady && <Card><p role="status">Структура и аккаунты ещё не загружены. При ошибке перечитайте данные, прежде чем создавать записи.</p></Card>}
-    {university && dataReady && <div key={university.id}>{step === 1 && <StructureStep universityId={university.id} owner={owner} faculties={faculties} groups={groups} reload={reload} />}{step === 2 && <AdministratorStep universityId={university.id} owner={owner} users={users} reload={reload} />}{step === 3 && !owner && profile && <ImportStep actorId={profile.id} universityId={university.id} groups={groups} />}{step === 4 && !owner && <ReadinessStep university={university} />}</div>}
+    {university && dataReady && <div key={university.id}>{step === 1 && <StructureStep organizationId={university.id} owner={owner} faculties={faculties} groups={groups} reload={reload} />}{step === 2 && <AdministratorStep organizationId={university.id} owner={owner} users={users} reload={reload} />}{step === 3 && !owner && profile && <ImportStep actorId={profile.id} organizationId={university.id} groups={groups} />}{step === 4 && !owner && <ReadinessStep university={university} />}</div>}
     <div className="flex flex-wrap items-center justify-between gap-3"><Button variant="secondary" disabled={step === 0 || busy} onClick={() => setStep(value => value - 1)}>Предыдущий шаг</Button>{step < (owner ? 2 : 4) && <Button disabled={!university || busy} onClick={() => setStep(value => value + 1)}>Следующий шаг</Button>}</div>
   </div>;
 }

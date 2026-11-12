@@ -9,18 +9,18 @@ import {
 
 @Entity('absences')
 @Index('IDX_absences_university_student_created_at', [
-  'universityId',
+  'organizationId',
   'studentId',
   'createdAt',
 ])
-@Index('IDX_absences_university_start_date', ['universityId', 'startDate'])
-@Index('IDX_absences_university_created_at', ['universityId', 'createdAt'])
+@Index('IDX_absences_university_start_date', ['organizationId', 'startDate'])
+@Index('IDX_absences_university_created_at', ['organizationId', 'createdAt'])
 export class Absence {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
   @Column({ type: 'uuid' })
-  universityId: string;
+  organizationId: string;
 
   @Column({ type: 'uuid' })
   studentId: string;

@@ -11,7 +11,7 @@ import { UserRole } from '../../auth/interfaces/user-role';
 import { TenantContext } from './tenant-context';
 
 describe('Tenant boundaries of mutable references', () => {
-  const actor = { id: 'admin-a', email: 'admin@a.test', role: UserRole.UNIVERSITY_ADMIN, universityId: 'uni-a' };
+  const actor = { id: 'admin-a', email: 'admin@a.test', role: UserRole.UNIVERSITY_ADMIN, organizationId: 'uni-a' };
   const context = new TenantContext();
   const groups = { findOne: jest.fn() };
   const users = { findOne: jest.fn(), save: jest.fn() };
@@ -24,7 +24,7 @@ describe('Tenant boundaries of mutable references', () => {
     undefined, undefined, undefined, undefined, groups as unknown as Repository<Group>,
   );
   const userService = new UsersService(users as unknown as Repository<User>, context, undefined, undefined, groups as unknown as Repository<Group>);
-  const ownLesson = { id: 'lesson-a', universityId: 'uni-a', groupId: 'group-a', teacherId: 'teacher-a' };
+  const ownLesson = { id: 'lesson-a', organizationId: 'uni-a', groupId: 'group-a', teacherId: 'teacher-a' };
   beforeEach(() => {
     jest.clearAllMocks();
     groups.findOne.mockResolvedValue(null);
@@ -38,17 +38,17 @@ describe('Tenant boundaries of mutable references', () => {
   });
 
   it('rejects changing a lesson university before opening a transaction', async () => {
-    await expect(asActor(() => service.update('lesson-a', { universityId: 'uni-b' }))).rejects.toThrow(ForbiddenException);
+    await expect(asActor(() => service.update('lesson-a', { organizationId: 'uni-b' }))).rejects.toThrow(ForbiddenException);
     expect(db.transaction).not.toHaveBeenCalled();
   });
   it('rejects attaching a lesson to a foreign group', async () => {
     await expect(asActor(() => service.update('lesson-a', { groupId: 'group-b' }))).rejects.toThrow(NotFoundException);
-    expect(groups.findOne).toHaveBeenCalledWith({ where: { id: 'group-b', universityId: 'uni-a' } });
+    expect(groups.findOne).toHaveBeenCalledWith({ where: { id: 'group-b', organizationId: 'uni-a' } });
     expect(db.transaction).not.toHaveBeenCalled();
   });
   it('rejects attaching a lesson to a foreign teacher', async () => {
     await expect(asActor(() => service.update('lesson-a', { teacherId: 'teacher-b' }))).rejects.toThrow(NotFoundException);
-    expect(teacherRepository.findOne).toHaveBeenCalledWith({ where: { id: 'teacher-b', universityId: 'uni-a' } });
+    expect(teacherRepository.findOne).toHaveBeenCalledWith({ where: { id: 'teacher-b', organizationId: 'uni-a' } });
     expect(db.transaction).not.toHaveBeenCalled();
   });
   it('rejects binding a profile to a foreign group', async () => {
@@ -56,7 +56,7 @@ describe('Tenant boundaries of mutable references', () => {
     expect(users.save).not.toHaveBeenCalled();
   });
   it('allows binding an own-university group', async () => {
-    groups.findOne.mockResolvedValue({ id: 'group-a', universityId: 'uni-a' });
+    groups.findOne.mockResolvedValue({ id: 'group-a', organizationId: 'uni-a' });
     users.save.mockImplementation(value => value);
     await expect(asActor(() => userService.bindGroup('admin-a', 'group-a'))).resolves.toMatchObject({ groupId: 'group-a' });
   });

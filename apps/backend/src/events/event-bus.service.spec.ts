@@ -7,7 +7,7 @@ describe('EventBusService', () => {
       type: 'lesson.changed',
       actor: { type: 'system' },
       timestamp: new Date('2026-09-19T10:00:00.000Z'),
-      universityId: 'university-1',
+      organizationId: 'university-1',
       idempotencyKey: 'change-1',
       target: { type: 'lesson_occurrence', id: 'occurrence-1' },
       payload: { occurrenceId: 'occurrence-1' },
@@ -24,7 +24,7 @@ describe('EventBusService', () => {
     const result = await service.publish({
       type: 'lesson.changed',
       idempotencyKey: 'change-1',
-      universityId: 'university-1',
+      organizationId: 'university-1',
       target: { type: 'lesson_occurrence', id: 'occurrence-1' },
       payload: { occurrenceId: 'occurrence-1' },
     });
@@ -39,7 +39,7 @@ describe('EventBusService', () => {
       type: 'lesson.changed\nevent:spoofed',
       actor: { type: 'system' },
       timestamp: new Date('2026-10-17T00:00:00.000Z'),
-      universityId: 'university-1',
+      organizationId: 'university-1',
       idempotencyKey: null,
       target: { type: 'lesson_occurrence', id: 'occurrence-1' },
       payload: { occurrenceId: 'occurrence-1' },

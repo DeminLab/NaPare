@@ -3,7 +3,7 @@ import { of, throwError } from 'rxjs';
 
 import { TelemetryInterceptor } from './telemetry.interceptor';
 
-function context(path: string, user?: { id: string; universityId: string; sessionId: string }) {
+function context(path: string, user?: { id: string; organizationId: string; sessionId: string }) {
   const request = { method: 'GET', originalUrl: path, ip: '203.0.113.10', get: () => 'Mozilla/5.0 (Windows NT 10.0)', user };
   const response = { statusCode: 200 };
   return {
@@ -44,7 +44,7 @@ describe('TelemetryInterceptor', () => {
   it('records failed authentication calls and refreshes session activity', async () => {
     const telemetry = { enqueueEvent: jest.fn(), touchSession: jest.fn() };
     const interceptor = new TelemetryInterceptor(telemetry as never);
-    const ctx = context('/api/v1/auth/login', { id: 'user-1', universityId: 'university-1', sessionId: 'session-1' });
+    const ctx = context('/api/v1/auth/login', { id: 'user-1', organizationId: 'university-1', sessionId: 'session-1' });
 
     await expect(interceptor.intercept(ctx as never, { handle: () => throwError(() => new HttpException('bad', HttpStatus.UNAUTHORIZED)) } as never).toPromise()).rejects.toThrow(HttpException);
 

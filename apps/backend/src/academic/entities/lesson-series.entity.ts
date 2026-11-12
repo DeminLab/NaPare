@@ -3,15 +3,15 @@ import { Column, CreateDateColumn, Entity, Index, PrimaryGeneratedColumn, Update
 import { ProvenanceSyncStatus } from '../academic.types';
 
 @Entity('lesson_series')
-@Index('IDX_lesson_series_university_course', ['universityId', 'courseId'])
-@Index('IDX_lesson_series_university_group', ['universityId', 'groupId'])
-@Index('IDX_lesson_series_university_teacher', ['universityId', 'teacherId'])
+@Index('IDX_lesson_series_university_course', ['organizationId', 'courseId'])
+@Index('IDX_lesson_series_university_group', ['organizationId', 'groupId'])
+@Index('IDX_lesson_series_university_teacher', ['organizationId', 'teacherId'])
 export class LessonSeries {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
   @Column({ type: 'uuid' })
-  universityId: string;
+  organizationId: string;
 
   @Column({ type: 'uuid' })
   courseId: string;

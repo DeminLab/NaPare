@@ -27,7 +27,7 @@ suite('Tenant isolation: real HTTP, JWT, services and PostgreSQL', () => {
   const eventWork: Promise<unknown>[] = [];
   const http = () => request(fixture.app.getHttpServer());
   const privileged = <T>(callback: () => Promise<T>) => fixture.app.get(TenantContext).runWithDatabaseAccess({
-    tables: fixture.db.entityMetadatas.map(entity => entity.tableName), universityIds: null, write: true,
+    tables: fixture.db.entityMetadatas.map(entity => entity.tableName), organizationIds: null, write: true,
   }, callback);
   const call = (method: string, path: string, actor = 'admin', resources = objects) => {
     const substituted = path.replace(/\{(\w+)\}/g, (_, key: string) => resources[key]);
@@ -46,21 +46,21 @@ suite('Tenant isolation: real HTTP, JWT, services and PostgreSQL', () => {
       return work;
     });
     await privileged(async () => {
-      const student = await fixture.db.getRepository(User).save({ email: `foreign-${randomUUID()}@tenant.test`, firstName: 'Чужой', lastName: 'Студент', role: UserRole.STUDENT, universityId: fixture.otherUni.id, groupId: fixture.groups[3].id, passwordHash: fixture.users.student.passwordHash });
+      const student = await fixture.db.getRepository(User).save({ email: `foreign-${randomUUID()}@tenant.test`, firstName: 'Чужой', lastName: 'Студент', role: UserRole.STUDENT, organizationId: fixture.otherUni.id, groupId: fixture.groups[3].id, passwordHash: fixture.users.student.passwordHash });
       fixture.users.foreignStudent = student;
-      fixture.users.foreignAdmin = await fixture.db.getRepository(User).save({ email: `admin-${randomUUID()}@tenant.test`, firstName: 'Другой', lastName: 'Администратор', role: UserRole.UNIVERSITY_ADMIN, universityId: fixture.otherUni.id, passwordHash: fixture.users.student.passwordHash });
-      const lesson = await fixture.db.getRepository(Lesson).save({ ...fixture.lesson, id: randomUUID(), universityId: fixture.otherUni.id, groupId: fixture.groups[3].id, teacherId: fixture.users.outsider.id, subject: `private-${randomBytes(8).toString('hex')}`, isChanged: true });
-      const course = await fixture.db.getRepository(Course).save({ universityId: fixture.otherUni.id, code: 'FOREIGN', name: lesson.subject });
-      const ownCourse = await fixture.db.getRepository(Course).save({ universityId: fixture.uni.id, code: 'OWN', name: 'Own course' });
-      const courseSpace = await fixture.db.getRepository(CourseSpace).save({ universityId: fixture.otherUni.id, courseId: course.id, name: course.name });
-      const series = await fixture.db.getRepository(LessonSeries).save({ universityId: fixture.otherUni.id, courseId: course.id, groupId: fixture.groups[3].id, teacherId: fixture.users.outsider.id, dayOfWeek: 1, startTime: '08:30', endTime: '10:00', pairNumber: 1, validFrom: new Date('2026-09-01') });
-      const occurrence = await fixture.db.getRepository(LessonOccurrence).save({ universityId: fixture.otherUni.id, seriesId: series.id, courseId: course.id, groupId: fixture.groups[3].id, teacherId: fixture.users.outsider.id, startsAt: new Date('2026-10-22T08:30:00Z'), endsAt: new Date('2026-10-22T10:00:00Z') });
-      await fixture.db.getRepository(LessonSpace).save({ universityId: fixture.otherUni.id, courseSpaceId: courseSpace.id, occurrenceId: occurrence.id, name: course.name });
-      const event = await fixture.db.getRepository(AcademicEvent).save({ universityId: fixture.otherUni.id, type: 'university_event', title: lesson.subject, groupId: fixture.groups[3].id, courseId: course.id });
-      const absence = await fixture.db.getRepository(Absence).save({ universityId: fixture.otherUni.id, studentId: student.id, type: 'sick', startDate: new Date(), endDate: new Date() });
-      const notification = await fixture.db.getRepository(Notification).save({ universityId: fixture.otherUni.id, userId: student.id, type: 'system', title: lesson.subject, body: lesson.subject });
-      const inbox = await fixture.db.getRepository(InboxItem).save({ universityId: fixture.otherUni.id, userId: student.id, type: 'system', title: lesson.subject, description: lesson.subject });
-      const faculty = await fixture.db.getRepository(Faculty).findOneByOrFail({ universityId: fixture.otherUni.id });
+      fixture.users.foreignAdmin = await fixture.db.getRepository(User).save({ email: `admin-${randomUUID()}@tenant.test`, firstName: 'Другой', lastName: 'Администратор', role: UserRole.UNIVERSITY_ADMIN, organizationId: fixture.otherUni.id, passwordHash: fixture.users.student.passwordHash });
+      const lesson = await fixture.db.getRepository(Lesson).save({ ...fixture.lesson, id: randomUUID(), organizationId: fixture.otherUni.id, groupId: fixture.groups[3].id, teacherId: fixture.users.outsider.id, subject: `private-${randomBytes(8).toString('hex')}`, isChanged: true });
+      const course = await fixture.db.getRepository(Course).save({ organizationId: fixture.otherUni.id, code: 'FOREIGN', name: lesson.subject });
+      const ownCourse = await fixture.db.getRepository(Course).save({ organizationId: fixture.uni.id, code: 'OWN', name: 'Own course' });
+      const courseSpace = await fixture.db.getRepository(CourseSpace).save({ organizationId: fixture.otherUni.id, courseId: course.id, name: course.name });
+      const series = await fixture.db.getRepository(LessonSeries).save({ organizationId: fixture.otherUni.id, courseId: course.id, groupId: fixture.groups[3].id, teacherId: fixture.users.outsider.id, dayOfWeek: 1, startTime: '08:30', endTime: '10:00', pairNumber: 1, validFrom: new Date('2026-09-01') });
+      const occurrence = await fixture.db.getRepository(LessonOccurrence).save({ organizationId: fixture.otherUni.id, seriesId: series.id, courseId: course.id, groupId: fixture.groups[3].id, teacherId: fixture.users.outsider.id, startsAt: new Date('2026-10-22T08:30:00Z'), endsAt: new Date('2026-10-22T10:00:00Z') });
+      await fixture.db.getRepository(LessonSpace).save({ organizationId: fixture.otherUni.id, courseSpaceId: courseSpace.id, occurrenceId: occurrence.id, name: course.name });
+      const event = await fixture.db.getRepository(AcademicEvent).save({ organizationId: fixture.otherUni.id, type: 'university_event', title: lesson.subject, groupId: fixture.groups[3].id, courseId: course.id });
+      const absence = await fixture.db.getRepository(Absence).save({ organizationId: fixture.otherUni.id, studentId: student.id, type: 'sick', startDate: new Date(), endDate: new Date() });
+      const notification = await fixture.db.getRepository(Notification).save({ organizationId: fixture.otherUni.id, userId: student.id, type: 'system', title: lesson.subject, body: lesson.subject });
+      const inbox = await fixture.db.getRepository(InboxItem).save({ organizationId: fixture.otherUni.id, userId: student.id, type: 'system', title: lesson.subject, description: lesson.subject });
+      const faculty = await fixture.db.getRepository(Faculty).findOneByOrFail({ organizationId: fixture.otherUni.id });
       Object.assign(objects, { student: student.id, teacher: fixture.users.outsider.id, lesson: lesson.id, ownLesson: fixture.lesson.id, course: course.id, ownCourse: ownCourse.id, series: series.id, occurrence: occurrence.id, event: event.id, absence: absence.id, notification: notification.id, inbox: inbox.id, faculty: faculty.id, group: fixture.groups[3].id, ownGroup: fixture.groups[0].id, ownUniversity: fixture.uni.id, university: fixture.otherUni.id });
     });
     for (const actor of ['student', 'admin', 'teacher', 'outsider', 'foreignStudent', 'foreignAdmin'] as const) {
@@ -76,22 +76,22 @@ suite('Tenant isolation: real HTTP, JWT, services and PostgreSQL', () => {
   afterAll(async () => { await fixture?.app.close(); });
 
   // A 404 is meaningful only after the same handler can read the existing B resource.
-  const foreignState = (universityId = fixture.otherUni.id) => privileged(async () => {
+  const foreignState = (organizationId = fixture.otherUni.id) => privileged(async () => {
     await new Promise<void>(resolve => setImmediate(resolve));
     while (eventWork.length) await Promise.all(eventWork.splice(0));
     const state: Record<string, unknown> = {};
     // Telemetry tables are written by global interceptors on every request, so they
     // legitimately change during the probe and cannot serve as isolation evidence.
     const interceptorWritableTables = new Set(['platform_events', 'auth_events', 'user_sessions']);
-    for (const entity of fixture.db.entityMetadatas.filter(entity => !interceptorWritableTables.has(entity.tableName) && entity.columns.some(column => column.databaseName === 'universityId'))) {
-      state[entity.tableName] = await fixture.db.query(`SELECT to_jsonb(t) AS row FROM "${entity.tableName}" t WHERE "universityId" = $1 ORDER BY to_jsonb(t)::text`, [universityId]);
+    for (const entity of fixture.db.entityMetadatas.filter(entity => !interceptorWritableTables.has(entity.tableName) && entity.columns.some(column => column.databaseName === 'organizationId'))) {
+      state[entity.tableName] = await fixture.db.query(`SELECT to_jsonb(t) AS row FROM "${entity.tableName}" t WHERE "organizationId" = $1 ORDER BY to_jsonb(t)::text`, [organizationId]);
     }
     for (const table of ['announcements', 'homeworks', 'file_attachments', 'discussion_messages']) {
-      state[table] = await fixture.db.query(`SELECT to_jsonb(t) AS row FROM "${table}" t JOIN pair_spaces p ON p.id = t."pairSpaceId" WHERE p."universityId" = $1 ORDER BY to_jsonb(t)::text`, [universityId]);
+      state[table] = await fixture.db.query(`SELECT to_jsonb(t) AS row FROM "${table}" t JOIN pair_spaces p ON p.id = t."pairSpaceId" WHERE p."organizationId" = $1 ORDER BY to_jsonb(t)::text`, [organizationId]);
     }
-    state.absence_confirmations = await fixture.db.query('SELECT to_jsonb(t) AS row FROM absence_confirmations t JOIN absences a ON a.id = t."absenceId" WHERE a."universityId" = $1 ORDER BY to_jsonb(t)::text', [universityId]);
+    state.absence_confirmations = await fixture.db.query('SELECT to_jsonb(t) AS row FROM absence_confirmations t JOIN absences a ON a.id = t."absenceId" WHERE a."organizationId" = $1 ORDER BY to_jsonb(t)::text', [organizationId]);
     for (const table of ['homework_progress', 'homework_submissions']) {
-      state[table] = await fixture.db.query(`SELECT to_jsonb(t) AS row FROM "${table}" t JOIN homeworks h ON h.id = t."homeworkId" JOIN pair_spaces p ON p.id = h."pairSpaceId" WHERE p."universityId" = $1 ORDER BY to_jsonb(t)::text`, [universityId]);
+      state[table] = await fixture.db.query(`SELECT to_jsonb(t) AS row FROM "${table}" t JOIN homeworks h ON h.id = t."homeworkId" JOIN pair_spaces p ON p.id = h."pairSpaceId" WHERE p."organizationId" = $1 ORDER BY to_jsonb(t)::text`, [organizationId]);
     }
     return state;
   });
@@ -208,12 +208,12 @@ suite('Tenant isolation: real HTTP, JWT, services and PostgreSQL', () => {
       expect(await foreignState()).toEqual(before);
     }
   });
-  it('ignores a supplied foreign universityId on manual lesson creation and preserves B', async () => {
-    const b = await call('POST', '/api/v1/schedule', 'foreignAdmin').send({ ...scheduleBody(), universityId: fixture.uni.id }).expect(201);
-    expect(b.body.universityId).toBe(fixture.otherUni.id);
+  it('ignores a supplied foreign organizationId on manual lesson creation and preserves B', async () => {
+    const b = await call('POST', '/api/v1/schedule', 'foreignAdmin').send({ ...scheduleBody(), organizationId: fixture.uni.id }).expect(201);
+    expect(b.body.organizationId).toBe(fixture.otherUni.id);
     const before = await foreignState();
-    const a = await call('POST', '/api/v1/schedule').send({ ...scheduleBody(), groupId: objects.ownGroup, teacherId: fixture.users.teacher.id, universityId: fixture.otherUni.id }).expect(201);
-    expect(a.body.universityId).toBe(fixture.uni.id);
+    const a = await call('POST', '/api/v1/schedule').send({ ...scheduleBody(), groupId: objects.ownGroup, teacherId: fixture.users.teacher.id, organizationId: fixture.otherUni.id }).expect(201);
+    expect(a.body.organizationId).toBe(fixture.uni.id);
     expect(await foreignState()).toEqual(before);
   });
   it.each(['groupId', 'teacherId'] as const)('rejects a foreign %s during manual lesson creation without partial rows', async field => {
@@ -256,7 +256,7 @@ suite('Tenant isolation: real HTTP, JWT, services and PostgreSQL', () => {
   });
 
   it('rejects a university move through the schedule PATCH body', async () => {
-    await call('PATCH', '/api/v1/schedule/{ownLesson}').send({ universityId: objects.university }).expect(403);
+    await call('PATCH', '/api/v1/schedule/{ownLesson}').send({ organizationId: objects.university }).expect(403);
   });
   it('rejects binding the current user to a foreign group', async () => {
     await call('POST', '/api/v1/users/me/bind-group', 'student').send({ groupId: objects.group }).expect(404);
@@ -277,10 +277,10 @@ suite('Tenant isolation: real HTTP, JWT, services and PostgreSQL', () => {
   it('creates identical course codes within each JWT university without touching B', async () => {
     const body = { code: `ISOLATED-${randomUUID()}`, name: 'Synthetic scoped course' };
     const b = await call('POST', '/api/v1/academic/courses', 'foreignAdmin').send(body).expect(201);
-    expect(b.body.universityId).toBe(fixture.otherUni.id);
+    expect(b.body.organizationId).toBe(fixture.otherUni.id);
     const before = await foreignState();
     const a = await call('POST', '/api/v1/academic/courses').send(body).expect(201);
-    expect(a.body.universityId).toBe(fixture.uni.id);
+    expect(a.body.organizationId).toBe(fixture.uni.id);
     expect(a.body.id).not.toBe(b.body.id);
     await call('GET', '/api/v1/academic/courses/' + a.body.id + '/space').expect(200);
     expect(await foreignState()).toEqual(before);
@@ -324,10 +324,10 @@ suite('Tenant isolation: real HTTP, JWT, services and PostgreSQL', () => {
   it('creates unlinked events only in the JWT university', async () => {
     const body = { type: 'university_event', title: 'Synthetic unlinked event' };
     const b = await call('POST', '/api/v1/academic/events', 'foreignAdmin').send(body).expect(201);
-    expect(b.body.universityId).toBe(fixture.otherUni.id);
+    expect(b.body.organizationId).toBe(fixture.otherUni.id);
     const before = await foreignState();
     const a = await call('POST', '/api/v1/academic/events').send(body).expect(201);
-    expect(a.body.universityId).toBe(fixture.uni.id);
+    expect(a.body.organizationId).toBe(fixture.uni.id);
     expect(await foreignState()).toEqual(before);
   });
   it.each(['done', 'in_progress'])('cannot write preparation state %s to a foreign homework', async state => {
@@ -392,13 +392,13 @@ suite('Tenant isolation: real HTTP, JWT, services and PostgreSQL', () => {
     const bLabel = `Private B favorite ${randomUUID()}`, aLabel = 'Own A favorite';
     await call('POST', '/api/v1/users/me/favorites', 'foreignStudent').send({ kind, externalId, label: bLabel }).expect(201);
     const control = await call('GET', '/api/v1/users/me/favorites', 'foreignStudent').expect(200);
-    expect(control.body).toEqual(expect.arrayContaining([expect.objectContaining({ kind, externalId, label: bLabel, userId: fixture.users.foreignStudent.id, universityId: fixture.otherUni.id })]));
+    expect(control.body).toEqual(expect.arrayContaining([expect.objectContaining({ kind, externalId, label: bLabel, userId: fixture.users.foreignStudent.id, organizationId: fixture.otherUni.id })]));
     const before = await foreignState();
     await call('POST', '/api/v1/users/me/favorites', 'student').send({ kind, externalId, label: aLabel }).expect(201);
     await call('POST', '/api/v1/users/me/favorites', 'student').send({ kind, externalId, label: aLabel + ' updated' }).expect(201);
     const own = await call('GET', '/api/v1/users/me/favorites', 'student').expect(200);
     expect(JSON.stringify(own.body)).not.toContain(bLabel);
-    expect(own.body).toEqual(expect.arrayContaining([expect.objectContaining({ kind, externalId, userId: fixture.users.student.id, universityId: fixture.uni.id })]));
+    expect(own.body).toEqual(expect.arrayContaining([expect.objectContaining({ kind, externalId, userId: fixture.users.student.id, organizationId: fixture.uni.id })]));
     await call('DELETE', '/api/v1/users/me/favorites', 'student').send({ kind, externalId }).expect(200);
     expect(await foreignState()).toEqual(before);
   });
@@ -430,7 +430,7 @@ suite('Tenant isolation: real HTTP, JWT, services and PostgreSQL', () => {
     const tenant = fixture.app.get(TenantContext), bus = fixture.app.get(EventBusService);
     const publish = (actorKey: string, studentKey: string, label: string) => tenant.runInRequest(() => {
       const actor = fixture.users[actorKey]; tenant.setUser(actor);
-      return bus.publish({ type: 'lesson.changed', universityId: actor.universityId!, actor: { type: 'user', id: actor.id, role: actor.role },
+      return bus.publish({ type: 'lesson.changed', organizationId: actor.organizationId!, actor: { type: 'user', id: actor.id, role: actor.role },
         target: { type: 'lesson', id: actorKey === 'admin' ? objects.ownLesson : objects.lesson },
         recipients: [fixture.users[studentKey].id], payload: { subject: label, deepLink: '/schedule' } });
     });

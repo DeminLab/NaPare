@@ -59,12 +59,12 @@ export class NotificationsController {
 
   @Get('preferences')
   async getPreferences(@Request() req) {
-    return this.notificationsService.getPreferences(req.user.id, req.user.universityId);
+    return this.notificationsService.getPreferences(req.user.id, req.user.organizationId);
   }
 
   @Patch('preferences')
   async updatePreferences(@Request() req, @Body() update: UpdateNotificationPreferenceDto) {
-    return this.notificationsService.updatePreferences(req.user.id, req.user.universityId, update);
+    return this.notificationsService.updatePreferences(req.user.id, req.user.organizationId, update);
   }
 
   @Get('inbox')

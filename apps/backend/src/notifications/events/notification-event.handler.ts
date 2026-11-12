@@ -38,7 +38,7 @@ export class NotificationEventHandler {
     if (event.type === 'sync.completed' || event.type === 'sync.failed') {
       const operators = await this.usersRepository.find({
         where: {
-          universityId: event.university.id,
+          organizationId: event.university.id,
           isActive: true,
           role: In([UserRole.DEVELOPER, UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN]),
         },
@@ -51,7 +51,7 @@ export class NotificationEventHandler {
     const teacherId = typeof event.payload.teacherId === 'string' ? event.payload.teacherId : undefined;
     if (groupId) {
       const students = await this.usersRepository.find({
-        where: { universityId: event.university.id, groupId, isActive: true, role: UserRole.STUDENT },
+        where: { organizationId: event.university.id, groupId, isActive: true, role: UserRole.STUDENT },
         select: ['id'],
       });
       const studentIds = students.map((student) => student.id);
@@ -76,7 +76,7 @@ export class NotificationEventHandler {
     }
 
     const users = await this.usersRepository.find({
-      where: { universityId: event.university.id, isActive: true },
+      where: { organizationId: event.university.id, isActive: true },
       select: ['id'],
     });
     return users.map((user) => user.id);

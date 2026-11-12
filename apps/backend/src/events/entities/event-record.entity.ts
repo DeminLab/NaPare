@@ -4,9 +4,9 @@ import { JsonObject } from '../../common/types/json-value.type';
 import { EventActor, EventPriority, EventTarget, NapareEventType } from '../event.types';
 
 @Entity('event_records')
-@Index('IDX_event_records_university_timestamp', ['universityId', 'timestamp'])
+@Index('IDX_event_records_university_timestamp', ['organizationId', 'timestamp'])
 @Index('IDX_event_records_type_timestamp', ['type', 'timestamp'])
-@Index('UQ_event_records_university_idempotency_key', ['universityId', 'idempotencyKey'], { unique: true, where: '\"idempotencyKey\" IS NOT NULL' })
+@Index('UQ_event_records_organization_idempotency_key', ['organizationId', 'idempotencyKey'], { unique: true, where: '\"idempotencyKey\" IS NOT NULL' })
 export class EventRecord {
   @PrimaryColumn('uuid')
   id: string;
@@ -21,7 +21,7 @@ export class EventRecord {
   timestamp: Date;
 
   @Column({ type: 'uuid' })
-  universityId: string;
+  organizationId: string;
 
   @Column({ type: 'varchar', nullable: true })
   idempotencyKey: string | null;

@@ -55,7 +55,7 @@ export class PairSpaceController {
   ) {
     return this.pairSpaceService.listExistingForGroup(
       groupId,
-      req.user.universityId,
+      req.user.organizationId,
       pagination,
     );
   }
@@ -68,7 +68,7 @@ export class PairSpaceController {
   async findByLesson(@Param("lessonId") lessonId: string, @Request() req) {
     return this.pairSpaceService.getOrCreateByLesson(
       lessonId,
-      req.user.universityId,
+      req.user.organizationId,
     );
   }
 
@@ -80,7 +80,7 @@ export class PairSpaceController {
   async getSubjectTimeline(@Param("lessonId") lessonId: string, @Request() req) {
     return this.pairSpaceService.getSubjectTimeline(
       lessonId,
-      req.user.universityId,
+      req.user.organizationId,
     );
   }
 
@@ -103,7 +103,7 @@ export class PairSpaceController {
   ) {
     const pairSpace = await this.pairSpaceService.getOrCreateByLesson(
       lessonId,
-      req.user.universityId,
+      req.user.organizationId,
     );
     return this.pairSpaceService.createAnnouncement(
       pairSpace.id,
@@ -131,7 +131,7 @@ export class PairSpaceController {
   ) {
     const pairSpace = await this.pairSpaceService.getOrCreateByLesson(
       lessonId,
-      req.user.universityId,
+      req.user.organizationId,
     );
     return this.pairSpaceService.createHomework(
       pairSpace.id,
@@ -159,7 +159,7 @@ export class PairSpaceController {
   ) {
     const pairSpace = await this.pairSpaceService.getOrCreateByLesson(
       lessonId,
-      req.user.universityId,
+      req.user.organizationId,
     );
     return this.pairSpaceService.uploadFile(
       pairSpace.id,
@@ -182,7 +182,7 @@ export class PairSpaceController {
   ) {
     const pairSpace = await this.pairSpaceService.getOrCreateByLesson(
       lessonId,
-      req.user.universityId,
+      req.user.organizationId,
     );
     return this.pairSpaceService.getMessages(pairSpace.id, pagination);
   }
@@ -190,7 +190,7 @@ export class PairSpaceController {
   @Get(":lessonId/personal-note")
   @ApiOperation({ summary: "Получить личную заметку к занятию" })
   async getPersonalNote(@Param("lessonId") lessonId: string, @Request() req) {
-    return this.pairSpaceService.getPersonalNote(lessonId, req.user.universityId);
+    return this.pairSpaceService.getPersonalNote(lessonId, req.user.organizationId);
   }
 
   @Put(":lessonId/personal-note")
@@ -200,7 +200,7 @@ export class PairSpaceController {
     @Request() req,
     @Body() dto: UpsertPersonalNoteDto,
   ) {
-    return this.pairSpaceService.savePersonalNote(lessonId, req.user.universityId, dto);
+    return this.pairSpaceService.savePersonalNote(lessonId, req.user.organizationId, dto);
   }
 
   @Post(":lessonId/messages")
@@ -214,7 +214,7 @@ export class PairSpaceController {
   ) {
     const pairSpace = await this.pairSpaceService.getOrCreateByLesson(
       lessonId,
-      req.user.universityId,
+      req.user.organizationId,
     );
     return this.pairSpaceService.createMessage(
       pairSpace.id,

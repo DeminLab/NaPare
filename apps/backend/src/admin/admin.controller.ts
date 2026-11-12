@@ -67,7 +67,7 @@ export class AdminController {
   @ApiResponse({ status: 401, description: "Unauthorized" })
   async getUsers(@Request() req, @Query() pagination: PaginationQueryDto) {
     return this.adminService.getUniversityUsers(
-      req.user.universityId,
+      req.user.organizationId,
       pagination,
       req.user.role,
     );
@@ -77,7 +77,7 @@ export class AdminController {
   @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
   @ApiOperation({ summary: "Получить преподавателей и расписание из каталога СИБИТа" })
   async getSibitTeachers(@Request() req) {
-    return this.adminService.getSibitTeachers(req.user.universityId);
+    return this.adminService.getSibitTeachers(req.user.organizationId);
   }
 
   @Patch("users/:id/roles")
@@ -91,7 +91,7 @@ export class AdminController {
     @Body() updateUserRoleDto: UpdateUserRoleDto,
   ) {
     return this.adminService.updateUserRole(
-      req.user.universityId,
+      req.user.organizationId,
       id,
       updateUserRoleDto,
       req.user.role,
@@ -106,7 +106,7 @@ export class AdminController {
     @Body() createUserDto: CreateUniversityUserDto,
   ) {
     return this.adminService.createUniversityUser(
-      req.user.universityId,
+      req.user.organizationId,
       createUserDto,
       req.user.role,
     );
@@ -120,7 +120,7 @@ export class AdminController {
     @Param("id") id: string,
     @Body() dto: LinkSibitTeacherDto,
   ) {
-    return this.adminService.linkSibitTeacher(req.user.universityId, id, dto.sourceTeacherId ?? null);
+    return this.adminService.linkSibitTeacher(req.user.organizationId, id, dto.sourceTeacherId ?? null);
   }
 
   @Patch("users/:id/status")
@@ -132,7 +132,7 @@ export class AdminController {
     @Body() updateUserStatusDto: UpdateUniversityUserStatusDto,
   ) {
     return this.adminService.updateUniversityUserStatus(
-      req.user.universityId,
+      req.user.organizationId,
       id,
       updateUserStatusDto,
       req.user.id,
@@ -151,7 +151,7 @@ export class AdminController {
     @Body() resetPasswordDto: ResetUniversityUserPasswordDto,
   ) {
     return this.adminService.resetUniversityUserPassword(
-      req.user.universityId,
+      req.user.organizationId,
       id,
       resetPasswordDto,
       req.user.role,
@@ -168,7 +168,7 @@ export class AdminController {
     @Body() importScheduleDto: ImportScheduleDto,
   ) {
     return this.adminService.importSchedule(
-      req.user.universityId,
+      req.user.organizationId,
       importScheduleDto,
     );
   }
@@ -177,14 +177,14 @@ export class AdminController {
   @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Статус задания импорта расписания своего вуза' })
   getScheduleImport(@Request() req, @Param('id', ParseUUIDPipe) id: string) {
-    return this.scheduleImports.getJob(req.user.universityId, id);
+    return this.scheduleImports.getJob(req.user.organizationId, id);
   }
 
   @Get('schedule/imports/:id/changes')
   @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Добавления, изменения и отмены в задании импорта' })
   getScheduleImportChanges(@Request() req, @Param('id', ParseUUIDPipe) id: string, @Query() pagination: PaginationQueryDto) {
-    return this.scheduleImports.getChanges(req.user.universityId, id, pagination);
+    return this.scheduleImports.getChanges(req.user.organizationId, id, pagination);
   }
 
   @Post("schedule/sync")
@@ -193,12 +193,12 @@ export class AdminController {
   @ApiResponse({ status: 200, description: "Синхронизация запущена" })
   @ApiResponse({ status: 401, description: "Unauthorized" })
   async syncSchedule(@Request() req) {
-    const result = await this.adminService.syncSchedule(req.user.universityId);
+    const result = await this.adminService.syncSchedule(req.user.organizationId);
     await this.eventBus.publish({
       type: "sync.completed",
-      universityId: req.user.universityId,
+      organizationId: req.user.organizationId,
       actor: { id: req.user.id, type: "user", role: req.user.role },
-      target: { type: "schedule", id: req.user.universityId },
+      target: { type: "schedule", id: req.user.organizationId },
       payload: result,
       priority: "normal",
     });
@@ -212,7 +212,7 @@ export class AdminController {
   @ApiResponse({ status: 401, description: "Unauthorized" })
   async getSyncStatus(@Request() req) {
     const university = await this.adminService.getUniversity(
-      req.user.universityId,
+      req.user.organizationId,
     );
     const config = university.connectorConfig || {};
     return {
@@ -227,7 +227,7 @@ export class AdminController {
   @ApiResponse({ status: 200, description: "Информация получена" })
   @ApiResponse({ status: 401, description: "Unauthorized" })
   async getUniversity(@Request() req) {
-    return this.adminService.getUniversity(req.user.universityId);
+    return this.adminService.getUniversity(req.user.organizationId);
   }
 
   @Patch("university")
@@ -240,7 +240,7 @@ export class AdminController {
     @Body() updateUniversityDto: UpdateUniversityDto,
   ) {
     return this.adminService.updateUniversity(
-      req.user.universityId,
+      req.user.organizationId,
       updateUniversityDto,
     );
   }
@@ -254,7 +254,7 @@ export class AdminController {
   })
   @ApiResponse({ status: 401, description: "Unauthorized" })
   async getFaculties(@Request() req, @Query() pagination: PaginationQueryDto) {
-    return this.adminService.getFaculties(req.user.universityId, pagination);
+    return this.adminService.getFaculties(req.user.organizationId, pagination);
   }
 
   @Post("faculties")
@@ -267,7 +267,7 @@ export class AdminController {
     @Body() createFacultyDto: CreateFacultyDto,
   ) {
     return this.adminService.createFaculty(
-      req.user.universityId,
+      req.user.organizationId,
       createFacultyDto,
     );
   }
@@ -290,7 +290,7 @@ export class AdminController {
   @ApiOkResponse({ description: "Группы получены", type: PaginatedResponseDto })
   @ApiResponse({ status: 401, description: "Unauthorized" })
   async getGroups(@Request() req, @Query() pagination: PaginationQueryDto) {
-    return this.adminService.getGroups(req.user.universityId, pagination);
+    return this.adminService.getGroups(req.user.organizationId, pagination);
   }
 
   @Get("attendance-groups")
@@ -308,7 +308,7 @@ export class AdminController {
     @Query() pagination: PaginationQueryDto,
   ) {
     return this.adminService.getAttendanceGroups(
-      req.user.universityId,
+      req.user.organizationId,
       req.user.id,
       req.user.role,
       pagination,
@@ -337,7 +337,7 @@ export class AdminController {
     @Query() pagination: PaginationQueryDto,
   ) {
     return this.adminService.getGroupStudents(
-      req.user.universityId,
+      req.user.organizationId,
       id,
       pagination,
       req.user.id,
@@ -351,7 +351,7 @@ export class AdminController {
   @ApiResponse({ status: 201, description: "Группа создана" })
   @ApiResponse({ status: 401, description: "Unauthorized" })
   async createGroup(@Request() req, @Body() createGroupDto: CreateGroupDto) {
-    return this.adminService.createGroup(req.user.universityId, createGroupDto);
+    return this.adminService.createGroup(req.user.organizationId, createGroupDto);
   }
 
   @Patch("groups/:id")
@@ -372,7 +372,7 @@ export class AdminController {
   @ApiResponse({ status: 200, description: "Статистика получена" })
   @ApiResponse({ status: 401, description: "Unauthorized" })
   async getStats(@Request() req) {
-    return this.adminService.getUniversityStats(req.user.universityId);
+    return this.adminService.getUniversityStats(req.user.organizationId);
   }
 
   @Get("audit-log")
@@ -384,7 +384,7 @@ export class AdminController {
   })
   @ApiResponse({ status: 401, description: "Unauthorized" })
   async getAuditLog(@Request() req, @Query() pagination: PaginationQueryDto) {
-    return this.adminService.getAuditLog(req.user.universityId, pagination);
+    return this.adminService.getAuditLog(req.user.organizationId, pagination);
   }
 
   @Get("connectors")
@@ -395,7 +395,7 @@ export class AdminController {
     type: PaginatedResponseDto,
   })
   async getConnectors(@Request() req, @Query() pagination: PaginationQueryDto) {
-    return this.adminService.getConnectors(req.user.universityId, pagination);
+    return this.adminService.getConnectors(req.user.organizationId, pagination);
   }
 
   @Post("connectors/moodle/configure")
@@ -406,7 +406,7 @@ export class AdminController {
     @Body() dto: ConfigureMoodleConnectorDto,
   ) {
     return this.adminService.configureMoodleConnector(
-      req.user.universityId,
+      req.user.organizationId,
       dto,
     );
   }
@@ -415,7 +415,7 @@ export class AdminController {
   @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
   @ApiOperation({ summary: "Проверить подключение Moodle Web Services" })
   async testMoodleConnector(@Request() req) {
-    return this.adminService.testMoodleConnector(req.user.universityId);
+    return this.adminService.testMoodleConnector(req.user.organizationId);
   }
 
   @Patch("connectors/:id")
@@ -427,7 +427,7 @@ export class AdminController {
     @Body() updateConnectorDto: UpdateConnectorDto,
   ) {
     return this.adminService.updateConnector(
-      req.user.universityId,
+      req.user.organizationId,
       id,
       updateConnectorDto,
     );

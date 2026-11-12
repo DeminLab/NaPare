@@ -23,7 +23,7 @@ export class ChangeDetectorService {
   ) {}
 
   async detectChanges(
-    universityId: string,
+    organizationId: string,
     newLessons: CreateLessonDto[],
   ): Promise<LessonChange[]> {
     const changes: LessonChange[] = [];
@@ -31,7 +31,7 @@ export class ChangeDetectorService {
     for (const newLesson of newLessons) {
       const existingLesson = await this.lessonRepository.findOne({
         where: {
-          universityId,
+          organizationId,
           groupId: newLesson.groupId,
           dayOfWeek: newLesson.dayOfWeek,
           pairNumber: newLesson.pairNumber,
@@ -64,7 +64,7 @@ export class ChangeDetectorService {
 
           // Emit change event
           this.eventEmitter.emit('lesson.changed', {
-            universityId,
+            organizationId,
             lessonId: existingLesson.id,
             oldValue: diff.oldValues,
             newValue: diff.newValues,
@@ -78,7 +78,7 @@ export class ChangeDetectorService {
               : 'lesson.changed';
           await this.eventBus?.publish({
             type,
-            universityId,
+            organizationId,
             actor: { type: 'system' },
             target: { type: 'lesson', id: existingLesson.id },
             payload: {
@@ -98,7 +98,7 @@ export class ChangeDetectorService {
 
     if (changes.length > 0) {
       this.logger.log(
-        `Detected ${changes.length} changes for university ${universityId}`,
+        `Detected ${changes.length} changes for university ${organizationId}`,
       );
     }
 

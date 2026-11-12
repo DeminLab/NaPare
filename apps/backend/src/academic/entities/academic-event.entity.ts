@@ -3,15 +3,15 @@ import { Column, CreateDateColumn, Entity, Index, PrimaryGeneratedColumn } from 
 import { AcademicEventPayload, AcademicEventType } from '../academic.types';
 
 @Entity('academic_events')
-@Index('IDX_academic_events_university_starts_at', ['universityId', 'startsAt'])
-@Index('IDX_academic_events_university_type', ['universityId', 'type'])
-@Index('IDX_academic_events_context', ['universityId', 'courseId', 'groupId'])
+@Index('IDX_academic_events_university_starts_at', ['organizationId', 'startsAt'])
+@Index('IDX_academic_events_university_type', ['organizationId', 'type'])
+@Index('IDX_academic_events_context', ['organizationId', 'courseId', 'groupId'])
 export class AcademicEvent {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
   @Column({ type: 'uuid' })
-  universityId: string;
+  organizationId: string;
 
   @Column({ type: 'varchar' })
   type: AcademicEventType;

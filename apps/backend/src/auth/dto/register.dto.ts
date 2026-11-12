@@ -21,7 +21,7 @@ export class RegisterDto {
 
   @ApiProperty({ example: 'uuid-of-university' })
   @IsUUID()
-  universityId: string;
+  organizationId: string;
 
   @ApiProperty({ example: '12131', required: false })
   @IsOptional()

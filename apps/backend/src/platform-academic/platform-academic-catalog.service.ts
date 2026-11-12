@@ -42,15 +42,15 @@ export class PlatformAcademicCatalogService {
     private readonly tenant: TenantContext,
   ) {}
 
-  async options(universityId: string) {
+  async options(organizationId: string) {
     const access = await this.platform.require('academic-data.read');
-    this.platform.assertUniversityScope(access, universityId);
-    const university = await this.db.getRepository(University).findOne({ where: { id: universityId }, select: ['id'] });
+    this.platform.assertUniversityScope(access, organizationId);
+    const university = await this.db.getRepository(University).findOne({ where: { id: organizationId }, select: ['id'] });
     if (!university) throw new NotFoundException('Университет не найден.');
     const [faculties, groups, teachers] = await Promise.all([
-      this.db.getRepository(Faculty).createQueryBuilder('f').select(['f.id', 'f.name']).where('f.universityId = :universityId', { universityId }).orderBy('f.name', 'ASC').getMany(),
-      this.db.getRepository(Group).createQueryBuilder('g').select(['g.id', 'g.name']).where('g.universityId = :universityId', { universityId }).orderBy('g.name', 'ASC').getMany(),
-      this.db.getRepository(User).createQueryBuilder('u').select(['u.id', 'u.firstName', 'u.lastName']).where('u.universityId = :universityId AND u.role = :role AND u.isActive = true', { universityId, role: UserRole.TEACHER }).orderBy('u.lastName', 'ASC').addOrderBy('u.firstName', 'ASC').getMany(),
+      this.db.getRepository(Faculty).createQueryBuilder('f').select(['f.id', 'f.name']).where('f.organizationId = :organizationId', { organizationId }).orderBy('f.name', 'ASC').getMany(),
+      this.db.getRepository(Group).createQueryBuilder('g').select(['g.id', 'g.name']).where('g.organizationId = :organizationId', { organizationId }).orderBy('g.name', 'ASC').getMany(),
+      this.db.getRepository(User).createQueryBuilder('u').select(['u.id', 'u.firstName', 'u.lastName']).where('u.organizationId = :organizationId AND u.role = :role AND u.isActive = true', { organizationId, role: UserRole.TEACHER }).orderBy('u.lastName', 'ASC').addOrderBy('u.firstName', 'ASC').getMany(),
     ]);
     return { faculties, groups, teachers: teachers.map(user => ({ id: user.id, name: `${user.firstName} ${user.lastName}`.trim() })) };
   }
@@ -58,17 +58,17 @@ export class PlatformAcademicCatalogService {
   async listCourses(query: PlatformAcademicCatalogQueryDto, auditContext: AuditContext = {}) {
     const access = await this.platform.require('academic-data.read');
     const qb = this.db.getRepository(Course).createQueryBuilder('c')
-      .leftJoin(University, 'u', 'u.id = c.universityId')
-      .leftJoin(Faculty, 'f', 'f.id = c.facultyId AND f.universityId = c.universityId')
+      .leftJoin(University, 'u', 'u.id = c.organizationId')
+      .leftJoin(Faculty, 'f', 'f.id = c.facultyId AND f.organizationId = c.organizationId')
       .addSelect('u.name', 'catalog_university_name')
       .addSelect('f.name', 'catalog_faculty_name');
-    if (query.universityId) {
-      this.platform.assertUniversityScope(access, query.universityId);
-      qb.andWhere('c.universityId = :universityId', { universityId: query.universityId });
+    if (query.organizationId) {
+      this.platform.assertUniversityScope(access, query.organizationId);
+      qb.andWhere('c.organizationId = :organizationId', { organizationId: query.organizationId });
     }
-    if (!access.owner && access.universityIds !== null) {
-      if (!access.universityIds.length) qb.andWhere('1 = 0');
-      else qb.andWhere('c.universityId IN (:...allowedUniversityIds)', { allowedUniversityIds: access.universityIds });
+    if (!access.owner && access.organizationIds !== null) {
+      if (!access.organizationIds.length) qb.andWhere('1 = 0');
+      else qb.andWhere('c.organizationId IN (:...allowedOrganizationIds)', { allowedOrganizationIds: access.organizationIds });
     }
     this.applySearch(qb, query.q, "c.id::text ILIKE :q ESCAPE E'\\\\' OR c.code ILIKE :q ESCAPE E'\\\\' OR c.name ILIKE :q ESCAPE E'\\\\' OR c.facultyId::text ILIKE :q ESCAPE E'\\\\' OR f.name ILIKE :q ESCAPE E'\\\\' OR u.name ILIKE :q ESCAPE E'\\\\'");
     const total = await qb.clone().getCount();
@@ -80,7 +80,7 @@ export class PlatformAcademicCatalogService {
       action: 'platform.academic_course.search',
       entity: 'academic_course_search',
       entityId: 'search',
-      newValues: { queryEntered: Boolean(query.q?.trim()), universityId: query.universityId ?? null, page: query.page, limit: query.limit, resultCount: data.length, total, resultIds: data.map(item => item.id) },
+      newValues: { queryEntered: Boolean(query.q?.trim()), organizationId: query.organizationId ?? null, page: query.page, limit: query.limit, resultCount: data.length, total, resultIds: data.map(item => item.id) },
       ...this.auditContext(auditContext),
     });
     return toPaginatedResponse(data, total, query);
@@ -89,22 +89,22 @@ export class PlatformAcademicCatalogService {
   async listSeries(query: PlatformAcademicCatalogQueryDto, auditContext: AuditContext = {}) {
     const access = await this.platform.require('academic-data.read');
     const qb = this.db.getRepository(LessonSeries).createQueryBuilder('s')
-      .leftJoin(University, 'u', 'u.id = s.universityId')
-      .leftJoin(Course, 'c', 'c.id = s.courseId AND c.universityId = s.universityId')
-      .leftJoin(Group, 'g', 'g.id = s.groupId AND g.universityId = s.universityId')
-      .leftJoin(User, 't', 't.id = s.teacherId AND t.universityId = s.universityId')
+      .leftJoin(University, 'u', 'u.id = s.organizationId')
+      .leftJoin(Course, 'c', 'c.id = s.courseId AND c.organizationId = s.organizationId')
+      .leftJoin(Group, 'g', 'g.id = s.groupId AND g.organizationId = s.organizationId')
+      .leftJoin(User, 't', 't.id = s.teacherId AND t.organizationId = s.organizationId')
       .addSelect('u.name', 'catalog_university_name')
       .addSelect('c.name', 'catalog_course_name')
       .addSelect('c.code', 'catalog_course_code')
       .addSelect('g.name', 'catalog_group_name')
       .addSelect("concat_ws(' ', t.firstName, t.lastName)", 'catalog_teacher_name');
-    if (query.universityId) {
-      this.platform.assertUniversityScope(access, query.universityId);
-      qb.andWhere('s.universityId = :universityId', { universityId: query.universityId });
+    if (query.organizationId) {
+      this.platform.assertUniversityScope(access, query.organizationId);
+      qb.andWhere('s.organizationId = :organizationId', { organizationId: query.organizationId });
     }
-    if (!access.owner && access.universityIds !== null) {
-      if (!access.universityIds.length) qb.andWhere('1 = 0');
-      else qb.andWhere('s.universityId IN (:...allowedUniversityIds)', { allowedUniversityIds: access.universityIds });
+    if (!access.owner && access.organizationIds !== null) {
+      if (!access.organizationIds.length) qb.andWhere('1 = 0');
+      else qb.andWhere('s.organizationId IN (:...allowedOrganizationIds)', { allowedOrganizationIds: access.organizationIds });
     }
     this.applySearch(qb, query.q, "s.id::text ILIKE :q ESCAPE E'\\\\' OR s.courseId::text ILIKE :q ESCAPE E'\\\\' OR s.groupId::text ILIKE :q ESCAPE E'\\\\' OR s.teacherId::text ILIKE :q ESCAPE E'\\\\' OR s.title ILIKE :q ESCAPE E'\\\\' OR s.subjectType ILIKE :q ESCAPE E'\\\\' OR c.name ILIKE :q ESCAPE E'\\\\' OR c.code ILIKE :q ESCAPE E'\\\\' OR g.name ILIKE :q ESCAPE E'\\\\' OR concat_ws(' ', t.firstName, t.lastName) ILIKE :q ESCAPE E'\\\\' OR u.name ILIKE :q ESCAPE E'\\\\'");
     const total = await qb.clone().getCount();
@@ -116,7 +116,7 @@ export class PlatformAcademicCatalogService {
       action: 'platform.academic_series.search',
       entity: 'academic_series_search',
       entityId: 'search',
-      newValues: { queryEntered: Boolean(query.q?.trim()), universityId: query.universityId ?? null, page: query.page, limit: query.limit, resultCount: data.length, total, resultIds: data.map(item => item.id) },
+      newValues: { queryEntered: Boolean(query.q?.trim()), organizationId: query.organizationId ?? null, page: query.page, limit: query.limit, resultCount: data.length, total, resultIds: data.map(item => item.id) },
       ...this.auditContext(auditContext),
     });
     return toPaginatedResponse(data, total, query);
@@ -125,14 +125,14 @@ export class PlatformAcademicCatalogService {
   async getCourse(id: string, auditContext: AuditContext = {}) {
     const access = await this.platform.require('academic-data.read');
     const context = await this.courseContext(this.db.manager, id, true);
-    this.platform.assertUniversityScope(access, context.course.universityId);
+    this.platform.assertUniversityScope(access, context.course.organizationId);
     const history = await this.db.getRepository(AuditLog).find({
       where: { entity: 'academic_course', entityId: id, action: In(COURSE_AUDIT_ACTIONS) },
       order: { createdAt: 'DESC', id: 'DESC' }, take: 20,
     });
     await this.db.getRepository(AuditLog).save({
       userId: access.actorId, action: 'platform.academic_course.viewed', entity: 'academic_course', entityId: id,
-      newValues: { universityId: context.course.universityId, facultyId: context.course.facultyId, result: 'viewed' },
+      newValues: { organizationId: context.course.organizationId, facultyId: context.course.facultyId, result: 'viewed' },
       ...this.auditContext(auditContext),
     });
     return {
@@ -145,7 +145,7 @@ export class PlatformAcademicCatalogService {
   async getSeries(id: string, auditContext: AuditContext = {}) {
     const access = await this.platform.require('academic-data.read');
     const context = await this.seriesContext(this.db.manager, id, { allowGroupMismatch: true, allowTeacherMismatch: true });
-    this.platform.assertUniversityScope(access, context.series.universityId);
+    this.platform.assertUniversityScope(access, context.series.organizationId);
     const [history, existingOccurrencesCount] = await Promise.all([
       this.db.getRepository(AuditLog).find({
         where: { entity: 'academic_series', entityId: id, action: In(SERIES_AUDIT_ACTIONS) },
@@ -155,7 +155,7 @@ export class PlatformAcademicCatalogService {
     ]);
     await this.db.getRepository(AuditLog).save({
       userId: access.actorId, action: 'platform.academic_series.viewed', entity: 'academic_series', entityId: id,
-      newValues: { universityId: context.series.universityId, courseId: context.series.courseId, groupId: context.series.groupId, teacherId: context.series.teacherId, result: 'viewed' },
+      newValues: { organizationId: context.series.organizationId, courseId: context.series.courseId, groupId: context.series.groupId, teacherId: context.series.teacherId, result: 'viewed' },
       ...this.auditContext(auditContext),
     });
     return {
@@ -189,7 +189,7 @@ export class PlatformAcademicCatalogService {
         const courseRepo = manager.getRepository(Course);
         const course = await courseRepo.createQueryBuilder('c').setLock('pessimistic_write').where('c.id = :id', { id }).getOne();
         if (!course) throw new NotFoundException('Курс каталога не найден.');
-        this.platform.assertUniversityScope(access, course.universityId);
+        this.platform.assertUniversityScope(access, course.organizationId);
         if (course.source !== 'manual') throw new ConflictException('Курс получен из внешнего источника и доступен только для просмотра. Исправьте его в источнике синхронизации.');
         const context = await this.courseContext(manager, id, dto.facultyId !== undefined);
         const oldValues = this.courseSnapshot(course);
@@ -197,7 +197,7 @@ export class PlatformAcademicCatalogService {
         if (dto.facultyId !== undefined) {
           if (dto.facultyId === null) course.facultyId = null;
           else {
-            const faculty = await manager.getRepository(Faculty).findOne({ where: { id: dto.facultyId, universityId: course.universityId } });
+            const faculty = await manager.getRepository(Faculty).findOne({ where: { id: dto.facultyId, organizationId: course.organizationId } });
             if (!faculty) throw new BadRequestException('Факультет должен принадлежать тому же вузу, что и курс.');
             course.facultyId = faculty.id;
           }
@@ -211,7 +211,7 @@ export class PlatformAcademicCatalogService {
         const updated = await courseRepo.save(course);
         if (updated.name !== oldValues.name || updated.isActive !== oldValues.isActive) {
           const spaceRepo = manager.getRepository(CourseSpace);
-          const space = await spaceRepo.findOne({ where: { courseId: updated.id, universityId: updated.universityId }, lock: { mode: 'pessimistic_write' } });
+          const space = await spaceRepo.findOne({ where: { courseId: updated.id, organizationId: updated.organizationId }, lock: { mode: 'pessimistic_write' } });
           if (!space) throw new ConflictException('Для курса не найдена связанная Course Space. Изменение отменено, чтобы не рассинхронизировать данные.');
           if (updated.name !== oldValues.name) space.name = updated.name;
           if (updated.isActive !== oldValues.isActive) space.isActive = updated.isActive;
@@ -220,8 +220,8 @@ export class PlatformAcademicCatalogService {
         const newValues = this.courseSnapshot(updated);
         await manager.getRepository(AuditLog).save({
           userId: access.actorId, action: 'platform.academic_course.updated', entity: 'academic_course', entityId: updated.id,
-          oldValues: { ...oldValues, universityId: context.course.universityId },
-          newValues: { ...newValues, universityId: context.course.universityId, reason },
+          oldValues: { ...oldValues, organizationId: context.course.organizationId },
+          newValues: { ...newValues, organizationId: context.course.organizationId, reason },
           ...this.auditContext(auditContext),
         });
         return updated;
@@ -244,7 +244,7 @@ export class PlatformAcademicCatalogService {
       const seriesRepo = manager.getRepository(LessonSeries);
       const series = await seriesRepo.createQueryBuilder('s').setLock('pessimistic_write').where('s.id = :id', { id }).getOne();
       if (!series) throw new NotFoundException('Серия занятий не найдена.');
-      this.platform.assertUniversityScope(access, series.universityId);
+      this.platform.assertUniversityScope(access, series.organizationId);
       if (series.source !== 'manual') throw new ConflictException('Серия получена из внешнего источника и доступна только для просмотра. Исправьте её в источнике синхронизации.');
       const context = await this.seriesContext(manager, id, {
         allowGroupMismatch: dto.groupId !== undefined,
@@ -253,14 +253,14 @@ export class PlatformAcademicCatalogService {
       const oldValues = this.seriesSnapshot(series);
 
       if (dto.groupId !== undefined) {
-        const group = await manager.getRepository(Group).findOne({ where: { id: dto.groupId, universityId: series.universityId } });
+        const group = await manager.getRepository(Group).findOne({ where: { id: dto.groupId, organizationId: series.organizationId } });
         if (!group) throw new BadRequestException('Группа должна принадлежать тому же вузу, что и серия.');
         series.groupId = group.id;
       }
       if (dto.teacherId !== undefined) {
         if (dto.teacherId === null) series.teacherId = null;
         else {
-          const teacher = await manager.getRepository(User).findOne({ where: { id: dto.teacherId, universityId: series.universityId, role: UserRole.TEACHER } });
+          const teacher = await manager.getRepository(User).findOne({ where: { id: dto.teacherId, organizationId: series.organizationId, role: UserRole.TEACHER } });
           if (!teacher) throw new BadRequestException('Преподаватель должен иметь роль преподавателя и принадлежать тому же вузу, что и серия.');
           series.teacherId = teacher.id;
         }
@@ -286,8 +286,8 @@ export class PlatformAcademicCatalogService {
       const newValues = this.seriesSnapshot(updated);
       await manager.getRepository(AuditLog).save({
         userId: access.actorId, action: 'platform.academic_series.updated', entity: 'academic_series', entityId: updated.id,
-        oldValues: { ...oldValues, universityId: context.series.universityId, courseId: context.series.courseId },
-        newValues: { ...newValues, universityId: context.series.universityId, courseId: context.series.courseId, reason, existingOccurrencesUpdated: false },
+        oldValues: { ...oldValues, organizationId: context.series.organizationId, courseId: context.series.courseId },
+        newValues: { ...newValues, organizationId: context.series.organizationId, courseId: context.series.courseId, reason, existingOccurrencesUpdated: false },
         ...this.auditContext(auditContext),
       });
       return updated;
@@ -319,14 +319,14 @@ export class PlatformAcademicCatalogService {
     const course = await manager.getRepository(Course).findOne({ where: { id } });
     if (!course) throw new NotFoundException('Курс каталога не найден.');
     const [university, faculty] = await Promise.all([
-      manager.getRepository(University).findOne({ where: { id: course.universityId } }),
+      manager.getRepository(University).findOne({ where: { id: course.organizationId } }),
       course.facultyId ? manager.getRepository(Faculty).findOne({ where: { id: course.facultyId } }) : null,
     ]);
     if (!university) throw new ConflictException('У курса отсутствует связанный вуз. Операция отменена до восстановления связи.');
-    if (course.facultyId && (!faculty || faculty.universityId !== course.universityId) && !allowFacultyRepair) {
+    if (course.facultyId && (!faculty || faculty.organizationId !== course.organizationId) && !allowFacultyRepair) {
       throw new ConflictException('Факультет курса не принадлежит его вузу. Сначала восстановите связь в исходных данных.');
     }
-    return { course, university, faculty: faculty?.universityId === course.universityId ? faculty : null };
+    return { course, university, faculty: faculty?.organizationId === course.organizationId ? faculty : null };
   }
 
   private async seriesContext(
@@ -337,22 +337,22 @@ export class PlatformAcademicCatalogService {
     const series = await manager.getRepository(LessonSeries).findOne({ where: { id } });
     if (!series) throw new NotFoundException('Серия занятий не найдена.');
     const [university, course, group, teacher] = await Promise.all([
-      manager.getRepository(University).findOne({ where: { id: series.universityId } }),
+      manager.getRepository(University).findOne({ where: { id: series.organizationId } }),
       manager.getRepository(Course).findOne({ where: { id: series.courseId } }),
       manager.getRepository(Group).findOne({ where: { id: series.groupId } }),
-      series.teacherId ? manager.getRepository(User).findOne({ where: { id: series.teacherId }, select: ['id', 'firstName', 'lastName', 'universityId', 'role'] }) : null,
+      series.teacherId ? manager.getRepository(User).findOne({ where: { id: series.teacherId }, select: ['id', 'firstName', 'lastName', 'organizationId', 'role'] }) : null,
     ]);
     if (!university) throw new ConflictException('У серии отсутствует связанный вуз. Операция отменена до восстановления связи.');
-    if (!course || course.universityId !== series.universityId) throw new ConflictException('Курс серии не принадлежит её вузу. Сначала восстановите связь в исходных данных.');
-    if ((!group || group.universityId !== series.universityId) && !options.allowGroupMismatch) throw new ConflictException('Группа серии не принадлежит её вузу. Сначала восстановите связь в исходных данных.');
-    const invalidTeacher = series.teacherId && (!teacher || teacher.universityId !== series.universityId || teacher.role !== UserRole.TEACHER);
+    if (!course || course.organizationId !== series.organizationId) throw new ConflictException('Курс серии не принадлежит её вузу. Сначала восстановите связь в исходных данных.');
+    if ((!group || group.organizationId !== series.organizationId) && !options.allowGroupMismatch) throw new ConflictException('Группа серии не принадлежит её вузу. Сначала восстановите связь в исходных данных.');
+    const invalidTeacher = series.teacherId && (!teacher || teacher.organizationId !== series.organizationId || teacher.role !== UserRole.TEACHER);
     if (invalidTeacher && !options.allowTeacherMismatch) {
       throw new ConflictException('Преподаватель серии не принадлежит её вузу или имеет другую роль. Сначала восстановите связь в исходных данных.');
     }
     return {
       series, university, course,
-      group: group?.universityId === series.universityId ? group : null,
-      teacher: teacher?.universityId === series.universityId && teacher.role === UserRole.TEACHER ? teacher : null,
+      group: group?.organizationId === series.organizationId ? group : null,
+      teacher: teacher?.organizationId === series.organizationId && teacher.role === UserRole.TEACHER ? teacher : null,
     };
   }
 
@@ -365,7 +365,7 @@ export class PlatformAcademicCatalogService {
 
   private courseListItem(course: Course, raw: Record<string, unknown>) {
     return {
-      id: course.id, universityId: course.universityId, universityName: raw.catalog_university_name as string | null ?? raw.university_name as string | null ?? null,
+      id: course.id, organizationId: course.organizationId, universityName: raw.catalog_university_name as string | null ?? raw.university_name as string | null ?? null,
       facultyId: course.facultyId, facultyName: raw.catalog_faculty_name as string | null ?? raw.faculty_name as string | null ?? null,
       code: course.code, name: course.name, description: course.description, credits: course.credits,
       isActive: course.isActive, source: course.source, syncStatus: course.syncStatus,
@@ -376,7 +376,7 @@ export class PlatformAcademicCatalogService {
 
   private seriesListItem(series: LessonSeries, raw: Record<string, unknown>) {
     return {
-      id: series.id, universityId: series.universityId, universityName: raw.catalog_university_name as string | null ?? raw.university_name as string | null ?? null,
+      id: series.id, organizationId: series.organizationId, universityName: raw.catalog_university_name as string | null ?? raw.university_name as string | null ?? null,
       courseId: series.courseId, courseCode: raw.catalog_course_code as string | null ?? raw.course_code as string | null ?? null,
       courseName: raw.catalog_course_name as string | null ?? raw.course_name as string | null ?? null,
       groupId: series.groupId, groupName: raw.catalog_group_name as string | null ?? raw.group_name as string | null ?? null,

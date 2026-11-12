@@ -4,7 +4,7 @@ import { apiFetch } from '@/lib/api';
 import { type Access, type Page, Button, Notice, Pager, errorText, inputClass, panelClass, useResource, useTargetUserId } from './control-ui';
 
 type Kind = 'applications' | 'works';
-interface CareerItem { id: string; taskId: string; taskTitle: string; companyName: string; universityId: string; universityName: string; studentId: string; studentName: string; studentEmail: string; state: string; skill: string; deadline: string; createdAt: string; updatedAt: string; messagePreview?: string; submissionPreview?: string; resultUrl?: string; decisionReason?: string; profiled?: boolean; message?: string; submission?: string }
+interface CareerItem { id: string; taskId: string; taskTitle: string; companyName: string; organizationId: string; universityName: string; studentId: string; studentName: string; studentEmail: string; state: string; skill: string; deadline: string; createdAt: string; updatedAt: string; messagePreview?: string; submissionPreview?: string; resultUrl?: string; decisionReason?: string; profiled?: boolean; message?: string; submission?: string }
 const applicationStates: Record<string, string> = { pending: 'Ожидает выбора', selected: 'Выбран', not_selected: 'Не выбран', withdrawn: 'Отозван' };
 const workStates: Record<string, string> = { in_progress: 'В работе', submitted: 'На приёмке', revision: 'На доработке', accepted: 'Принята' };
 
@@ -14,7 +14,7 @@ export default function CareerOperationsPanel({ access }: { access: Access }) {
   const [query, setQuery] = useState('');
   useEffect(() => { if (targetUserId) setQuery(targetUserId); }, [targetUserId]);
   const [state, setState] = useState('');
-  const [universityId, setUniversityId] = useState('');
+  const [organizationId, setOrganizationId] = useState('');
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<CareerItem | null>(null);
   const [message, setMessage] = useState('');
@@ -29,7 +29,7 @@ export default function CareerOperationsPanel({ access }: { access: Access }) {
   const params = new URLSearchParams({ page: String(page), limit: '20' });
   if (query.trim()) params.set('q', query.trim());
   if (state) params.set('state', state);
-  if (universityId) params.set('universityId', universityId);
+  if (organizationId) params.set('organizationId', organizationId);
   const list = useResource<Page<CareerItem>>(`/platform-career/${kind}?${params.toString()}`);
   const refresh = () => list.refresh();
 
@@ -66,7 +66,7 @@ export default function CareerOperationsPanel({ access }: { access: Access }) {
     <div className="flex flex-wrap gap-2" role="group" aria-label="Тип карьерной записи"><Button aria-pressed={kind === 'applications'} onClick={() => { setKind('applications'); setState(''); setPage(1); close(); }} className={kind === 'applications' ? '!border-cyan-400 !bg-cyan-400/10' : ''}>Отклики</Button><Button aria-pressed={kind === 'works'} onClick={() => { setKind('works'); setState(''); setPage(1); close(); }} className={kind === 'works' ? '!border-cyan-400 !bg-cyan-400/10' : ''}>Работы</Button></div>
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       <label className="block text-sm">Поиск по тексту, задаче или студенту<input className={inputClass} type="search" maxLength={100} value={query} onChange={event => { setQuery(event.target.value); setPage(1); }} placeholder="ФИО, email, ID, задача, текст" /></label>
-      {universityOptions.data && <label className="block text-sm">Университет<select className={inputClass} value={universityId} onChange={event => { setUniversityId(event.target.value); setPage(1); }}><option value="">Все университеты</option>{universityOptions.data.data.map(university => <option key={university.id} value={university.id}>{university.name} · {university.city}</option>)}</select></label>}
+      {universityOptions.data && <label className="block text-sm">Университет<select className={inputClass} value={organizationId} onChange={event => { setOrganizationId(event.target.value); setPage(1); }}><option value="">Все университеты</option>{universityOptions.data.data.map(university => <option key={university.id} value={university.id}>{university.name} · {university.city}</option>)}</select></label>}
       <label className="block text-sm">Состояние<select className={inputClass} value={state} onChange={event => { setState(event.target.value); setPage(1); }}><option value="">Любое</option>{Object.entries(states).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
     </div>
     {(error || list.error || universityOptions.error) && <Notice error>{error || list.error || universityOptions.error}</Notice>}{notice && <Notice>{notice}</Notice>}

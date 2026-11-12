@@ -6,7 +6,7 @@ import { LESSON_OCCURRENCE_STATUSES } from '../academic/academic.types';
 
 export class PlatformAcademicOccurrencesQueryDto {
   @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(100) q?: string;
-  @ApiPropertyOptional() @IsOptional() @IsUUID() universityId?: string;
+  @ApiPropertyOptional() @IsOptional() @IsUUID() organizationId?: string;
   @ApiPropertyOptional({ description: 'ISO date or date-time; inclusive lower bound on startsAt' }) @IsOptional() @IsDateString() from?: string;
   @ApiPropertyOptional({ description: 'ISO date or date-time; exclusive upper bound on startsAt' }) @IsOptional() @IsDateString() to?: string;
   @ApiPropertyOptional({ enum: [...LESSON_OCCURRENCE_STATUSES, 'all'] }) @IsOptional() @IsIn([...LESSON_OCCURRENCE_STATUSES, 'all']) status?: string;
