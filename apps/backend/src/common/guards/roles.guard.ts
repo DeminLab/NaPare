@@ -25,7 +25,10 @@ export class RolesGuard implements CanActivate {
       throw new ForbiddenException('User not authenticated');
     }
 
-    const hasRole = requiredRoles.includes(user.role);
+    // ADR-0009: authorize against the effective role set of the active
+    // organization; the legacy single role is the fallback until contract.
+    const effectiveRoles = user.roles?.length ? user.roles : [user.role];
+    const hasRole = requiredRoles.some((role) => effectiveRoles.includes(role));
 
     if (!hasRole) {
       throw new ForbiddenException('Insufficient permissions');

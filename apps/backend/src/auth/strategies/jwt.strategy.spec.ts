@@ -4,13 +4,16 @@ import { JwtStrategy } from "./jwt.strategy";
 import { UserRole } from "../interfaces/user-role";
 
 describe("JwtStrategy", () => {
-  const usersService = { findById: jest.fn() };
+  const usersService = { findById: jest.fn(), findMembershipRoles: jest.fn() };
   const configService = {
     getOrThrow: jest.fn().mockReturnValue("access-secret"),
   } as unknown as ConfigService;
   const strategy = new JwtStrategy(configService, usersService as never);
 
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    usersService.findMembershipRoles.mockResolvedValue([]);
+  });
 
   it("accepts a token role only when it matches the database role", async () => {
     usersService.findById.mockResolvedValue({

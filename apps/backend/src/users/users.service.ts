@@ -33,7 +33,9 @@ export class UsersService {
     if (this.tenantContext.getUser() && [UserRole.DEVELOPER, UserRole.SUPERADMIN].includes(createUserDto.role)) await this.platform?.requireOwner();
     this.tenantContext.assertAccess(createUserDto.organizationId);
     const user = this.usersRepository.create(createUserDto);
-    return this.usersRepository.save(user);
+    const saved = await this.usersRepository.save(user);
+    await this.syncRoleMembership(saved, false);
+    return saved;
   }
 
   async findById(id: string): Promise<User | null> {
@@ -194,7 +196,43 @@ export class UsersService {
     }
 
     Object.assign(user, updateData);
-    return this.usersRepository.save(user);
+    const saved = await this.usersRepository.save(user);
+    if (updateData.role !== undefined) await this.syncRoleMembership(saved, true);
+    return saved;
+  }
+
+  /**
+   * ADR-0009 dual-read: effective roles of the active organization. Callers
+   * fall back to the legacy `users.role` when no membership row exists, so an
+   * account that was never migrated keeps working unchanged.
+   */
+  async findMembershipRoles(userId: string, organizationId: string | null): Promise<string[]> {
+    if (!organizationId) return [];
+    const rows = await this.usersRepository.manager.query<Array<{ role: string }>>(
+      'SELECT role FROM "user_role" WHERE "userId" = $1 AND "organizationId" = $2',
+      [userId, organizationId],
+    );
+    return rows.map((row) => row.role);
+  }
+
+  /**
+   * ADR-0009 dual-write: memberships are the source of truth, `users.role`
+   * mirrors the active organization's single role. A role change replaces the
+   * active organization's rows (never another organization's memberships);
+   * creation only adds the missing row.
+   */
+  private async syncRoleMembership(user: User, replaceActive: boolean): Promise<void> {
+    if (!user.organizationId || !user.role) return;
+    const { id: userId, organizationId, role } = user;
+    await this.usersRepository.manager.transaction(async (manager) => {
+      if (replaceActive) {
+        await manager.query('DELETE FROM "user_role" WHERE "userId" = $1 AND "organizationId" = $2', [userId, organizationId]);
+      }
+      await manager.query(
+        'INSERT INTO "user_role" ("userId", "organizationId", role) VALUES ($1, $2, $3) ON CONFLICT ("userId", "organizationId", role) DO NOTHING',
+        [userId, organizationId, role],
+      );
+    });
   }
 
   async bindGroup(id: string, groupId: string): Promise<User> {

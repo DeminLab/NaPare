@@ -69,7 +69,7 @@ describe('Every declared protected route × every role (real HTTP/JWT/guards, sy
       controllers: [ProbeController],
       providers: [RoleProbeGuard, JwtAuthGuard, OptionalJwtAuthGuard, RolesGuard, PermissionsGuard, TenantContext, JwtStrategy,
         { provide: ConfigService, useValue: new ConfigService({ auth: { jwt: { secret } } }) },
-        { provide: UsersService, useValue: { findById: async (id: UserRole) => users.get(id) } },
+        { provide: UsersService, useValue: { findById: async (id: UserRole) => users.get(id), findMembershipRoles: async () => [] } },
       ],
     }).compile();
     app = module.createNestApplication({ logger: false });

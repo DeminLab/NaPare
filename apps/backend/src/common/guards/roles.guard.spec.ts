@@ -4,7 +4,7 @@ import { Reflector } from '@nestjs/core';
 import { RolesGuard } from './roles.guard';
 import { UserRole } from '../../auth/interfaces/user-role';
 
-function contextFor(user: { role: UserRole } | undefined): ExecutionContext {
+function contextFor(user: { role: UserRole; roles?: UserRole[] } | undefined): ExecutionContext {
   return {
     getHandler: jest.fn(),
     getClass: jest.fn(),
@@ -43,5 +43,19 @@ describe('RolesGuard', () => {
   it('allows superadmin on explicitly protected superadmin endpoints', () => {
     (reflector.getAllAndOverride as jest.Mock).mockReturnValue([UserRole.SUPERADMIN]);
     expect(guard.canActivate(contextFor({ role: UserRole.SUPERADMIN }))).toBe(true);
+  });
+
+  it('authorizes when any effective role of the active organization matches', () => {
+    (reflector.getAllAndOverride as jest.Mock).mockReturnValue([UserRole.FACULTY_DEAN]);
+    expect(
+      guard.canActivate(contextFor({ role: UserRole.STUDENT, roles: [UserRole.STUDENT, UserRole.FACULTY_DEAN] })),
+    ).toBe(true);
+  });
+
+  it('denies when the effective role set carries none of the required roles', () => {
+    (reflector.getAllAndOverride as jest.Mock).mockReturnValue([UserRole.FACULTY_DEAN]);
+    expect(() =>
+      guard.canActivate(contextFor({ role: UserRole.STUDENT, roles: [UserRole.STUDENT, UserRole.TEACHER] })),
+    ).toThrow('Insufficient permissions');
   });
 });

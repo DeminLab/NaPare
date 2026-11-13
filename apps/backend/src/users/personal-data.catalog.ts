@@ -45,6 +45,7 @@ export const PERSONAL_DATASETS: readonly PersonalDataset[] = [
   entry('audit_logs', 'userId', 'id action entity entityId ip userAgent createdAt'),
   entry('curator_assignments', 'userId', 'id organizationId groupId createdAt revokedAt'),
   activity('curator_assignments', 'grantedBy revokedBy', 'id organizationId groupId createdAt revokedAt'),
+  entry('user_role', 'userId', 'id userId organizationId role scope createdAt updatedAt'),
   entry('user_favorites', 'userId', 'id organizationId kind externalId label createdAt updatedAt'),
   entry('device_tokens', 'userId', 'id provider platform deviceName isActive webPushConsentedAt webPushConsentVersion webPushRevokedAt createdAt updatedAt'),
   entry('inbox_items', 'userId', 'id organizationId type title description deepLink priority status dueAt completedAt createdAt updatedAt'),

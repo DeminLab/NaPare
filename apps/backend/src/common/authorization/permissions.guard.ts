@@ -17,7 +17,9 @@ export class PermissionsGuard implements CanActivate {
     if (!required?.length) return true;
 
     const user = context.switchToHttp().getRequest<{ user?: AuthenticatedUser }>().user;
-    if (!user || !required.every((permission) => hasPermission(user.role, permission))) {
+    // ADR-0009: any effective role of the active organization may carry the permission.
+    const effectiveRoles = user?.roles?.length ? user.roles : user ? [user.role] : [];
+    if (!user || !required.every((permission) => effectiveRoles.some((role) => hasPermission(role, permission)))) {
       throw new ForbiddenException('Permission required');
     }
     return true;

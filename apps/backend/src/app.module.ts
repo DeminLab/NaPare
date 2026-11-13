@@ -55,6 +55,7 @@ import { OfficeReports1700000000042 } from './migrations/1700000000042-OfficeRep
 import { WebPushConsent1700000000043 } from './migrations/1700000000043-WebPushConsent';
 import { PlatformTelemetry1700000000044 } from './migrations/1700000000044-PlatformTelemetry';
 import { TenantOrganizationAlias1700000000046 } from './migrations/1700000000046-TenantOrganizationAlias';
+import { UserRoles1700000000047 } from './migrations/1700000000047-UserRoles';
 import { TelemetryModule } from './telemetry/telemetry.module';
 import { EventsModule } from './events/events.module';
 import { AcademicModule } from './academic/academic.module';
@@ -117,6 +118,10 @@ import { SearchModule } from './search/search.module';
               await new TenantOrganizationAlias1700000000046().up(runner);
               await new TenantRowSecurity1700000000029().up(runner); await new PersonalDataRead1700000000037().up(runner); await new AccountErasure1700000000038().up(runner); await new CareerModeration1700000000040().up(runner); await new ProductAnalytics1700000000041().up(runner); await new OfficeReports1700000000042().up(runner); await new WebPushConsent1700000000043().up(runner); await new PlatformTelemetry1700000000044().up(runner);
               await new TenantOrganizationAlias1700000000046().up(runner);
+              // ADR-0009 expand after the alias tail: the membership policies
+              // already exist (migration 29 above), so this only materializes
+              // memberships for a pre-existing dev/test database.
+              await new UserRoles1700000000047().up(runner);
             }
             finally { await runner.release(); }
           }

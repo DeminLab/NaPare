@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { User } from './entities/user.entity';
+import { UserRoleMembership } from './entities/user-role.entity';
 import { University } from './entities/university.entity';
 import { Faculty } from './entities/faculty.entity';
 import { Group } from './entities/group.entity';
@@ -16,7 +17,7 @@ import { AccountErasureService } from './account-erasure.service';
 @Module({
   imports: [
     PlatformModule,
-    TypeOrmModule.forFeature([User, University, Faculty, Group, Teacher, TelegramLinkChallenge]),
+    TypeOrmModule.forFeature([User, UserRoleMembership, University, Faculty, Group, Teacher, TelegramLinkChallenge]),
   ],
   providers: [UsersService, PersonalDataService, AccountErasureService],
   controllers: [UsersController],
