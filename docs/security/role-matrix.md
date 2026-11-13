@@ -385,6 +385,7 @@ pnpm --filter @napare/backend exec ts-node --transpile-only test/update-role-pol
 | `GET /api/v1/schedule/my` | JwtAuthGuard, RolesGuard | 200 | 403 | 403 | 403 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
 | `GET /api/v1/schedule/changes` | JwtAuthGuard, RolesGuard | 200 | 403 | 403 | 403 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
 | `GET /api/v1/schedule/lessons/:id/changes` | JwtAuthGuard, RolesGuard | 200 | 403 | 403 | 403 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
+| `GET /api/v1/schedule/week-type` | JwtAuthGuard, RolesGuard | 200 | 403 | 403 | 403 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
 | `PATCH /api/v1/schedule/:id` | JwtAuthGuard, RolesGuard | 403 | 403 | 403 | 403 | 200 | 200 | 200 | 200 | 200 | 200 | 403 |
 | `GET /api/v1/search` | JwtAuthGuard | 200 | 403 | 403 | 403 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
 | `GET /api/v1/academic/identities/moodle/:studentId` | JwtAuthGuard, RolesGuard | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 200 | 403 | 403 |

@@ -4,7 +4,10 @@ import { HttpModule } from "@nestjs/axios";
 
 import { Lesson } from "./entities/lesson.entity";
 import { LessonChange } from "./entities/lesson-change.entity";
+import { AcademicTerm } from "./entities/academic-term.entity";
+import { CalendarException } from "./entities/calendar-exception.entity";
 import { ScheduleService } from "./schedule.service";
+import { AcademicCalendarService } from "./academic-calendar.service";
 import { ScheduleController } from "./schedule.controller";
 import { ChangeDetectorService } from "./change-detector.service";
 import { SibitConnectorService } from "./connectors/sibit-connector.service";
@@ -20,6 +23,8 @@ import { CurationModule } from "../curation/curation.module";
     TypeOrmModule.forFeature([
       Lesson,
       LessonChange,
+      AcademicTerm,
+      CalendarException,
       LessonOccurrence,
       ScheduleChange,
       Group,
@@ -31,6 +36,7 @@ import { CurationModule } from "../curation/curation.module";
   ],
   providers: [
     ScheduleService,
+    AcademicCalendarService,
     ChangeDetectorService,
     SibitConnectorService,
   ],

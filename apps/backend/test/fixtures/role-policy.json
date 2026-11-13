@@ -9006,6 +9006,31 @@
       }
     },
     {
+      "id": "ScheduleController.getWeekType GET /api/v1/schedule/week-type",
+      "source": "apps/backend/src/schedule/schedule.controller.ts",
+      "method": "GET",
+      "path": "/api/v1/schedule/week-type",
+      "guards": [
+        "JwtAuthGuard",
+        "RolesGuard"
+      ],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 403,
+        "career_staff": 403,
+        "career_admin": 403,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
       "id": "ScheduleController.update PATCH /api/v1/schedule/:id",
       "source": "apps/backend/src/schedule/schedule.controller.ts",
       "method": "PATCH",

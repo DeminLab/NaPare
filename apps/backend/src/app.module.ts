@@ -56,6 +56,7 @@ import { WebPushConsent1700000000043 } from './migrations/1700000000043-WebPushC
 import { PlatformTelemetry1700000000044 } from './migrations/1700000000044-PlatformTelemetry';
 import { TenantOrganizationAlias1700000000046 } from './migrations/1700000000046-TenantOrganizationAlias';
 import { UserRoles1700000000047 } from './migrations/1700000000047-UserRoles';
+import { AcademicTerm1700000000048 } from './migrations/1700000000048-AcademicTerm';
 import { TelemetryModule } from './telemetry/telemetry.module';
 import { EventsModule } from './events/events.module';
 import { AcademicModule } from './academic/academic.module';
@@ -122,6 +123,9 @@ import { SearchModule } from './search/search.module';
               // already exist (migration 29 above), so this only materializes
               // memberships for a pre-existing dev/test database.
               await new UserRoles1700000000047().up(runner);
+              // TZ 11.3: tables come from synchronize above; this installs the
+              // tenant policies the startup invariant requires.
+              await new AcademicTerm1700000000048().up(runner);
             }
             finally { await runner.release(); }
           }

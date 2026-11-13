@@ -7,7 +7,7 @@ import { ScheduleController } from './schedule.controller';
 
 describe('ScheduleController write authorization', () => {
   const rolesGuard = new RolesGuard(new Reflector());
-  const controller = new ScheduleController({} as any);
+  const controller = new ScheduleController({} as any, {} as any);
 
   const contextFor = (handler: Function, role: UserRole) => ({
     getHandler: () => handler,
@@ -31,7 +31,7 @@ describe('ScheduleController write authorization', () => {
 
   it('uses the authenticated teacher id for a range instead of exposing the university schedule', async () => {
     const scheduleService = { findByTeacherDateRange: jest.fn().mockResolvedValue({ data: [], meta: {} }) };
-    const scopedController = new ScheduleController(scheduleService as any);
+    const scopedController = new ScheduleController(scheduleService as any, {} as any);
     const query = { startDate: '2026-09-26', endDate: '2026-10-02' } as any;
 
     await scopedController.findByDateRange({ user: { id: 'teacher-1', role: UserRole.TEACHER, organizationId: 'uni-1' } }, query);
@@ -41,7 +41,7 @@ describe('ScheduleController write authorization', () => {
 
   it('uses the authenticated user when opening a single lesson', async () => {
     const scheduleService = { findAccessibleById: jest.fn().mockResolvedValue({ id: 'lesson-1' }) };
-    const scopedController = new ScheduleController(scheduleService as any);
+    const scopedController = new ScheduleController(scheduleService as any, {} as any);
     const req = { user: { id: 'teacher-1', role: UserRole.TEACHER, organizationId: 'uni-1' } };
 
     await scopedController.findLesson('lesson-1', req);

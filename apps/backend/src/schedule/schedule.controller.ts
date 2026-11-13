@@ -13,6 +13,7 @@ import {
 import { ApiOkResponse, ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 
 import { ScheduleService } from './schedule.service';
+import { AcademicCalendarService } from './academic-calendar.service';
 import { CreateLessonDto } from './dto/create-lesson.dto';
 import { UpdateLessonDto } from './dto/update-lesson.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
@@ -22,13 +23,17 @@ import { UserRole } from '../auth/interfaces/user-role';
 import { DateRangeQueryDto } from '../common/dto/date-range-query.dto';
 import { PaginatedResponseDto, PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import { ScheduleQueryDto } from './dto/schedule-query.dto';
+import { WeekTypeQueryDto } from './dto/week-type-query.dto';
 
 @ApiTags('schedule')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('schedule')
 export class ScheduleController {
-  constructor(private readonly scheduleService: ScheduleService) {}
+  constructor(
+    private readonly scheduleService: ScheduleService,
+    private readonly academicCalendarService: AcademicCalendarService,
+  ) {}
 
   @Get('my')
   @ApiOperation({ summary: 'Получить моё расписание' })
@@ -104,6 +109,15 @@ export class ScheduleController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getChanges(@Request() req, @Query() query: ScheduleQueryDto) {
     return this.scheduleService.getChangedLessons(req.user.organizationId, query.date, query);
+  }
+
+  @Get('week-type')
+  @ApiOperation({ summary: 'Получить тип и номер недели по учебному календарю' })
+  @ApiOkResponse({ description: 'Тип недели получен' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Дата вне активного учебного календаря' })
+  async getWeekType(@Request() req, @Query() query: WeekTypeQueryDto) {
+    return this.academicCalendarService.getWeekType(req.user.organizationId ?? null, query.date);
   }
 
   @Post()

@@ -119,6 +119,8 @@ export const PERSONAL_EXPORT_EXCLUDED_TABLES: Record<string, string> = {
   career_partnership: 'Company/university relationship, not a personal account record.',
   career_task: 'Company-owned task catalog without a person reference.',
   career_test: 'University question bank; exporting it would disclose assessment answers.',
+  academic_term: 'Shared academic calendar configuration of the university; no account or actor reference.',
+  calendar_exception: 'Shared calendar overrides (dates, weeks, group/faculty scope); no personal data.',
 };
 
 export const quoteIdentifier = (name: string): string => {
