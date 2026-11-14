@@ -149,6 +149,7 @@ jobs:
           createdb -h 127.0.0.1 -U napare -O napare_runtime curation_test_webpush_ci
           createdb -h 127.0.0.1 -U napare -O napare_runtime curation_test_user_roles_ci
           createdb -h 127.0.0.1 -U napare -O napare_runtime curation_test_week_type_ci
+          createdb -h 127.0.0.1 -U napare -O napare_runtime curation_test_invites_ci
 
       - name: Run E2E tests
         shell: bash
@@ -175,6 +176,7 @@ jobs:
           WEBPUSH_TEST_DATABASE_URL: postgresql://napare_runtime:ci_runtime_password_only@127.0.0.1:5432/curation_test_webpush_ci
           USER_ROLES_TEST_DATABASE_URL: postgresql://napare_runtime:ci_runtime_password_only@127.0.0.1:5432/curation_test_user_roles_ci
           WEEK_TYPE_TEST_DATABASE_URL: postgresql://napare_runtime:ci_runtime_password_only@127.0.0.1:5432/curation_test_week_type_ci
+          INVITES_TEST_DATABASE_URL: postgresql://napare_runtime:ci_runtime_password_only@127.0.0.1:5432/curation_test_invites_ci
           NOTIFICATION_TEST_REDIS_URL: redis://127.0.0.1:6379
         run: pnpm test:e2e | tee e2e-test-report.txt
       - name: Report observed business HTTP routes

@@ -97,6 +97,11 @@ pnpm --filter @napare/backend exec ts-node --transpile-only test/update-role-pol
 | `PATCH /api/v1/admin/users/:id/roles` | JwtAuthGuard, RolesGuard | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 200 | 200 | 403 |
 | `PATCH /api/v1/admin/users/:id/status` | JwtAuthGuard, RolesGuard | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 200 | 200 | 403 |
 | `POST /api/v1/admin/schedule/upload` | JwtAuthGuard, RolesGuard | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 200 | 200 | 403 |
+| `POST /api/v1/admin/invites` | JwtAuthGuard, RolesGuard | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 200 | 200 | 403 |
+| `GET /api/v1/admin/invites` | JwtAuthGuard, RolesGuard | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 200 | 200 | 403 |
+| `POST /api/v1/admin/invites/:id/regenerate` | JwtAuthGuard, RolesGuard | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 200 | 200 | 403 |
+| `PATCH /api/v1/admin/link-requests/:id` | JwtAuthGuard, RolesGuard | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 200 | 200 | 403 |
+| `GET /api/v1/admin/link-requests` | JwtAuthGuard, RolesGuard | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 200 | 200 | 403 |
 | `POST /api/v1/auth/telegram/link` | JwtAuthGuard | 200 | 403 | 403 | 403 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
 | `GET /api/v1/auth/max/status` | JwtAuthGuard | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
 | `GET /api/v1/auth/telegram/status` | JwtAuthGuard | 200 | 403 | 403 | 403 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
@@ -428,6 +433,9 @@ pnpm --filter @napare/backend exec ts-node --transpile-only test/update-role-pol
 | `GET /api/v1/career/accounts/portfolio/:studentId/cases` | [apps/backend/src/career/career.controller.ts](../../apps/backend/src/career/career.controller.ts) |
 | `POST /api/v1/career/accounts/register` | [apps/backend/src/career/career.controller.ts](../../apps/backend/src/career/career.controller.ts) |
 | `GET /api/v1/health` | [apps/backend/src/health.controller.ts](../../apps/backend/src/health.controller.ts) |
+| `POST /api/v1/invites/:token/claim` | [apps/backend/src/invites/invites.controller.ts](../../apps/backend/src/invites/invites.controller.ts) |
+| `GET /api/v1/invites/:token` | [apps/backend/src/invites/invites.controller.ts](../../apps/backend/src/invites/invites.controller.ts) |
+| `POST /api/v1/link-requests` | [apps/backend/src/invites/link-requests.controller.ts](../../apps/backend/src/invites/link-requests.controller.ts) |
 | `POST /api/v1/career/payments/notification` | [apps/backend/src/career-billing/payment.controller.ts](../../apps/backend/src/career-billing/payment.controller.ts) |
 | `GET /api/v1/platform/public-settings` | [apps/backend/src/platform/platform.controller.ts](../../apps/backend/src/platform/platform.controller.ts) |
 | `POST /api/v1/integrations/telegram/webhook` | [apps/backend/src/auth/telegram-webhook.controller.ts](../../apps/backend/src/auth/telegram-webhook.controller.ts) |

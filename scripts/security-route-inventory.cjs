@@ -135,6 +135,8 @@ function tenantRule(route) {
     return 'JWT user.id (self), organizationId from verified actor; resource owner check in service';
   }
   if (route.controller === 'CurationController' || route.controller === 'CuratorController') return 'TenantContext actor; active curator assignment + own university, dean/admin manage scope';
+  if (['InvitesController', 'LinkRequestsController'].includes(route.controller)) return 'Public onboarding boundary; sha256 invite-token relation capability, uniform 404 + attempt limit (SEC-09), per-route throttle';
+  if (['AdminInvitesController', 'AdminLinkRequestsController'].includes(route.controller)) return 'JWT actor university (university_admin/superadmin); organizationId-scoped invite/link-request queue in InvitesService';
   return route.scopeEvidence.some(item => item.includes('.user'))
     ? 'Verified JWT actor university; service university filter + linked resource ownership'
     : 'Resource ID resolved in service; TenantContext.assertAccess / linked resource ownership (ID is not university ID)';

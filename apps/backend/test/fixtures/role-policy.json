@@ -1642,6 +1642,146 @@
       }
     },
     {
+      "id": "AdminInvitesController.create POST /api/v1/admin/invites",
+      "source": "apps/backend/src/invites/admin-invites.controller.ts",
+      "method": "POST",
+      "path": "/api/v1/admin/invites",
+      "guards": [
+        "JwtAuthGuard",
+        "RolesGuard"
+      ],
+      "roles": [
+        "university_admin",
+        "superadmin"
+      ],
+      "permissions": null,
+      "statuses": {
+        "student": 403,
+        "employer": 403,
+        "career_staff": 403,
+        "career_admin": 403,
+        "teacher": 403,
+        "curator": 403,
+        "faculty_dean": 403,
+        "department_head": 403,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 403
+      }
+    },
+    {
+      "id": "AdminInvitesController.list GET /api/v1/admin/invites",
+      "source": "apps/backend/src/invites/admin-invites.controller.ts",
+      "method": "GET",
+      "path": "/api/v1/admin/invites",
+      "guards": [
+        "JwtAuthGuard",
+        "RolesGuard"
+      ],
+      "roles": [
+        "university_admin",
+        "superadmin"
+      ],
+      "permissions": null,
+      "statuses": {
+        "student": 403,
+        "employer": 403,
+        "career_staff": 403,
+        "career_admin": 403,
+        "teacher": 403,
+        "curator": 403,
+        "faculty_dean": 403,
+        "department_head": 403,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 403
+      }
+    },
+    {
+      "id": "AdminInvitesController.regenerate POST /api/v1/admin/invites/:id/regenerate",
+      "source": "apps/backend/src/invites/admin-invites.controller.ts",
+      "method": "POST",
+      "path": "/api/v1/admin/invites/:id/regenerate",
+      "guards": [
+        "JwtAuthGuard",
+        "RolesGuard"
+      ],
+      "roles": [
+        "university_admin",
+        "superadmin"
+      ],
+      "permissions": null,
+      "statuses": {
+        "student": 403,
+        "employer": 403,
+        "career_staff": 403,
+        "career_admin": 403,
+        "teacher": 403,
+        "curator": 403,
+        "faculty_dean": 403,
+        "department_head": 403,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 403
+      }
+    },
+    {
+      "id": "AdminLinkRequestsController.decide PATCH /api/v1/admin/link-requests/:id",
+      "source": "apps/backend/src/invites/admin-link-requests.controller.ts",
+      "method": "PATCH",
+      "path": "/api/v1/admin/link-requests/:id",
+      "guards": [
+        "JwtAuthGuard",
+        "RolesGuard"
+      ],
+      "roles": [
+        "university_admin",
+        "superadmin"
+      ],
+      "permissions": null,
+      "statuses": {
+        "student": 403,
+        "employer": 403,
+        "career_staff": 403,
+        "career_admin": 403,
+        "teacher": 403,
+        "curator": 403,
+        "faculty_dean": 403,
+        "department_head": 403,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 403
+      }
+    },
+    {
+      "id": "AdminLinkRequestsController.list GET /api/v1/admin/link-requests",
+      "source": "apps/backend/src/invites/admin-link-requests.controller.ts",
+      "method": "GET",
+      "path": "/api/v1/admin/link-requests",
+      "guards": [
+        "JwtAuthGuard",
+        "RolesGuard"
+      ],
+      "roles": [
+        "university_admin",
+        "superadmin"
+      ],
+      "permissions": null,
+      "statuses": {
+        "student": 403,
+        "employer": 403,
+        "career_staff": 403,
+        "career_admin": 403,
+        "teacher": 403,
+        "curator": 403,
+        "faculty_dean": 403,
+        "department_head": 403,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 403
+      }
+    },
+    {
       "id": "AppController.info GET /api/v1/app",
       "source": "apps/backend/src/app.controller.ts",
       "method": "GET",
@@ -3886,6 +4026,72 @@
       "source": "apps/backend/src/health.controller.ts",
       "method": "GET",
       "path": "/api/v1/health",
+      "guards": [],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 200,
+        "career_staff": 200,
+        "career_admin": 200,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
+      "id": "InvitesController.claim POST /api/v1/invites/:token/claim",
+      "source": "apps/backend/src/invites/invites.controller.ts",
+      "method": "POST",
+      "path": "/api/v1/invites/:token/claim",
+      "guards": [],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 200,
+        "career_staff": 200,
+        "career_admin": 200,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
+      "id": "InvitesController.lookup GET /api/v1/invites/:token",
+      "source": "apps/backend/src/invites/invites.controller.ts",
+      "method": "GET",
+      "path": "/api/v1/invites/:token",
+      "guards": [],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 200,
+        "career_staff": 200,
+        "career_admin": 200,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
+      "id": "LinkRequestsController.create POST /api/v1/link-requests",
+      "source": "apps/backend/src/invites/link-requests.controller.ts",
+      "method": "POST",
+      "path": "/api/v1/link-requests",
       "guards": [],
       "roles": null,
       "permissions": null,

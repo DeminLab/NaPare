@@ -4,6 +4,7 @@ import { SemesterModule } from './semester/semester.module';
 import { PaymentModule } from './career-billing/payment.module';
 
 import { CurationModule } from './curation/curation.module';
+import { InvitesModule } from './invites/invites.module';
 import { RequestModule } from './requests/request.module';
 import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
@@ -57,6 +58,7 @@ import { PlatformTelemetry1700000000044 } from './migrations/1700000000044-Platf
 import { TenantOrganizationAlias1700000000046 } from './migrations/1700000000046-TenantOrganizationAlias';
 import { UserRoles1700000000047 } from './migrations/1700000000047-UserRoles';
 import { AcademicTerm1700000000048 } from './migrations/1700000000048-AcademicTerm';
+import { Invites1700000000049 } from './migrations/1700000000049-Invites';
 import { TelemetryModule } from './telemetry/telemetry.module';
 import { EventsModule } from './events/events.module';
 import { AcademicModule } from './academic/academic.module';
@@ -126,6 +128,10 @@ import { SearchModule } from './search/search.module';
               // TZ 11.3: tables come from synchronize above; this installs the
               // tenant policies the startup invariant requires.
               await new AcademicTerm1700000000048().up(runner);
+              // TZ 9.2: invite/link-request tables come from synchronize above;
+              // this installs the tenant policies plus the relation predicate
+              // the public claim path needs.
+              await new Invites1700000000049().up(runner);
             }
             finally { await runner.release(); }
           }
@@ -191,6 +197,7 @@ import { SearchModule } from './search/search.module';
     PlatformEventsModule,
     PlatformAttachmentsModule,
     CurationModule,
+    InvitesModule,
     RequestModule,
     AuthModule,
     UsersModule,

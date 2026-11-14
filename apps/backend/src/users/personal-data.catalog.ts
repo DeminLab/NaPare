@@ -121,6 +121,8 @@ export const PERSONAL_EXPORT_EXCLUDED_TABLES: Record<string, string> = {
   career_test: 'University question bank; exporting it would disclose assessment answers.',
   academic_term: 'Shared academic calendar configuration of the university; no account or actor reference.',
   calendar_exception: 'Shared calendar overrides (dates, weeks, group/faculty scope); no personal data.',
+  invite: 'Authentication secrets of the onboarding flow: shareable token hashes, second-factor hashes and attempt counters are never downloadable (FR-ONB-02/03, SEC-09).',
+  link_request: 'Pre-account linkage queue entry (contact email, name entered by the requester, staff decision); there is no owning account yet, staff handles it under FR-ONB-04/FR-STF-04.',
 };
 
 export const quoteIdentifier = (name: string): string => {

@@ -65,6 +65,18 @@ export class AuthService {
     return this.completeLogin(user, context, { method: "password" });
   }
 
+  /**
+   * A verified invite claim (TZ 9.2 / FR-ONB-03) authenticates the student
+   * without entering credentials: the service already proved the token, the
+   * entered data and the second factor before calling in.
+   */
+  async loginWithInvite(
+    user: User,
+    context: TelemetryRequestContext = {},
+  ): Promise<AuthResponse> {
+    return this.completeLogin(user, context, { method: "invite" });
+  }
+
   async portalLogin(
     loginDto: LoginDto,
     context: TelemetryRequestContext = {},
