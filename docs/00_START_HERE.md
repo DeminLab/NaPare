@@ -9,7 +9,7 @@ B2B2C SaaS для вузов: расписание, задания, матери
 
 ## Быстрый старт
 
-Состояние репозитория и проверки от 16 октября: [сводка изменений](project-log/2026-10-16-repository-sync.md). Текущий снимок от 11 ноября: [baseline-аудит](audit/BASELINE.md) и [разрывы с ТЗ v1.1](audit/TZ-1.1-GAP-ANALYSIS.md). Новые возможности: [кураторство](product/account-curatorship.md), [управление платформой](product/platform-control.md), [установка агента](deployment/platform-control.md), [Android и RuStore](deployment/rustore-publication.md). Публичный сайт: [SEO](SEO.md), [владелец](OWNER.md). QR-посещаемость удалена; актуальна ручная отметка преподавателем. Отправка кода в GitHub не подтверждает развёртывание этих возможностей.
+Состояние репозитория и проверки от 16 октября: [сводка изменений](project-log/2026-10-16-repository-sync.md). Текущий снимок от 11 ноября: [baseline-аудит](audit/BASELINE.md) и [разрывы с ТЗ v1.1](audit/TZ-1.1-GAP-ANALYSIS.md). Новые возможности: [кураторство](product/account-curatorship.md), [управление платформой](product/platform-control.md), [установка агента](deployment/platform-control.md), [Android и RuStore](deployment/rustore-publication.md). Публичный сайт: [SEO](SEO.md). QR-посещаемость удалена; актуальна ручная отметка преподавателем. Отправка кода в GitHub не подтверждает развёртывание этих возможностей.
 
 | Я | Мне нужно | Куда идти |
 |---|-----------|-----------|
@@ -18,7 +18,7 @@ B2B2C SaaS для вузов: расписание, задания, матери
 | AI-агент | Изучить контекст перед задачей | [AI_CONTEXT.md](../AI_CONTEXT.md) |
 | Продукт / команда | Видение и проверяемые продуктовые гипотезы | [strategy/](strategy/vision.md), [product/](product/overview.md) |
 | Новый участник команды | Понять контекст | [02_GLOSSARY.md](02_GLOSSARY.md), [architecture/README.md](architecture/README.md) |
-| Владелец / поисковики | Информация о владельце и SEO | [OWNER.md](OWNER.md), [SEO.md](SEO.md), [SEO_REGISTRATION.md](SEO_REGISTRATION.md) |
+| Публичный сайт / поисковики | SEO, мета-теги и карты сайта | [SEO.md](SEO.md), [SEO_REGISTRATION.md](SEO_REGISTRATION.md) |
 
 ---
 

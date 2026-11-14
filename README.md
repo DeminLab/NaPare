@@ -284,7 +284,7 @@ docker compose --env-file .env -f docker-compose.prod.yml up -d --build
 
 ## Владелец проекта
 
-NaPare развивает **ИП Демин Данила Алексеевич** — разработчик и владелец проекта. Контакты: [support@napare.ru](mailto:support@napare.ru), Telegram [@napare_bot](https://t.me/napare_bot), GitHub [DeminLab](https://github.com/DeminLab). Публичная страница владельца — [napare.sano.ru/owner](https://napare.sano.ru/owner); подробности и SEO-настройки — в [docs/OWNER.md](docs/OWNER.md) и [docs/SEO.md](docs/SEO.md).
+NaPare развивает **ИП Демин Данила Алексеевич** — разработчик и владелец проекта. Контакты: [support@napare.ru](mailto:support@napare.ru), Telegram [@napare_bot](https://t.me/napare_bot), GitHub [DeminLab](https://github.com/DeminLab). Команда проекта — [napare.sano.ru/team](https://napare.sano.ru/team); SEO-настройки — в [docs/SEO.md](docs/SEO.md).
 
 ## Локальная разработка
 
@@ -779,7 +779,6 @@ docs/
 Полная документация по SEO для NaPare находится в `docs/SEO.md`:
 
 - [SEO документация](docs/SEO.md) - полное описание системы SEO
-- [Информация о владельце](docs/OWNER.md) - контактная информация и юридические данные
 - [Регистрация в поисковых системах](docs/SEO_REGISTRATION.md) - инструкции по регистрации в Google, Яндекс и других системах
 - [Создание иконок](docs/SEO_ICONS.md) - инструкции по созданию иконок для сайта
 
@@ -791,13 +790,12 @@ docs/
 - Telegram: @napare_bot
 - GitHub: https://github.com/DeminLab
 
-Вся информация о владельце проекта добавлена в мета-теги на всех страницах и в структурированные данные Schema.org.
+Информация об авторе проекта добавлена в мета-теги на всех страницах и в структурированные данные Schema.org.
 
 ### Ключевые страницы
 
 - Главная: https://napare.sano.ru/
-- Страница владельца: https://napare.sano.ru/owner
-- О проекте: https://napare.sano.ru/about
+- Команда: https://napare.sano.ru/team
 - Возможности: https://napare.sano.ru/features
 
 ---

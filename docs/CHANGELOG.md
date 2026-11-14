@@ -5,9 +5,9 @@
 ## [Unreleased] — 2026-11-10
 
 ### SEO и публичный сайт
-- Добавлены мета-теги, Open Graph/Twitter Card, Schema.org (`Organization`, `Person`, `WebSite`) и страницы `/owner`, `/about`, `/features` в `web-portal`.
+- Добавлены мета-теги, Open Graph/Twitter Card, Schema.org (`Organization`, `Person`, `WebSite`) и публичные страницы `/features` и `/team` в `web-portal`.
 - Добавлены `sitemap.xml`, `robots.txt` и манифесты/иконки для portal и ролевых приложений.
-- Владелец и разработчик указан как **ИП Демин Данила Алексеевич**; добавлены [docs/OWNER.md](OWNER.md), [docs/SEO.md](SEO.md), [docs/SEO_REGISTRATION.md](SEO_REGISTRATION.md), [docs/SEO_ICONS.md](SEO_ICONS.md) и [docs/SEO_QUICK_START.md](SEO_QUICK_START.md).
+- Владелец и разработчик указан как **ИП Демин Данила Алексеевич**; добавлены [docs/SEO.md](SEO.md), [docs/SEO_REGISTRATION.md](SEO_REGISTRATION.md), [docs/SEO_ICONS.md](SEO_ICONS.md) и [docs/SEO_QUICK_START.md](SEO_QUICK_START.md).
 
 ### Удаление QR-посещаемости
 - Удалены `AttendanceQrSession`, DTO, сервисные методы, контроллеры и платформенные QR-маршруты; миграция `1700000000045-RemoveAttendanceQrSessions` удаляет таблицу `attendance_qr_sessions`.

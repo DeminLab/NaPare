@@ -26,19 +26,14 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://napare.sano.ru/about</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
     <loc>https://napare.sano.ru/features</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://napare.sano.ru/owner</loc>
+    <loc>https://napare.sano.ru/career</loc>
     <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.7</priority>
   </url>
   <url>
     <loc>https://napare.sano.ru/team</loc>

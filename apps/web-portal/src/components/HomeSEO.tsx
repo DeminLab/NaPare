@@ -54,7 +54,7 @@ export default function HomeSEO() {
             '@type': 'Person',
             name: 'Демин Данила Алексеевич',
             jobTitle: 'ИП, Разработчик',
-            url: 'https://napare.sano.ru/owner',
+            url: 'https://napare.sano.ru/team',
             sameAs: [
               'https://github.com/DeminLab/NaPare',
               'https://t.me/napare_bot',

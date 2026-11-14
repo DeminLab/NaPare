@@ -198,8 +198,7 @@
 4. Создайте следующие цели:
    - **Регистрация**: JavaScript-событие, событие "register"
    - **Вход в кабинет**: JavaScript-событие, событие "login"
-   - **Просмотр страницы владельца**: URL, содержит `/owner`
-   - **Просмотр страницы о проекте**: URL, содержит `/about`
+   - **Просмотр страницы команды**: URL, содержит `/team`
    - **Просмотр страницы возможностей**: URL, содержит `/features`
 
 ---
@@ -212,13 +211,12 @@
 2. Нажмите "Добавить цель"
 3. Выберите тип цели: "URL"
 4. Введите:
-   - Название: `Просмотр страницы владельца`
+   - Название: `Просмотр страницы команды`
    - Тип: `Начало посещения`
-   - URL: `/owner`
+   - URL: `/team`
 5. Нажмите "Создать"
 
 6. Повторите для других целей:
-   - `Просмотр страницы о проекте`: URL `/about`
    - `Просмотр страницы возможностей`: URL `/features`
    - `Регистрация пользователя`: JavaScript-событие `register`
    - `Вход в кабинет`: JavaScript-событие `login`
@@ -240,14 +238,9 @@ export default function YandexMetrika() {
     // Вход в кабинет
     window.yaCounter12345678.reachGoal('login');
 
-    // Просмотр страницы владельца
-    if (typeof window !== 'undefined' && window.location.pathname === '/owner') {
-      window.yaCounter12345678.reachGoal('view_owner');
-    }
-
-    // Просмотр страницы о проекте
-    if (typeof window !== 'undefined' && window.location.pathname === '/about') {
-      window.yaCounter12345678.reachGoal('view_about');
+    // Просмотр страницы команды
+    if (typeof window !== 'undefined' && window.location.pathname === '/team') {
+      window.yaCounter12345678.reachGoal('view_team');
     }
 
     // Просмотр страницы возможностей
