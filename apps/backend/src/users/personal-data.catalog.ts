@@ -73,6 +73,9 @@ export const PERSONAL_DATASETS: readonly PersonalDataset[] = [
   activity('request_decisions', 'actorId', 'id organizationId requestId stepId action fromStatus toStatus reason createdAt'),
   activity('request_documents', 'addedBy', 'id organizationId requestId attachmentId createdAt'),
   activity('schedule_import_jobs', 'actorId', 'id organizationId status attempts nextAttemptAt createdAt updatedAt'),
+  // Import journal of the acting admin: metadata only, the per-row `result`
+  // and `rollbackResult` JSON may hold other people's rows, hashes stay out.
+  activity('import_runs', 'actorId rolledBackBy', 'id organizationId actorId jobId mode status mappingVersion source fileName completedAt rolledBackAt rolledBackBy createdAt updatedAt'),
   activity('lesson_changes', 'changedBy', 'id lessonId changeType source changedAt createdAt'),
   entry('academic_identities', 'userId', 'id organizationId sourceBaseUrl externalUserId linkedAt'),
   activity('academic_identities', 'linkedBy', 'id organizationId linkedAt'),
