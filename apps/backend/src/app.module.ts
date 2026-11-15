@@ -59,6 +59,7 @@ import { TenantOrganizationAlias1700000000046 } from './migrations/1700000000046
 import { UserRoles1700000000047 } from './migrations/1700000000047-UserRoles';
 import { AcademicTerm1700000000048 } from './migrations/1700000000048-AcademicTerm';
 import { Invites1700000000049 } from './migrations/1700000000049-Invites';
+import { ImportRuns1700000000050 } from './migrations/1700000000050-ImportRuns';
 import { TelemetryModule } from './telemetry/telemetry.module';
 import { EventsModule } from './events/events.module';
 import { AcademicModule } from './academic/academic.module';
@@ -132,6 +133,9 @@ import { SearchModule } from './search/search.module';
               // this installs the tenant policies plus the relation predicate
               // the public claim path needs.
               await new Invites1700000000049().up(runner);
+              // TZ 9.3: import journal table comes from synchronize above;
+              // this installs the tenant policies plus the FR-IMP-08 threshold.
+              await new ImportRuns1700000000050().up(runner);
             }
             finally { await runner.release(); }
           }

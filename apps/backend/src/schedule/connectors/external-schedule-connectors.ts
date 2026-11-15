@@ -12,8 +12,10 @@ export class SibitScheduleConnector implements ScheduleConnector {
   async fetchSchedule(university: University, input: ScheduleConnectorInput): Promise<NormalizedScheduleLesson[]> {
     if (!['sibit', 'rasp-sano', 'rasp_sano'].includes(university.connectorType)) throw new BadRequestException('Для вуза не выбран источник СИБИТ.');
     const catalog = await this.rasp.getCatalog();
-    return catalog.lessons.filter(lesson => (!input.startDate || lesson.date >= input.startDate.slice(0, 10)) && (!input.endDate || lesson.date <= input.endDate.slice(0, 10))).map(lesson => ({
+    return catalog.lessons.filter(lesson => (!input.startDate || lesson.date >= input.startDate.slice(0, 10)) && (!input.endDate || lesson.date <= input.endDate.slice(0, 10))).map((lesson, index) => ({
       externalId: lesson.lessonId, groupExternalId: lesson.groupId, groupName: lesson.groupName, subject: lesson.subject, localDate: lesson.date,
+      // Row position within the connector response (1-based) so plan issues carry a row number.
+      row: index + 1,
       // Preserve the original scraper/connector's local-time conversion and source identifiers.
       startDate: new Date(`${lesson.date}T${lesson.startTime}:00`).toISOString(), endDate: new Date(`${lesson.date}T${lesson.endTime}:00`).toISOString(),
       startTime: lesson.startTime, endTime: lesson.endTime, pairNumber: lesson.pairNumber,
@@ -42,14 +44,14 @@ export class MoodleScheduleConnector implements ScheduleConnector {
     const from = Math.floor(new Date(input.startDate.slice(0, 10) + 'T00:00:00' + offset).getTime() / 1000);
     const to = Math.floor(new Date(input.endDate.slice(0, 10) + 'T23:59:59' + offset).getTime() / 1000);
     const events = await this.moodle.getCalendarEvents(config as unknown as MoodleConnectionConfig, ids, from, to);
-    return events.map(event => {
+    return events.map((event, index) => {
       if (!Number.isSafeInteger(event.id) || !Number.isSafeInteger(event.timestart) || !Number.isSafeInteger(event.timeduration) || Number(event.timeduration) < 60 || Number(event.timeduration) > 86400 || event.modulename) throw new BadRequestException('Moodle: импортируются только групповые календарные занятия с ID, временем и длительностью; задания/модули не являются парами.');
       const group = groupMap[String(event.groupid)];
       if (typeof group !== 'string') throw new BadRequestException('Moodle вернул событие без явного соответствия группе; импорт остановлен.');
       const localStart = new Date((Number(event.timestart) + offsetMinutes(offset) * 60) * 1000).toISOString();
       const localEnd = new Date((Number(event.timestart) + Number(event.timeduration) + offsetMinutes(offset) * 60) * 1000).toISOString();
       if (localStart.slice(0, 10) !== localEnd.slice(0, 10) || localStart.slice(17, 23) !== '00.000' || localEnd.slice(17, 23) !== '00.000') throw new BadRequestException('Moodle: нужны занятия в одних локальных сутках с точностью до минуты.');
-      return normalizeScheduleRow({ id: `moodle:${event.id}`, date: localStart.slice(0, 10), startTime: localStart.slice(11, 16), endTime: localEnd.slice(11, 16), pairNumber: (pairTimes as Record<string, unknown>)[localStart.slice(11, 16)], subject: event.name, group }, offset);
+      return { ...normalizeScheduleRow({ id: `moodle:${event.id}`, date: localStart.slice(0, 10), startTime: localStart.slice(11, 16), endTime: localEnd.slice(11, 16), pairNumber: (pairTimes as Record<string, unknown>)[localStart.slice(11, 16)], subject: event.name, group }, offset), row: index + 1 };
     });
   }
 }

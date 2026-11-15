@@ -27,6 +27,10 @@ export class University {
   @Column({ type: 'jsonb', nullable: true })
   connectorConfig: Record<string, unknown>;
 
+  /** FR-IMP-08: mass-change confirmation threshold in percent (0–100); the empty-snapshot gate is independent. */
+  @Column({ type: 'int', default: 30 })
+  importMassChangeThreshold: number;
+
   @Column({
     type: 'enum',
     enum: ['active', 'inactive', 'pending'],

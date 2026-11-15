@@ -7,6 +7,7 @@ import {
   Param,
   ParseUUIDPipe,
   Query,
+  Res,
   UseGuards,
   Request,
   ClassSerializerInterceptor,
@@ -19,6 +20,7 @@ import {
   ApiBearerAuth,
   ApiResponse,
 } from "@nestjs/swagger";
+import { Response } from "express";
 
 import { AdminService } from "./admin.service";
 import { UpdateUserRoleDto } from "./dto/update-user-role.dto";
@@ -185,6 +187,38 @@ export class AdminController {
   @ApiOperation({ summary: 'Добавления, изменения и отмены в задании импорта' })
   getScheduleImportChanges(@Request() req, @Param('id', ParseUUIDPipe) id: string, @Query() pagination: PaginationQueryDto) {
     return this.scheduleImports.getChanges(req.user.organizationId, id, pagination);
+  }
+
+  @Get('import-runs/:id')
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @ApiOperation({ summary: 'Запись импорта: dry-run или применение, хеш файла, порог и результат по строкам (FR-IMP-04/05)' })
+  @ApiResponse({ status: 200, description: 'Запись импорта найдена' })
+  @ApiResponse({ status: 404, description: 'Запись импорта не найдена' })
+  getImportRun(@Request() req, @Param('id', ParseUUIDPipe) id: string) {
+    return this.scheduleImports.getRun(req.user.organizationId, id);
+  }
+
+  @Get('import-runs/:id/report')
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @ApiOperation({ summary: 'CSV-отчёт записи импорта: строки, предупреждения и ошибки (FR-IMP-04)' })
+  @ApiResponse({ status: 200, description: 'Отчёт в формате CSV' })
+  async getImportRunReport(@Request() req, @Param('id', ParseUUIDPipe) id: string, @Res() response: Response) {
+    const report = await this.scheduleImports.getReport(req.user.organizationId, id);
+    response.set({
+      'Content-Type': 'text/csv; charset=utf-8',
+      'Content-Disposition': `attachment; filename="${report.fileName}"`,
+      'X-Content-Type-Options': 'nosniff',
+    });
+    response.send(report.csv);
+  }
+
+  @Post('import-runs/:id/rollback')
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @ApiOperation({ summary: 'Компенсирующий откат применённого импорта в течение 30 дней (FR-IMP-05)' })
+  @ApiResponse({ status: 201, description: 'Откат выполнен: восстановлено занятий и конфликты' })
+  @ApiResponse({ status: 400, description: 'Импорт не откатывается (срок, статус или повторный откат)' })
+  rollbackImportRun(@Request() req, @Param('id', ParseUUIDPipe) id: string) {
+    return this.scheduleImports.rollback(req.user.organizationId, id);
   }
 
   @Post("schedule/sync")

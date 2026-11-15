@@ -39,16 +39,26 @@ export function offsetMinutes(offset: string): number {
   return (offset.startsWith('-') ? -1 : 1) * (hours * 60 + minutes);
 }
 
-function tableRows(table: string[][], offset: string): NormalizedScheduleLesson[] {
+function tableRows(table: string[][], offset: string, onRowIssue?: (issue: { row: number; message: string }) => void): NormalizedScheduleLesson[] {
   if (table.length === 0) throw new BadRequestException('Пустой файл: отсутствует строка заголовков.');
   const headers = table[0].map(value => value.trim());
   if (new Set(headers).size !== headers.length || headers.some(header => !HEADERS.includes(header)) || REQUIRED.some(header => !headers.includes(header))) throw new BadRequestException(`Нужны заголовки ${REQUIRED.join(', ')}; неизвестные/повторные колонки запрещены.`);
   const records = table.slice(1).filter(row => row.some(value => value !== ''));
   if (records.length > MAX_IMPORT_ROWS) throw new BadRequestException('Не больше 1000 занятий за импорт.');
-  return records.map((row, index) => {
-    if (row.length !== headers.length) throw new BadRequestException(`Строка ${index + 2}: число ячеек не совпадает с заголовками.`);
-    return normalizeScheduleRow(Object.fromEntries(headers.map((header, cell) => [header, row[cell]])), offset);
+  const lessons: NormalizedScheduleLesson[] = [];
+  records.forEach((row, index) => {
+    const rowNumber = index + 2;
+    if (row.length !== headers.length) throw new BadRequestException(`Строка ${rowNumber}: число ячеек не совпадает с заголовками.`);
+    try {
+      lessons.push({ ...normalizeScheduleRow(Object.fromEntries(headers.map((header, cell) => [header, row[cell]])), offset), row: rowNumber });
+    } catch (error) {
+      // FR-IMP-07: with a collector the row becomes an error entry and the
+      // remaining rows still import; without one the historic 400 stands.
+      if (onRowIssue && error instanceof BadRequestException) onRowIssue({ row: rowNumber, message: error.message });
+      else throw error;
+    }
   });
+  return lessons;
 }
 
 @Injectable()
@@ -79,7 +89,7 @@ export class CsvScheduleConnector implements ScheduleConnector {
     }
     if (quoted) throw new BadRequestException('Незакрытые кавычки CSV.');
     if (cell || row.length || closed) { row.push(cell); table.push(row); }
-    return tableRows(table, input.utcOffset || '+00:00');
+    return tableRows(table, input.utcOffset || '+00:00', input.onRowIssue);
   }
 }
 
@@ -105,6 +115,7 @@ export class IcsScheduleConnector implements ScheduleConnector {
         const pair = Number(component.getFirstPropertyValue('x-napare-pair-number') || input.pairNumber);
         const iterator = event.iterator();
         let steps = 0;
+        let rowSequence = 0;
         while (true) {
           if (++steps > 10000) throw new BadRequestException('ICS recurrence: превышен предел 10000 шагов. Разверните события за нужный период.');
           const occurrence = iterator.next();
@@ -114,7 +125,13 @@ export class IcsScheduleConnector implements ScheduleConnector {
           if (start.slice(0, 10) !== end.slice(0, 10) || start.slice(17, 23) !== '00.000' || end.slice(17, 23) !== '00.000') throw new BadRequestException('ICS: нужны занятия в пределах одних UTC суток с точностью до минуты.');
           if (input.endDate && start.slice(0, 10) > input.endDate.slice(0, 10)) break;
           if (!input.startDate || start.slice(0, 10) >= input.startDate.slice(0, 10)) {
-            results.push(normalizeScheduleRow({ id: event.isRecurring() ? `${event.uid}@${occurrence.toString()}` : event.uid, date: start.slice(0, 10), startTime: start.slice(11, 16), endTime: end.slice(11, 16), pairNumber: pair, subject: event.summary, group, teacher: component.getFirstPropertyValue('x-napare-teacher') || '', room: event.location || '', status: component.getFirstPropertyValue('status') === 'CANCELLED' ? 'cancelled' : 'scheduled' }, '+00:00'));
+            const rowNumber = ++rowSequence;
+            try {
+              results.push({ ...normalizeScheduleRow({ id: event.isRecurring() ? `${event.uid}@${occurrence.toString()}` : event.uid, date: start.slice(0, 10), startTime: start.slice(11, 16), endTime: end.slice(11, 16), pairNumber: pair, subject: event.summary, group, teacher: component.getFirstPropertyValue('x-napare-teacher') || '', room: event.location || '', status: component.getFirstPropertyValue('status') === 'CANCELLED' ? 'cancelled' : 'scheduled' }, '+00:00'), row: rowNumber });
+            } catch (error) {
+              if (input.onRowIssue && error instanceof BadRequestException) input.onRowIssue({ row: rowNumber, message: error.message });
+              else throw error;
+            }
             if (results.length > MAX_IMPORT_ROWS) throw new BadRequestException('Не больше 1000 занятий за импорт.');
           }
           if (!event.isRecurring()) break;
@@ -181,7 +198,7 @@ export class XlsxScheduleConnector implements ScheduleConnector {
         }
         table.push(values);
       });
-      return tableRows(table, input.utcOffset || '+00:00');
+      return tableRows(table, input.utcOffset || '+00:00', input.onRowIssue);
     } catch (error) {
       if (error instanceof BadRequestException) throw error;
       throw new BadRequestException('Некорректный или слишком большой XLSX.');

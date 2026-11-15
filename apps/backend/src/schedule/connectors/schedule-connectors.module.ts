@@ -10,10 +10,11 @@ import { Lesson } from '../entities/lesson.entity';
 import { CsvScheduleConnector, IcsScheduleConnector, XlsxScheduleConnector } from './file-schedule-connectors';
 import { MoodleScheduleConnector, SibitScheduleConnector } from './external-schedule-connectors';
 import { ScheduleImportJob } from './schedule-import-job.entity';
+import { ImportRun } from './import-run.entity';
 import { ScheduleImportService } from './schedule-import.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([University, Group, User, Lesson, ScheduleChange, ScheduleImportJob]), MoodleModule, RaspModule],
+  imports: [TypeOrmModule.forFeature([University, Group, User, Lesson, ScheduleChange, ScheduleImportJob, ImportRun]), MoodleModule, RaspModule],
   providers: [CsvScheduleConnector, IcsScheduleConnector, XlsxScheduleConnector, SibitScheduleConnector, MoodleScheduleConnector, ScheduleImportService],
   exports: [ScheduleImportService],
 })

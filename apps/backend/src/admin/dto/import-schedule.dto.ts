@@ -119,4 +119,16 @@ export class ImportScheduleDto {
   @ApiPropertyOptional({ description: 'Номер пары ICS при отсутствии X-NAPARE-PAIR-NUMBER' })
   @IsOptional() @IsInt() @Min(1)
   pairNumber?: number;
+
+  @ApiPropertyOptional({
+    description: 'Серверный dry-run (FR-IMP-04): вернуть сводку, предупреждения и ошибки по строкам, ничего не применяя',
+  })
+  @IsOptional() @IsBoolean()
+  dryRun?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Явное подтверждение массового изменения/пустого снимка (FR-IMP-08); требуется при 409 IMPORT_NEEDS_CONFIRMATION',
+  })
+  @IsOptional() @IsBoolean()
+  confirmMassChange?: boolean;
 }

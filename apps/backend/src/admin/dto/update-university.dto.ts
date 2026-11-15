@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsObject, IsEnum } from 'class-validator';
+import { IsString, IsOptional, IsObject, IsEnum, IsInt, Min, Max } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class UpdateUniversityDto {
@@ -21,6 +21,15 @@ export class UpdateUniversityDto {
   @IsOptional()
   @IsObject()
   connectorConfig?: Record<string, unknown>;
+
+  @ApiPropertyOptional({
+    description: 'Порог массового изменения расписания в процентах (FR-IMP-08); пустой снимок подтверждается всегда',
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(100)
+  importMassChangeThreshold?: number;
 
   @ApiPropertyOptional()
   @IsOptional()

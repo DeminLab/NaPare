@@ -50,10 +50,20 @@ async function refreshTokens(): Promise<boolean> {
   }
 }
 
-export async function apiFetch<T>(
-  path: string,
-  init: RequestInit = {},
-): Promise<T> {
+/** HTTP error with the backend status and machine code (e.g. IMPORT_NEEDS_CONFIRMATION). */
+export class ApiError extends Error {
+  readonly status: number;
+  readonly code?: string;
+  constructor(message: string, status: number, code?: string) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.code = code;
+  }
+}
+
+/** Authenticated request with the shared refresh-on-401 behavior. */
+async function request(path: string, init: RequestInit = {}): Promise<Response> {
   const token = getToken();
   let res = await fetch(`${API_BASE}${path}`, {
     ...init,
@@ -79,24 +89,57 @@ export async function apiFetch<T>(
     } else {
       clearTokens();
       window.location.href = LOGIN_PATH;
-      throw new Error("Сессия истекла");
+      throw new ApiError("Сессия истекла", 401);
     }
   }
+  return res;
+}
+
+function toApiError(res: Response, body: unknown): ApiError {
+  const fallback =
+    res.status === 403
+      ? "У вас нет доступа к этому разделу."
+      : res.status === 404
+        ? "Запрошенные данные не найдены или больше недоступны."
+        : `Не удалось выполнить запрос (${res.status}).`;
+  const record = body && typeof body === 'object' ? body as Record<string, unknown> : null;
+  const raw = record?.message;
+  const text = Array.isArray(raw)
+    ? raw.filter((part): part is string => typeof part === 'string').join(" ")
+    : typeof raw === "string" && raw
+      ? raw
+      : fallback;
+  const code = typeof record?.code === "string" ? record.code : undefined;
+  return new ApiError(text, res.status, code);
+}
+
+export async function apiFetch<T>(
+  path: string,
+  init: RequestInit = {},
+): Promise<T> {
+  const res = await request(path, init);
 
   if (!res.ok) {
     const body = await res.json().catch(() => null);
-    const fallback =
-      res.status === 403
-        ? "У вас нет доступа к этому разделу."
-        : res.status === 404
-          ? "Запрошенные данные не найдены или больше недоступны."
-          : `Не удалось выполнить запрос (${res.status}).`;
-    throw new Error(body?.message || fallback);
+    throw toApiError(res, body);
   }
 
   if (res.status === 204) return undefined as T;
   const content = await res.text();
   return (content.trim() ? JSON.parse(content) : undefined) as T;
+}
+
+/** Non-JSON response body (e.g. the text/csv import report) with the same auth handling. */
+export async function apiFetchText(
+  path: string,
+  init: RequestInit = {},
+): Promise<string> {
+  const res = await request(path, init);
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw toApiError(res, body);
+  }
+  return res.text();
 }
 
 export interface PaginatedResponse<T> {

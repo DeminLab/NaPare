@@ -9,7 +9,9 @@ import { Lesson } from '../src/schedule/entities/lesson.entity';
 import { ScheduleChange } from '../src/academic/entities/schedule-change.entity';
 import { ScheduleImportService } from '../src/schedule/connectors/schedule-import.service';
 import { ScheduleImportJob } from '../src/schedule/connectors/schedule-import-job.entity';
+import { ImportRun } from '../src/schedule/connectors/import-run.entity';
 import { ScheduleImportJobs1700000000033 } from '../src/migrations/1700000000033-ScheduleImportJobs';
+import { ImportRuns1700000000050 } from '../src/migrations/1700000000050-ImportRuns';
 import { TenantOrganizationAlias1700000000046 } from '../src/migrations/1700000000046-TenantOrganizationAlias';
 import { PaginationQueryDto } from '../src/common/dto/pagination-query.dto';
 import { SibitScheduleConnector } from '../src/schedule/connectors/external-schedule-connectors';
@@ -28,7 +30,15 @@ suite('Queued schedule import: real HTTP/JWT/PostgreSQL FORCE RLS', () => {
     f = await createCurationFixture(process.env.SCHEDULE_IMPORT_TEST_DATABASE_URL!);
     const runner = f.db.createQueryRunner();
     await runner.connect();
-    try { await runner.query('DROP TABLE schedule_import_jobs'); await new ScheduleImportJobs1700000000033().up(runner); await new TenantOrganizationAlias1700000000046().up(runner); } finally { await runner.release(); }
+    try {
+      // import_runs references schedule_import_jobs, so the journal goes first;
+      // 050 recreates it together with the university threshold column.
+      await runner.query('DROP TABLE IF EXISTS import_runs');
+      await runner.query('DROP TABLE schedule_import_jobs');
+      await new ScheduleImportJobs1700000000033().up(runner);
+      await new ImportRuns1700000000050().up(runner);
+      await new TenantOrganizationAlias1700000000046().up(runner);
+    } finally { await runner.release(); }
     service = f.app.get(ScheduleImportService);
     await f.db.getRepository(User).update(f.users.outsider.id, { role: UserRole.UNIVERSITY_ADMIN });
     for (const actor of ['admin', 'student', 'outsider']) {
@@ -54,7 +64,7 @@ suite('Queued schedule import: real HTTP/JWT/PostgreSQL FORCE RLS', () => {
   it('updates and soft-cancels only source-owned lessons within explicit groups/local days; preserves manual and other sources', async () => {
     await submit(payload('replace', { content: JSON.stringify([row('a'), row('b')]) })).expect(201);
     const manual = await f.db.getRepository(Lesson).save({ ...f.lesson, id: randomUUID(), source: 'manual', startDate: new Date('2026-10-21T19:00Z') });
-    const data = payload('replace', { content: JSON.stringify([row('a', { room: '999' })]), replace: true, startDate: '2026-10-22', endDate: '2026-10-22', groupNames: ['ИН-25'] });
+    const data = payload('replace', { content: JSON.stringify([row('a', { room: '999' })]), replace: true, startDate: '2026-10-22', endDate: '2026-10-22', groupNames: ['ИН-25'], confirmMassChange: true });
     const result = await submit(data).expect(201); expect(result.body).toMatchObject({ imported: 0, updated: 1, deleted: 1 });
     expect(await f.db.getRepository(Lesson).countBy({ id: manual.id })).toBe(1);
     expect(await f.db.getRepository(Lesson).countBy({ source: 'university-import:first' })).toBe(1);
@@ -63,7 +73,7 @@ suite('Queued schedule import: real HTTP/JWT/PostgreSQL FORCE RLS', () => {
     expect(await f.db.getRepository(Lesson).countBy({ id: b.id })).toBe(0);
     const changes = await f.db.getRepository(ScheduleChange).findBy({ legacyLessonId: b.id });
     expect(changes.map(change => change.newValue.changeType)).toEqual(['added', 'deleted']);
-    await submit(payload('replace', { content: JSON.stringify([row('b')]) })).expect(201).expect(({ body }) => expect(body.updated).toBe(1));
+    await submit(payload('replace', { content: JSON.stringify([row('b')]), confirmMassChange: true })).expect(201).expect(({ body }) => expect(body.updated).toBe(1));
   });
   it('rejects unauthorized role, duplicate IDs and foreign group names; hides foreign jobs/journal', async () => {
     await submit(payload('role'), 'student').expect(403);
@@ -123,5 +133,116 @@ suite('Queued schedule import: real HTTP/JWT/PostgreSQL FORCE RLS', () => {
     await f.db.getRepository(User).update(f.users.admin.id, { isActive: false });
     await service.processJob(revoked.body.jobId);
     expect((await f.db.getRepository(ScheduleImportJob).findOneByOrFail({ id: revoked.body.jobId })).status).toBe('failed');
+  });
+  it('answers a server dry-run with the plan, a downloadable report and no queued job (FR-IMP-04)', async () => {
+    // The previous test revoked the admin account; the token must work again.
+    await f.db.getRepository(User).update(f.users.admin.id, { isActive: true });
+    const jobsBefore = await f.db.getRepository(ScheduleImportJob).count();
+    const content = JSON.stringify([row('dry-1'), row('dry-2', { date: '2026-13-45' })]);
+    const dry = await submit(payload('dry', { content, dryRun: true })).expect(201);
+    expect(dry.body).toMatchObject({ dryRun: true, summary: { imported: 1, updated: 0, deleted: 0, errors: 1 } });
+    expect(dry.body.rows).toEqual(expect.arrayContaining([
+      expect.objectContaining({ row: 1, outcome: 'created' }),
+      expect.objectContaining({ row: 2, outcome: 'error', message: expect.stringContaining('дата') }),
+    ]));
+    expect(dry.body.warnings).toEqual(expect.arrayContaining([expect.objectContaining({ row: 1 })]));
+    expect(dry.body.errors).toHaveLength(1);
+    expect(dry.body.requiresConfirmation).toBe(false);
+    expect(dry.body.existingActive).toBeGreaterThan(0);
+    expect(dry.body.runId).toEqual(expect.any(String));
+    // A dry-run is read-only: no job, no lessons.
+    expect(await f.db.getRepository(ScheduleImportJob).count()).toBe(jobsBefore);
+    expect(await f.db.getRepository(Lesson).countBy({ source: 'university-import:dry' })).toBe(0);
+    const run = await http().get(`/api/v1/admin/import-runs/${dry.body.runId}`).auth(tokens.admin, { type: 'bearer' }).expect(200);
+    expect(run.body).toMatchObject({ dryRun: true, mode: 'dry-run', status: 'completed', mappingVersion: '1' });
+    expect(run.body.fileHash).toEqual(expect.any(String));
+    expect(run.body.result.summary).toMatchObject({ imported: 1, errors: 1 });
+    const report = await http().get(`/api/v1/admin/import-runs/${dry.body.runId}/report`).auth(tokens.admin, { type: 'bearer' }).expect(200);
+    expect(report.headers['content-type']).toContain('text/csv');
+    expect(report.headers['content-disposition']).toContain(`import-run-${dry.body.runId}.csv`);
+    expect(report.text.charCodeAt(0)).toBe(0xfeff);
+    expect(report.text).toContain('Тип;Строка;Внешний ID');
+    expect(report.text).toContain('создано');
+    expect(report.text).toContain('ошибка');
+    // The run journal is tenant-isolated.
+    await http().get(`/api/v1/admin/import-runs/${dry.body.runId}`).auth(tokens.outsider, { type: 'bearer' }).expect(404);
+    await http().get('/api/v1/admin/import-runs/not-a-uuid').auth(tokens.admin, { type: 'bearer' }).expect(400);
+    const [rls] = await f.db.query("SELECT relrowsecurity,relforcerowsecurity FROM pg_class WHERE relname='import_runs'");
+    expect(rls).toEqual({ relrowsecurity: true, relforcerowsecurity: true });
+  });
+  it('gates mass changes behind an explicit confirmation and honors the organization threshold (FR-IMP-08)', async () => {
+    // Creates are never gated, so the seed row lands without a flag.
+    await submit(payload('gate', { content: JSON.stringify([row('g1'), row('g2')]) })).expect(201);
+    const changed = payload('gate', { content: JSON.stringify([row('g1', { room: '101' }), row('g2', { room: '102' })]) });
+    const setThreshold = (value: number) => http().patch('/api/v1/admin/university').auth(tokens.admin, { type: 'bearer' }).send({ importMassChangeThreshold: value }).expect(200);
+    await setThreshold(0);
+    try {
+      const jobsBefore = await f.db.getRepository(ScheduleImportJob).count();
+      const gated = await submit(changed).expect(409);
+      expect(gated.body).toMatchObject({ code: 'IMPORT_NEEDS_CONFIRMATION' });
+      // Nothing durable is written before the confirmation (FR-IMP-08).
+      expect(await f.db.getRepository(ScheduleImportJob).count()).toBe(jobsBefore);
+      const g1 = await f.db.getRepository(Lesson).findOneByOrFail({ source: 'university-import:gate', externalId: 'g1' });
+      expect(g1.room).toBeFalsy();
+      // The explicit confirmation applies the very same payload.
+      const confirmed = await submit({ ...changed, confirmMassChange: true }).expect(201);
+      expect(confirmed.body).toMatchObject({ updated: 2, deleted: 0, runId: expect.any(String) });
+      expect((await f.db.getRepository(Lesson).findOneByOrFail({ source: 'university-import:gate', externalId: 'g1' })).room).toBe('101');
+      // Threshold 100 disables only the mass-change gate.
+      await setThreshold(100);
+      const free = payload('gate', { content: JSON.stringify([row('g1', { room: '103' }), row('g2', { room: '104' })]) });
+      await submit(free).expect(201).expect(({ body }) => expect(body.updated).toBe(2));
+    } finally {
+      await setThreshold(30);
+    }
+  });
+  it('applies only valid rows atomically and keeps error rows for the report (FR-IMP-07)', async () => {
+    const content = JSON.stringify([row('p1'), row('p2', { date: '2026-13-45' }), row('p3')]);
+    const applied = await submit(payload('partial', { content })).expect(201);
+    expect(applied.body).toMatchObject({ imported: 2, updated: 0, deleted: 0, errors: 1 });
+    expect(await f.db.getRepository(Lesson).countBy({ source: 'university-import:partial' })).toBe(2);
+    const run = await http().get(`/api/v1/admin/import-runs/${applied.body.runId}`).auth(tokens.admin, { type: 'bearer' }).expect(200);
+    expect(run.body.result.summary).toMatchObject({ imported: 2, errors: 1 });
+    const errorRows = run.body.result.rows.filter((entry: { outcome: string }) => entry.outcome === 'error');
+    expect(errorRows).toHaveLength(1);
+    expect(errorRows[0]).toMatchObject({ row: 2, message: expect.stringContaining('дата') });
+    // The dry-run of the same file agrees with what was applied, without applying.
+    const dry = await submit(payload('partial', { content, dryRun: true })).expect(201);
+    expect(dry.body.summary).toMatchObject({ imported: 0, updated: 0, unchanged: 2, errors: 1 });
+    expect(await f.db.getRepository(Lesson).countBy({ source: 'university-import:partial' })).toBe(2);
+  });
+  it('rolls an applied run back inside 30 days and never overwrites newer data (FR-IMP-05)', async () => {
+    // Dry-runs and foreign accounts are not rollback targets.
+    const dry = await submit(payload('rb-dry', { content: JSON.stringify([row('rd1')]), dryRun: true })).expect(201);
+    await http().post(`/api/v1/admin/import-runs/${dry.body.runId}/rollback`).auth(tokens.admin, { type: 'bearer' }).expect(400);
+    await http().post(`/api/v1/admin/import-runs/${dry.body.runId}/rollback`).auth(tokens.outsider, { type: 'bearer' }).expect(404);
+    // 1) Created rows are compensated by a soft delete.
+    const seed = await submit(payload('rb-created', { content: JSON.stringify([row('rc1'), row('rc2', { room: '101' })]) })).expect(201);
+    const undone = await http().post(`/api/v1/admin/import-runs/${seed.body.runId}/rollback`).auth(tokens.admin, { type: 'bearer' }).expect(201);
+    expect(undone.body).toMatchObject({ restored: 2, conflicts: [] });
+    expect(await f.db.getRepository(Lesson).countBy({ source: 'university-import:rb-created' })).toBe(0);
+    await http().post(`/api/v1/admin/import-runs/${seed.body.runId}/rollback`).auth(tokens.admin, { type: 'bearer' }).expect(400);
+    const seedRun = await http().get(`/api/v1/admin/import-runs/${seed.body.runId}`).auth(tokens.admin, { type: 'bearer' }).expect(200);
+    expect(seedRun.body.rollbackResult).toMatchObject({ restored: 2 });
+    expect(seedRun.body.rolledBackAt).toEqual(expect.any(String));
+    // 2) Updated rows return to their pre-import values.
+    await submit(payload('rb-updated', { content: JSON.stringify([row('ru1', { room: '101' })]) })).expect(201);
+    const update = await submit(payload('rb-updated', { content: JSON.stringify([row('ru1', { room: '202' })]) })).expect(201);
+    expect(update.body).toMatchObject({ updated: 1 });
+    const restored = await http().post(`/api/v1/admin/import-runs/${update.body.runId}/rollback`).auth(tokens.admin, { type: 'bearer' }).expect(201);
+    expect(restored.body).toMatchObject({ restored: 1, conflicts: [] });
+    expect((await f.db.getRepository(Lesson).findOneByOrFail({ source: 'university-import:rb-updated', externalId: 'ru1' })).room).toBe('101');
+    // 3) Data changed after the import is never overwritten (FR-IMP-05).
+    const conflictSeed = await submit(payload('rb-conflict', { content: JSON.stringify([row('rx1')]) })).expect(201);
+    await f.db.getRepository(Lesson).update({ source: 'university-import:rb-conflict', externalId: 'rx1' }, { subject: 'Ручная правка' });
+    const conflicted = await http().post(`/api/v1/admin/import-runs/${conflictSeed.body.runId}/rollback`).auth(tokens.admin, { type: 'bearer' }).expect(201);
+    expect(conflicted.body).toMatchObject({ restored: 0 });
+    expect(conflicted.body.conflicts).toEqual([expect.objectContaining({ reason: 'changed', externalId: 'rx1' })]);
+    expect((await f.db.getRepository(Lesson).findOneByOrFail({ source: 'university-import:rb-conflict', externalId: 'rx1' })).subject).toBe('Ручная правка');
+    // 4) The 30-day window is enforced.
+    const expired = await submit(payload('rb-expired', { content: JSON.stringify([row('re1')]) })).expect(201);
+    await f.db.getRepository(ImportRun).update({ id: expired.body.runId }, { completedAt: new Date(Date.now() - 31 * 86400000) });
+    await http().post(`/api/v1/admin/import-runs/${expired.body.runId}/rollback`).auth(tokens.admin, { type: 'bearer' }).expect(400);
+    await http().post('/api/v1/admin/import-runs/not-a-uuid/rollback').auth(tokens.admin, { type: 'bearer' }).expect(400);
   });
 });
