@@ -3,13 +3,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useWorkspaceQuery, parseCalendarDate } from '@napare/ui/workspace-shell';
-import { ApiError, apiFetch, apiFetchList } from '@/lib/api';
+import { ApiError, apiFetch } from '@/lib/api';
 import { flushStudentFavoriteQueue, getStudentFavorites, syncStudentFavorite } from '../favorite-api';
 import { RequestState, Skeleton } from '@/components/ui';
 import { EmptyState, LessonTypeBadge, lessonTypeKey } from '@napare/ui';
 import { getLessonLocation } from '../schedule-location';
+import { fetchScheduleLessons, isScheduleLesson as isLesson, type ScheduleLesson as Lesson } from '../schedule-read-model';
 
-interface Lesson { id: string; date?: string; startDate?: string; endDate?: string; subject: string; subjectType?: string; teacherName?: string; room?: string; building?: string; subgroup?: string; weekType?: 'odd' | 'even' | 'both'; startTime: string; endTime: string; pairNumber?: number; isChanged: boolean; changeDescription?: string; }
 interface DaySchedule { date: string; dayName: string; lessons: Lesson[]; }
 interface AcademicWeek { weekNumber: number; weekType: string; }
 
@@ -34,15 +34,8 @@ function AcademicWeekLabel({ date }: { date: string }) {
   </p>;
 }
 
-interface ScheduleV2Entry { id: string; date: string; startTime: string; endTime: string; subject: string; subjectType?: string | null; teacherName?: string | null; room?: string | null; building?: string | null; subgroup?: string | null; pairNumber?: number | null; state: 'scheduled' | 'changed' | 'cancelled'; change?: { type: string; reason?: string | null } | null; }
-interface ScheduleV2Response { days: Array<{ date: string; lessons: ScheduleV2Entry[] }>; }
 const typeLabels: Record<string, string> = { lecture: 'Лекция', practice: 'Практика', lab: 'Лабораторная', exam: 'Экзамен', consultation: 'Консультация', coursework: 'Курсовая', test: 'Зачёт' };
 const hasPairSpace = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
-function isLesson(value: unknown): value is Lesson {
-  if (!value || typeof value !== 'object') return false;
-  const lesson = value as Partial<Lesson>;
-  return typeof lesson.id === 'string' && typeof lesson.subject === 'string' && typeof lesson.startTime === 'string' && typeof lesson.endTime === 'string';
-}
 const time = (value?: string) => value?.includes('T') ? value.slice(11, 16) : value || '—';
 const dateIso = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 const weekStart = (base: Date) => { const date = new Date(base); const day = date.getDay(); date.setDate(date.getDate() - day + (day === 0 ? -6 : 1)); return date; };
@@ -118,41 +111,6 @@ function favoriteTeachersStorageKey(): string | null {
   } catch {
     return null;
   }
-}
-
-function entryToLesson(entry: ScheduleV2Entry): Lesson {
-  const reason = entry.change?.reason || '';
-  return {
-    id: entry.id,
-    date: entry.date,
-    startDate: `${entry.date}T${entry.startTime}:00`,
-    endDate: `${entry.date}T${entry.endTime}:00`,
-    subject: entry.subject,
-    subjectType: entry.subjectType || undefined,
-    teacherName: entry.teacherName || undefined,
-    room: entry.room || undefined,
-    building: entry.building || undefined,
-    subgroup: entry.subgroup || undefined,
-    startTime: entry.startTime,
-    endTime: entry.endTime,
-    pairNumber: entry.pairNumber ?? undefined,
-    isChanged: entry.state !== 'scheduled',
-    changeDescription: entry.state === 'cancelled' ? `Отменено${reason ? `: ${reason}` : ''}` : reason || undefined,
-  };
-}
-
-/**
- * One read contract over both schedule storages. If the unified endpoint is
- * unavailable, the legacy range endpoint keeps the week usable.
- */
-async function fetchWeekLessons(startDate: string, endDate: string): Promise<Lesson[]> {
-  try {
-    const response = await apiFetch<ScheduleV2Response>(`/schedule/v2?from=${startDate}&to=${endDate}`);
-    if (Array.isArray(response.days)) return response.days.flatMap(day => day.lessons.map(entryToLesson));
-  } catch {
-    // Fall through to the legacy endpoint.
-  }
-  return apiFetchList<Lesson>(`/schedule/range?startDate=${startDate}&endDate=${endDate}`);
 }
 
 function groupLessonsByWeek(lessons: Lesson[], start: Date): DaySchedule[] {
@@ -358,7 +316,7 @@ export default function WeekPage() {
     setCacheRefreshing(Boolean(cached));
     setLoading(!cached);
     setError('');
-    fetchWeekLessons(startIso, dateIso(endDate))
+    fetchScheduleLessons(startIso, dateIso(endDate))
       .then(lessons => {
         if (!active) return;
         setSchedule(groupLessonsByWeek(lessons, start));

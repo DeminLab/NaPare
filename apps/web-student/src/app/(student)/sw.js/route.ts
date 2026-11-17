@@ -9,7 +9,7 @@ async function remember(request, response, epoch) {
   if (!response.ok) return;
   const url = new URL(request.url), owner = ownerOf((request.headers.get('Authorization') || '').replace(/^Bearer /i, ''));
   if (!owner || url.origin !== self.location.origin) return;
-  if ([...url.searchParams.keys()].some(key => !['startDate','endDate','date','timeZone','page','limit'].includes(key))) return;
+  if ([...url.searchParams.keys()].some(key => !['startDate','endDate','from','to','date','timeZone','page','limit'].includes(key))) return;
   if (Number(response.headers.get('Content-Length')) > 512000) return;
   const raw = await response.text(); if (raw.length > 512000) return;
   const data = payloadOf(url.pathname, JSON.parse(raw)); if (!data) return;
@@ -32,7 +32,7 @@ self.addEventListener('fetch', (event) => {
   const request = event.request;
   if (request.method !== 'GET') return;
   const url = new URL(request.url);
-  if (url.origin === self.location.origin && (url.pathname === '/api/v1/schedule/range' || url.pathname === '/api/v1/my-day' || /^\\/api\\/v1\\/pair-spaces\\/[\\da-f-]{36}$/i.test(url.pathname))) {
+  if (url.origin === self.location.origin && (url.pathname === '/api/v1/schedule/v2' || url.pathname === '/api/v1/schedule/range' || url.pathname === '/api/v1/my-day' || /^\\/api\\/v1\\/pair-spaces\\/[\\da-f-]{36}$/i.test(url.pathname))) {
     const epoch = generation, network = fetch(request);
     event.waitUntil(network.then(response => epoch === generation ? remember(request, response.clone(), epoch) : undefined).catch(() => undefined));
     event.respondWith(network); return;

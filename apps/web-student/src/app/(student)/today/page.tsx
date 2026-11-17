@@ -4,9 +4,10 @@ import Link from 'next/link';
 import { getInternalHref } from '../internal-navigation';
 import { getLessonLocation } from '../schedule-location';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { apiFetch, apiFetchList, getUser, StudentUser } from '@/lib/api';
+import { apiFetch, getUser, StudentUser } from '@/lib/api';
 import { Badge, Button, Card, EmptyState, Icon, LessonTypeBadge, RequestState, Skeleton } from '@napare/ui';
 import { PreparationProgressControl, type PreparationProgress } from '../PreparationProgressControl';
+import { fetchScheduleLessons, type ScheduleLesson } from '../schedule-read-model';
 
 interface Lesson { id: string; startDate?: string; endDate?: string; subject: string; subjectType?: string; teacherName?: string; room?: string; building?: string; subgroup?: string; weekType?: 'odd' | 'even' | 'both'; startTime: string; endTime: string; isChanged?: boolean; changeDescription?: string; }
 interface Preparation { id: string; title: string; description?: string | null; deadline?: string | null; lessonId: string; subject: string; progress?: PreparationProgress; subtasks?: Array<{ id: string; title: string; done: boolean }>; }
@@ -16,7 +17,6 @@ interface Notification { id: string; title: string; body?: string; type: string;
 interface CareerDeadline { id: string; title: string; deadline: string; }
 interface MyDayResponse { date?: string; lessons: Lesson[]; pairSpaces?: PairSpace[]; upcomingPreparations?: Preparation[]; careerDeadlines?: CareerDeadline[]; careerInterviews?: Array<{ id: string; title: string; startsAt: string; endsAt: string }>; notifications?: { unreadCount?: number }; }
 interface TodaySnapshot { savedAt: string; timeZone: string; day: MyDayResponse; user: StudentUser; notifications: Notification[]; }
-interface ScheduleLesson extends Lesson { date?: string; startDate?: string; endDate?: string; }
 interface AbsenceRecord { id: string; startDate?: string; endDate?: string; affectedLessonsCount?: number; }
 type TimelineItem = { lesson: Lesson; start: number; end: number };
 type ActionState = 'today' | 'tomorrow' | 'upcoming' | 'overdue' | 'noDeadline' | 'invalid';
@@ -181,7 +181,7 @@ export default function TodayPage() {
     setScheduleStatus('loading');
     setAbsenceStatus('loading');
     void Promise.all([
-      apiFetchList<ScheduleLesson>(`/schedule/range?startDate=${startDate}&endDate=${endDate}`).catch(() => null),
+      fetchScheduleLessons(startDate, endDate).catch(() => null),
       apiFetch<{ data: AbsenceRecord[]; meta: { total: number } }>('/absences/my?limit=100&page=1')
         .then(response => response.meta.total <= response.data.length ? response.data : null)
         .catch(() => null),

@@ -20,7 +20,32 @@ export function offlinePayload(path: string, body: unknown) {
     const row = record(value);
     return Object.fromEntries(['id', 'date', 'startDate', 'startTime', 'endTime', 'subject', 'teacherName', 'room', 'building', 'changeDescription'].map(key => [key, text(row[key])]));
   };
+  const pickEntry = (value: unknown) => {
+    const row = record(value);
+    const date = text(row.date);
+    return {
+      id: text(row.lessonId) || text(row.id),
+      date,
+      startDate: date,
+      startTime: text(row.startTime),
+      endTime: text(row.endTime),
+      subject: text(row.subject),
+      teacherName: text(row.teacherName),
+      room: text(row.room),
+      building: text(row.building),
+      changeDescription: text(record(row.change).reason),
+    };
+  };
   const source = record(body);
+  if (path === '/api/v1/schedule/v2') {
+    const days = Array.isArray(source.days) ? source.days : [];
+    const rows = days.flatMap(day => {
+      const lessons = record(day).lessons;
+      return Array.isArray(lessons) ? lessons : [];
+    });
+    if (rows.length > 500) return null;
+    return { kind: 'schedule', lessons: rows.map(pickEntry) };
+  }
   if (path === '/api/v1/schedule/range' || path === '/api/v1/my-day') {
     const rows = Array.isArray(source.data) ? source.data : Array.isArray(source.lessons) ? source.lessons : [];
     if (rows.length > 500) return null;

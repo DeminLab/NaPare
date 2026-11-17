@@ -4,28 +4,9 @@ import Link from 'next/link';
 import { lessonTypeKey } from '@napare/ui';
 import { useWorkspaceQuery, parseCalendarDate } from '@napare/ui/workspace-shell';
 import { useEffect, useMemo, useState } from 'react';
-import { apiFetch } from '@/lib/api';
-import type { PaginatedResponse } from '@/lib/api';
 import { MonthCalendar, lessonCountLabel, type MonthDayCell } from './MonthCalendar';
 import { getLessonLocation } from '../schedule-location';
-
-interface Lesson {
-  id: string;
-  date?: string;
-  startDate?: string;
-  endDate?: string;
-  subject: string;
-  subjectType?: string;
-  teacherName?: string;
-  room?: string;
-  building?: string;
-  subgroup?: string;
-  weekType?: 'odd' | 'even' | 'both';
-  startTime: string;
-  endTime: string;
-  isChanged?: boolean;
-  changeDescription?: string;
-}
+import { fetchScheduleLessons, isScheduleLesson as isLesson, type ScheduleLesson as Lesson } from '../schedule-read-model';
 
 const typeLabels: Record<string, string> = {
   lecture: 'Лекции',
@@ -115,22 +96,6 @@ function getCacheKey(monthKey: string): string | null {
   }
 }
 
-async function fetchMonthSchedule(start: Date, end: Date): Promise<Lesson[]> {
-  const startDate = dateKey(start);
-  const endDate = dateKey(end);
-  const lessons: Lesson[] = [];
-  let page = 1;
-  let totalPages = 1;
-  do {
-    const query = new URLSearchParams({ startDate, endDate, page: String(page), limit: '100' });
-    const result = await apiFetch<PaginatedResponse<Lesson>>(`/schedule/range?${query}`);
-    lessons.push(...result.data);
-    totalPages = result.meta.totalPages;
-    page += 1;
-  } while (page <= totalPages);
-  return lessons;
-}
-
 export default function MonthSchedulePage() {
   const [month, setMonth] = useState(() => {
     const now = new Date();
@@ -187,7 +152,7 @@ export default function MonthSchedulePage() {
     setLoading(!cached);
     setError('');
     const requestedMonth = new Date(`${monthKey}-01T12:00:00`);
-    void fetchMonthSchedule(monthGridStart(requestedMonth), monthGridEnd(requestedMonth))
+    void fetchScheduleLessons(dateKey(monthGridStart(requestedMonth)), dateKey(monthGridEnd(requestedMonth)))
       .then(result => {
         if (!active) return;
         setLessons(result);
@@ -295,11 +260,3 @@ export default function MonthSchedulePage() {
   </div>;
 }
 
-function isLesson(value: unknown): value is Lesson {
-  if (!value || typeof value !== 'object') return false;
-  const lesson = value as Partial<Lesson>;
-  return typeof lesson.id === 'string'
-    && typeof lesson.subject === 'string'
-    && typeof lesson.startTime === 'string'
-    && typeof lesson.endTime === 'string';
-}
