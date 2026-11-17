@@ -7,6 +7,7 @@ import { CareerService, assertCareerResultUrl, assertCareerTransition } from './
 import { CareerTask, CareerProfile, CareerMembership, CareerAdmission, CareerTest, CareerTestAttempt, CareerNotice, CareerPortfolio, CareerWork, CareerReview, CareerApplication, CareerCompany, CareerPartnership } from './career.entities';
 import { User } from '../users/entities/user.entity';
 import { University } from '../users/entities/university.entity';
+import { TenantContext } from '../common/tenant/tenant-context';
 
 const student={id:'student-a',email:'student@test',role:UserRole.STUDENT,organizationId:'university-a'};
 describe('Career resource boundaries',()=>{
@@ -453,13 +454,16 @@ describe('Career student admissions and portfolio',()=>{
 
 describe('Career public portfolio cases',()=>{
   const studentId='public-student';
-  const row={portfolio_id:'portfolio-101',portfolio_case_text:'Published case',portfolio_created_at:new Date(),work_id:'work-101',work_submission:'Accepted result',work_result_url:'https://example.test/result',task_id:'task-101',task_title:'Task',task_skill:'design',company_id:'company-1',company_name:'Company',review_id:'review-101',review_body:'Review',review_rating:5};
+  const row={portfolio_id:'portfolio-101',portfolio_case_text:'Published case',portfolio_created_at:new Date(),work_id:'work-101',work_task_id:'task-101',work_submission:'Accepted result',work_result_url:'https://example.test/result',review_id:'review-101',review_body:'Review',review_rating:5};
   const makeBuilder=(rows:Array<Record<string,any>>,total:number)=>{
     const query:any={innerJoin:jest.fn(function(){return this;}),where:jest.fn(function(){return this;}),select:jest.fn(function(){return this;}),orderBy:jest.fn(function(){return this;}),addOrderBy:jest.fn(function(){return this;}),skip:jest.fn(function(){return this;}),take:jest.fn(function(){return this;}),getRawMany:jest.fn().mockResolvedValue(rows),getCount:jest.fn().mockResolvedValue(total)};return query;
   };
   const makeHarness=(rows:Array<Record<string,any>>,total:number,user:any={id:studentId,firstName:'Ada',lastName:'Lovelace'})=>{
-    const queries:Array<any>=[];const userFind=jest.fn().mockResolvedValue(user);const getRepository=jest.fn(entity=>entity===User?{findOne:userFind}:entity===CareerPortfolio?{createQueryBuilder:jest.fn(()=>{const query=makeBuilder(rows,total);queries.push(query);return query;})}:{});
-    return {service:new CareerService({manager:{getRepository}} as unknown as DataSource,{} as AuthService),queries,getRepository,userFind};
+    const queries:Array<any>=[];const userFind=jest.fn().mockResolvedValue(user);
+    const taskFind=jest.fn().mockResolvedValue([{id:'task-101',title:'Task',skill:'design',companyId:'company-1'}]);
+    const companyFind=jest.fn().mockResolvedValue([{id:'company-1',name:'Company'}]);
+    const getRepository=jest.fn(entity=>entity===User?{findOne:userFind}:entity===CareerTask?{find:taskFind}:entity===CareerCompany?{find:companyFind}:entity===CareerPortfolio?{createQueryBuilder:jest.fn(()=>{const query=makeBuilder(rows,total);queries.push(query);return query;})}:{});
+    return {service:new CareerService({manager:{getRepository}} as unknown as DataSource,{} as AuthService),queries,getRepository,userFind,taskFind};
   };
   it.each([
     {name:'empty visible cases',rows:[],total:0,offset:'0',hasMore:false},
@@ -467,14 +471,15 @@ describe('Career public portfolio cases',()=>{
     {name:'continuation past 100',rows:Array.from({length:20},(_,i)=>({...row,portfolio_id:`portfolio-${i}`})),total:101,offset:'80',hasMore:true},
     {name:'case beyond 100',rows:[row],total:101,offset:'100',hasMore:false},
   ])('returns paginated $name after eligibility filters',async({rows,total,offset,hasMore})=>{
-    const {service,queries,userFind}=makeHarness(rows,total);
+    const {service,queries,userFind,taskFind}=makeHarness(rows,total);
     if(total===0){await expect(service.publicPortfolioCases(studentId,{offset,limit:'20'})).rejects.toThrow(NotFoundException);return;}
     const result=await service.publicPortfolioCases(studentId,{offset,limit:'20'});
     expect(result).toMatchObject({name:'Ada Lovelace',total,offset:Number(offset),limit:20,hasMore});
     expect(userFind).toHaveBeenCalledWith({where:{id:studentId,isActive:true,role:UserRole.STUDENT},select:{id:true,firstName:true,lastName:true}});
-    expect(queries).toHaveLength(2);for(const query of queries){expect(query.where).toHaveBeenCalledWith('portfolio.studentId = :studentId AND portfolio.published = :published',{studentId,published:true});expect(query.innerJoin).toHaveBeenNthCalledWith(1,CareerWork,'work','work.id = portfolio.workId AND work.studentId = portfolio.studentId AND work.state = :accepted',{accepted:'accepted'});expect(query.innerJoin).toHaveBeenNthCalledWith(4,CareerReview,'review','review.workId = work.id AND review.publishAllowed = :publishAllowed',{publishAllowed:true});}
+    expect(queries).toHaveLength(2);for(const query of queries){expect(query.where).toHaveBeenCalledWith('portfolio.studentId = :studentId AND portfolio.published = :published',{studentId,published:true});expect(query.innerJoin).toHaveBeenNthCalledWith(1,CareerWork,'work','work.id = portfolio.workId AND work.studentId = portfolio.studentId AND work.state = :accepted',{accepted:'accepted'});expect(query.innerJoin).toHaveBeenNthCalledWith(2,CareerReview,'review','review.workId = work.id AND review.publishAllowed = :publishAllowed',{publishAllowed:true});}
     expect(queries[0].orderBy).toHaveBeenCalledWith('portfolio.createdAt','DESC');expect(queries[0].addOrderBy).toHaveBeenCalledWith('portfolio.id','DESC');expect(queries[0].skip).toHaveBeenCalledWith(Number(offset));
-    const firstRow=rows[0];expect(result.cases[0]).toEqual({portfolio:{id:firstRow.portfolio_id,caseText:firstRow.portfolio_case_text,createdAt:firstRow.portfolio_created_at},work:{id:firstRow.work_id,submission:firstRow.work_submission,resultUrl:firstRow.work_result_url},task:{id:firstRow.task_id,title:firstRow.task_title,skill:firstRow.task_skill,company:{id:firstRow.company_id,name:firstRow.company_name}},review:{id:firstRow.review_id,body:firstRow.review_body,rating:5}});
+    expect(taskFind).toHaveBeenCalledWith({where:{id:In(['task-101'])},select:{id:true,title:true,skill:true,companyId:true}});
+    const firstRow=rows[0];expect(result.cases[0]).toEqual({portfolio:{id:firstRow.portfolio_id,caseText:firstRow.portfolio_case_text,createdAt:firstRow.portfolio_created_at},work:{id:firstRow.work_id,submission:firstRow.work_submission,resultUrl:firstRow.work_result_url},task:{id:'task-101',title:'Task',skill:'design',company:{id:'company-1',name:'Company'}},review:{id:firstRow.review_id,body:firstRow.review_body,rating:5}});
     expect(JSON.stringify(result)).not.toMatch(/university|studentId|email|decisionReason|criteria/i);
   });
   it('returns the same not-found outcome for missing/inactive users and users without consented accepted cases',async()=>{
@@ -482,5 +487,56 @@ describe('Career public portfolio cases',()=>{
     const inactive=makeHarness([],0,null);const inactiveError=await inactive.service.publicPortfolioCases(studentId,{}).catch(error=>error);expect(inactiveError).toBeInstanceOf(NotFoundException);
     const noCases=makeHarness([],0);const hiddenError=await noCases.service.publicPortfolioCases(studentId,{}).catch(error=>error);expect(hiddenError).toBeInstanceOf(NotFoundException);
     expect(missingError.message).toBe(inactiveError.message);expect(missingError.message).toBe(hiddenError.message);
+  });
+  it('grants row-level access for exactly the published student and task rows',async()=>{
+    const portfolio={id:'portfolio-1',workId:'work-1',studentId,caseText:'Case',published:true,createdAt:new Date()};
+    const work={id:'work-1',taskId:'task-1',studentId,state:'accepted',submission:'Result',resultUrl:''};
+    const review={id:'review-1',workId:'work-1',authorId:'employer-1',rating:5,body:'Good',publishAllowed:true,createdAt:new Date()};
+    const publishedFind=jest.fn().mockResolvedValue([portfolio]);
+    const workFind=jest.fn().mockResolvedValue([work]);
+    const reviewFind=jest.fn().mockResolvedValue([review]);
+    const taskFind=jest.fn().mockResolvedValue([{id:'task-1',title:'Task',skill:'design',companyId:'company-1'}]);
+    const companyFind=jest.fn().mockResolvedValue([{id:'company-1',name:'Company'}]);
+    const getRepository=jest.fn(entity=>entity===User?{findOne:jest.fn().mockResolvedValue({id:studentId,firstName:'Ada',lastName:'Lovelace'})}:entity===CareerPortfolio?{find:publishedFind}:entity===CareerWork?{find:workFind}:entity===CareerReview?{find:reviewFind}:entity===CareerTask?{find:taskFind}:entity===CareerCompany?{find:companyFind}:{});
+    const tenant=new TenantContext();
+    const grants:unknown[]=[];
+    const run=tenant.runWithDatabaseAccess.bind(tenant);
+    jest.spyOn(tenant,'runWithDatabaseAccess').mockImplementation((access,callback)=>{grants.push(access);return run(access,callback);});
+    const result=await new CareerService({manager:{getRepository}} as unknown as DataSource,{} as AuthService,tenant).publicPortfolio(studentId);
+    expect(result).toEqual({name:'Ada Lovelace',truncated:false,cases:[{id:'portfolio-1',title:'Task',skill:'design',company:'Company',result:'Result',resultUrl:'',review:'Good',rating:5,paymentConfirmed:false,caseText:'Case'}]});
+    expect(grants).toEqual([
+      {relation:{table:'users',column:'id',value:studentId}},
+      {relation:{table:'career_task',column:'id',value:'task-1'}},
+    ]);
+    expect(publishedFind).toHaveBeenCalledWith({where:{studentId,published:true},order:{createdAt:'DESC',id:'DESC'},take:101});
+  });
+});
+
+describe('Career overview aggregates',()=>{
+  const buildService=()=>{
+    const find=jest.fn().mockResolvedValue([]);
+    const count=jest.fn().mockResolvedValue(7);
+    const findOneBy=jest.fn().mockResolvedValue({id:'profile-a',studentId:'student-a',headline:'Design',about:'',skills:[],verification:'verified'});
+    const getRepository=jest.fn(()=>({find,count,findOneBy,existsBy:jest.fn().mockResolvedValue(false)}));
+    return {service:new CareerService({manager:{getRepository}} as unknown as DataSource,{} as AuthService),count,find};
+  };
+  it('returns aggregates and active works instead of truncated lists',async()=>{
+    const {service,count}=buildService();
+    const result=await service.overview(student) as Record<string,unknown>;
+    for(const removed of ['tasks','applications','works','notices','profiles','admissions','portfolio','universities','staff','candidates','reviews','partnerships','limit']) {
+      expect(result).not.toHaveProperty(removed);
+    }
+    expect(result.limits).toEqual({pageSize:20,activeWorks:3,companies:50});
+    expect(result.counts).toMatchObject({applications:7,works:7,activeWorks:7,admissions:7,portfolios:7,unreadNotices:7});
+    expect(result.activeWorks).toEqual([]);
+    expect(result.companies).toEqual([]);
+    expect(result.profile).toMatchObject({id:'profile-a'});
+    expect(count).toHaveBeenCalled();
+  });
+  it('never returns more than three active works even when more exist',async()=>{
+    const {service,find}=buildService();
+    find.mockResolvedValue([{id:'work-1',state:'in_progress'},{id:'work-2',state:'revision'},{id:'work-3',state:'submitted'}]);
+    const result=await service.overview(student) as {activeWorks:unknown[]};
+    expect(result.activeWorks).toHaveLength(3);
   });
 });

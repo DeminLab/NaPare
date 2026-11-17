@@ -17,6 +17,7 @@ import { OfficeReports1700000000042 } from '../src/migrations/1700000000042-Offi
 import { TenantOrganizationAlias1700000000046 } from '../src/migrations/1700000000046-TenantOrganizationAlias';
 import { CareerVacancies1700000000052 } from '../src/migrations/1700000000052-CareerVacancies';
 import { Invites1700000000049 } from '../src/migrations/1700000000049-Invites';
+import { PublicPortfolioRead1700000000053 } from '../src/migrations/1700000000053-PublicPortfolioRead';
 import { TenantContext } from '../src/common/tenant/tenant-context';
 import { fixtureDatabase } from './tenant-database.fixture';
 import { installHttpRouteEvidence } from './http-route-evidence';
@@ -83,6 +84,9 @@ export async function createCurationFixture(url: string, options: { organization
     // predicate; re-run 49 (idempotent) so the public claim path keeps working.
     await new Invites1700000000049().up(runner);
     await new CareerVacancies1700000000052().up(runner);
+    // The public portfolio reads the published student and task rows through a
+    // relation capability; renew it after the migration-29 replay above.
+    await new PublicPortfolioRead1700000000053().up(runner);
   } finally { await runner.release(); }
   const now = new Date(); now.setHours(8, 30, 0, 0);
   const lesson = await db.getRepository(Lesson).save({ organizationId: uni.id, groupId: groups[0].id, teacherId: users.teacher.id, subject: 'Технологии программирования', teacherName: 'Соколова М.', groupName: groups[0].name, startDate: now, endDate: new Date(now.getTime() + 5400000), startTime: '08:30', endTime: '10:00', dayOfWeek: now.getDay(), pairNumber: 1, room: '416' });

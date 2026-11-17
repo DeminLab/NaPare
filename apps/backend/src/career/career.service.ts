@@ -86,35 +86,68 @@ export class CareerService {
     const availableModes = actor.role===UserRole.STUDENT ? ['student'] : [...(isCenter?['center']:[]),...([UserRole.DEVELOPER,UserRole.SUPERADMIN].includes(actor.role)?[]:['employer'])];
     if(requestedMode&&!availableModes.includes(requestedMode))throw new ForbiddenException('Этот кабинет вам недоступен');
     const mode=requestedMode || availableModes[0] || 'unavailable';
-    const ownedCompanies = companyIds.length ? await this.repo(CareerCompany).find({where:{id:In(companyIds)}}) : [];
-    const partnerships = mode==='center' ? await this.repo(CareerPartnership).find({where:{organizationId:requireOrganizationId(actor)},take:100}) : companyIds.length ? await this.repo(CareerPartnership).find({where:{companyId:In(companyIds)},take:100}) : [];
-    const partnerCompanies = mode==='center' && partnerships.length ? await this.repo(CareerCompany).find({where:{id:In(partnerships.map(p=>p.companyId))}}) : [];
-    const companies=ownedCompanies;
+    const COMPANY_REFERENCE_LIMIT = 50;
+    const ACTIVE_WORK_STATES = ['in_progress','revision','submitted'];
+    const ownedCompanies = companyIds.length ? await this.repo(CareerCompany).find({where:{id:In(companyIds)},take:COMPANY_REFERENCE_LIMIT}) : [];
+    const partnerCompanyIds = mode==='center' && actor.organizationId
+      ? (await this.repo(CareerPartnership).find({where:{organizationId:actor.organizationId},select:{id:true,companyId:true},take:COMPANY_REFERENCE_LIMIT})).map(row=>row.companyId)
+      : [];
+    const partnerCompanies = partnerCompanyIds.length ? await this.repo(CareerCompany).find({where:{id:In(partnerCompanyIds)}}) : [];
+    const contacts = mode==='center' && partnerCompanies.length
+      ? await this.repo(User).find({where:{id:In(partnerCompanies.map(company=>company.createdBy))},select:{id:true,firstName:true,lastName:true,email:true}})
+      : [];
+    const companies = [...ownedCompanies, ...partnerCompanies.map(company=>{
+      const contact = contacts.find(user=>user.id===company.createdBy);
+      return {...company, contact: contact ? {name:`${contact.firstName} ${contact.lastName}`, email:contact.email} : null};
+    })];
     const profile = actor.role===UserRole.STUDENT ? await this.repo(CareerProfile).findOneBy({studentId:actor.id}) : null;
-    const profiles = mode==='center' ? await this.repo(CareerProfile).find({where:{organizationId:requireOrganizationId(actor)},take:100}) : [];
-    const admissions = mode==='center' ? await this.repo(CareerAdmission).find({where:{organizationId:requireOrganizationId(actor)},take:100}) : actor.role===UserRole.STUDENT ? await this.repo(CareerAdmission).find({where:{studentId:actor.id},take:100}) : [];
-    const myApplications = actor.role===UserRole.STUDENT ? await this.repo(CareerApplication).find({where:{studentId:actor.id},take:100}) : [];
-    const myWorks = actor.role===UserRole.STUDENT ? await this.repo(CareerWork).find({where:{studentId:actor.id},take:100}) : [];
-    const tasks = mode==='center' ? await this.repo(CareerTask).find({where:{organizationId:requireOrganizationId(actor)},order:{createdAt:'DESC'},take:100}) : mode==='employer' && companyIds.length ? await this.repo(CareerTask).find({where:{companyId:In(companyIds)},order:{createdAt:'DESC'},take:100}) : mode==='student' ? await this.repo(CareerTask).find({where:[{organizationId:requireOrganizationId(actor),state:'open'},...(myApplications.length? [{id:In(myApplications.map(a=>a.taskId)),organizationId:requireOrganizationId(actor)}]:[])],order:{createdAt:'DESC'},take:100}) : [];
-    const taskIds=tasks.map(t=>t.id);
-    const works = mode==='student' ? myWorks : taskIds.length ? await this.repo(CareerWork).find({where:{taskId:In(taskIds)},take:100}) : [];
-    const applications = mode==='student' ? myApplications : taskIds.length ? await this.repo(CareerApplication).find({where:{taskId:In(taskIds)},take:100}) : [];
-    // Employers receive only the professional profile of actual applicants, never university records.
-    const candidateProfiles = mode==='employer' && applications.length ? await this.repo(CareerProfile).find({where:{studentId:In(applications.map(a=>a.studentId))}}) : [];
-    const candidateNames=candidateProfiles.length?await this.repo(User).find({where:{id:In(candidateProfiles.map(p=>p.studentId))},select:{id:true,firstName:true,lastName:true}}):[];
-    const candidateAdmissions=mode==='employer'&&candidateProfiles.length?await this.repo(CareerAdmission).find({where:{studentId:In(candidateProfiles.map(p=>p.studentId)),organizationId:In([...new Set(tasks.map(t=>t.organizationId))]),state:'approved'}}):[];
-    const candidates=candidateProfiles.map(profile=>({...profile,approvedSkills:candidateAdmissions.filter(a=>a.studentId===profile.studentId&&applications.some(app=>app.studentId===profile.studentId&&tasks.some(task=>task.id===app.taskId&&task.organizationId===a.organizationId&&task.profiled&&task.skill===a.skill))).map(a=>({skill:a.skill,basis:a.basis})),name: candidateNames.find(u=>u.id===profile.studentId)?`${candidateNames.find(u=>u.id===profile.studentId)!.firstName} ${candidateNames.find(u=>u.id===profile.studentId)!.lastName}`:''}));
-    const contacts=mode==='center'&&partnerCompanies.length?await this.repo(User).find({where:{id:In(partnerCompanies.map(c=>c.createdBy))},select:{id:true,firstName:true,lastName:true,email:true}}):[];
-    const relevantCompanies = [...companies,...partnerCompanies.map(company=>({...company,contact:contacts.find(u=>u.id===company.createdBy)?{name:`${contacts.find(u=>u.id===company.createdBy)!.firstName} ${contacts.find(u=>u.id===company.createdBy)!.lastName}`,email:contacts.find(u=>u.id===company.createdBy)!.email}:null}))];
-    if (mode==='student' && tasks.length) relevantCompanies.push(...await this.repo(CareerCompany).find({where:{id:In(tasks.map(t=>t.companyId))}}));
-    const workIds=works.map(w=>w.id);
-    const reviews = workIds.length ? await this.repo(CareerReview).find({where:{workId:In(workIds)}}) : [];
-    const portfolio = mode==='student' ? await this.repo(CareerPortfolio).find({where:{studentId:actor.id},take:100}) : [];
-    const ownUniversity=actor.organizationId ? await this.repo(University).findOneBy({id:actor.organizationId}) : null;
-    const universities=mode==='employer' ? await this.repo(University).find({select:{id:true,name:true,city:true},take:100}) : ownUniversity ? [{id:ownUniversity.id,name:ownUniversity.name,city:ownUniversity.city}] : [];
-    const staff = mode==='center' ? await this.repo(User).find({where:{organizationId:requireOrganizationId(actor)},select:{id:true,firstName:true,lastName:true,role:true},take:100}) : [];
-    const notices=await this.repo(CareerNotice).find({where:{userId:actor.id},order:{createdAt:'DESC'},take:100});
-    return {availableModes,notices,actor:{id:actor.id,role:actor.role},mode,payment:{configured:false,provider:null,country:'RU'},limit:100,companies:relevantCompanies,partnerships,memberships,profile,profiles,admissions,tasks,applications,candidates,works,reviews,portfolio,universities,staff};
+    const studentId = actor.role===UserRole.STUDENT ? actor.id : null;
+    const centerOrganizationId = mode==='center' ? requireOrganizationId(actor) : null;
+    // The overview returns aggregates and reference data only. Every list is served
+    // by its own paginated endpoint so no array here can silently stop at 100 rows.
+    const counts = {
+      tasks: 0,
+      applications: 0,
+      works: 0,
+      activeWorks: 0,
+      profiles: 0,
+      admissions: 0,
+      partnerships: 0,
+      portfolios: 0,
+      unreadNotices: await this.repo(CareerNotice).count({where:{userId:actor.id,isRead:false}}),
+      companies: companies.length,
+    };
+    if (studentId) {
+      counts.applications = await this.repo(CareerApplication).count({where:{studentId}});
+      counts.works = await this.repo(CareerWork).count({where:{studentId}});
+      counts.activeWorks = await this.repo(CareerWork).count({where:{studentId,state:In(ACTIVE_WORK_STATES)}});
+      counts.admissions = await this.repo(CareerAdmission).count({where:{studentId}});
+      counts.portfolios = await this.repo(CareerPortfolio).count({where:{studentId}});
+      counts.tasks = await this.repo(CareerTask).count({where:{organizationId:requireOrganizationId(actor),state:'open'}});
+    } else if (mode==='employer' && companyIds.length) {
+      counts.tasks = await this.repo(CareerTask).count({where:{companyId:In(companyIds)}});
+    } else if (centerOrganizationId) {
+      counts.tasks = await this.repo(CareerTask).count({where:{organizationId:centerOrganizationId}});
+      counts.profiles = await this.repo(CareerProfile).count({where:{organizationId:centerOrganizationId}});
+      counts.admissions = await this.repo(CareerAdmission).count({where:{organizationId:centerOrganizationId}});
+      counts.partnerships = await this.repo(CareerPartnership).count({where:{organizationId:centerOrganizationId}});
+    }
+    const activeWorks = studentId
+      ? await this.repo(CareerWork).find({where:{studentId,state:In(ACTIVE_WORK_STATES)},order:{updatedAt:'DESC'},take:3})
+      : [];
+    return {
+      availableModes,
+      actor:{id:actor.id,role:actor.role},
+      mode,
+      payment:{configured:false,provider:null,country:'RU'},
+      limits:{pageSize:20,activeWorks:3,companies:COMPANY_REFERENCE_LIMIT},
+      companies,
+      companiesTruncated: ownedCompanies.length >= COMPANY_REFERENCE_LIMIT || partnerCompanyIds.length >= COMPANY_REFERENCE_LIMIT,
+      memberships,
+      profile,
+      counts,
+      activeWorks,
+    };
   }
   async listTasks(actor: Actor, requestedMode: string | undefined, query: CareerTaskListQuery) {
     const offset = query.offset === undefined ? 0 : Number(query.offset);
@@ -478,13 +511,44 @@ export class CareerService {
   async publishPortfolio(actor:Actor,id:string,published:boolean) {
     this.student(actor);const item=await this.repo(CareerPortfolio).findOneBy({id,studentId:actor.id});if(!item) throw new NotFoundException();const review=await this.repo(CareerReview).findOneBy({workId:item.workId});if(published&&!review?.publishAllowed) throw new ForbiddenException('Работодатель не разрешил публикацию результата');await this.repo(CareerPortfolio).update({id,studentId:actor.id},{published});return this.repo(CareerPortfolio).findOneBy({id,studentId:actor.id});
   }
+  /**
+   * The public portfolio is anonymous, but `users` and `career_task` stay under
+   * FORCE RLS. The caller proves which rows it already resolved from the
+   * unguarded portfolio/work/review chain, and each id becomes a relation
+   * capability for exactly that row — no university-wide read.
+   */
+  private withPublicRows<T>(table:'users'|'career_task',ids:string[],run:()=>Promise<T>):Promise<T> {
+    return [...new Set(ids)].reduceRight(
+      (next,id)=>()=>this.tenant.runWithDatabaseAccess({relation:{table,column:'id',value:id}},next),
+      run,
+    )();
+  }
+  private async publicStudent(studentId:string){
+    const student=await this.withPublicRows('users',[studentId],()=>this.repo(User).findOne({where:{id:studentId,isActive:true,role:UserRole.STUDENT},select:{id:true,firstName:true,lastName:true}}));
+    if(!student)throw new NotFoundException('Публичное портфолио не найдено');
+    return student;
+  }
   async publicPortfolio(studentId: string) {
-    const items=await this.repo(CareerPortfolio).find({where:{studentId,published:true},take:100});
-    const student=await this.repo(User).findOneBy({id:studentId,isActive:true,role:UserRole.STUDENT});
-    if(!student||!items.length) throw new NotFoundException('Публичное портфолио не найдено');
-    const result: Array<{id:string;title:string;skill:string;company:string|undefined;result:string;resultUrl:string;review:string;rating:number;paymentConfirmed:boolean;caseText:string}> = [];
-    for(const item of items){const review=await this.repo(CareerReview).findOneBy({workId:item.workId,publishAllowed:true});const work=await this.repo(CareerWork).findOneBy({id:item.workId,studentId,state:'accepted'});if(!review||!work)continue;const task=await this.task(work.taskId);const company=await this.repo(CareerCompany).findOneBy({id:task.companyId});result.push({id:item.id,title:task.title,skill:task.skill,company:company?.name,result:work.submission,resultUrl:work.resultUrl,review:review.body,rating:review.rating,paymentConfirmed:false,caseText:item.caseText});}
-    return {name:`${student.firstName} ${student.lastName}`,cases:result};
+    const student=await this.publicStudent(studentId);
+    const items=await this.repo(CareerPortfolio).find({where:{studentId,published:true},order:{createdAt:'DESC',id:'DESC'},take:101});
+    const truncated=items.length>100;const page=items.slice(0,100);
+    if(!page.length) throw new NotFoundException('Публичное портфолио не найдено');
+    const workIds=page.map(item=>item.workId);
+    const [works,reviews]=await Promise.all([
+      this.repo(CareerWork).find({where:{id:In(workIds),studentId,state:'accepted'}}),
+      this.repo(CareerReview).find({where:{workId:In(workIds),publishAllowed:true}}),
+    ]);
+    const taskIds=[...new Set(works.map(work=>work.taskId))];
+    const tasks=taskIds.length?await this.withPublicRows('career_task',taskIds,()=>this.repo(CareerTask).find({where:{id:In(taskIds)}})):[];
+    const companyIds=[...new Set(tasks.map(task=>task.companyId))];
+    const companies=companyIds.length?await this.repo(CareerCompany).find({where:{id:In(companyIds)}}):[];
+    const cases=page.flatMap(item=>{
+      const work=works.find(candidate=>candidate.id===item.workId);if(!work)return [];
+      const review=reviews.find(candidate=>candidate.workId===item.workId);if(!review)return [];
+      const task=tasks.find(candidate=>candidate.id===work.taskId);if(!task)return [];
+      return [{id:item.id,title:task.title,skill:task.skill,company:companies.find(candidate=>candidate.id===task.companyId)?.name,result:work.submission,resultUrl:work.resultUrl,review:review.body,rating:review.rating,paymentConfirmed:false,caseText:item.caseText}];
+    });
+    return {name:`${student.firstName} ${student.lastName}`,cases,truncated};
   }
 
   async listStudentAdmissions(actor:Actor,query:CareerStudentAdmissionQuery) {
@@ -542,30 +606,35 @@ export class CareerService {
     const offset=query.offset===undefined?0:Number(query.offset);const limit=query.limit===undefined?20:Number(query.limit);
     if(!Number.isSafeInteger(offset)||offset<0||offset>1_000_000)throw new BadRequestException('Некорректное смещение портфолио');
     if(!Number.isSafeInteger(limit)||limit<1||limit>50)throw new BadRequestException('Размер страницы портфолио должен быть от 1 до 50');
-    const student=await this.repo(User).findOne({where:{id:studentId,isActive:true,role:UserRole.STUDENT},select:{id:true,firstName:true,lastName:true}});
-    if(!student)throw new NotFoundException('Публичное портфолио не найдено');
+    const student=await this.publicStudent(studentId);
+    // Tasks are read after the page: the page itself only needs the unguarded
+    // portfolio/work/review chain, and each task then gets an explicit grant.
     const createBuilder=()=>this.repo(CareerPortfolio).createQueryBuilder('portfolio')
       .innerJoin(CareerWork,'work','work.id = portfolio.workId AND work.studentId = portfolio.studentId AND work.state = :accepted',{accepted:'accepted'})
-      .innerJoin(CareerTask,'task','task.id = work.taskId')
-      .innerJoin(CareerCompany,'company','company.id = task.companyId')
       .innerJoin(CareerReview,'review','review.workId = work.id AND review.publishAllowed = :publishAllowed',{publishAllowed:true})
       .where('portfolio.studentId = :studentId AND portfolio.published = :published',{studentId,published:true});
     const builder=createBuilder();
     builder.select([
       'portfolio.id AS portfolio_id','portfolio.caseText AS portfolio_case_text','portfolio.createdAt AS portfolio_created_at',
-      'work.id AS work_id','work.submission AS work_submission','work.resultUrl AS work_result_url',
-      'task.id AS task_id','task.title AS task_title','task.skill AS task_skill',
-      'company.id AS company_id','company.name AS company_name',
+      'work.id AS work_id','work.taskId AS work_task_id','work.submission AS work_submission','work.resultUrl AS work_result_url',
       'review.id AS review_id','review.body AS review_body','review.rating AS review_rating',
     ]).orderBy('portfolio.createdAt','DESC').addOrderBy('portfolio.id','DESC').skip(offset).take(limit);
     const [rows,total]=await Promise.all([builder.getRawMany<Record<string,any>>(),createBuilder().getCount()]);
     if(total===0)throw new NotFoundException('Публичное портфолио не найдено');
-    const cases=rows.map(row=>({
-      portfolio:{id:row.portfolio_id,caseText:row.portfolio_case_text,createdAt:row.portfolio_created_at},
-      work:{id:row.work_id,submission:row.work_submission,resultUrl:row.work_result_url},
-      task:{id:row.task_id,title:row.task_title,skill:row.task_skill,company:{id:row.company_id,name:row.company_name}},
-      review:{id:row.review_id,body:row.review_body,rating:Number(row.review_rating)},
-    }));
+    const taskIds=[...new Set(rows.map(row=>String(row.work_task_id)))];
+    const tasks=taskIds.length?await this.withPublicRows('career_task',taskIds,()=>this.repo(CareerTask).find({where:{id:In(taskIds)},select:{id:true,title:true,skill:true,companyId:true}})):[];
+    const companyIds=[...new Set(tasks.map(task=>task.companyId))];
+    const companies=companyIds.length?await this.repo(CareerCompany).find({where:{id:In(companyIds)},select:{id:true,name:true}}):[];
+    const cases=rows.flatMap(row=>{
+      const task=tasks.find(candidate=>candidate.id===String(row.work_task_id));if(!task)return [];
+      const company=companies.find(candidate=>candidate.id===task.companyId);if(!company)return [];
+      return [{
+        portfolio:{id:row.portfolio_id,caseText:row.portfolio_case_text,createdAt:row.portfolio_created_at},
+        work:{id:row.work_id,submission:row.work_submission,resultUrl:row.work_result_url},
+        task:{id:task.id,title:task.title,skill:task.skill,company:{id:company.id,name:company.name}},
+        review:{id:row.review_id,body:row.review_body,rating:Number(row.review_rating)},
+      }];
+    });
     return {name:`${student.firstName} ${student.lastName}`,cases,total,offset,limit,hasMore:offset+cases.length<total};
   }
 
