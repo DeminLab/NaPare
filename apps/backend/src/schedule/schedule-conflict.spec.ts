@@ -63,6 +63,14 @@ describe('Schedule conflicts', () => {
     expect(where.endDate).toBeInstanceOf(FindOperator);
   });
 
+  it('compares whole calendar days so a plain date still finds an 08:30 lesson', async () => {
+    const { service, find } = buildService([]);
+    await service.findConflicts({ ...base, startDate: '2026-11-17', endDate: '2026-11-17', startTime: '09:00', endTime: '10:30' });
+    const where = find.mock.calls[0][0].where;
+    expect(operatorValue(where.startDate)).toEqual(new Date('2026-11-17T23:59:59.999Z'));
+    expect(operatorValue(where.endDate)).toEqual(new Date('2026-11-17T00:00:00.000Z'));
+  });
+
   it('ignores lessons on the other week and the lesson being edited', async () => {
     const { service } = buildService([
       row({ id: 'odd-lesson', weekType: 'odd' }),

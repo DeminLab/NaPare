@@ -9,6 +9,8 @@ import {
   Query,
   UseGuards,
   Request,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { ApiOkResponse, ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 
@@ -155,6 +157,7 @@ export class ScheduleController {
   }
 
   @Post('validate')
+  @HttpCode(HttpStatus.OK)
   @Roles(UserRole.TEACHER, UserRole.CURATOR, UserRole.DEPARTMENT_HEAD, UserRole.FACULTY_DEAN, UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Проверить занятие на конфликты без сохранения' })
   @ApiResponse({ status: 200, description: 'Проверка выполнена' })

@@ -69,6 +69,15 @@ export interface ScheduleCandidate {
 const toDateKey = (value: Date | string): string =>
   (value instanceof Date ? value.toISOString() : new Date(value).toISOString()).slice(0, 10);
 
+/**
+ * A lesson occupies calendar days, not instants: `startDate` may arrive as
+ * `YYYY-MM-DD` (midnight) while the stored row starts at 08:30. Comparing raw
+ * instants then hides a real clash, so the day bounds widen to the whole day.
+ */
+const startOfDay = (value: Date): Date =>
+  new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()));
+const endOfDay = (value: Date): Date => new Date(startOfDay(value).getTime() + 86400000 - 1);
+
 const conflictTypeLabel: Record<ScheduleConflictType, string> = {
   teacher: "преподаватель",
   group: "группа",
@@ -641,8 +650,8 @@ export class ScheduleService {  private readonly logger = new Logger(ScheduleSer
       where: {
         organizationId,
         dayOfWeek: candidate.dayOfWeek,
-        startDate: LessThanOrEqual(endDate),
-        endDate: MoreThanOrEqual(startDate),
+        startDate: LessThanOrEqual(endOfDay(endDate)),
+        endDate: MoreThanOrEqual(startOfDay(startDate)),
         startTime: LessThan(candidate.endTime),
         endTime: MoreThan(candidate.startTime),
       },
