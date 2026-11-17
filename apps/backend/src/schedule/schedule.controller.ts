@@ -16,6 +16,11 @@ import { ScheduleService } from './schedule.service';
 import { AcademicCalendarService } from './academic-calendar.service';
 import { CreateLessonDto } from './dto/create-lesson.dto';
 import { UpdateLessonDto } from './dto/update-lesson.dto';
+import { ValidateLessonDto } from './dto/validate-lesson.dto';
+import { ExpandSeriesDto } from './dto/expand-series.dto';
+import { ScheduleSeriesService } from './schedule-series.service';
+import { ScheduleReadService } from './schedule-read.service';
+import { ScheduleRangeV2QueryDto } from './dto/schedule-range-v2-query.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -33,6 +38,8 @@ export class ScheduleController {
   constructor(
     private readonly scheduleService: ScheduleService,
     private readonly academicCalendarService: AcademicCalendarService,
+    private readonly scheduleSeriesService: ScheduleSeriesService,
+    private readonly scheduleReadService: ScheduleReadService,
   ) {}
 
   @Get('my')
@@ -118,6 +125,47 @@ export class ScheduleController {
   @ApiResponse({ status: 404, description: 'Дата вне активного учебного календаря' })
   async getWeekType(@Request() req, @Query() query: WeekTypeQueryDto) {
     return this.academicCalendarService.getWeekType(req.user.organizationId ?? null, query.date);
+  }
+
+  @Get('v2')
+  @ApiOperation({ summary: 'Единое расписание за период: занятия и academic occurrences в одном ответе' })
+  @ApiOkResponse({ description: 'Расписание сгруппировано по дням' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async findRangeV2(@Request() req, @Query() query: ScheduleRangeV2QueryDto) {
+    return this.scheduleReadService.readRange(req.user, query);
+  }
+
+  @Post('series/expand')
+  @Roles(UserRole.DEPARTMENT_HEAD, UserRole.FACULTY_DEAN, UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @ApiOperation({ summary: 'Создать занятия на период по всем сериям своего университета' })
+  @ApiResponse({ status: 201, description: 'Генерация выполнена или показан план' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async expandOrganizationSeries(@Request() req, @Body() dto: ExpandSeriesDto) {
+    return this.scheduleSeriesService.expandOrganization(req.user.organizationId, dto);
+  }
+
+  @Post('series/:id/expand')
+  @Roles(UserRole.DEPARTMENT_HEAD, UserRole.FACULTY_DEAN, UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @ApiOperation({ summary: 'Создать занятия на период по одной серии' })
+  @ApiResponse({ status: 201, description: 'Генерация выполнена или показан план' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Серия не найдена' })
+  async expandSeries(@Param('id') id: string, @Body() dto: ExpandSeriesDto) {
+    return this.scheduleSeriesService.expandSeries(id, dto);
+  }
+
+  @Post('validate')
+  @Roles(UserRole.TEACHER, UserRole.CURATOR, UserRole.DEPARTMENT_HEAD, UserRole.FACULTY_DEAN, UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @ApiOperation({ summary: 'Проверить занятие на конфликты без сохранения' })
+  @ApiResponse({ status: 200, description: 'Проверка выполнена' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async validate(@Request() req, @Body() dto: ValidateLessonDto) {
+    const dayOfWeek = dto.dayOfWeek ?? new Date(`${dto.startDate.slice(0, 10)}T00:00:00.000Z`).getUTCDay();
+    const conflicts = await this.scheduleService.findConflicts(
+      { ...dto, dayOfWeek, organizationId: req.user.organizationId },
+      dto.lessonId,
+    );
+    return { ok: conflicts.length === 0, conflicts };
   }
 
   @Post()

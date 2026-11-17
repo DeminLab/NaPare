@@ -96,7 +96,7 @@ export class RequestService {
     end.setUTCDate(end.getUTCDate() + 1);
     const [rows, total] = await this.db.getRepository(Lesson).createQueryBuilder('lesson').where('lesson.organizationId = :uni AND lesson.groupId = :groupId AND lesson.startDate >= :start AND lesson.startDate < :end', { uni: group.organizationId, groupId: group.id, start, end })
       .orderBy('lesson.startDate', 'ASC').addOrderBy('lesson.pairNumber', 'ASC').skip((query.page - 1) * query.limit).take(query.limit).getManyAndCount();
-    return toPaginatedResponse(rows.map(({ id, subject, teacherName, startDate, endDate, startTime, endTime, room, building, changeDescription }) => ({ id, subject, teacherName, startDate, endDate, startTime, endTime, room, building, changeDescription })), total, query);
+    return toPaginatedResponse(rows.map(({ id, subject, teacherName, startDate, endDate, startTime, endTime, room, building, changeDescription, groupId: rowGroupId, groupName, teacherId, dayOfWeek, pairNumber, weekType }) => ({ id, subject, teacherName, startDate, endDate, startTime, endTime, room, building, changeDescription, groupId: rowGroupId, groupName, teacherId, dayOfWeek, pairNumber, weekType })), total, query);
   }
   async assignments() {
     const actor = this.access.admin(), rows = await this.db.manager.find(OfficeAssignment, { where: { organizationId: actor.organizationId }, order: { createdAt: 'DESC' } });

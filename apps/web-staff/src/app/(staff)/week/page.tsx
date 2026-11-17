@@ -4,11 +4,45 @@ import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useWorkspaceQuery } from '@napare/ui/workspace-shell';
 import { LessonTypeBadge, lessonTypeKey } from '@napare/ui';
-import { apiFetchList } from '@/lib/api';
+import { apiFetch, apiFetchList } from '@/lib/api';
 import { Badge, Button, EmptyState, RequestState, Skeleton } from '@/components/ui';
 
 interface Lesson { id: string; subject: string; subjectType?: string; room?: string; startTime: string; endTime: string; startDate?: string; date?: string; groupName?: string; groupId?: string; teacherName?: string; subgroup?: string; weekType?: 'odd' | 'even' | 'both'; isChanged?: boolean; changeDescription?: string; status?: string; }
 interface DaySchedule { date: string; dayName: string; lessons: Lesson[]; }
+interface ScheduleV2Entry { id: string; date: string; startTime: string; endTime: string; subject: string; subjectType?: string | null; teacherName?: string | null; groupId?: string | null; groupName?: string | null; room?: string | null; subgroup?: string | null; state: 'scheduled' | 'changed' | 'cancelled'; change?: { type: string; reason?: string | null } | null; }
+interface ScheduleV2Response { days: Array<{ date: string; lessons: ScheduleV2Entry[] }>; }
+
+function entryToLesson(entry: ScheduleV2Entry): Lesson {
+  const reason = entry.change?.reason || '';
+  return {
+    id: entry.id,
+    date: entry.date,
+    startDate: `${entry.date}T${entry.startTime}:00`,
+    subject: entry.subject,
+    subjectType: entry.subjectType || undefined,
+    room: entry.room || undefined,
+    groupId: entry.groupId || undefined,
+    groupName: entry.groupName || undefined,
+    teacherName: entry.teacherName || undefined,
+    subgroup: entry.subgroup || undefined,
+    startTime: entry.startTime,
+    endTime: entry.endTime,
+    isChanged: entry.state !== 'scheduled',
+    status: entry.state,
+    changeDescription: entry.state === 'cancelled' ? `Отменено${reason ? `: ${reason}` : ''}` : reason || undefined,
+  };
+}
+
+/** Unified read contract with a legacy fallback for older deployments. */
+async function fetchWeekLessons(startDate: string, endDate: string): Promise<Lesson[]> {
+  try {
+    const response = await apiFetch<ScheduleV2Response>(`/schedule/v2?from=${startDate}&to=${endDate}`);
+    if (Array.isArray(response.days)) return response.days.flatMap(day => day.lessons.map(entryToLesson));
+  } catch {
+    // Fall through to the legacy endpoint.
+  }
+  return apiFetchList<Lesson>(`/schedule/range?startDate=${startDate}&endDate=${endDate}&limit=100`);
+}
 
 const typeLabels: Record<string, string> = { lecture: 'Лекция', practice: 'Практика', lab: 'Лабораторная', exam: 'Экзамен', consultation: 'Консультация', coursework: 'Курсовая', test: 'Зачёт' };
 const weekDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
@@ -41,7 +75,7 @@ export default function WeekPage() {
     const requestId = ++requestSequence.current;
     const end = new Date(weekStart); end.setDate(end.getDate() + 6);
     setLoading(true); setError('');
-    apiFetchList<Lesson>(`/schedule/range?startDate=${dateKey(weekStart)}&endDate=${dateKey(end)}&limit=100`)
+    fetchWeekLessons(dateKey(weekStart), dateKey(end))
       .then((result) => { if (requestId === requestSequence.current) setLessons(result); })
       .catch((err) => { if (requestId === requestSequence.current) setError(err instanceof Error ? err.message : 'Не удалось загрузить расписание.'); })
       .finally(() => { if (requestId === requestSequence.current) setLoading(false); });

@@ -1,4 +1,5 @@
 import {
+  ConflictException,
   ForbiddenException,
   Injectable,
   Logger,
@@ -6,7 +7,7 @@ import {
   Optional,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { DataSource, FindManyOptions, Repository, Between, In, And, Equal, IsNull } from "typeorm";
+import { DataSource, FindManyOptions, Repository, Between, In, And, Equal, IsNull, LessThan, LessThanOrEqual, MoreThan, MoreThanOrEqual } from "typeorm";
 import { OfficeAssignment } from '../requests/request.entities';
 import { CurationService } from '../curation/curation.service';
 import { EventEmitter2 } from "@nestjs/event-emitter";
@@ -33,9 +34,58 @@ import {
   toPaginatedResponse,
 } from "../common/dto/pagination-query.dto";
 
+export type ScheduleConflictType = "teacher" | "group" | "room";
+
+export interface ScheduleConflict {
+  type: ScheduleConflictType;
+  lessonId: string;
+  subject: string;
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
+  dateFrom: string;
+  dateTo: string;
+  groupId: string | null;
+  groupName: string | null;
+  teacherId: string | null;
+  teacherName: string | null;
+  room: string | null;
+}
+
+export interface ScheduleCandidate {
+  organizationId?: string | null;
+  groupId?: string | null;
+  teacherId?: string | null;
+  room?: string | null;
+  /** 0=воскресенье … 6=суббота, как в legacy `lessons`. Без него проверка невозможна. */
+  dayOfWeek?: number | null;
+  startDate: Date | string;
+  endDate: Date | string;
+  startTime: string;
+  endTime: string;
+  weekType?: string | null;
+}
+
+const toDateKey = (value: Date | string): string =>
+  (value instanceof Date ? value.toISOString() : new Date(value).toISOString()).slice(0, 10);
+
+const conflictTypeLabel: Record<ScheduleConflictType, string> = {
+  teacher: "преподаватель",
+  group: "группа",
+  room: "аудитория",
+};
+
+const describeScheduleConflict = (conflict: ScheduleConflict): string => {
+  const who = conflict.type === "teacher"
+    ? conflict.teacherName || "преподаватель"
+    : conflict.type === "group"
+      ? conflict.groupName || "группа"
+      : conflict.room || "аудитория";
+  return `${conflictTypeLabel[conflict.type]} ${who} занят(а): ${conflict.subject}, ${conflict.startTime}–${conflict.endTime}`;
+};
+
 @Injectable()
-export class ScheduleService {
-  private readonly logger = new Logger(ScheduleService.name);
+export class ScheduleService {  private readonly logger = new Logger(ScheduleService.name);
 
   constructor(
     @InjectRepository(Lesson)
@@ -394,7 +444,10 @@ export class ScheduleService {
     ];
   }
 
-  async create(createLessonDto: CreateLessonDto): Promise<Lesson> {
+  async create(
+    createLessonDto: CreateLessonDto,
+    options: { skipConflictCheck?: boolean } = {},
+  ): Promise<Lesson> {
     if (createLessonDto.organizationId) {
       this.tenantContext.assertAccess(createLessonDto.organizationId);
     }
@@ -410,6 +463,12 @@ export class ScheduleService {
       );
     }
     await this.assertLessonReferences(createLessonDto.organizationId, createLessonDto.groupId, createLessonDto.teacherId);
+    if (!options.skipConflictCheck) {
+      await this.assertNoScheduleConflicts({
+        ...createLessonDto,
+        teacherId: createLessonDto.teacherId ?? actor?.id ?? null,
+      });
+    }
     const lesson = this.lessonRepository.create({
       ...createLessonDto,
       ...(actor?.role === UserRole.TEACHER ? { teacherId: actor.id } : {}),
@@ -420,7 +479,11 @@ export class ScheduleService {
     return this.lessonRepository.save(lesson);
   }
 
-  async update(id: string, updateLessonDto: UpdateLessonDto): Promise<Lesson> {
+  async update(
+    id: string,
+    updateLessonDto: UpdateLessonDto,
+    options: { skipConflictCheck?: boolean } = {},
+  ): Promise<Lesson> {
     const lesson = await this.lessonRepository.findOne({ where: { id } });
 
     if (!lesson) {
@@ -446,6 +509,7 @@ export class ScheduleService {
 
     const oldValue = lessonChangeValues(lesson);
     Object.assign(lesson, updateLessonDto);
+    if (!options.skipConflictCheck) await this.assertNoScheduleConflicts(lesson, lesson.id);
 
     const actor = this.tenantContext.getUser();
     const updatedLesson = await this.dataSource.transaction(async (manager) => {
@@ -557,6 +621,77 @@ export class ScheduleService {
     });
   }
 
+  /**
+   * Server-side schedule conflicts. The client may warn, but only this check
+   * decides whether a lesson can be stored.
+   */
+  async findConflicts(
+    candidate: ScheduleCandidate,
+    excludeId?: string,
+  ): Promise<ScheduleConflict[]> {
+    const organizationId = candidate.organizationId;
+    if (!organizationId) return [];
+    const startDate = new Date(candidate.startDate);
+    const endDate = new Date(candidate.endDate);
+    if (!Number.isFinite(startDate.getTime()) || !Number.isFinite(endDate.getTime())) return [];
+    if (!candidate.startTime || !candidate.endTime || candidate.startTime >= candidate.endTime) return [];
+    // Without a weekday every weekly row would match, so a check must not guess.
+    if (candidate.dayOfWeek == null) return [];
+    const rows = await this.lessonRepository.find({
+      where: {
+        organizationId,
+        dayOfWeek: candidate.dayOfWeek,
+        startDate: LessThanOrEqual(endDate),
+        endDate: MoreThanOrEqual(startDate),
+        startTime: LessThan(candidate.endTime),
+        endTime: MoreThan(candidate.startTime),
+      },
+    });
+    const candidateWeek = candidate.weekType ?? "both";
+    const candidateRoom = candidate.room?.trim().toLowerCase();
+    const conflicts: ScheduleConflict[] = [];
+    for (const row of rows) {
+      if (row.id === excludeId) continue;
+      const rowWeek = row.weekType ?? "both";
+      if (candidateWeek !== "both" && rowWeek !== "both" && candidateWeek !== rowWeek) continue;
+      const types: ScheduleConflictType[] = [];
+      if (candidate.teacherId && row.teacherId === candidate.teacherId) types.push("teacher");
+      if (candidate.groupId && row.groupId === candidate.groupId) types.push("group");
+      if (candidateRoom && row.room?.trim().toLowerCase() === candidateRoom) types.push("room");
+      for (const type of types) {
+        conflicts.push({
+          type,
+          lessonId: row.id,
+          subject: row.subject,
+          dayOfWeek: row.dayOfWeek,
+          startTime: row.startTime,
+          endTime: row.endTime,
+          dateFrom: toDateKey(row.startDate),
+          dateTo: toDateKey(row.endDate),
+          groupId: row.groupId ?? null,
+          groupName: row.groupName ?? null,
+          teacherId: row.teacherId ?? null,
+          teacherName: row.teacherName ?? null,
+          room: row.room ?? null,
+        });
+      }
+    }
+    return conflicts;
+  }
+
+  private async assertNoScheduleConflicts(
+    candidate: ScheduleCandidate,
+    excludeId?: string,
+  ): Promise<void> {
+    const conflicts = await this.findConflicts(candidate, excludeId);
+    if (!conflicts.length) return;
+    throw new ConflictException({
+      code: "SCHEDULE_CONFLICT",
+      message: `Конфликт расписания: ${conflicts.map(describeScheduleConflict).join("; ")}`,
+      conflicts,
+    });
+  }
+
   private async assertLessonReferences(organizationId: string | undefined, groupId?: string, teacherId?: string): Promise<void> {
     // Background imports resolve their references separately. HTTP mutations
     // must never attach an own-university row to a foreign group or teacher.
@@ -606,10 +741,10 @@ export class ScheduleService {
         });
 
         if (existingLesson) {
-          await this.update(existingLesson.id, lessonData);
+          await this.update(existingLesson.id, lessonData, { skipConflictCheck: true });
           updated++;
         } else {
-          await this.create({ ...lessonData, organizationId });
+          await this.create({ ...lessonData, organizationId }, { skipConflictCheck: true });
           imported++;
         }
       }
