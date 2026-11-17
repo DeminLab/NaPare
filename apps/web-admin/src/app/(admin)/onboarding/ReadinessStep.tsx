@@ -7,6 +7,30 @@ import { Button, Card } from '@/components/ui';
 import { errorMessage, fieldClass, localDate, type Account, type Faculty, type Group, type Lesson, type University } from './types';
 
 interface Snapshot { faculties: Faculty[]; groups: Group[]; users: Account[]; lessons: Lesson[]; start: string; end: string; offset: string; at: string }
+interface UnifiedEntry { id: string; date: string; startTime: string; endTime: string; subject: string; groupId?: string | null; teacherId?: string | null; teacherName?: string | null; lessonId?: string | null }
+
+/**
+ * The readiness check must see lessons generated from series, so it reads the
+ * unified model and falls back to the legacy endpoint for older deployments.
+ */
+async function fetchReadinessLessons(from: string, to: string, signal: AbortSignal): Promise<Lesson[]> {
+  try {
+    const response = await apiFetch<{ days: Array<{ lessons: UnifiedEntry[] }> }>(`/schedule/v2?from=${from}&to=${to}`, { signal });
+    if (Array.isArray(response.days)) {
+      return response.days.flatMap(day => day.lessons.map(entry => ({
+        id: entry.lessonId || entry.id,
+        groupId: entry.groupId || '',
+        teacherId: entry.teacherId || null,
+        teacherName: entry.teacherName || undefined,
+        subject: entry.subject,
+        startDate: `${entry.date}T${entry.startTime}:00`,
+      })));
+    }
+  } catch (cause) {
+    if (signal.aborted) throw cause;
+  }
+  return apiFetchAllPages<Lesson>(`/schedule/range?startDate=${from}&endDate=${to}`, { signal });
+}
 export default function ReadinessStep({ university }: { university: University }) {
   const [start, setStart] = useState(localDate()), [end, setEnd] = useState(localDate(new Date(Date.now() + 6 * 86400000)));
   const [offset, setOffset] = useState('+06:00');
@@ -26,7 +50,7 @@ export default function ReadinessStep({ university }: { university: University }
     try {
       const [faculties, groups, users, lessons] = await Promise.all([
         apiFetchAllPages<Faculty>('/admin/faculties', { signal: controller.signal }), apiFetchAllPages<Group>('/admin/groups', { signal: controller.signal }),
-        apiFetchAllPages<Account>('/admin/users', { signal: controller.signal }), apiFetchAllPages<Lesson>(`/schedule/range?${period}`, { signal: controller.signal }),
+        apiFetchAllPages<Account>('/admin/users', { signal: controller.signal }), fetchReadinessLessons(start, end, controller.signal),
       ]);
       if (!controller.signal.aborted) setSnapshot({ faculties, groups, users, lessons, start, end, offset, at: new Date().toLocaleString('ru-RU') });
       if (!controller.signal.aborted) {

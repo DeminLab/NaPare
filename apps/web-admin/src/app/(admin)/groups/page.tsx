@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useWorkspaceQuery } from '@napare/ui/workspace-shell';
-import { apiFetch, apiFetchAllPages, apiFetchList, type PaginatedResponse } from '@/lib/api';
+import { apiFetch, apiFetchAllPages, type PaginatedResponse } from '@/lib/api';
 import { ListPagination } from '@/components/ListPagination';
 import { Badge, Button, Card, EmptyState, Input, LessonTypeBadge, Modal, RequestState, Sheet, SearchInput, Skeleton } from '@/components/ui';
 
@@ -25,6 +25,40 @@ function revealHorizontally(container: HTMLElement | null, item: HTMLElement) {
 }
 function facultyName(group: Group, faculties: Faculty[]) { return group.faculty?.name || faculties.find((faculty) => faculty.id === group.facultyId)?.name || '—'; }
 function datePart(value?: string) { return value ? value.slice(0, 10) : '—'; }
+const dayKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+const dayOffset = (days: number) => { const date = new Date(); date.setDate(date.getDate() + days); return dayKey(date); };
+
+interface UnifiedEntry { id: string; date: string; startTime: string; endTime: string; subject: string; subjectType?: string | null; groupId?: string | null; groupName?: string | null; teacherName?: string | null; room?: string | null; lessonId?: string | null }
+
+/**
+ * A whole year through the paginated endpoint silently stopped after one page.
+ * The unified model covers a 62-day window around today and also returns the
+ * lessons generated from series.
+ */
+async function fetchGroupLessons(): Promise<Lesson[]> {
+  const from = dayOffset(-30), to = dayOffset(31);
+  try {
+    const response = await apiFetch<{ days: Array<{ lessons: UnifiedEntry[] }> }>(`/schedule/v2?from=${from}&to=${to}`);
+    if (Array.isArray(response.days)) {
+      return response.days.flatMap(day => day.lessons.map(entry => ({
+        id: entry.lessonId || entry.id,
+        date: entry.date,
+        startDate: entry.date,
+        subject: entry.subject,
+        subjectType: entry.subjectType || undefined,
+        groupId: entry.groupId || undefined,
+        groupName: entry.groupName || '',
+        startTime: entry.startTime,
+        endTime: entry.endTime,
+        room: entry.room || undefined,
+        teacherName: entry.teacherName || undefined,
+      })));
+    }
+  } catch {
+    // Fall through to the legacy endpoint.
+  }
+  return apiFetchAllPages<Lesson>(`/schedule/range?startDate=${from}&endDate=${to}`);
+}
 function timePart(value?: string) { return value?.includes('T') ? value.slice(11, 16) : value || '—'; }
 
 function GroupAttendancePanel({ groupName, lessons, scheduleAvailable, onRetry }: { groupName: string; lessons: Lesson[]; scheduleAvailable: boolean; onRetry: () => void }) {
@@ -151,7 +185,7 @@ export default function GroupsPage() {
   const [error, setError] = useState('');
   const studentRequestRef = useRef(0);
 
-  const load = () => { setLoading(true); setError(''); setScheduleAvailable(true); Promise.all([apiFetchAllPages<Group>('/admin/groups'), apiFetchAllPages<Faculty>('/admin/faculties'), apiFetchAllPages<Student>('/admin/users').catch(() => []), apiFetchList<Lesson>(`/schedule/range?startDate=${new Date().getFullYear()}-01-01&endDate=${new Date().getFullYear()}-12-31`).catch(() => { setScheduleAvailable(false); return []; })]).then(([groupItems, facultyItems, curatorItems, lessonItems]) => { setGroups(groupItems); setFaculties(facultyItems); setCurators(curatorItems); setLessons(lessonItems); }).catch((err) => setError(err instanceof Error ? err.message : 'Не удалось загрузить группы.')).finally(() => setLoading(false)); };
+  const load = () => { setLoading(true); setError(''); setScheduleAvailable(true); Promise.all([apiFetchAllPages<Group>('/admin/groups'), apiFetchAllPages<Faculty>('/admin/faculties'), apiFetchAllPages<Student>('/admin/users').catch(() => []), fetchGroupLessons().catch(() => { setScheduleAvailable(false); return []; })]).then(([groupItems, facultyItems, curatorItems, lessonItems]) => { setGroups(groupItems); setFaculties(facultyItems); setCurators(curatorItems); setLessons(lessonItems); }).catch((err) => setError(err instanceof Error ? err.message : 'Не удалось загрузить группы.')).finally(() => setLoading(false)); };
   useEffect(() => { load(); }, []);
 
   const courses = [...new Set(groups.map(course).filter((item) => item !== '—'))].sort();
@@ -159,7 +193,7 @@ export default function GroupsPage() {
   const visible = filtered.slice((page - 1) * pageSize, page * pageSize);
   useEffect(() => { setPage(1); }, [search, facultyFilter, courseFilter]);
   const selectedLessons = selected ? lessons.filter((lesson) => lesson.groupId ? lesson.groupId === selected.id : lesson.groupName === selected.name).sort((a, b) => `${a.startDate || a.date || a.startTime || ''} ${a.startTime || ''}`.localeCompare(`${b.startDate || b.date || b.startTime || ''} ${b.startTime || ''}`)) : [];
-  const attendanceLessons = selected ? lessons.filter((lesson) => lesson.groupId === selected.id).sort((a, b) => `${b.startDate || b.date || b.startTime || ''} ${b.startTime || ''}`.localeCompare(`${a.startDate || a.date || a.startTime || ''} ${a.startTime || ''}`)) : [];
+  const attendanceLessons = selected ? lessons.filter((lesson) => lesson.groupId === selected.id && /^[\da-f-]{36}$/i.test(lesson.id)).sort((a, b) => `${b.startDate || b.date || b.startTime || ''} ${b.startTime || ''}`.localeCompare(`${a.startDate || a.date || a.startTime || ''} ${a.startTime || ''}`)) : [];
   const selectedTeachers = [...new Set(selectedLessons.map(lesson => lesson.teacherName || [lesson.teacher?.firstName, lesson.teacher?.lastName].filter(Boolean).join(' ')).filter(Boolean))];
 
   const openCreate = () => { setEditing(null); setFormName(''); setFormYear('1'); setFormFaculty(faculties[0]?.id || ''); setFormError(''); setModalOpen(true); };
