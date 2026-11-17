@@ -39,3 +39,30 @@ code, pre, .font-mono { font-family: var(--font-mono); }
 html, body { min-width: 0; overflow-x: clip; } img, svg, video { max-width: 100%; } button, input, select, textarea { max-width: 100%; } input, select, textarea { font-size: max(16px, 1rem); } button, [role="button"], nav a { min-height: 2.75rem; } button, a, input, select, textarea { touch-action: manipulation; }
 @media (max-width: 639px) { .action-card { padding: 1rem; } }
 @media (min-width: 640px) { .table-shell, [role="table"] { scrollbar-gutter: stable; } }
+
+/* Platform control: grouped navigation and readable content density. */
+.control-page-header { align-items: flex-end; background: linear-gradient(135deg, var(--color-surface) 0%, var(--color-surface-secondary) 100%); border: 1px solid var(--color-border); border-radius: var(--radius-xl); box-shadow: var(--shadow-sm); display: flex; flex-wrap: wrap; gap: 1rem; justify-content: space-between; padding: 1.25rem 1.5rem; }
+.control-page-header h1 { text-wrap: balance; }
+.control-count { background: var(--color-brand-soft); border: 1px solid color-mix(in srgb, var(--color-brand) 18%, transparent); border-radius: var(--radius-pill); color: var(--color-brand-strong); font-size: .8125rem; font-weight: 700; padding: .45rem .75rem; }
+.control-nav-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-xl); box-shadow: var(--shadow-sm); padding: .875rem; }
+.control-nav-group { border-top: 1px solid var(--color-border); margin-top: .5rem; padding-top: .5rem; }
+.control-nav-group:first-child { border-top: 0; margin-top: 0; padding-top: 0; }
+.control-nav-category { align-items: center; border-radius: var(--radius-md); color: var(--color-text); display: flex; gap: .625rem; min-height: 3.5rem; padding: .55rem .625rem; transition: background-color 140ms ease, color 140ms ease; width: 100%; }
+.control-nav-category:hover { background: var(--color-surface-secondary); }
+.control-nav-category.is-active { background: var(--color-brand-soft); color: var(--color-brand-strong); }
+.control-nav-category:focus-visible, .control-nav-tab:focus-visible { outline: 2px solid var(--color-brand); outline-offset: 2px; }
+.control-nav-icon { align-items: center; background: var(--color-surface-secondary); border-radius: var(--radius-md); color: var(--color-text-secondary); display: inline-flex; flex: 0 0 auto; height: 2.25rem; justify-content: center; width: 2.25rem; }
+.control-nav-category.is-active .control-nav-icon { background: var(--color-surface); color: var(--color-brand); }
+.control-nav-count { background: var(--color-surface); border-radius: var(--radius-pill); color: var(--color-text-secondary); flex: 0 0 auto; font-size: .75rem; font-weight: 700; min-width: 1.5rem; padding: .18rem .4rem; text-align: center; }
+.control-nav-tab { border-radius: var(--radius-sm); color: var(--color-text-secondary); display: block; font-size: .875rem; line-height: 1.35; min-height: 2.6rem; padding: .55rem .75rem .55rem 2.3rem; position: relative; text-align: left; transition: background-color 140ms ease, color 140ms ease; width: 100%; }
+.control-nav-tab::before { background: currentColor; border-radius: 50%; content: ""; height: 5px; left: 1.15rem; opacity: .35; position: absolute; top: calc(50% - 2.5px); width: 5px; }
+.control-nav-tab:hover { background: var(--color-surface-secondary); color: var(--color-text); }
+.control-nav-tab.is-active { background: var(--color-brand-soft); color: var(--color-brand-strong); font-weight: 700; }
+.control-nav-tab.is-active::before { background: var(--color-brand); border-radius: 2px; height: 14px; opacity: 1; top: calc(50% - 7px); }
+.control-context { border-left: 3px solid var(--color-brand); padding: .15rem 0 .15rem .875rem; }
+.control-content { font-size: .9375rem; line-height: 1.55; }
+.control-content .text-xs { font-size: .8125rem; line-height: 1.5; }
+.control-content :is(h2, h3, h4) { text-wrap: balance; }
+.control-content pre { background: var(--color-surface-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); line-height: 1.55; max-height: 24rem; overflow: auto; padding: .75rem; }
+@media (max-width: 639px) { .control-page-header { padding: 1rem; } }
+@media (min-width: 1024px) { .control-nav-card { max-height: calc(100dvh - 6rem); overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; } }
