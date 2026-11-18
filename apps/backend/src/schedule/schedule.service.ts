@@ -701,7 +701,7 @@ export class ScheduleService {  private readonly logger = new Logger(ScheduleSer
     });
   }
 
-  private async assertLessonReferences(organizationId: string | undefined, groupId?: string, teacherId?: string): Promise<void> {
+  async assertLessonReferences(organizationId: string | undefined, groupId?: string, teacherId?: string): Promise<void> {
     // Background imports resolve their references separately. HTTP mutations
     // must never attach an own-university row to a foreign group or teacher.
     if (!this.tenantContext.getUser()) return;

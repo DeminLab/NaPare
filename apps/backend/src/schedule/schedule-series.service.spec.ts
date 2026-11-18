@@ -42,24 +42,43 @@ const week = (weekType: string, exception: unknown = null) => ({
 });
 
 const build = (options: {
-  item?: LessonSeries;
+  item?: LessonSeries | null;
   existing?: Array<{ id: string; startsAt: Date }>;
+  legacy?: { id: string; occurrenceId?: string | null; seriesId?: string | null } | null;
+  series?: LessonSeries[];
+  ownedLessons?: Array<{ id: string }>;
+  conflicts?: unknown[];
   calendar?: (date: string) => unknown;
 } = {}) => {
   const existing = options.existing ?? [];
   const save = jest.fn(async (value: unknown) => value);
-  const create = jest.fn((value: unknown) => value);
+  let occurrenceSeq = 0;
+  const create = jest.fn((value: unknown) => ({ ...(value as object), id: `occurrence-${occurrenceSeq += 1}` }));
   const find = jest.fn().mockResolvedValue(existing);
-  const findOne = jest.fn().mockResolvedValue(options.item ?? series());
+  const seriesFind = jest.fn().mockResolvedValue(options.series ?? []);
+  const seriesRemove = jest.fn(async (value: unknown) => value);
+  const seriesSave = jest.fn(async (value: unknown) => value);
+  const seriesCreate = jest.fn((value: unknown) => value);
+  const findOne = jest.fn().mockResolvedValue(options.item === undefined ? series() : options.item);
+  const lessonSave = jest.fn(async (value: unknown) => value);
+  const lessonCreate = jest.fn((value: unknown) => value);
+  const lessonFindOne = jest.fn().mockResolvedValue(options.legacy ?? null);
+  const lessonFind = jest.fn().mockResolvedValue(options.ownedLessons ?? []);
   const calendar = { getWeekType: jest.fn(async (_org: string, date: string) => options.calendar ? options.calendar(date) : week('odd')) };
   const tenantContext = { assertAccess: jest.fn() };
+  const scheduleService = {
+    findConflicts: jest.fn().mockResolvedValue(options.conflicts ?? []),
+    assertLessonReferences: jest.fn(),
+  };
   const service = new ScheduleSeriesService(
-    { findOne, find: jest.fn() } as never,
+    { findOne, find: seriesFind, remove: seriesRemove, save: seriesSave, create: seriesCreate } as never,
     { find, save, create } as never,
+    { findOne: lessonFindOne, find: lessonFind, save: lessonSave, create: lessonCreate } as never,
     calendar as never,
     tenantContext as never,
+    scheduleService as never,
   );
-  return { service, save, create, find, calendar, tenantContext };
+  return { service, save, create, find, calendar, tenantContext, lessonSave, lessonCreate, lessonFindOne, seriesFind, seriesSave, seriesRemove, scheduleService };
 };
 
 describe('Lesson series expansion', () => {
@@ -101,12 +120,60 @@ describe('Lesson series expansion', () => {
     expect(result.skipped).toEqual([{ date: '2026-11-16', reason: 'Занятие уже создано' }]);
   });
 
+  it('mirrors every occurrence into a linked legacy lesson', async () => {
+    const { service, lessonCreate, lessonSave } = build();
+    await service.expandSeries('series-a', { from: '2026-11-16', to: '2026-11-29' });
+
+    expect(lessonCreate).toHaveBeenCalledTimes(2);
+    const first = lessonCreate.mock.calls[0][0] as Record<string, unknown>;
+    expect(first).toMatchObject({
+      organizationId: 'university-a',
+      groupId: 'group-a',
+      courseId: 'course-a',
+      seriesId: 'series-a',
+      occurrenceId: 'occurrence-1',
+      teacherId: 'teacher-a',
+      subject: 'Математика',
+      subjectType: 'lecture',
+      room: '301',
+      dayOfWeek: 1,
+      startTime: '10:00',
+      endTime: '11:30',
+      pairNumber: 2,
+    });
+    expect((first.startDate as Date).toISOString()).toBe('2026-11-16T00:00:00.000Z');
+    expect((first.endDate as Date).toISOString()).toBe('2026-11-16T00:00:00.000Z');
+    const linked = lessonSave.mock.calls.map(call => call[0] as { id?: string });
+    expect(linked.map(lesson => lesson.id)).toEqual([undefined, undefined]);
+  });
+
+  it('links a legacy lesson that already belongs to the series', async () => {
+    const { service, lessonCreate, lessonSave } = build({ legacy: { id: 'lesson-imported', occurrenceId: null, seriesId: 'series-a' } });
+    await service.expandSeries('series-a', { from: '2026-11-16', to: '2026-11-16' });
+
+    expect(lessonCreate).not.toHaveBeenCalled();
+    const stored = lessonSave.mock.calls[0][0] as Record<string, unknown>;
+    expect(stored).toMatchObject({ id: 'lesson-imported', occurrenceId: 'occurrence-1', seriesId: 'series-a' });
+  });
+
+  it('leaves a slot that belongs to another lesson untouched', async () => {
+    const { service, lessonCreate, lessonSave, save } = build({ legacy: { id: 'lesson-other', occurrenceId: null, seriesId: 'other-series' } });
+    const result = await service.expandSeries('series-a', { from: '2026-11-16', to: '2026-11-16' });
+
+    expect(result.created).toEqual([]);
+    expect(result.skipped).toEqual([{ date: '2026-11-16', reason: 'Слот занят другим занятием' }]);
+    expect(lessonCreate).not.toHaveBeenCalled();
+    expect(lessonSave).not.toHaveBeenCalled();
+    expect(save).not.toHaveBeenCalled();
+  });
+
   it('does not write anything in dry-run mode', async () => {
-    const { service, save } = build();
+    const { service, save, lessonSave } = build();
     const result = await service.expandSeries('series-a', { from: '2026-11-16', to: '2026-11-29', dryRun: true });
     expect(result.dryRun).toBe(true);
     expect(result.created).toHaveLength(2);
     expect(save).not.toHaveBeenCalled();
+    expect(lessonSave).not.toHaveBeenCalled();
   });
 
   it('still expands a both-weeks series without an academic calendar', async () => {
@@ -141,5 +208,80 @@ describe('Lesson series expansion', () => {
     const { service, tenantContext } = build();
     await service.expandSeries('series-a', { from: '2026-11-16', to: '2026-11-16' });
     expect(tenantContext.assertAccess).toHaveBeenCalledWith('university-a');
+  });
+});
+
+
+describe('Lesson series CRUD', () => {
+  const input = {
+    groupId: 'group-a',
+    teacherId: 'teacher-a',
+    courseId: 'course-a',
+    title: 'Математика',
+    subjectType: 'lecture',
+    dayOfWeek: 1,
+    startTime: '10:00',
+    endTime: '11:30',
+    pairNumber: 2,
+    room: '301',
+    validFrom: '2026-09-01',
+  };
+
+  it('lists the series of the university with optional filters', async () => {
+    const { service, seriesFind, tenantContext } = build({ series: [series()] });
+    const result = await service.list('university-a', { groupId: 'group-a' });
+
+    expect(result).toHaveLength(1);
+    expect(seriesFind).toHaveBeenCalledWith(expect.objectContaining({
+      where: { organizationId: 'university-a', groupId: 'group-a' },
+    }));
+    expect(tenantContext.assertAccess).toHaveBeenCalledWith('university-a');
+  });
+
+  it('creates a series after checking references and conflicts', async () => {
+    const { service, scheduleService } = build();
+    const created = await service.create('university-a', input);
+
+    expect(created).toMatchObject({ groupId: 'group-a', dayOfWeek: 1, startTime: '10:00', endTime: '11:30', weekType: 'both', source: 'manual' });
+    expect(scheduleService.assertLessonReferences).toHaveBeenCalledWith('university-a', 'group-a', 'teacher-a');
+    expect(scheduleService.findConflicts).toHaveBeenCalled();
+  });
+
+  it('rejects a series that clashes with an existing lesson', async () => {
+    const { service, scheduleService } = build({
+      conflicts: [{ type: 'group', lessonId: 'lesson-a', subject: 'Физика', startTime: '10:00', endTime: '11:30', dateFrom: '2026-11-23', dateTo: '2026-11-23' }],
+    });
+
+    await expect(service.create('university-a', input)).rejects.toMatchObject({
+      response: { code: 'SCHEDULE_CONFLICT' },
+    });
+    expect(scheduleService.findConflicts).toHaveBeenCalled();
+  });
+
+  it('does not count the lessons generated by the series being edited', async () => {
+    const { service, scheduleService } = build({
+      ownedLessons: [{ id: 'lesson-own' }],
+      conflicts: [{ type: 'group', lessonId: 'lesson-own', subject: 'Математика', startTime: '10:00', endTime: '11:30', dateFrom: '2026-11-23', dateTo: '2026-11-23' }],
+    });
+
+    await expect(service.update('series-a', { room: '302' })).resolves.toMatchObject({ room: '302' });
+    expect(scheduleService.findConflicts).toHaveBeenCalled();
+  });
+
+  it('validates the series window before writing', async () => {
+    const { service } = build();
+    await expect(service.create('university-a', { ...input, startTime: '12:00', endTime: '11:00' }))
+      .rejects.toThrow('Окончание занятия должно быть позже начала');
+    await expect(service.create('university-a', { ...input, validTo: '2026-08-01' }))
+      .rejects.toThrow('Дата окончания действия раньше начала');
+  });
+
+  it('removes the template and reports a missing series', async () => {
+    const { service, seriesRemove } = build();
+    await expect(service.remove('series-a')).resolves.toEqual({ id: 'series-a', deleted: true });
+    expect(seriesRemove).toHaveBeenCalled();
+
+    const missing = build({ item: null });
+    await expect(missing.service.remove('series-x')).rejects.toBeInstanceOf(NotFoundException);
   });
 });

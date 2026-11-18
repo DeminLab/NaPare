@@ -20,6 +20,7 @@ import { CreateLessonDto } from './dto/create-lesson.dto';
 import { UpdateLessonDto } from './dto/update-lesson.dto';
 import { ValidateLessonDto } from './dto/validate-lesson.dto';
 import { ExpandSeriesDto } from './dto/expand-series.dto';
+import { CreateLessonSeriesDto, LessonSeriesQueryDto, UpdateLessonSeriesDto } from './dto/lesson-series.dto';
 import { ScheduleSeriesService } from './schedule-series.service';
 import { ScheduleReadService } from './schedule-read.service';
 import { ScheduleRangeV2QueryDto } from './dto/schedule-range-v2-query.dto';
@@ -135,6 +136,48 @@ export class ScheduleController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async findRangeV2(@Request() req, @Query() query: ScheduleRangeV2QueryDto) {
     return this.scheduleReadService.readRange(req.user, query);
+  }
+
+  @Get('series')
+  @Roles(UserRole.TEACHER, UserRole.CURATOR, UserRole.DEPARTMENT_HEAD, UserRole.FACULTY_DEAN, UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @ApiOperation({ summary: 'Получить серии занятий своего университета' })
+  @ApiResponse({ status: 200, description: 'Серии получены' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async listSeries(@Request() req, @Query() query: LessonSeriesQueryDto) {
+    return this.scheduleSeriesService.list(req.user.organizationId, query);
+  }
+
+  @Post('series')
+  @Roles(UserRole.CURATOR, UserRole.DEPARTMENT_HEAD, UserRole.FACULTY_DEAN, UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @ApiOperation({ summary: 'Создать серию занятий' })
+  @ApiResponse({ status: 201, description: 'Серия создана' })
+  @ApiResponse({ status: 400, description: 'Некорректные данные серии' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 409, description: 'Конфликт расписания' })
+  async createSeries(@Request() req, @Body() dto: CreateLessonSeriesDto) {
+    return this.scheduleSeriesService.create(req.user.organizationId, dto);
+  }
+
+  @Patch('series/:id')
+  @Roles(UserRole.CURATOR, UserRole.DEPARTMENT_HEAD, UserRole.FACULTY_DEAN, UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @ApiOperation({ summary: 'Обновить серию занятий' })
+  @ApiResponse({ status: 200, description: 'Серия обновлена' })
+  @ApiResponse({ status: 400, description: 'Некорректные данные серии' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Серия не найдена' })
+  @ApiResponse({ status: 409, description: 'Конфликт расписания' })
+  async updateSeries(@Param('id') id: string, @Body() dto: UpdateLessonSeriesDto) {
+    return this.scheduleSeriesService.update(id, dto);
+  }
+
+  @Delete('series/:id')
+  @Roles(UserRole.CURATOR, UserRole.DEPARTMENT_HEAD, UserRole.FACULTY_DEAN, UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @ApiOperation({ summary: 'Удалить серию занятий' })
+  @ApiResponse({ status: 200, description: 'Серия удалена' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Серия не найдена' })
+  async removeSeries(@Param('id') id: string) {
+    return this.scheduleSeriesService.remove(id);
   }
 
   @Post('series/expand')
