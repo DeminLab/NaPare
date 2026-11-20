@@ -17,6 +17,7 @@ import { LessonOccurrence } from "../academic/entities/lesson-occurrence.entity"
 import { ScheduleChange } from "../academic/entities/schedule-change.entity";
 import { Group } from "../users/entities/group.entity";
 import { CurationModule } from "../curation/curation.module";
+import { LessonIdentifierService } from "../common/identifiers/lesson-identifier.service";
 
 @Module({
   imports: [
@@ -39,8 +40,9 @@ import { CurationModule } from "../curation/curation.module";
     AcademicCalendarService,
     ChangeDetectorService,
     SibitConnectorService,
+    LessonIdentifierService,
   ],
   controllers: [ScheduleController],
-  exports: [ScheduleService, SibitConnectorService],
+  exports: [ScheduleService, SibitConnectorService, LessonIdentifierService],
 })
 export class ScheduleModule {}

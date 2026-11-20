@@ -2870,6 +2870,33 @@
       }
     },
     {
+      "id": "CareerController.removeSavedTask DELETE /api/v1/career/tasks/:id/favorite",
+      "source": "apps/backend/src/career/career.controller.ts",
+      "method": "DELETE",
+      "path": "/api/v1/career/tasks/:id/favorite",
+      "guards": [
+        "JwtAuthGuard",
+        "RolesGuard"
+      ],
+      "roles": [
+        "student"
+      ],
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 403,
+        "career_staff": 403,
+        "career_admin": 403,
+        "teacher": 403,
+        "curator": 403,
+        "faculty_dean": 403,
+        "department_head": 403,
+        "university_admin": 403,
+        "superadmin": 403,
+        "developer": 403
+      }
+    },
+    {
       "id": "CareerController.requestAdmission POST /api/v1/career/admissions",
       "source": "apps/backend/src/career/career.controller.ts",
       "method": "POST",
@@ -2987,6 +3014,33 @@
         "university_admin": 200,
         "superadmin": 200,
         "developer": 200
+      }
+    },
+    {
+      "id": "CareerController.saveTask PUT /api/v1/career/tasks/:id/favorite",
+      "source": "apps/backend/src/career/career.controller.ts",
+      "method": "PUT",
+      "path": "/api/v1/career/tasks/:id/favorite",
+      "guards": [
+        "JwtAuthGuard",
+        "RolesGuard"
+      ],
+      "roles": [
+        "student"
+      ],
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 403,
+        "career_staff": 403,
+        "career_admin": 403,
+        "teacher": 403,
+        "curator": 403,
+        "faculty_dean": 403,
+        "department_head": 403,
+        "university_admin": 403,
+        "superadmin": 403,
+        "developer": 403
       }
     },
     {
@@ -9868,6 +9922,198 @@
       "source": "apps/backend/src/users/users.controller.ts",
       "method": "PATCH",
       "path": "/api/v1/users/me",
+      "guards": [
+        "JwtAuthGuard"
+      ],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 200,
+        "career_staff": 200,
+        "career_admin": 200,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
+      "id": "VacanciesController.applications GET /api/v1/career/vacancies/:id/applications",
+      "source": "apps/backend/src/career/vacancies.controller.ts",
+      "method": "GET",
+      "path": "/api/v1/career/vacancies/:id/applications",
+      "guards": [
+        "JwtAuthGuard"
+      ],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 200,
+        "career_staff": 200,
+        "career_admin": 200,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
+      "id": "VacanciesController.apply PUT /api/v1/career/vacancies/:id/application",
+      "source": "apps/backend/src/career/vacancies.controller.ts",
+      "method": "PUT",
+      "path": "/api/v1/career/vacancies/:id/application",
+      "guards": [
+        "JwtAuthGuard"
+      ],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 200,
+        "career_staff": 200,
+        "career_admin": 200,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
+      "id": "VacanciesController.close PATCH /api/v1/career/vacancies/:id/close",
+      "source": "apps/backend/src/career/vacancies.controller.ts",
+      "method": "PATCH",
+      "path": "/api/v1/career/vacancies/:id/close",
+      "guards": [
+        "JwtAuthGuard"
+      ],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 200,
+        "career_staff": 200,
+        "career_admin": 200,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
+      "id": "VacanciesController.create POST /api/v1/career/vacancies",
+      "source": "apps/backend/src/career/vacancies.controller.ts",
+      "method": "POST",
+      "path": "/api/v1/career/vacancies",
+      "guards": [
+        "JwtAuthGuard"
+      ],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 200,
+        "career_staff": 200,
+        "career_admin": 200,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
+      "id": "VacanciesController.list GET /api/v1/career/vacancies",
+      "source": "apps/backend/src/career/vacancies.controller.ts",
+      "method": "GET",
+      "path": "/api/v1/career/vacancies",
+      "guards": [
+        "JwtAuthGuard"
+      ],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 200,
+        "career_staff": 200,
+        "career_admin": 200,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
+      "id": "VacanciesController.propose PUT /api/v1/career/vacancies/:vacancyId/applications/:id/interview",
+      "source": "apps/backend/src/career/vacancies.controller.ts",
+      "method": "PUT",
+      "path": "/api/v1/career/vacancies/:vacancyId/applications/:id/interview",
+      "guards": [
+        "JwtAuthGuard"
+      ],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 200,
+        "career_staff": 200,
+        "career_admin": 200,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
+      "id": "VacanciesController.respond PATCH /api/v1/career/vacancies/applications/:id/interview",
+      "source": "apps/backend/src/career/vacancies.controller.ts",
+      "method": "PATCH",
+      "path": "/api/v1/career/vacancies/applications/:id/interview",
+      "guards": [
+        "JwtAuthGuard"
+      ],
+      "roles": null,
+      "permissions": null,
+      "statuses": {
+        "student": 200,
+        "employer": 200,
+        "career_staff": 200,
+        "career_admin": 200,
+        "teacher": 200,
+        "curator": 200,
+        "faculty_dean": 200,
+        "department_head": 200,
+        "university_admin": 200,
+        "superadmin": 200,
+        "developer": 200
+      }
+    },
+    {
+      "id": "VacanciesController.review PATCH /api/v1/career/vacancies/:id/review",
+      "source": "apps/backend/src/career/vacancies.controller.ts",
+      "method": "PATCH",
+      "path": "/api/v1/career/vacancies/:id/review",
       "guards": [
         "JwtAuthGuard"
       ],

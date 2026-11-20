@@ -1,8 +1,14 @@
 import * as request from 'supertest';
+import { DataSource } from 'typeorm';
+import { CareerVacancyApplication } from '../src/career/vacancies.entity';
+import { TenantContext } from '../src/common/tenant/tenant-context';
+import { Lesson } from '../src/schedule/entities/lesson.entity';
 import { createCurationFixture } from './curation.fixture';
 import { CareerApplication, CareerCompany, CareerMembership, CareerPartnership, CareerProfile, CareerTask, CareerTaskComplaint, CareerWork } from '../src/career/career.entities';
 import { User } from '../src/users/entities/user.entity';
 import { UserRole } from '../src/auth/interfaces/user-role';
+import { Favorite, CAREER_FAVORITE_KIND } from '../src/favorites/entities/favorite.entity';
+import { CareerTaskFavorites1700000000051 } from '../src/migrations/1700000000051-CareerTaskFavorites';
 import { AuditLog } from '../src/common/entities/audit-log.entity';
 import { PersonalDataRead1700000000037 } from '../src/migrations/1700000000037-PersonalDataRead';
 import { AccountErasure1700000000038 } from '../src/migrations/1700000000038-AccountErasure';
@@ -21,7 +27,7 @@ suite('Career moderation, student complaints and tenant isolation with real JWT/
   const create=async(extra:object={})=>(await post('tasks','employer',draft(extra)).expect(201)).body;
   beforeAll(async()=>{
     f=await createCurationFixture(process.env.CAREER_MODERATION_TEST_DATABASE_URL!);f.app.getHttpAdapter().getInstance().set('trust proxy',true);
-    const runner=f.db.createQueryRunner();try{await new PersonalDataRead1700000000037().up(runner);await new AccountErasure1700000000038().up(runner);await new CareerModeration1700000000040().up(runner);}finally{await runner.release();}
+    const runner=f.db.createQueryRunner();try{await new PersonalDataRead1700000000037().up(runner);await new AccountErasure1700000000038().up(runner);await new CareerModeration1700000000040().up(runner);await new CareerTaskFavorites1700000000051().up(runner);}finally{await runner.release();}
     await f.db.getRepository(User).update(f.users.outsider.id,{role:UserRole.CAREER_STAFF});
     const employer=await f.db.getRepository(User).save({email:'moderation-employer@example.test',firstName:'Синтетический',lastName:'Работодатель',passwordHash:f.users.student.passwordHash,role:UserRole.EMPLOYER,organizationId:null});
     const foreignStudent=await f.db.getRepository(User).save({email:'moderation-foreign@example.test',firstName:'Синтетический',lastName:'Студент',passwordHash:f.users.student.passwordHash,role:UserRole.STUDENT,organizationId:f.otherUni.id,groupId:f.groups[3].id});
@@ -32,6 +38,87 @@ suite('Career moderation, student complaints and tenant isolation with real JWT/
     for(const actor of ['employer','student','peer','admin','teacher','outsider','foreignStudent']){const user=actor==='employer'?employer:actor==='foreignStudent'?foreignStudent:f.users[actor];const login=await http().post('/api/v1/auth/login').send({email:user.email,password:f.password}).expect(200);tokens[actor]=login.body.accessToken;}
   });
   afterAll(async()=>{await f?.app.close();});
+
+  it('publishes a vacancy, transfers a resume and only confirms an available interview', async () => {
+    const api = (verb: 'get' | 'post' | 'put' | 'patch', path: string, actor: string) =>
+      http()[verb](`/api/v1/career/vacancies${path}`).auth(tokens[actor], { type: 'bearer' });
+    const vacancyInput = {
+      companyId, organizationId: f.uni.id, title: 'Стажировка аналитика',
+      description: 'Подготовка аналитических отчётов. Условия обсуждаются на встрече.', kind: 'internship',
+    };
+
+    await api('post', '', 'student').send(vacancyInput).expect(403);
+    const { body: vacancy } = await api('post', '', 'employer').send(vacancyInput).expect(201);
+    expect(vacancy.status).toBe('pending');
+    await api('get', '?workspace=student', 'student').expect(200).expect(({ body }) => expect(body.data).toEqual([]));
+    await api('put', `/${vacancy.id}/application`, 'student').expect(404);
+    await api('patch', `/${vacancy.id}/review`, 'outsider').send({ decision: 'open', reason: '' }).expect(404);
+    await api('patch', `/${vacancy.id}/review`, 'admin').send({ decision: 'open', reason: '' }).expect(200);
+    await api('get', '?workspace=student', 'foreignStudent').expect(200).expect(({ body }) => expect(body.data).toEqual([]));
+
+    const submit = () => api('put', `/${vacancy.id}/application`, 'student').expect(200);
+    const [first, second] = await Promise.all([submit(), submit()]);
+    const application = first.body;
+    expect(second.body.id).toBe(application.id);
+    expect(application.resume).toMatchObject({ headline: 'Синтетический профиль' });
+    await api('get', `/${vacancy.id}/applications`, 'student').expect(403);
+    await api('get', `/${vacancy.id}/applications`, 'outsider').expect(404);
+    await api('get', `/${vacancy.id}/applications`, 'employer').expect(200)
+      .expect(({ body }) => expect(body.data.map(row => row.id)).toEqual([application.id]));
+    expect((await api('get', '?workspace=student', 'peer').expect(200)).body.data[0].application).toBeNull();
+
+    const baseTime = new Date(Date.now() + 86400000);
+    baseTime.setUTCMinutes(0, 0, 0);
+    const time = (addMinutes: number) => new Date(baseTime.getTime() + addMinutes * 60000).toISOString();
+    const lesson = f.db.getRepository(Lesson).create({
+      organizationId: f.uni.id, groupId: f.groups[0].id, teacherId: f.users.teacher.id,
+      subject: 'Приватная дисциплина', dayOfWeek: baseTime.getUTCDay(), pairNumber: 2,
+      startDate: baseTime, endDate: new Date(time(60)), startTime: '10:00', endTime: '11:00',
+    });
+    await f.db.getRepository(Lesson).save(lesson);
+    const proposal = (start: number, end: number) => ({ startsAt: time(start), endsAt: time(end), meetingDetails: 'Корпус А, аудитория 201' });
+    const propose = (start: number, end: number) =>
+      api('put', `/${vacancy.id}/applications/${application.id}/interview`, 'employer').send(proposal(start, end)).expect(200);
+    const respond = (actor: string, decision: string, updatedAt: string) =>
+      api('patch', `/applications/${application.id}/interview`, actor).send({ decision, updatedAt });
+    const busy = (await propose(15, 45)).body;
+    await respond('peer', 'confirmed', busy.updatedAt).expect(404);
+    await respond('student', 'confirmed', busy.updatedAt).expect(409)
+      .expect(({ body }) => expect(JSON.stringify(body)).not.toContain(lesson.subject));
+    await respond('student', 'declined', busy.updatedAt).expect(200);
+
+    const available = (await propose(60, 90)).body;
+    await respond('student', 'confirmed', busy.updatedAt).expect(409);
+    await respond('student', 'confirmed', available.updatedAt).expect(200)
+      .expect(({ body }) => expect(body.status).toBe('confirmed'));
+    await api('get', `/${vacancy.id}/applications`, 'employer').expect(200)
+      .expect(({ body }) => expect(body.data[0].status).toBe('confirmed'));
+
+    const myDay = (await http().get('/api/v1/my-day?timeZone=Asia%2FOmsk').auth(tokens.student, { type: 'bearer' }).expect(200)).body;
+    expect(myDay.careerInterviews).toEqual([{ id: application.id, title: vacancy.title, startsAt: time(60), endsAt: time(90) }]);
+    expect((await http().get('/api/v1/my-day?timeZone=Asia%2FOmsk').auth(tokens.teacher, { type: 'bearer' }).expect(200)).body.careerInterviews).toEqual([]);
+
+    const offer = async (title: string, start: number, end: number) => {
+      const created = (await api('post', '', 'employer').send({ ...vacancyInput, title }).expect(201)).body;
+      await api('patch', `/${created.id}/review`, 'admin').send({ decision: 'open', reason: '' }).expect(200);
+      const applied = (await api('put', `/${created.id}/application`, 'student').expect(200)).body;
+      return (await api('put', `/${created.id}/applications/${applied.id}/interview`, 'employer').send(proposal(start, end)).expect(200)).body;
+    };
+    const confirm = ({ id, updatedAt }: { id: string; updatedAt: string }) =>
+      api('patch', `/applications/${id}/interview`, 'student').send({ decision: 'confirmed', updatedAt });
+    await confirm(await offer('Вторая стажировка', 70, 100)).expect(409);
+    const competing = [
+      await offer('Третья стажировка', 120, 150),
+      await offer('Четвёртая стажировка', 130, 160),
+    ];
+    const confirmations = await Promise.all(competing.map(candidate => confirm(candidate)));
+    expect(confirmations.map(result => result.status).sort()).toEqual([200, 409]);
+
+    await api('patch', `/${vacancy.id}/close`, 'employer').expect(200);
+    await api('put', `/${vacancy.id}/application`, 'peer').expect(404);
+    const exportData = await http().get('/api/v1/users/me/export').auth(tokens.student, { type: 'bearer' }).expect(200);
+    expect(JSON.stringify(exportData.body.datasets.career_vacancy_application)).toContain(application.id);
+  });
 
   it('uses FORCE RLS and four restrictive policies for the complaint table',async()=>{
     const [security]=await f.db.query(`SELECT relrowsecurity,relforcerowsecurity,(SELECT count(*)::int FROM pg_policy WHERE polrelid=c.oid AND NOT polpermissive) AS restrictive FROM pg_class c WHERE relname='career_task_complaint'`);
@@ -45,6 +132,51 @@ suite('Career moderation, student complaints and tenant isolation with real JWT/
     await post(`tasks/${ordinaryId}/approve`,'teacher').expect(403);
     await post(`tasks/${ordinaryId}/approve`,'outsider').expect(404);
     expect((await post(`tasks/${ordinaryId}/approve`,'admin').expect(201)).body).toMatchObject({state:'open',moderationStatus:'approved'});
+  });
+  it('saves only visible own-university tasks and keeps favorites private and idempotent', async () => {
+    const path = `/api/v1/career/tasks/${ordinaryId}/favorite`;
+    const save = (actor: string) => http().put(path).auth(tokens[actor], { type: 'bearer' });
+    const remove = (actor: string) => http().delete(path).auth(tokens[actor], { type: 'bearer' });
+    await save('employer').expect(403);
+    await save('foreignStudent').expect(404);
+    await save('student').expect(200, { saved: true });
+    await save('student').expect(200, { saved: true });
+    expect(await f.db.getRepository(Favorite).countBy({ kind: CAREER_FAVORITE_KIND, externalId: ordinaryId })).toBe(1);
+    const saved = await get('tasks?saved=true&limit=1', 'student').expect(200);
+    expect(saved.body).toMatchObject({ savedTaskIds: [ordinaryId], total: 1, hasMore: false });
+    expect(saved.body.items[0].id).toBe(ordinaryId);
+    expect((await get('tasks?saved=true', 'student').query({ q: 'несовпадающая' }).expect(200)).body.total).toBe(0);
+    expect((await get('tasks?saved=true', 'peer').expect(200)).body.total).toBe(0);
+    await get('tasks?saved=true', 'employer').expect(403);
+    await get('tasks?saved=wrong', 'student').expect(400);
+    await remove('peer').expect(200, { saved: false });
+    expect((await get('tasks?saved=true', 'student').expect(200)).body.total).toBe(1);
+    await remove('student').expect(200, { saved: false });
+    expect((await get('tasks?saved=true', 'student').expect(200)).body.total).toBe(0);
+  });
+  it('shows only actionable own-university career deadlines on My Day', async () => {
+    const today = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Omsk' }).format(new Date());
+    const tasks = f.db.getRepository(CareerTask);
+    const own = await tasks.save({ ...draft({ title: 'Своя работа', deadline: today }), state: 'assigned' });
+    const peer = await tasks.save({ ...draft({ title: 'Работа сокурсника', deadline: today }), state: 'assigned' });
+    const complete = await tasks.save({ ...draft({ title: 'Уже завершена', deadline: today }), state: 'accepted' });
+    const foreign = await tasks.save({ ...draft({ title: 'Работа из другого вуза', deadline: today }), organizationId: f.otherUni.id, state: 'assigned' });
+    const works = f.db.getRepository(CareerWork);
+    const work = await works.save({ taskId: own.id, studentId: f.users.student.id, state: 'revision' });
+    const otherWorks = await works.save([
+      { taskId: peer.id, studentId: f.users.otherStudent.id, state: 'in_progress' },
+      { taskId: complete.id, studentId: f.users.student.id, state: 'accepted' },
+      { taskId: foreign.id, studentId: f.users.student.id, state: 'in_progress' },
+    ]);
+
+    const load = (actor: string) => http().get('/api/v1/my-day?timeZone=Asia%2FOmsk').auth(tokens[actor], { type: 'bearer' });
+    try {
+      expect((await load('student').expect(200)).body.careerDeadlines).toEqual([{ id: work.id, title: own.title, deadline: today }]);
+      expect((await load('teacher').expect(200)).body.careerDeadlines).toEqual([]);
+    } finally {
+      await works.delete([work.id, ...otherWorks.map(row => row.id)]);
+      await tasks.delete([own.id, peer.id, complete.id, foreign.id]);
+    }
   });
   it('requires explicit reasons for flagged decisions and current content version after correction',async()=>{
     flaggedId=(await create({description:'Нужен депозит за получение доступа к материалам проекта',rewardKopecks:10000000,hours:1})).id;
@@ -130,6 +262,11 @@ suite('Career moderation, student complaints and tenant isolation with real JWT/
     const exported=await http().get('/api/v1/users/me/export').auth(tokens.student,{type:'bearer'}).expect(200);
     expect(exported.body.complete).toBe(true);expect(JSON.stringify(exported.body.datasets.career_task_complaint)).toContain('OWN_OLD_UNIVERSITY_COMPLAINT');
     await http().delete('/api/v1/users/me').auth(tokens.student,{type:'bearer'}).send({expectedUserId:f.users.student.id,currentPassword:f.password,confirmed:true,acknowledgeRetention:true}).expect(200);
+    const applications = await f.app.get(TenantContext).runInRequest(() => {
+      f.app.get(TenantContext).setUser({ id: f.users.student.id, email: f.users.student.email, role: UserRole.STUDENT, organizationId: f.uni.id });
+      return f.app.get(DataSource).getRepository(CareerVacancyApplication).countBy({ studentId: f.users.student.id });
+    });
+    expect(applications).toBe(0);
     expect((await f.db.getRepository(CareerTaskComplaint).findOneByOrFail({id:old.id})).details).toBe('[Текст жалобы удалён пользователем]');
     expect((await f.db.getRepository(CareerTaskComplaint).findOneByOrFail({id:complaintId})).details).toBe('[Текст жалобы удалён пользователем]');
     expect(await f.db.getRepository(CareerTaskComplaint).existsBy({studentId:f.users.peer.id,details:'KEEP_PEER_PRIVATE_COMPLAINT'})).toBe(true);

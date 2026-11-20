@@ -16,6 +16,7 @@ import { Lesson } from "../schedule/entities/lesson.entity";
 import { Group } from "../users/entities/group.entity";
 import { University } from "../users/entities/university.entity";
 import { CurationModule } from '../curation/curation.module';
+import { ScheduleModule } from "../schedule/schedule.module";
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { CurationModule } from '../curation/curation.module';
     ]),
     EventsModule,
     CurationModule,
+    ScheduleModule,
   ],
   providers: [PairSpaceService],
   controllers: [PairSpaceController],

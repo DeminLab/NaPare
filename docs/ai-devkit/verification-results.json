@@ -1,0 +1,249 @@
+{
+  "date": "2026-11-19",
+  "scope": "local-devkit-not-production",
+  "installerExit": 0,
+  "checks": {
+    "projectLint": "passed",
+    "projectTypecheck": "passed after generated route cache repair",
+    "roleBoundaryGuard": "passed",
+    "docsAndProjectSkillsMarkdownlint": "passed",
+    "vendorFullFreshInstall": "passed",
+    "codexDiscovery20Skills": "passed",
+    "agent12Contracts": "passed",
+    "nativeCustomAgentSelection": "not confirmed; selector unavailable",
+    "codeReviewerPromptRole": "passed",
+    "productBuild": "not run",
+    "productUnitE2E": "not run",
+    "externalCI": "not run"
+  },
+  "mcp": [
+    {
+      "name": "context7",
+      "transport": "stdio",
+      "status": "verified",
+      "tools": [
+        "resolve-library-id",
+        "query-docs"
+      ],
+      "checks": [
+        "resolve-library-id returned Next.js documentation"
+      ]
+    },
+    {
+      "name": "playwright",
+      "transport": "stdio",
+      "status": "verified",
+      "tools": [
+        "browser_close",
+        "browser_resize",
+        "browser_console_messages",
+        "browser_handle_dialog",
+        "browser_emulate_media",
+        "browser_evaluate",
+        "browser_file_upload",
+        "browser_drop",
+        "browser_find",
+        "browser_fill_form",
+        "browser_press_key",
+        "browser_type",
+        "browser_navigate",
+        "browser_navigate_back",
+        "browser_network_requests",
+        "browser_network_request",
+        "browser_run_code_unsafe",
+        "browser_take_screenshot",
+        "browser_snapshot",
+        "browser_click",
+        "browser_drag",
+        "browser_hover",
+        "browser_select_option",
+        "browser_tabs",
+        "browser_wait_for"
+      ],
+      "checks": [
+        "isolated Chrome launched",
+        "loopback fixture navigation and button interaction passed"
+      ]
+    },
+    {
+      "name": "chrome_devtools",
+      "transport": "stdio",
+      "status": "verified",
+      "tools": [
+        "click",
+        "close_page",
+        "drag",
+        "emulate",
+        "evaluate_script",
+        "fill",
+        "fill_form",
+        "get_console_message",
+        "get_css_styles",
+        "get_network_request",
+        "handle_dialog",
+        "hover",
+        "lighthouse_audit",
+        "list_console_messages",
+        "list_network_requests",
+        "list_pages",
+        "navigate_page",
+        "new_page",
+        "performance_analyze_insight",
+        "performance_start_trace",
+        "performance_stop_trace",
+        "press_key",
+        "resize_page",
+        "screencast_start",
+        "screencast_stop",
+        "select_page",
+        "set_logpoints",
+        "take_heapsnapshot",
+        "take_screenshot",
+        "take_snapshot",
+        "type_text",
+        "upload_file",
+        "wait_for"
+      ],
+      "checks": [
+        "isolated headless Chrome launched",
+        "fixture title, network and console tools passed"
+      ]
+    },
+    {
+      "name": "dbhub",
+      "transport": "stdio",
+      "status": "verified",
+      "tools": [
+        "execute_sql",
+        "search_objects"
+      ],
+      "checks": [
+        "synthetic PostgreSQL SELECT passed",
+        "database ACLs deny INSERT/UPDATE/DELETE and default transaction is read-only"
+      ]
+    },
+    {
+      "name": "next_devtools",
+      "status": "incompatible",
+      "checks": [
+        "Next.js 16+ required; vulnerable unused 0.4.0 runtime removed after initial handshake probe"
+      ]
+    },
+    {
+      "name": "github",
+      "status": "requires_authorization",
+      "checks": [
+        "GITHUB_PAT_TOKEN absent; authenticated smoke requires a user-provided read-only token"
+      ]
+    },
+    {
+      "name": "figma",
+      "status": "requires_authorization",
+      "checks": [
+        "server requires authentication"
+      ]
+    },
+    {
+      "name": "sentry",
+      "status": "requires_authorization",
+      "checks": [
+        "server requires authentication"
+      ]
+    }
+  ],
+  "runtimeAudit": {
+    "info": 0,
+    "low": 0,
+    "moderate": 0,
+    "high": 0,
+    "critical": 0,
+    "total": 0
+  },
+  "existingPlugins": [
+    {
+      "name": "documents",
+      "version": "26.1117.12345",
+      "enabled": true
+    },
+    {
+      "name": "pdf",
+      "version": "26.1117.12345",
+      "enabled": true
+    },
+    {
+      "name": "spreadsheets",
+      "version": "26.1117.12345",
+      "enabled": true
+    },
+    {
+      "name": "presentations",
+      "version": "26.1117.12345",
+      "enabled": true
+    },
+    {
+      "name": "template-creator",
+      "version": "26.1117.12345",
+      "enabled": true
+    },
+    {
+      "name": "codex-app-tools",
+      "version": "26.1111.21308",
+      "enabled": true
+    },
+    {
+      "name": "browser",
+      "version": "26.1111.21308",
+      "enabled": true
+    },
+    {
+      "name": "unified-computer-use",
+      "version": "26.1111.21308",
+      "enabled": true
+    },
+    {
+      "name": "chrome",
+      "version": "26.1111.21308",
+      "enabled": true
+    },
+    {
+      "name": "computer-use",
+      "version": "26.1111.21308",
+      "enabled": true
+    },
+    {
+      "name": "visualize",
+      "version": "1.0.97",
+      "enabled": true
+    },
+    {
+      "name": "canva",
+      "version": "d416fd5a",
+      "enabled": true
+    },
+    {
+      "name": "figma",
+      "version": "d416fd5a",
+      "enabled": true
+    },
+    {
+      "name": "vercel",
+      "version": "d416fd5a",
+      "enabled": true
+    },
+    {
+      "name": "github",
+      "version": "d416fd5a",
+      "enabled": true
+    },
+    {
+      "name": "build-web-apps",
+      "version": "d416fd5a",
+      "enabled": true
+    },
+    {
+      "name": "supabase",
+      "version": "d416fd5a",
+      "enabled": true
+    }
+  ]
+}

@@ -1,5 +1,6 @@
 import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { DataSource, In } from 'typeorm';
+import { Favorite } from '../favorites/entities/favorite.entity';
 import { AuthService } from '../auth/auth.service';
 import { UserRole } from '../auth/interfaces/user-role';
 import { CareerService, assertCareerResultUrl, assertCareerTransition } from './career.service';
@@ -174,7 +175,7 @@ describe('Career case descriptions',()=>{
 describe('Career task list pagination',()=>{
   const makeHarness=(actor:{id:string;email:string;role:UserRole;organizationId:string|null},items:Array<{id:string}>,total:number,memberships:Array<Record<string,unknown>>=[],applications:Array<{taskId:string}>=[])=>{
     const query:any={where:jest.fn(function(){return this;}),andWhere:jest.fn(function(){return this;}),orderBy:jest.fn(function(){return this;}),addOrderBy:jest.fn(function(){return this;}),skip:jest.fn(function(){return this;}),take:jest.fn(function(){return this;}),getManyAndCount:jest.fn().mockResolvedValue([items,total])};
-    const getRepository=jest.fn(entity=>entity===CareerMembership?{find:jest.fn().mockResolvedValue(memberships),existsBy:jest.fn().mockResolvedValue(false)}:entity===CareerApplication?{find:jest.fn().mockResolvedValue(applications)}:entity===CareerTask?{createQueryBuilder:jest.fn(()=>query)}:entity===CareerCompany?{find:jest.fn().mockResolvedValue([])}:{});
+    const getRepository=jest.fn(entity=>entity===CareerMembership?{find:jest.fn().mockResolvedValue(memberships),existsBy:jest.fn().mockResolvedValue(false)}:entity===CareerApplication?{find:jest.fn().mockResolvedValue(applications)}:entity===CareerTask?{createQueryBuilder:jest.fn(()=>query)}:entity===CareerCompany||entity===Favorite?{find:jest.fn().mockResolvedValue([])}:{});
     return {service:new CareerService({manager:{getRepository}} as unknown as DataSource,{} as AuthService),query,getRepository};
   };
   it.each([

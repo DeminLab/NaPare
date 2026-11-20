@@ -8,12 +8,13 @@ import { apiFetch, apiFetchList, getUser, StudentUser } from '@/lib/api';
 import { Badge, Button, Card, EmptyState, Icon, LessonTypeBadge, RequestState, Skeleton } from '@napare/ui';
 import { PreparationProgressControl, type PreparationProgress } from '../PreparationProgressControl';
 
-interface Lesson { id: string; subject: string; subjectType?: string; teacherName?: string; room?: string; building?: string; subgroup?: string; weekType?: 'odd' | 'even' | 'both'; startTime: string; endTime: string; isChanged?: boolean; changeDescription?: string; }
+interface Lesson { id: string; startDate?: string; endDate?: string; subject: string; subjectType?: string; teacherName?: string; room?: string; building?: string; subgroup?: string; weekType?: 'odd' | 'even' | 'both'; startTime: string; endTime: string; isChanged?: boolean; changeDescription?: string; }
 interface Preparation { id: string; title: string; description?: string | null; deadline?: string | null; lessonId: string; subject: string; progress?: PreparationProgress; subtasks?: Array<{ id: string; title: string; done: boolean }>; }
 interface Announcement { id: string; text: string; createdAt: string; }
 interface PairSpace { lessonId: string; announcements?: Announcement[]; }
 interface Notification { id: string; title: string; body?: string; type: string; deepLink?: string; createdAt: string; isRead?: boolean; priority?: string; }
-interface MyDayResponse { date?: string; lessons: Lesson[]; pairSpaces?: PairSpace[]; upcomingPreparations?: Preparation[]; notifications?: { unreadCount?: number }; }
+interface CareerDeadline { id: string; title: string; deadline: string; }
+interface MyDayResponse { date?: string; lessons: Lesson[]; pairSpaces?: PairSpace[]; upcomingPreparations?: Preparation[]; careerDeadlines?: CareerDeadline[]; careerInterviews?: Array<{ id: string; title: string; startsAt: string; endsAt: string }>; notifications?: { unreadCount?: number }; }
 interface TodaySnapshot { savedAt: string; timeZone: string; day: MyDayResponse; user: StudentUser; notifications: Notification[]; }
 interface ScheduleLesson extends Lesson { date?: string; startDate?: string; endDate?: string; }
 interface AbsenceRecord { id: string; startDate?: string; endDate?: string; affectedLessonsCount?: number; }
@@ -21,7 +22,13 @@ type TimelineItem = { lesson: Lesson; start: number; end: number };
 type ActionState = 'today' | 'tomorrow' | 'upcoming' | 'overdue' | 'noDeadline' | 'invalid';
 
 const time = (value: string) => value.includes('T') ? value.slice(11, 16) : value;
-const timestamp = (value: string) => { const parsed = Date.parse(value); if (!Number.isNaN(parsed)) return parsed; const parts = value.split(':').map(Number); const date = new Date(); date.setHours(parts[0], parts[1], 0, 0); return date.getTime(); };
+const timestamp = (instant: string | undefined, timeValue: string, date: string | undefined) => {
+  if (instant) return Date.parse(instant);
+  if (timeValue.includes('T')) return Date.parse(timeValue);
+  return date ? Date.parse(`${date}T${timeValue}`) : NaN;
+};
+const cancelled = (lesson: Lesson) => Boolean(lesson.isChanged && /отмен/i.test(lesson.changeDescription ?? ''));
+const pairHref = (lesson: Lesson) => lesson.id.startsWith('rasp-') ? null : '/pair-space/' + lesson.id;
 const dateLabel = (value?: string) => new Date(value ? `${value}T00:00:00` : Date.now()).toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' });
 const isoDate = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 const lessonDate = (lesson: ScheduleLesson) => lesson.date || lesson.startDate?.slice(0, 10) || lesson.startTime.slice(0, 10);
@@ -188,13 +195,31 @@ export default function TodayPage() {
     return () => { active = false; };
   }, [monthCursor]);
 
-  const timeline = useMemo<TimelineItem[]>(() => (day?.lessons || []).map(lesson => ({ lesson, start: timestamp(lesson.startTime), end: timestamp(lesson.endTime) })).sort((a, b) => a.start - b.start), [day]);
-  const conflicts = useMemo(() => timeline.flatMap((item, index) => timeline.slice(index + 1)
+  const timeline = useMemo<TimelineItem[]>(() => (day?.lessons || []).map(lesson => ({
+    lesson,
+    start: timestamp(lesson.startDate, lesson.startTime, day?.date),
+    end: timestamp(lesson.endDate, lesson.endTime, day?.date),
+  })).sort((a, b) => a.start - b.start), [day]);
+  const activeTimeline = useMemo(() => timeline.filter(({ lesson, start, end }) => !cancelled(lesson) && end > start), [timeline]);
+  const gaps = useMemo(() => {
+    const result = new Map<string, number>();
+    let previousEnd = 0;
+    for (const item of activeTimeline) {
+      // Ordinary passing time is part of the timetable. Highlight breaks of at least half an hour.
+      if (previousEnd && item.start - previousEnd >= 30 * 60000) {
+        result.set(item.lesson.id, Math.floor((item.start - previousEnd) / 60000));
+      }
+      previousEnd = Math.max(previousEnd, item.end);
+    }
+    return result;
+  }, [activeTimeline]);
+  const conflicts = useMemo(() => activeTimeline.flatMap((item, index) => activeTimeline.slice(index + 1)
     .filter(other => item.lesson.id !== other.lesson.id && other.start < item.end && item.start < other.end)
-    .map(other => ({ first: item, second: other, start: Math.max(item.start, other.start), end: Math.min(item.end, other.end) }))), [timeline]);
-  const current = timeline.find(item => item.start <= now && now < item.end);
-  const next = timeline.find(item => item.start > now);
+    .map(other => ({ first: item, second: other, start: Math.max(item.start, other.start), end: Math.min(item.end, other.end) }))), [activeTimeline]);
+  const current = activeTimeline.find(item => item.start <= now && now < item.end);
+  const next = activeTimeline.find(item => item.start > now);
   const primary = current || next;
+  const primaryHref = primary ? pairHref(primary.lesson) : null;
   const tomorrow = new Date((day?.date || dateInTimeZone(Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC")) + "T12:00:00Z");
   tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
   const tomorrowHref = "/week?view=day&date=" + tomorrow.toISOString().slice(0, 10);
@@ -237,7 +262,7 @@ export default function TodayPage() {
   if (!day || !user) return <EmptyState title="Учебный день пока не сформирован" description="Попробуйте обновить данные позже." action={<Button onClick={() => void loadDay()}>Обновить</Button>} />;
 
   return <div className="today-dashboard mx-auto max-w-[1320px]">
-    <header className="today-heading"><div><p className="today-eyebrow">Студент</p><h1 className="ds-page-title">{user.firstName}, добрый день</h1><p className="today-date">{dateLabel(day.date)}</p>{offlineSavedAt && <p role="status" className="mt-2 text-xs font-medium text-[var(--color-warning)]">{cacheRefreshing ? 'Сохраненная копия · проверяем актуальность' : 'Офлайн · сохранено'} {new Date(offlineSavedAt).toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' })}</p>}</div><div className="today-heading-actions">{stale && <Badge variant="warning">Данные могли устареть</Badge>}<Button variant="ghost" size="md" aria-label="Обновить данные" onClick={() => void loadDay()}><Icon name="refresh" size={16} /></Button></div></header>
+    <header className="today-heading"><div><h1 className="ds-page-title">{user.firstName}, добрый день</h1><p className="today-date">{dateLabel(day.date)}</p>{offlineSavedAt && <p role="status" className="mt-2 text-xs font-medium text-[var(--color-warning)]">{cacheRefreshing ? 'Сохраненная копия · проверяем актуальность' : 'Офлайн · сохранено'} {new Date(offlineSavedAt).toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' })}</p>}</div><div className="today-heading-actions">{stale && <Badge variant="warning">Данные могли устареть</Badge>}<Button variant="ghost" size="md" aria-label="Обновить данные" onClick={() => void loadDay()}><Icon name="refresh" size={16} /></Button></div></header>
     {error && <div className="today-error" role="status">Не удалось обновить данные. {offlineSavedAt ? 'Показана сохраненная копия.' : error} <button type="button" onClick={() => void loadDay()}>Повторить</button></div>}
     <div className="today-layout">
       <section className="today-hero" aria-label="Ближайшая пара">
@@ -246,9 +271,37 @@ export default function TodayPage() {
           {primary ? <><div className="today-next-title"><h2>{primary.lesson.subject}</h2><LessonTypeBadge subjectType={primary.lesson.subjectType} /></div>
             <div className="today-next-details"><span><Icon name="user" size={19} />{primary.lesson.teacherName || 'Преподаватель не указан'}</span><span><Icon name="building" size={19} />{getLessonLocation(primary.lesson.building, primary.lesson.room) || 'Аудитория не указана'}</span>{primary.lesson.subgroup?.trim() && <Badge variant="default">Подгруппа {primary.lesson.subgroup}</Badge>}</div>
             <div className="today-next-footer"><div className="today-next-time"><Icon name="calendar" size={21} /><strong>{time(primary.lesson.startTime)} – {time(primary.lesson.endTime)}</strong></div>{current && <div className="today-time-remaining"><Icon name="calendar" size={18} />Осталось {remaining} мин</div>}{!current && <span className="today-time-remaining">{primary.start > now ? `Начнётся через ${Math.ceil((primary.start - now) / 60000)} мин` : ''}</span>}</div>
-            <Link href={'/pair-space/' + primary.lesson.id + (current ? '' : '?tab=homeworks')} className="today-open-lesson">Открыть занятие <Icon name="arrow-right" size={17} /></Link>
+            {primaryHref ? <Link href={primaryHref + (current ? '' : '?tab=homeworks')} className="today-open-lesson">Открыть занятие <Icon name="arrow-right" size={17} /></Link> : <Link href="/week" className="today-open-lesson">Открыть расписание <Icon name="arrow-right" size={17} /></Link>}
           </> : <div className="today-next-empty"><h2>{timeline.length ? 'На сегодня всё' : 'Свободный день'}</h2><Link href={tomorrowHref}>Открыть расписание на завтра <Icon name="arrow-right" size={16} /></Link></div>}
         </div><div className="today-hero-art" aria-hidden="true"><span /><span /><span /><i /></div></div></Card>
+      </section>
+
+
+      <section className="today-schedule" id="today-schedule" aria-label="Расписание дня">
+        <div className="today-section-title"><h2 className="ds-section-title">Расписание дня</h2><Link href="/week?view=week">На неделю <Icon name="arrow-right" size={15} /></Link></div>
+        {conflicts.length > 0 && <div className="today-conflicts" role="status"><Icon name="info" size={18} /><span>Пары пересекаются по времени ({conflicts.length}).</span><Link href="/week">Проверить</Link></div>}
+        {timeline.length ? <ul className="today-lesson-list">{timeline.map(item => {
+          const { lesson } = item;
+          const href = pairHref(lesson);
+          const gap = gaps.get(lesson.id);
+          const isCancelled = cancelled(lesson);
+          const state = isCancelled ? 'cancelled' : item === current ? 'current' : item.end <= now ? 'done' : item === next ? 'next' : 'upcoming';
+          const content = <>
+            <span className="today-row-time">{time(lesson.startTime)}<small>{time(lesson.endTime)}</small></span>
+            <span className="today-row-divider" />
+            <span className="today-row-type"><LessonTypeBadge subjectType={lesson.subjectType} /></span>
+            <span className="today-row-subject">{lesson.subject}{lesson.subgroup?.trim() && <small>Подгруппа {lesson.subgroup}</small>}</span>
+            <span className="today-row-meta">{lesson.teacherName || 'Преподаватель не указан'}<small>{getLessonLocation(lesson.building, lesson.room) || 'Аудитория не указана'}</small></span>
+            {href && <Icon name="chevron-right" size={18} className="today-row-chevron" />}
+            {lesson.weekType && lesson.weekType !== 'both' && <span className="sr-only">{lesson.weekType === 'odd' ? 'Нечётная неделя' : 'Чётная неделя'}</span>}
+            {lesson.isChanged && <Badge variant="warning">{isCancelled ? 'Отменено' : 'Изменено'}</Badge>}
+          </>;
+          return <li key={lesson.id}>
+            {gap && <div className="today-lesson-gap">Окно · {gap} мин</div>}
+            {href ? <Link href={href} className={`today-lesson-row state-${state}`}>{content}</Link>
+              : <div className={`today-lesson-row state-${state}`}>{content}</div>}
+          </li>;
+        })}</ul> : <Card className="mt-3"><EmptyState title="Сегодня пар нет" description="Расписание на другие дни доступно в разделе «Расписание»." /></Card>}
       </section>
 
       <aside className="today-rail" aria-label="Календарь и сводка">
@@ -256,16 +309,42 @@ export default function TodayPage() {
           <div className="today-calendar-grid" aria-label="Календарь месяца"><div className="today-weekdays">{['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map(name => <span key={name}>{name}</span>)}</div><div className="today-calendar-days">{calendarDays.map(item => <Link key={item.iso} href={`/week?view=day&date=${item.iso}`} aria-label={`${item.date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}${item.hasLessons ? ', есть занятия' : ''}`} aria-current={item.isToday ? 'date' : undefined} className={`today-calendar-day${item.inMonth ? '' : ' is-outside'}${item.isToday ? ' is-today' : ''}${item.hasLessons ? ' has-lessons' : ''}`} onClick={() => setSelectedDate(item.iso)}>{item.date.getDate()}{item.hasLessons && <i />}</Link>)}</div></div>{monthLoading && <span className="today-calendar-loading" role="status">Обновляем расписание…</span>}
         </section>
 
-        <section className="today-panel today-quick-actions"><h2><Icon name="pulse" size={19} />Быстрые действия</h2><div className="today-action-grid"><Link href="/absences" className="today-action-tile tone-blue"><Icon name="clipboard" /><span>Сообщить<br />об отсутствии</span><Icon name="chevron-right" size={16} /></Link><Link href="/week" className="today-action-tile tone-violet"><Icon name="calendar" /><span>Открыть<br />расписание</span><Icon name="chevron-right" size={16} /></Link><Link href="/pair-space" className="today-action-tile tone-green"><Icon name="book" /><span>Подготовка<br />к занятиям</span><Icon name="chevron-right" size={16} /></Link><Link href="/pair-space" className="today-action-tile tone-orange"><Icon name="clipboard" /><span>Мои задания</span><Icon name="chevron-right" size={16} /></Link></div></section>
+        <section className="today-panel today-quick-actions"><h2><Icon name="pulse" size={19} />Быстрые действия</h2><div className="today-action-grid"><Link href="/absences" className="today-action-tile tone-blue"><Icon name="clipboard" /><span>Сообщить<br />об отсутствии</span><Icon name="chevron-right" size={16} /></Link><Link href="/week" className="today-action-tile tone-violet"><Icon name="calendar" /><span>Открыть<br />расписание</span><Icon name="chevron-right" size={16} /></Link><Link href="/pair-space" className="today-action-tile tone-green"><Icon name="book" /><span>Подготовка<br />к занятиям</span><Icon name="chevron-right" size={16} /></Link><a href="/career?tab=vacancies" className="today-action-tile tone-orange"><Icon name="layers" /><span>Вакансии</span><Icon name="chevron-right" size={16} /></a></div></section>
 
         <section className="today-panel today-week-stats"><div className="today-panel-heading"><h2><Icon name="chart" size={19} />Статистика недели</h2><Link href={`/week?view=week&date=${selectedDate}`}>Подробнее <Icon name="arrow-right" size={14} /></Link></div><div className="today-stat-grid">{weekStats.map(stat => <div key={stat.label} className={`today-stat tone-${stat.tone}`}><strong>{stat.count === undefined ? '—' : stat.count}</strong><span>{stat.label}</span></div>)}</div>{(scheduleStatus === 'unavailable' || absenceStatus === 'unavailable') && <p className="today-stat-note">{scheduleStatus === 'unavailable' ? 'Расписание недели недоступно. ' : ''}{absenceStatus === 'unavailable' ? 'Данные о пропусках недоступны.' : ''}</p>}</section>
+        {!!day.careerDeadlines?.length && <section className="today-panel" aria-labelledby="career-deadlines">
+          <div className="today-panel-heading">
+            <h2 id="career-deadlines"><Icon name="clipboard" size={19} />Сроки карьерных задач</h2>
+          </div>
+          <ul className="space-y-3">
+            {day.careerDeadlines.map(item => <li key={item.id} className="min-w-0 break-words text-sm">
+              <strong>{item.title}</strong>
+              <p className="mt-0.5 text-[var(--color-text-secondary)]">{item.deadline === day.date ? 'Сегодня' :
+                new Date(item.deadline + 'T12:00:00').toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}</p>
+            </li>)}
+          </ul>
+          <a className="mt-3 inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-[var(--color-brand)]" href="/career?tab=works">
+            Мои работы <Icon name="arrow-right" size={14} />
+          </a>
+        </section>}
+        {!!day.careerInterviews?.length && <section className="today-panel" aria-labelledby="career-interviews">
+          <div className="today-panel-heading">
+            <h2 id="career-interviews"><Icon name="calendar" size={19} />Собеседования</h2>
+          </div>
+          <ul className="space-y-3">
+            {day.careerInterviews.map(item => <li key={item.id} className="min-w-0 break-words text-sm">
+              <strong>{item.title}</strong>
+              <time className="mt-0.5 block text-[var(--color-text-secondary)]" dateTime={item.startsAt}>
+                {new Date(item.startsAt).toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' })}
+              </time>
+            </li>)}
+          </ul>
+          <a className="mt-3 inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-[var(--color-brand)]" href="/career?tab=vacancies">
+            Открыть вакансии <Icon name="arrow-right" size={14} />
+          </a>
+        </section>}
       </aside>
 
-      <section className="today-schedule" id="today-schedule" aria-label="Расписание дня"><div className="today-schedule-toolbar"><nav aria-label="Разделы дня" className="today-tabs"><a href="#today-schedule" aria-current="page">Расписание дня</a><Link href="/pair-space">Задания на сегодня</Link><Link href="/pair-space">Подготовка</Link><Link href="/career">Стажировки</Link></nav><div className="today-date-control"><Icon name="calendar" size={17} /><Link href={`/week?view=day&date=${isoDate(new Date())}`}>Сегодня</Link><Link href={`/week?view=day&date=${tomorrowHref.split('date=')[1]}`} aria-label="Следующий день">›</Link></div></div>
-        <div className="today-section-title"><h2 className="ds-section-title">Расписание дня</h2><Link href="/week">Всё расписание <Icon name="arrow-right" size={15} /></Link></div>
-        {conflicts.length > 0 && <div className="today-conflicts" role="status"><Icon name="info" size={18} /><span>Пары пересекаются по времени ({conflicts.length}).</span><Link href="/week">Проверить</Link></div>}
-        {timeline.length ? <div className="today-lesson-list">{timeline.map((item, index) => { const lesson = item.lesson; const state = item.start <= now && now < item.end ? 'current' : item.end <= now ? 'done' : index === timeline.findIndex(nextItem => nextItem.start > now) ? 'next' : 'upcoming'; return <Link key={lesson.id} href={'/pair-space/' + lesson.id} className={`today-lesson-row state-${state}`}><span className="today-row-time">{time(lesson.startTime)}<small>{time(lesson.endTime)}</small></span><span className="today-row-divider" /><span className="today-row-type"><LessonTypeBadge subjectType={lesson.subjectType} /></span><span className="today-row-subject">{lesson.subject}{lesson.subgroup?.trim() && <small>Подгруппа {lesson.subgroup}</small>}</span><span className="today-row-meta">{lesson.teacherName || 'Преподаватель не указан'}<small>{getLessonLocation(lesson.building, lesson.room) || 'Аудитория не указана'}</small></span><Icon name="chevron-right" size={18} className="today-row-chevron" />{lesson.weekType && lesson.weekType !== 'both' && <span className="sr-only">{lesson.weekType === 'odd' ? 'Нечётная неделя' : 'Чётная неделя'}</span>}{lesson.isChanged && <Badge variant="warning">Изменено</Badge>}</Link>; })}</div> : <Card className="mt-3"><EmptyState title="Сегодня пар нет" description="Расписание на другие дни доступно в разделе «Расписание»." /></Card>}
-      </section>
 
       {(preparations.length > 0 || changes.length > 0 || announcements.length > 0 || importantNotifications.length > 0) && <section className="today-important" id="today-preparation"><div className="today-section-title"><h2 className="ds-section-title">Что важно сегодня</h2><Link href="/notifications">Все уведомления <Icon name="arrow-right" size={15} /></Link></div><div className="today-important-grid">
         {preparations.slice(0, 3).map(preparation => { const state = actionState(preparation.deadline); return <article key={'preparation-' + preparation.id} className="today-important-item"><span className="today-important-icon"><Icon name="clipboard" size={17} /></span><Link href={'/pair-space/' + preparation.lessonId + '?tab=homeworks'} className="today-important-copy"><span>{preparation.title}</span><small>{preparation.subject} · {deadlineLabel(preparation.deadline)}</small><small className="today-important-link">Открыть занятие <Icon name="arrow-right" size={13} /></small></Link><Badge variant={state === 'overdue' ? 'danger' : state === 'upcoming' || state === 'noDeadline' || state === 'invalid' ? 'default' : 'warning'}>{actionLabel[state]}</Badge><PreparationProgressControl preparationId={preparation.id} initialState={preparation.progress} onSaved={progress => handlePreparationProgressSaved(preparation.id, progress)} /></article>; })}

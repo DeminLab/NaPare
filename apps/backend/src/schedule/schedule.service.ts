@@ -25,6 +25,8 @@ import { RaspLesson, RaspScraperService } from "../auth/rasp-scraper.service";
 import { Group } from "../users/entities/group.entity";
 import { User } from "../users/entities/user.entity";
 import { UserRole } from "../auth/interfaces/user-role";
+import { isPersistedLessonId, parseRaspLessonId } from "../common/identifiers/lesson-id";
+import { LessonIdentifierService } from "../common/identifiers/lesson-identifier.service";
 import {
   PaginatedResponse,
   PaginationQueryDto,
@@ -55,9 +57,13 @@ export class ScheduleService {
     @InjectRepository(Group)
     private readonly groupRepository?: Repository<Group>,
     @Optional() private readonly curation?: CurationService,
+    @Optional() private readonly lessonIdentifiers?: LessonIdentifierService,
   ) {}
 
   async findById(id: string): Promise<Lesson> {
+    if (!isPersistedLessonId(id)) {
+      throw new NotFoundException(`Lesson with id ${id} not found`);
+    }
     const lesson = await this.lessonRepository.findOne({ where: { id } });
 
     if (!lesson) {
@@ -78,6 +84,24 @@ export class ScheduleService {
       groupId?: string | null;
     },
   ): Promise<Lesson> {
+    const externalId = parseRaspLessonId(id);
+    if (externalId) {
+      if (user.role !== UserRole.STUDENT || !this.lessonIdentifiers) {
+        throw new NotFoundException(`Lesson with id ${id} not found`);
+      }
+      const localLessonId = await this.lessonIdentifiers.resolvePersistedLessonId(
+        id,
+        user.organizationId,
+      );
+      if (!localLessonId) {
+        throw new NotFoundException(`Lesson with id ${id} not found`);
+      }
+      id = localLessonId;
+    }
+
+    if (!isPersistedLessonId(id)) {
+      throw new NotFoundException(`Lesson with id ${id} not found`);
+    }
     const lesson = await this.lessonRepository.findOne({
       where: { id, organizationId: user.organizationId },
     });
@@ -87,7 +111,7 @@ export class ScheduleService {
     if (user.role === UserRole.CURATOR && this.curation) await this.curation.assertGroup(lesson.groupId);
     if (
       user.role === UserRole.STUDENT &&
-      (!user.groupId || lesson.groupId !== user.groupId)
+      (!user.groupId || lesson.groupId !== await this.resolveStudentGroupId(user))
     ) {
       throw new ForbiddenException(
         "Students can only access lessons for their own group",
@@ -99,6 +123,19 @@ export class ScheduleService {
       );
     }
     return lesson;
+  }
+
+  private async resolveStudentGroupId(user: {
+    organizationId: string;
+    groupId?: string | null;
+  }): Promise<string | null | undefined> {
+    if (!user.groupId || !/^\d+$/.test(user.groupId) || !this.groupRepository) {
+      return user.groupId;
+    }
+    const group = await this.groupRepository.findOne({
+      where: { organizationId: user.organizationId, externalId: user.groupId },
+    });
+    return group?.id;
   }
 
   async getLessonChanges(
@@ -162,6 +199,7 @@ export class ScheduleService {
     pagination: PaginationQueryDto = new PaginationQueryDto(),
     timeZone?: string,
   ): Promise<PaginatedResponse<Lesson>> {
+    this.tenantContext.assertAccess(organizationId);
     if (
       groupId &&
       /^\d+$/.test(groupId) &&
@@ -169,11 +207,12 @@ export class ScheduleService {
     ) {
       const sourceLessons =
         await this.raspScraperService.getSchedule(groupId);
-      const startDateKey = this.getCalendarDateKey(startDate, timeZone);
-      const endDateKey = this.getCalendarDateKey(endDate, timeZone);
+      const explicitInstants = !!timeZone && startDate.includes("T") && endDate.includes("T");
+      const [from, to] = getInclusiveDateBounds(startDate, endDate);
       const lessons = sourceLessons
-        .filter((lesson) => lesson.date >= startDateKey && lesson.date <= endDateKey)
-        .map((lesson) => this.mapRaspLesson(lesson, organizationId));
+        .filter((lesson) => explicitInstants || (lesson.date >= startDate.slice(0, 10) && lesson.date <= endDate.slice(0, 10)))
+        .map((lesson) => this.mapRaspLesson(lesson, organizationId))
+        .filter((lesson) => !explicitInstants || (lesson.startDate >= from && lesson.startDate <= to));
       return this.paginateLessons(lessons, pagination);
     }
     const resolvedGroupId = groupId;
@@ -199,6 +238,7 @@ export class ScheduleService {
     date: string,
     pagination: PaginationQueryDto = new PaginationQueryDto(),
   ): Promise<PaginatedResponse<Lesson>> {
+    this.tenantContext.assertAccess(organizationId);
     if (
       groupId &&
       /^\d+$/.test(groupId) &&
@@ -218,18 +258,6 @@ export class ScheduleService {
     return this.findByGroup(organizationId, resolvedGroupId, date, pagination);
   }
 
-  private getCalendarDateKey(value: string, timeZone?: string): string {
-    if (!timeZone) return value.slice(0, 10);
-    const parts = new Intl.DateTimeFormat("en-CA", {
-      timeZone,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    }).formatToParts(new Date(value));
-    const values = Object.fromEntries(parts.map(({ type, value: part }) => [type, part]));
-    return `${values.year}-${values.month}-${values.day}`;
-  }
-
   private paginateLessons(
     lessons: Lesson[],
     pagination: PaginationQueryDto,
@@ -242,11 +270,12 @@ export class ScheduleService {
     );
   }
 
-  private mapRaspLesson(lesson: RaspLesson, organizationId: string): Lesson {
-    const startDate = new Date(`${lesson.date}T${lesson.startTime}:00`);
-    const endDate = new Date(`${lesson.date}T${lesson.endTime}:00`);
+  private mapRaspLesson(lesson: RaspLesson, organizationId: string): Lesson & { date: string } {
+    const startDate = new Date(`${lesson.date}T${lesson.startTime}:00+06:00`);
+    const endDate = new Date(`${lesson.date}T${lesson.endTime}:00+06:00`);
     return {
       id: `rasp-${lesson.lessonId}-${lesson.groupId}`,
+      date: lesson.date,
       deletedAt: null,
       organizationId,
       groupId: lesson.groupId,
@@ -623,12 +652,27 @@ export class ScheduleService {
     this.tenantContext.assertAccess(organizationId);
     const { startDate, endDate } = getDayRange(date);
 
+    const actor = this.tenantContext.getUser();
+    if (actor?.role === UserRole.STUDENT) {
+      if (!actor.groupId) return toPaginatedResponse([], 0, pagination);
+      if (/^\d+$/.test(actor.groupId) && this.raspScraperService) {
+        const lessons = await this.raspScraperService.getSchedule(actor.groupId);
+        return this.paginateLessons(
+          lessons.filter(lesson => lesson.date === date && lesson.isReplacement)
+            .map(lesson => this.mapRaspLesson(lesson, organizationId)),
+          pagination,
+        );
+      }
+    }
+
     return this.findPaginated(
       {
         where: {
           organizationId,
           startDate: Between(startDate, endDate),
           isChanged: true,
+          ...(actor?.role === UserRole.STUDENT ? { groupId: actor.groupId! } : {}),
+          ...(actor?.role === UserRole.TEACHER ? { teacherId: actor.id } : {}),
         },
         order: { pairNumber: "ASC" },
       },

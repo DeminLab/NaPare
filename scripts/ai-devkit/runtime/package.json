@@ -1,0 +1,15 @@
+{
+  "name": "napare-ai-devkit-runtime",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Isolated, pinned MCP runtime. Install with npm ci --ignore-scripts.",
+  "engines": { "node": ">=22.5.0" },
+  "dependencies": {
+    "@bytebase/dbhub": "2.0.0",
+    "@modelcontextprotocol/sdk": "1.32.2",
+    "@playwright/mcp": "0.0.85",
+    "@upstash/context7-mcp": "4.7.3",
+    "chrome-devtools-mcp": "1.13.0",
+    "smol-toml": "1.9.1"
+  }
+}

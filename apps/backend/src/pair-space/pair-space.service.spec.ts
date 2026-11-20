@@ -10,6 +10,7 @@ import { HomeworkSubmission } from "./entities/homework-submission.entity";
 import { HomeworkProgress } from "./entities/homework-progress.entity";
 import { ForbiddenException, NotFoundException } from "@nestjs/common";
 import { TenantContext } from "../common/tenant/tenant-context";
+import { LessonIdentifierService } from "../common/identifiers/lesson-identifier.service";
 import { UserRole } from "../auth/interfaces/user-role";
 import { EventBusService } from "../events/event-bus.service";
 import { Lesson } from "../schedule/entities/lesson.entity";
@@ -156,6 +157,41 @@ describe("PairSpaceService", () => {
       expect(personalNoteRepository.upsert).toHaveBeenCalledWith({ pairSpaceId: "space-1", organizationId: "uni-1", userId: "user-1", content: note.content }, { conflictPaths: ["pairSpaceId", "userId"] });
       await expect(scopedService.savePersonalNote(lessonId, "uni-1", { content: "" })).resolves.toBeNull();
       expect(personalNoteRepository.delete).toHaveBeenCalledWith({ pairSpaceId: "space-1", userId: "user-1", organizationId: "uni-1" });
+    });
+
+    it("reopens a note through a tenant-mapped legacy RASP lesson ID", async () => {
+      const canonicalLessonId = "10000000-0000-4000-8000-000000000099";
+      const note = { pairSpaceId: "space-1", organizationId: "uni-1", userId: "user-1", content: "Revisit notes" };
+      tenantContext.getUser.mockReturnValue(user);
+      pairSpaceRepository.findOne.mockResolvedValue(pairSpace);
+      personalNoteRepository.findOne.mockResolvedValue(note);
+      const module = await Test.createTestingModule({
+        providers: [
+          PairSpaceService,
+          { provide: getRepositoryToken(PersonalLessonNote), useValue: personalNoteRepository },
+          { provide: getRepositoryToken(PairSpace), useValue: pairSpaceRepository },
+          { provide: getRepositoryToken(Announcement), useValue: mockRepo("Announcement") },
+          { provide: getRepositoryToken(Homework), useValue: mockRepo("Homework") },
+          { provide: getRepositoryToken(FileAttachment), useValue: mockRepo("FileAttachment") },
+          { provide: getRepositoryToken(DiscussionMessage), useValue: mockRepo("DiscussionMessage") },
+          { provide: getRepositoryToken(HomeworkSubmission), useValue: mockRepo("HomeworkSubmission") },
+          { provide: getRepositoryToken(HomeworkProgress), useValue: mockRepo("HomeworkProgress") },
+          { provide: getRepositoryToken(Lesson), useValue: { findOne: jest.fn().mockResolvedValue({ id: canonicalLessonId, organizationId: "uni-1", groupId: "group-1" }) } },
+          { provide: TenantContext, useValue: tenantContext },
+          { provide: LessonIdentifierService, useValue: { resolvePersistedLessonId: jest.fn().mockResolvedValue(canonicalLessonId) } },
+        ],
+      }).compile();
+      const scopedService = module.get<PairSpaceService>(PairSpaceService);
+
+      await expect(scopedService.getPersonalNote("rasp-5725936-12131", "uni-1")).resolves.toBe(note);
+      expect(personalNoteRepository.findOne).toHaveBeenCalledWith({
+        where: { pairSpaceId: "space-1", organizationId: "uni-1", userId: "user-1" },
+      });
+      await expect(scopedService.savePersonalNote("rasp-5725936-12131", "uni-1", { content: note.content })).resolves.toBe(note);
+      expect(personalNoteRepository.upsert).toHaveBeenCalledWith(
+        { pairSpaceId: "space-1", organizationId: "uni-1", userId: "user-1", content: note.content },
+        { conflictPaths: ["pairSpaceId", "userId"] },
+      );
     });
   });
 

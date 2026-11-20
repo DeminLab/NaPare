@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './portal.css';
 import { TelemetryProvider } from '../components/TelemetryProvider';
 import { OrganizationSchema } from '../components/SEO';
@@ -42,11 +42,12 @@ export const metadata: Metadata = {
     shortcut: '/brand/np-mark.png',
   },
   manifest: '/manifest.json',
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-    maximumScale: 5,
-  },
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

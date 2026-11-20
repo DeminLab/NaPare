@@ -30,6 +30,8 @@ import { Group } from "../users/entities/group.entity";
 import { University } from "../users/entities/university.entity";
 import { UserRole } from "../auth/interfaces/user-role";
 import { CurationService } from '../curation/curation.service';
+import { isPersistedLessonId } from "../common/identifiers/lesson-id";
+import { LessonIdentifierService } from "../common/identifiers/lesson-identifier.service";
 import {
   PaginatedResponse,
   PaginationQueryDto,
@@ -73,7 +75,6 @@ export interface PairSpaceGroupSummary {
   syncStatus: string;
 }
 
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const SUBJECT_TIMELINE_LIMIT = 20;
 
 function visibleAttachments(files: FileAttachment[] | undefined): FileAttachment[] {
@@ -114,10 +115,11 @@ export class PairSpaceService {
     private readonly universityRepository?: Repository<University>,
     @Optional() private readonly eventBus?: EventBusService,
     @Optional() private readonly curation?: CurationService,
+    @Optional() private readonly lessonIdentifiers?: LessonIdentifierService,
   ) {}
 
   private assertPersistedLessonId(lessonId: string): void {
-    if (!UUID_PATTERN.test(lessonId)) {
+    if (!isPersistedLessonId(lessonId)) {
       throw new NotFoundException(`Lesson ${lessonId} not found`);
     }
   }
@@ -225,15 +227,25 @@ export class PairSpaceService {
     lessonId: string,
     organizationId?: string,
   ): Promise<PairSpaceResponse> {
-    this.assertPersistedLessonId(lessonId);
+    const user = this.tenantContext.getUser();
+    const scopedOrganizationId = organizationId ?? user?.organizationId;
+    if (!scopedOrganizationId) {
+      throw new NotFoundException(`Lesson ${lessonId} not found`);
+    }
+    if (!isPersistedLessonId(lessonId)) {
+      const resolvedId = await this.lessonIdentifiers?.resolvePersistedLessonId(
+        lessonId,
+        scopedOrganizationId,
+      );
+      if (!resolvedId) throw new NotFoundException(`Lesson ${lessonId} not found`);
+      lessonId = resolvedId;
+    }
     try {
-      return await this.findByLesson(lessonId, organizationId);
+      return await this.findByLesson(lessonId, scopedOrganizationId);
     } catch (error) {
       if (!(error instanceof NotFoundException)) throw error;
     }
 
-    const user = this.tenantContext.getUser();
-    const scopedOrganizationId = organizationId ?? user?.organizationId;
     if (!scopedOrganizationId || !this.lessonRepository) {
       throw new NotFoundException(`Lesson ${lessonId} not found`);
     }
@@ -358,7 +370,7 @@ export class PairSpaceService {
     organizationId: string,
   ): Promise<PairSpacePreparationSummary[]> {
     this.tenantContext.assertAccess(organizationId);
-    const persistedLessonIds = lessonIds.filter((id) => UUID_PATTERN.test(id));
+    const persistedLessonIds = lessonIds.filter(isPersistedLessonId);
     if (persistedLessonIds.length === 0) return [];
 
     const pairSpaces = await this.pairSpaceRepository.find({

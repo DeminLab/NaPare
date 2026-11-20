@@ -1,3 +1,4 @@
+import { CAREER_FAVORITE_KIND, Favorite } from '../favorites/entities/favorite.entity';
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException, Optional, ServiceUnavailableException } from '@nestjs/common';
 import { DataSource, EntityManager, In, IsNull, MoreThanOrEqual, SelectQueryBuilder } from 'typeorm';
 import * as bcrypt from 'bcrypt';
@@ -13,8 +14,10 @@ import { randomUUID } from 'node:crypto';
 import { TenantContext } from '../common/tenant/tenant-context';
 import { CompanyRegistryService } from './company-registry.service';
 
+import { CareerVacancy, CareerVacancyApplication } from './vacancies.entity';
+
 type Actor = AuthenticatedUser;
-type CareerTaskListQuery = {offset?: string; limit?: string; q?: string; category?: string; state?: string};
+type CareerTaskListQuery = {offset?: string; limit?: string; q?: string; category?: string; state?: string; saved?: string};
 type CareerWorkflowQuery = {kind?: string; offset?: string; limit?: string; q?: string; state?: string};
 type CareerCenterReviewQuery = {kind?: string; offset?: string; limit?: string; q?: string; state?: string};
 type CareerPartnershipQuery = {offset?: string; limit?: string; q?: string; state?: string};
@@ -128,6 +131,12 @@ export class CareerService {
     const availableModes = actor.role===UserRole.STUDENT ? ['student'] : [...(isCenter?['center']:[]),...([UserRole.DEVELOPER,UserRole.SUPERADMIN].includes(actor.role)?[]:['employer'])];
     if (requestedMode && !availableModes.includes(requestedMode)) throw new ForbiddenException('Этот кабинет вам недоступен');
     const mode = requestedMode || availableModes[0] || 'unavailable';
+    const savedOnly = query.saved === 'true';
+    if (query.saved !== undefined && !['true', 'false'].includes(query.saved)) {
+      throw new BadRequestException('Некорректный фильтр избранного');
+    }
+    if (savedOnly && mode !== 'student') throw new ForbiddenException('Избранное доступно только студенту');
+
     const repository = this.repo(CareerTask);
     const builder = repository.createQueryBuilder('task');
     let applicationTaskIds: string[] = [];
@@ -139,6 +148,12 @@ export class CareerService {
       builder.where('task.organizationId = :organizationId',{organizationId});
       if (applicationTaskIds.length) builder.andWhere('(task.state = :openState OR task.id IN (:...applicationTaskIds))',{openState:'open',applicationTaskIds});
       else builder.andWhere('task.state = :openState',{openState:'open'});
+      if (savedOnly) {
+        const favorites = builder.subQuery().select('favorite.externalId').from(Favorite, 'favorite')
+          .where('favorite.userId = :favoriteOwner AND favorite.organizationId = :organizationId AND favorite.kind = :favoriteKind')
+          .getQuery();
+        builder.andWhere(`CAST(task.id AS varchar) IN ${favorites}`, { favoriteOwner: actor.id, favoriteKind: CAREER_FAVORITE_KIND });
+      }
     } else if (mode === 'center') {
       const organizationId = requireOrganizationId(actor);
       await this.center(actor,organizationId);
@@ -162,8 +177,58 @@ export class CareerService {
     const itemIds = new Set(items.map(item=>item.id));
     const appliedTaskIds = applicationTaskIds.filter(id=>itemIds.has(id));
     const companies = items.length ? await this.repo(CareerCompany).find({where:{id:In([...new Set(items.map(item=>item.companyId))])},select:{id:true,name:true}}) : [];
-    return {items,companies,appliedTaskIds,total,offset,limit,hasMore:offset+items.length<total};
+    const savedTaskIds = mode === 'student' && items.length ? (await this.repo(Favorite).find({
+      where: { userId: actor.id, organizationId: this.student(actor), kind: CAREER_FAVORITE_KIND, externalId: In([...itemIds]) },
+      select: { externalId: true },
+    })).map(favorite => favorite.externalId) : [];
+    return {items,companies,appliedTaskIds,savedTaskIds,total,offset,limit,hasMore:offset+items.length<total};
   }
+  listStudentInterviews(studentId: string, organizationId: string, start: Date, end: Date) {
+    return this.repo(CareerVacancyApplication).createQueryBuilder('application')
+      .innerJoin(CareerVacancy, 'vacancy', 'vacancy.id = application.vacancyId')
+      .select('application.id', 'id')
+      .addSelect('vacancy.title', 'title')
+      .addSelect('application.startsAt', 'startsAt')
+      .addSelect('application.endsAt', 'endsAt')
+      .where('application.studentId = :studentId AND application.organizationId = :organizationId', { studentId, organizationId })
+      .andWhere("application.status = 'confirmed' AND application.startsAt >= :start AND application.startsAt < :end", { start, end })
+      .orderBy('application.startsAt', 'ASC')
+      .addOrderBy('application.id', 'ASC')
+      .limit(5)
+      .getRawMany<{ id: string; title: string; startsAt: Date; endsAt: Date }>();
+  }
+
+  listStudentDeadlines(studentId: string, organizationId: string, from: string, through: string) {
+    return this.repo(CareerWork).createQueryBuilder('work')
+      .innerJoin(CareerTask, 'task', 'task.id = work.taskId AND task.organizationId = :organizationId', { organizationId })
+      .select('work.id', 'id')
+      .addSelect('task.title', 'title')
+      .addSelect('CAST(task.deadline AS text)', 'deadline')
+      .where('work.studentId = :studentId', { studentId })
+      .andWhere('work.state IN (:...actionableStates)', { actionableStates: ['in_progress', 'revision'] })
+      .andWhere('task.deadline BETWEEN :from AND :through', { from, through })
+      .orderBy('task.deadline', 'ASC')
+      .addOrderBy('work.id', 'ASC')
+      .limit(3)
+      .getRawMany<{ id: string; title: string; deadline: string }>();
+  }
+
+  async saveTask(actor: Actor, taskId: string) {
+    const organizationId = this.student(actor);
+    const task = await this.repo(CareerTask).findOneBy({ id: taskId, organizationId, state: 'open' });
+    if (!task) throw new NotFoundException('Открытая задача своего вуза не найдена');
+    await this.repo(Favorite).upsert({
+      userId: actor.id, organizationId, externalId: task.id, kind: CAREER_FAVORITE_KIND, label: task.title.slice(0, 220),
+    }, ['userId', 'organizationId', 'kind', 'externalId']);
+    return { saved: true };
+  }
+
+  async removeSavedTask(actor: Actor, taskId: string) {
+    const organizationId = this.student(actor);
+    await this.repo(Favorite).delete({ userId: actor.id, organizationId, kind: CAREER_FAVORITE_KIND, externalId: taskId });
+    return { saved: false };
+  }
+
   async listWorkflows(actor: Actor, requestedMode: string | undefined, query: CareerWorkflowQuery) {
     const kind = query.kind;
     if (kind !== 'applications' && kind !== 'works') throw new BadRequestException('Укажите тип списка: отклики или работы');

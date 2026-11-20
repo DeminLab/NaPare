@@ -27,11 +27,13 @@ export default function LoginPage() {
   const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
   const [maxAvailable, setMaxAvailable] = useState(false);
   const [succeeded, setSucceeded] = useState(false);
+  const [formReady, setFormReady] = useState(false);
   const [studentRegistrationInfo, setStudentRegistrationInfo] = useState(false);
-  const [sessionRestoreState, setSessionRestoreState] = useState<SessionRestoreState>('checking');
+  const [sessionRestoreState, setSessionRestoreState] = useState<SessionRestoreState>('idle');
   const restoreControllerRef = useRef<AbortController | null>(null);
   const manualLoginStartedRef = useRef(false);
   useEffect(() => {
+    setFormReady(true);
     setMaxAvailable(!!(window.WebApp?.initData || window.__naparePendingMaxInitData || window.location.hash.includes('WebAppData=')));
     setStudentRegistrationInfo(new URLSearchParams(window.location.search).get('reason') === 'student-registration-disabled');
 
@@ -211,13 +213,6 @@ export default function LoginPage() {
 
   return (
     <main className="login-layout login-focused">
-      {sessionRestoreState === 'checking' && (
-        <div className="login-restore-gate" aria-busy="true">
-          <span className="home-session-spinner" aria-hidden="true" />
-          <div role="status" aria-live="polite">Проверяем сохранённый вход…</div>
-          <button type="button" onClick={stopSessionRestoreForManualLogin}>Войти вручную</button>
-        </div>
-      )}
       <section className="login-hero-aside">
         {/* Plain img (asset is served unoptimized anyway): next/image with priority
             injects a preload link that mismatches SSR DOM and triggers hydration rebuild. */}
@@ -249,7 +244,7 @@ export default function LoginPage() {
         <div className="login-card">
           <MaxLaunchAuth captureOnly />
           <Link href="/" className="brand login-brand"><img src="/brand/np-mark.png" alt="" width={34} height={34} />НаПаре</Link>
-          <h1>С возвращением</h1>
+          <h1>Вход в НаПаре</h1>
 
           {studentRegistrationInfo && (
             <p className="login-session-status" role="status" aria-live="polite">
@@ -259,7 +254,7 @@ export default function LoginPage() {
 
           {sessionRestoreState !== 'idle' && sessionRestoreState !== 'manual' && (
             <p className="login-session-status" role="status" aria-live="polite">
-              {sessionRestoreState === 'checking' && 'Проверяем сохранённый вход. Вы можете войти вручную, не дожидаясь проверки.'}
+              {sessionRestoreState === 'checking' && 'Проверяем сохранённый вход…'}
               {sessionRestoreState === 'expired' && 'Сохранённый вход завершился. Войдите снова по email и паролю.'}
               {sessionRestoreState === 'incomplete' && 'Не удалось восстановить сохранённый вход. Войдите снова по email и паролю.'}
               {sessionRestoreState === 'unavailable' && 'Не удалось проверить сохранённый вход из-за временной ошибки. Он сохранён; вы можете войти вручную.'}
@@ -267,21 +262,24 @@ export default function LoginPage() {
             </p>
           )}
 
-          <form onSubmit={submit} className="login-form" noValidate aria-busy={loading}>
+          {sessionRestoreState === 'checking' && (
+            <button className="login-manual-action" type="button" onClick={stopSessionRestoreForManualLogin}>Войти вручную</button>
+          )}
+          <form method="post" onSubmit={submit} className="login-form" noValidate aria-busy={!formReady || loading}>
             {error && <p className="error" role="alert" key={error}>{error}</p>}
             <label htmlFor="login-email">Email
-              <input id="login-email" name="email" type="email" autoComplete="username" inputMode="email" autoCapitalize="none" spellCheck={false} value={email} onChange={(event) => { setEmail(event.target.value); setFieldErrors(previous => ({ ...previous, email: undefined })); }} aria-invalid={!!fieldErrors.email} aria-describedby={fieldErrors.email ? 'login-email-error' : undefined} required />
+              <input id="login-email" name="email" type="email" autoComplete="username" inputMode="email" autoCapitalize="none" spellCheck={false} value={email} readOnly={!formReady} onChange={(event) => { setEmail(event.target.value); setFieldErrors(previous => ({ ...previous, email: undefined })); }} aria-invalid={!!fieldErrors.email} aria-describedby={fieldErrors.email ? 'login-email-error' : undefined} required />
               {fieldErrors.email && <span id="login-email-error" className="login-field-error" role="alert">{fieldErrors.email}</span>}
             </label>
             <div>
               <label htmlFor="login-password">Пароль</label>
               <div className="login-password-field">
-                <input id="login-password" name="password" type={passwordVisible ? 'text' : 'password'} autoComplete="current-password" value={password} onChange={(event) => { setPassword(event.target.value); setFieldErrors(previous => ({ ...previous, password: undefined })); }} aria-invalid={!!fieldErrors.password} aria-describedby={fieldErrors.password ? 'login-password-error' : undefined} required />
-                <button className="login-password-toggle" type="button" aria-label={passwordVisible ? 'Скрыть пароль' : 'Показать пароль'} aria-pressed={passwordVisible} onClick={() => setPasswordVisible(!passwordVisible)}>{passwordVisible ? 'Скрыть' : 'Показать'}</button>
+                <input id="login-password" name="password" type={passwordVisible ? 'text' : 'password'} autoComplete="current-password" value={password} readOnly={!formReady} onChange={(event) => { setPassword(event.target.value); setFieldErrors(previous => ({ ...previous, password: undefined })); }} aria-invalid={!!fieldErrors.password} aria-describedby={fieldErrors.password ? 'login-password-error' : undefined} required />
+                <button className="login-password-toggle" type="button" disabled={!formReady} aria-label={passwordVisible ? 'Скрыть пароль' : 'Показать пароль'} aria-pressed={passwordVisible} onClick={() => setPasswordVisible(!passwordVisible)}>{passwordVisible ? 'Скрыть' : 'Показать'}</button>
               </div>
               {fieldErrors.password && <span id="login-password-error" className="login-field-error" role="alert">{fieldErrors.password}</span>}
             </div>
-            <button type="submit" disabled={loading || succeeded} className={succeeded ? 'is-success' : loading ? 'is-loading' : undefined}>
+            <button type="submit" disabled={!formReady || loading || succeeded} className={succeeded ? 'is-success' : loading ? 'is-loading' : undefined}>
               {succeeded ? <><span className="login-btn-check" aria-hidden="true"><Icon name="check" size={16} /></span>Входим в кабинет…</> : loading ? <><span className="login-btn-spinner" aria-hidden="true" />Входим…</> : 'Войти'}
             </button>
           </form>

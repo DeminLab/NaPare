@@ -1,0 +1,22 @@
+{
+  "repository": "https://github.com/affaan-m/ECC.git",
+  "revision": "3f14a103a8694e51c1df9a806217a6d0b5f7a6f7",
+  "version": "2.2.3",
+  "files": [
+    {
+      "source": "LICENSE",
+      "destination": "LICENSE",
+      "sha256": "326146379f01bb137c0a5d3c54770c1aa31076705c8b88a7f6b26a460f6221b2"
+    },
+    {
+      "source": "skills/verification-loop/SKILL.md",
+      "destination": "verification-loop.md",
+      "sha256": "9ee288d426660b0c785f534a003a4960fb4d8083a21302d8a4fd9b035b2edbb1"
+    },
+    {
+      "source": "skills/mcp-dependency-review/SKILL.md",
+      "destination": "mcp-dependency-review.md",
+      "sha256": "766536baa981710a85c8f761675f6a57f58600fff42b23ccf6171606180f4c12"
+    }
+  ]
+}

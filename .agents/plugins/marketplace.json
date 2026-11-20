@@ -1,0 +1,12 @@
+{
+  "name": "napare-local",
+  "interface": { "displayName": "NaPare DevKit" },
+  "plugins": [
+    {
+      "name": "ecc",
+      "source": { "source": "local", "path": "./.agents/plugins/ecc" },
+      "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" },
+      "category": "Productivity"
+    }
+  ]
+}

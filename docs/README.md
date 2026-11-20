@@ -4,6 +4,9 @@ Project guides, reference material and historical records live under this direct
 
 ## Sections
 
+- [NaPare AI DevKit](ai-devkit/README.md) — проектные Skills, роли AI-агентов, MCP, воспроизводимая установка, проверки и границы авторизации.
+- [Интеграция ECC с Codex](ecc/PROGRESS.md) — текущее состояние, требования, план, решения и результаты проверок.
+
 - [Публичный сайт и SEO](SEO.md) — мета-теги, Schema.org, карты сайта и регистрация в поисковых системах.
 - [SEO](SEO.md), [быстрый старт](SEO_QUICK_START.md), [регистрация](SEO_REGISTRATION.md) и [иконки](SEO_ICONS.md) — мета-теги, sitemap, robots.txt и публичные страницы portal.
 

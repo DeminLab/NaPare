@@ -21,6 +21,7 @@ describe("MyDayService", () => {
   const absencesService = { findByStudent: jest.fn(), findByLesson: jest.fn() };
   const notificationsService = { getUnreadCount: jest.fn() };
 
+  const careerService = { listStudentDeadlines: jest.fn().mockResolvedValue([]), listStudentInterviews: jest.fn().mockResolvedValue([]) };
   let service: MyDayService;
 
   beforeEach(() => {
@@ -47,6 +48,7 @@ describe("MyDayService", () => {
       pairSpaceService as never,
       absencesService as never,
       notificationsService as never,
+      careerService as never,
     );
   });
 

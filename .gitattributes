@@ -1,0 +1,3 @@
+# Vendor manifests verify bytes; keep reviewed skills stable with core.autocrlf=true.
+/.agents/skills/** text eol=lf
+/scripts/ai-devkit/skill-adapters/** text eol=lf

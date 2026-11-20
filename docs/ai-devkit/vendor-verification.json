@@ -1,0 +1,20 @@
+{
+  "new_skill_metadata_and_opt_in_policy": 31,
+  "fresh_install_idempotency_conflict_preservation": "passed",
+  "path_traversal_rejected": 4,
+  "pinned_github_network_install_and_integrity": "passed (systematic-debugging only; remaining pinned sources installed from downloaded cache)",
+  "fullFreshInstall": {
+    "result": "passed",
+    "skills": 35,
+    "repositories": 9,
+    "network": "all pinned public repositories via codeload.github.com; no source cache",
+    "checks": [
+      "fresh install",
+      "all skill names and descriptions",
+      "all per-file SHA-256 including 4 preserve-existing fallbacks",
+      "offline --check",
+      "repeat install idempotency"
+    ],
+    "elapsedSeconds": 75.2
+  }
+}

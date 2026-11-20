@@ -1,0 +1,3 @@
+# Vendor workflows are opt-in. NaPare skills route tasks using project conventions.
+policy:
+  allow_implicit_invocation: false

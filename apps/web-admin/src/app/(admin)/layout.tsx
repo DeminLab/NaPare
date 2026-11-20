@@ -10,7 +10,7 @@ import { apiFetch, getUser, logout, readUserCache, type Me } from '@/lib/api';
 const groups: WorkspaceNavGroup[] = [
   { label: 'Обзор', items: [{ href: '/dashboard', label: 'Обзор', icon: 'dashboard', keywords: ['overview', 'сводка'] }] },
   { label: 'Университет', items: [{ href: '/users', label: 'Пользователи', mobileLabel: 'Люди', icon: 'users' }, { href: '/structure', label: 'Структура', icon: 'building', keywords: ['университет', 'факультеты', 'группы'] }, { href: '/absences', label: 'Отсутствия', mobileLabel: 'Пропуски', icon: 'clipboard', keywords: ['пропуски', 'обращения'] }] },
-  { label: 'Расписание и данные', items: [{ href: '/schedule-import', label: 'Расписание', mobileLabel: 'План', icon: 'calendar', keywords: ['расписание', 'импорт'] }, { href: '/connectors', label: 'Источники данных', icon: 'plug', keywords: ['коннекторы', 'интеграции'] }] },
+  { label: 'Расписание и данные', items: [{ href: '/schedule-import', label: 'Расписание', mobileLabel: 'Импорт', icon: 'calendar', keywords: ['расписание', 'импорт'] }, { href: '/connectors', label: 'Источники данных', icon: 'plug', keywords: ['коннекторы', 'интеграции'] }] },
   { label: 'Система', items: [{ href: '/notifications', label: 'Уведомления', icon: 'bell' }, { href: '/audit-log', label: 'Журнал аудита', icon: 'list', keywords: ['аудит', 'логи'] }] },
   { label: 'Настройки', items: [{ href: '/university', label: 'Настройки университета', icon: 'settings' }, { href: '/connections', label: 'Подключения аккаунта', icon: 'plug', keywords: ['max'] }] },
 ];

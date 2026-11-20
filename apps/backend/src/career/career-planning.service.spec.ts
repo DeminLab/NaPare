@@ -3,10 +3,22 @@ import { DataSource } from 'typeorm';
 import { UserRole } from '../auth/interfaces/user-role';
 import { ScheduleService } from '../schedule/schedule.service';
 import { CareerAvailability, CareerProfile, CareerAdmission, CareerWork, CareerTask, CareerPortfolio } from './career.entities';
-import { assessTask, CareerPlanningService, freeMinutes, mergeIntervals, validateAvailability } from './career-planning.service';
+import { assessTask, CareerPlanningService, freeMinutes, lessonMinutesForDay, mergeIntervals, validateAvailability } from './career-planning.service';
 const task={id:'task',hours:3,deadline:'2099-12-01',profiled:true,skill:'design',level:'starter'};
 const context={verified:true,skills:['design'],activeCount:0,budget:8,reservedHours:2,days:[{date:'2026-10-14',minutes:360}],scheduleKnown:true,serverToday:'2026-10-13'};
 describe('Career planning rules',()=>{
+  it('uses the local lesson day across UTC midnight', () => {
+    const start = new Date('2026-10-13T20:00:00Z');
+    const end = new Date('2026-10-13T21:30:00Z');
+    expect(lessonMinutesForDay(start, end, '2026-10-13', 'Asia/Omsk')).toBeNull();
+    expect(lessonMinutesForDay(start, end, '2026-10-14', 'Asia/Omsk')).toEqual([120, 210]);
+  });
+  it('clips a lesson that spans local midnight to each affected day', () => {
+    const start = new Date('2026-10-13T17:30:00Z');
+    const end = new Date('2026-10-13T18:30:00Z');
+    expect(lessonMinutesForDay(start, end, '2026-10-13', 'Asia/Omsk')).toEqual([1410, 1440]);
+    expect(lessonMinutesForDay(start, end, '2026-10-14', 'Asia/Omsk')).toEqual([0, 30]);
+  });
   it('merges overlapping work and lesson intervals without double counting',()=>{expect(mergeIntervals([[10,50],[20,70],[90,100]])).toEqual([[10,70],[90,100]]);expect(freeMinutes([[0,120],[60,180]],[[30,90],[60,120]])).toBe(90);});
   it('does not subtract classes outside selected windows',()=>{expect(freeMinutes([[600,720]],[[480,540],[750,840]])).toBe(120);expect(freeMinutes([[600,720]],[[590,730]])).toBe(0);});
   it('uses the smaller of declared budget and windows, then reserves active work',()=>{expect(assessTask(task,context)).toMatchObject({canApply:true,fit:'fits',availableHours:4});expect(assessTask({...task,hours:5},context)).toMatchObject({canApply:true,fit:'tight',availableHours:4});});
@@ -35,7 +47,7 @@ describe('Planning calendar and unavailable periods',()=>{
     jest.useFakeTimers({now:new Date('2026-10-13T08:00:00Z')});
     const availability={weeklyHours:8,timeZone:'Asia/Omsk',windows:[{day:2,start:'12:00',end:'18:00'},{day:3,start:'12:00',end:'18:00'}],blockedDates:[{start:'2026-10-14',end:'2026-10-14'}]};
     const getRepository=jest.fn(entity=>entity===CareerAvailability?{findOneBy:jest.fn().mockResolvedValue(availability)}:entity===CareerProfile?{findOneBy:jest.fn().mockResolvedValue({verification:'verified'})}:entity===CareerAdmission?{find:jest.fn().mockResolvedValue([{skill:'design'}])}:entity===CareerWork?{find:jest.fn().mockResolvedValue([]),countBy:jest.fn().mockResolvedValue(0)}:entity===CareerTask?{find:jest.fn().mockResolvedValue([task])}:{countBy:jest.fn().mockResolvedValue(0)});
-    const schedule={findForStudentDateRange:jest.fn().mockResolvedValue({data:[{startDate:new Date('2026-10-13T14:00:00Z'),startTime:'14:00',endTime:'15:00',subject:'PRIVATE SUBJECT',teacherName:'PRIVATE TEACHER'}],meta:{totalPages:1}})};
+    const schedule={findForStudentDateRange:jest.fn().mockResolvedValue({data:[{startDate:new Date('2026-10-13T08:00:00Z'),endDate:new Date('2026-10-13T09:00:00Z'),startTime:'14:00',endTime:'15:00',subject:'PRIVATE SUBJECT',teacherName:'PRIVATE TEACHER'}],meta:{totalPages:1}})};
     const service=new CareerPlanningService({getRepository} as unknown as DataSource,schedule as unknown as ScheduleService);
     const result=await service.get({id:'s',organizationId:'u',groupId:'g',role:UserRole.STUDENT,email:'s@test'});
     expect(result.days[0]).toMatchObject({date:'2026-10-13',minutes:180});expect(result.days[1]).toMatchObject({date:'2026-10-14',minutes:0,blocked:true});expect(result.fits[0]).toMatchObject({fit:'fits',availableHours:3});expect(JSON.stringify(result)).not.toContain('PRIVATE');

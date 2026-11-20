@@ -1,0 +1,3092 @@
+{
+  "schema_version": 1,
+  "reviewed_on": "2026-11-19",
+  "policy": "Project scope; commit and per-file SHA256 pins; no upstream code executed; existing skills preserved. Adapted skills omit hooks and engines. Selected relevant subsets; no claim of full plugin installation.",
+  "packages": [
+    {
+      "repo": "obra/superpowers",
+      "revision": "22f0b463e7a5e579904dd6211a520321035526f7",
+      "source_url": "https://github.com/obra/superpowers",
+      "installation": "project-vendored-skills",
+      "skills": [
+        {
+          "name": "brainstorming",
+          "source": "skills/brainstorming",
+          "mode": "upstream",
+          "preserve_existing": false,
+          "license_files": [
+            "upstream-licenses/LICENSE"
+          ],
+          "license_metadata": null,
+          "files": [
+            {
+              "source": "skills/brainstorming/builder-check-prompt.md",
+              "destination": "builder-check-prompt.md",
+              "sha256": "36d51a4723d6f0a3ce5811a0ea3b3a8424f07533947e1355f5d8cb8cce40c55e"
+            },
+            {
+              "source": "skills/brainstorming/scripts/frame-template.html",
+              "destination": "scripts/frame-template.html",
+              "sha256": "6a8a4e58bd6a44b904e2e3c57de774481d909204597e1498de53f1b2fecc4c4e"
+            },
+            {
+              "source": "skills/brainstorming/scripts/helper.js",
+              "destination": "scripts/helper.js",
+              "sha256": "43c6d69954a46ec34a2a262bcc62a9a7e83e839c739f199cb72646d397c686e3"
+            },
+            {
+              "source": "skills/brainstorming/scripts/server.cjs",
+              "destination": "scripts/server.cjs",
+              "sha256": "763abf96510e0b892a1141397b31aa82ef900cf87ed34dde94bc8782baf4a7ca"
+            },
+            {
+              "source": "skills/brainstorming/scripts/start-server.sh",
+              "destination": "scripts/start-server.sh",
+              "sha256": "314dd68dc00e8dd94c7491aca8a5f004c7fddffc161e2b07482f29f48d13659a"
+            },
+            {
+              "source": "skills/brainstorming/scripts/stop-server.sh",
+              "destination": "scripts/stop-server.sh",
+              "sha256": "0b5ccbbd57f62d3ed88993f7940b5ee0e5c0fc9b21c550c623da4f6292e47daf"
+            },
+            {
+              "source": "skills/brainstorming/SKILL.md",
+              "destination": "SKILL.md",
+              "sha256": "2c9ca71f94886f9ca9f4aef055f7cafb3e1a9bdf3aeebf8f4cb547c69405d207"
+            },
+            {
+              "source": "skills/brainstorming/visual-companion.md",
+              "destination": "visual-companion.md",
+              "sha256": "6ffcb038b53254bd31debaa15e12dcd4ff24bd63d690e0b644ac6396701cf2e2"
+            },
+            {
+              "source": "LICENSE",
+              "destination": "upstream-licenses/LICENSE",
+              "sha256": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400"
+            },
+            {
+              "local": "scripts/ai-devkit/skill-adapters/vendor-policy.yaml",
+              "destination": "agents/openai.yaml",
+              "sha256": "2e41c1267a52f6f328cdc4e676fc1bda07545633f8ed7b5854bb86882df53029"
+            }
+          ]
+        },
+        {
+          "name": "diagnosing-superpowers",
+          "source": "skills/diagnosing-superpowers",
+          "mode": "upstream",
+          "preserve_existing": false,
+          "license_files": [
+            "upstream-licenses/LICENSE"
+          ],
+          "license_metadata": null,
+          "files": [
+            {
+              "source": "skills/diagnosing-superpowers/prompts/analyst-common.md",
+              "destination": "prompts/analyst-common.md",
+              "sha256": "88801c36070be2a54a8a9a29632b01ab21db053e2e76ee49b5252a9b74ca4090"
+            },
+            {
+              "source": "skills/diagnosing-superpowers/prompts/cost-and-time.md",
+              "destination": "prompts/cost-and-time.md",
+              "sha256": "fe97a66d4db3b436816ef82694bda413b522b3a862dd41978da01e358fffecc4"
+            },
+            {
+              "source": "skills/diagnosing-superpowers/prompts/plan-adherence.md",
+              "destination": "prompts/plan-adherence.md",
+              "sha256": "1dcbab82033598a2e9c9ee42e950d4b1822d2c871c02cef9e102cdd5cbbda113"
+            },
+            {
+              "source": "skills/diagnosing-superpowers/prompts/quality-evidence.md",
+              "destination": "prompts/quality-evidence.md",
+              "sha256": "749d11cf678f379ed77a29274cad456634e0284aa523639a1a214a9f2b986eb1"
+            },
+            {
+              "source": "skills/diagnosing-superpowers/prompts/repeated-work.md",
+              "destination": "prompts/repeated-work.md",
+              "sha256": "895027f2dfa4b1b8bcdb7ac9aec8d45a80bff212fad6ec6cad5ab38fa68322f5"
+            },
+            {
+              "source": "skills/diagnosing-superpowers/prompts/request-conflicts.md",
+              "destination": "prompts/request-conflicts.md",
+              "sha256": "e800e38d8b7752c212c76c5c3ed75cd78b749684263ea0c313586f26af6f4b5c"
+            },
+            {
+              "source": "skills/diagnosing-superpowers/prompts/scrub-audit.md",
+              "destination": "prompts/scrub-audit.md",
+              "sha256": "5cc48f05a7f81f5f7e05e0c7ceafc0fb8774bcaf75fe88dcb5c7e408026c70ad"
+            },
+            {
+              "source": "skills/diagnosing-superpowers/prompts/scrub.md",
+              "destination": "prompts/scrub.md",
+              "sha256": "854cb3320cc5377b493cea2f72519d67983464882db68a0f408a7d0a0f040b8c"
+            },
+            {
+              "source": "skills/diagnosing-superpowers/prompts/similar-session.md",
+              "destination": "prompts/similar-session.md",
+              "sha256": "b190f713b463df2bb5ec3914647e204074d1bd50643a53159db6d13cace916c1"
+            },
+            {
+              "source": "skills/diagnosing-superpowers/prompts/skill-timeline.md",
+              "destination": "prompts/skill-timeline.md",
+              "sha256": "45d604d583b57a77b9033eced8eb875ef342af70fcd66cf7d15c6dc89964890f"
+            },
+            {
+              "source": "skills/diagnosing-superpowers/prompts/stumbles.md",
+              "destination": "prompts/stumbles.md",
+              "sha256": "1f2d1f048aff7b8b400006301f1ce8c232ecc7e9d5f705af27a849b2c03ea2e7"
+            },
+            {
+              "source": "skills/diagnosing-superpowers/references/context-safety.md",
+              "destination": "references/context-safety.md",
+              "sha256": "e6be2bd3495f454d4bedee9484d728d245d1fa656e11fc4ceec5693c16e4730a"
+            },
+            {
+              "source": "skills/diagnosing-superpowers/references/github-issues.md",
+              "destination": "references/github-issues.md",
+              "sha256": "d26ef9197b4a6ae5159ae6d11abd162bcc624d95fc7ccf508e07b68f916a1b19"
+            },
+            {
+              "source": "skills/diagnosing-superpowers/references/redaction-policy.md",
+              "destination": "references/redaction-policy.md",
+              "sha256": "96b16f47074838fe2d7e609577d6f8b0ad460f8378b281a3f96ee23cb5a08bde"
+            },
+            {
+              "source": "skills/diagnosing-superpowers/references/session-discovery.md",
+              "destination": "references/session-discovery.md",
+              "sha256": "6d1dced083e5d978448a78df298cf515531b0eb39b2854a4a2afbffeb69a7435"
+            },
+            {
+              "source": "skills/diagnosing-superpowers/SKILL.md",
+              "destination": "SKILL.md",
+              "sha256": "3143de8695c5a2d63e8b1675f33837578076f464deb127c2ebdd0b46fceef886"
+            },
+            {
+              "source": "skills/diagnosing-superpowers/templates/bundle-README.md",
+              "destination": "templates/bundle-README.md",
+              "sha256": "2e6ddc6b106028d5ebd00a50ad93a77111d675c219ee1273cd0857869e8d51ec"
+            },
+            {
+              "source": "skills/diagnosing-superpowers/templates/case.md",
+              "destination": "templates/case.md",
+              "sha256": "597892462be83bc478536ec91f7c285f6dd25d119c560734a3a180fe8471301d"
+            },
+            {
+              "source": "skills/diagnosing-superpowers/templates/issue.md",
+              "destination": "templates/issue.md",
+              "sha256": "afd21779e5de5bc5adfe2f5a50a04e44ab8d50d9ad0f829243de248d6f023eed"
+            },
+            {
+              "source": "skills/diagnosing-superpowers/templates/report.md",
+              "destination": "templates/report.md",
+              "sha256": "38295d0fd785e8608f330815c59ebd7047942002ec7085aecbed54681f56b0c1"
+            },
+            {
+              "source": "LICENSE",
+              "destination": "upstream-licenses/LICENSE",
+              "sha256": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400"
+            },
+            {
+              "local": "scripts/ai-devkit/skill-adapters/vendor-policy.yaml",
+              "destination": "agents/openai.yaml",
+              "sha256": "2e41c1267a52f6f328cdc4e676fc1bda07545633f8ed7b5854bb86882df53029"
+            }
+          ]
+        },
+        {
+          "name": "dispatching-parallel-agents",
+          "source": "skills/dispatching-parallel-agents",
+          "mode": "upstream",
+          "preserve_existing": false,
+          "license_files": [
+            "upstream-licenses/LICENSE"
+          ],
+          "license_metadata": null,
+          "files": [
+            {
+              "source": "skills/dispatching-parallel-agents/SKILL.md",
+              "destination": "SKILL.md",
+              "sha256": "1968923066f3b707eb01d1992cdf4c42284c3855f70253b9cd5000ff45fca13c"
+            },
+            {
+              "source": "LICENSE",
+              "destination": "upstream-licenses/LICENSE",
+              "sha256": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400"
+            },
+            {
+              "local": "scripts/ai-devkit/skill-adapters/vendor-policy.yaml",
+              "destination": "agents/openai.yaml",
+              "sha256": "2e41c1267a52f6f328cdc4e676fc1bda07545633f8ed7b5854bb86882df53029"
+            }
+          ]
+        },
+        {
+          "name": "executing-plans",
+          "source": "skills/executing-plans",
+          "mode": "upstream",
+          "preserve_existing": false,
+          "license_files": [
+            "upstream-licenses/LICENSE"
+          ],
+          "license_metadata": null,
+          "files": [
+            {
+              "source": "skills/executing-plans/scripts/task-done",
+              "destination": "scripts/task-done",
+              "sha256": "ac0b5ebafc7d471507b7e94d88da77a11f187ba277c8d48fefaf8ff3e4fee50e"
+            },
+            {
+              "source": "skills/executing-plans/scripts/task-start",
+              "destination": "scripts/task-start",
+              "sha256": "4ae7ce3b6777c3240af786197836a6b4bbf3b0ee831c25f147c149ea8db54a21"
+            },
+            {
+              "source": "skills/executing-plans/SKILL.md",
+              "destination": "SKILL.md",
+              "sha256": "deaf176fa179827e80f2ea3101db3ea90fdf562ebef340eba761e4687940f5f5"
+            },
+            {
+              "source": "LICENSE",
+              "destination": "upstream-licenses/LICENSE",
+              "sha256": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400"
+            },
+            {
+              "local": "scripts/ai-devkit/skill-adapters/vendor-policy.yaml",
+              "destination": "agents/openai.yaml",
+              "sha256": "2e41c1267a52f6f328cdc4e676fc1bda07545633f8ed7b5854bb86882df53029"
+            }
+          ]
+        },
+        {
+          "name": "finishing-a-development-branch",
+          "source": "skills/finishing-a-development-branch",
+          "mode": "upstream",
+          "preserve_existing": false,
+          "license_files": [
+            "upstream-licenses/LICENSE"
+          ],
+          "license_metadata": null,
+          "files": [
+            {
+              "source": "skills/finishing-a-development-branch/SKILL.md",
+              "destination": "SKILL.md",
+              "sha256": "8db5a922b242dd4e1bf824cb91c13b3e8d8e8a86d6ceaf7f0774eb9cce909d65"
+            },
+            {
+              "source": "LICENSE",
+              "destination": "upstream-licenses/LICENSE",
+              "sha256": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400"
+            },
+            {
+              "local": "scripts/ai-devkit/skill-adapters/vendor-policy.yaml",
+              "destination": "agents/openai.yaml",
+              "sha256": "2e41c1267a52f6f328cdc4e676fc1bda07545633f8ed7b5854bb86882df53029"
+            }
+          ]
+        },
+        {
+          "name": "receiving-code-review",
+          "source": "skills/receiving-code-review",
+          "mode": "upstream",
+          "preserve_existing": false,
+          "license_files": [
+            "upstream-licenses/LICENSE"
+          ],
+          "license_metadata": null,
+          "files": [
+            {
+              "source": "skills/receiving-code-review/SKILL.md",
+              "destination": "SKILL.md",
+              "sha256": "091df1629510af1b92fc4abd6f96732ebedb4cb2c0f3457e8f2740b0504a2438"
+            },
+            {
+              "source": "LICENSE",
+              "destination": "upstream-licenses/LICENSE",
+              "sha256": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400"
+            },
+            {
+              "local": "scripts/ai-devkit/skill-adapters/vendor-policy.yaml",
+              "destination": "agents/openai.yaml",
+              "sha256": "2e41c1267a52f6f328cdc4e676fc1bda07545633f8ed7b5854bb86882df53029"
+            }
+          ]
+        },
+        {
+          "name": "requesting-code-review",
+          "source": "skills/requesting-code-review",
+          "mode": "upstream",
+          "preserve_existing": false,
+          "license_files": [
+            "upstream-licenses/LICENSE"
+          ],
+          "license_metadata": null,
+          "files": [
+            {
+              "source": "skills/requesting-code-review/code-reviewer.md",
+              "destination": "code-reviewer.md",
+              "sha256": "82e370be6b3447523816286195571e4216ba56ba1ad6ad0e87862294c4c78dcb"
+            },
+            {
+              "source": "skills/requesting-code-review/SKILL.md",
+              "destination": "SKILL.md",
+              "sha256": "2180e14a448e9410bec88e6646a2d1f0ce7fdd58de27388c1e052e929679d2bc"
+            },
+            {
+              "source": "LICENSE",
+              "destination": "upstream-licenses/LICENSE",
+              "sha256": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400"
+            },
+            {
+              "local": "scripts/ai-devkit/skill-adapters/vendor-policy.yaml",
+              "destination": "agents/openai.yaml",
+              "sha256": "2e41c1267a52f6f328cdc4e676fc1bda07545633f8ed7b5854bb86882df53029"
+            }
+          ]
+        },
+        {
+          "name": "subagent-driven-development",
+          "source": "skills/subagent-driven-development",
+          "mode": "upstream",
+          "preserve_existing": false,
+          "license_files": [
+            "upstream-licenses/LICENSE"
+          ],
+          "license_metadata": null,
+          "files": [
+            {
+              "source": "skills/subagent-driven-development/implementer-prompt.md",
+              "destination": "implementer-prompt.md",
+              "sha256": "81dd9d5a3fb0b09b96b5829f03b9796842f3199ef7591d1ba1c2db2a515f64d0"
+            },
+            {
+              "source": "skills/subagent-driven-development/re-review-prompt.md",
+              "destination": "re-review-prompt.md",
+              "sha256": "ad54d0a10f1c2c8e656456e0a46e654af5dfe5ee6bcef63428cfd69b8dcd9311"
+            },
+            {
+              "source": "skills/subagent-driven-development/references/batching.md",
+              "destination": "references/batching.md",
+              "sha256": "b54dc7e23dbfb90db89bcb2fb3af591aabf6a271a165fbc0da4c6f9439980eac"
+            },
+            {
+              "source": "skills/subagent-driven-development/references/cannot-verify.md",
+              "destination": "references/cannot-verify.md",
+              "sha256": "e698713a15e0eabf1a2ab26ffe1bb04bf70c9d6d2e2060d44a0f9a1bdd4408bf"
+            },
+            {
+              "source": "skills/subagent-driven-development/references/final-review.md",
+              "destination": "references/final-review.md",
+              "sha256": "6c9e12093e46c4ad0a203bc07709c17e3470f855f1b78e55c5e7b722a012a32c"
+            },
+            {
+              "source": "skills/subagent-driven-development/references/fix-loop.md",
+              "destination": "references/fix-loop.md",
+              "sha256": "1938ce707915efc44021e563ebc29666329e20ad861b6c50b89f305b8f4e8d8b"
+            },
+            {
+              "source": "skills/subagent-driven-development/references/handling-reports.md",
+              "destination": "references/handling-reports.md",
+              "sha256": "8f759cdd4936220c38aab05b6d6c48c6df8ac8f146b0f37a6d2facbf87133c67"
+            },
+            {
+              "source": "skills/subagent-driven-development/references/preflight.md",
+              "destination": "references/preflight.md",
+              "sha256": "3ea21c5fc1af1a190ac8a9d19ceb0849b47bf2ffe27b87dffcc21b6a0539776c"
+            },
+            {
+              "source": "skills/subagent-driven-development/references/resuming.md",
+              "destination": "references/resuming.md",
+              "sha256": "ff6e38bde2276faa2a7e93513086caded0ea10edbf2ec7f349a7e3b0d7c668c4"
+            },
+            {
+              "source": "skills/subagent-driven-development/scripts/review-package",
+              "destination": "scripts/review-package",
+              "sha256": "aed7c6e09fc660417d28898ed975e84651cb9f18f4675141cd475edfb7037f3d"
+            },
+            {
+              "source": "skills/subagent-driven-development/scripts/sdd-repo",
+              "destination": "scripts/sdd-repo",
+              "sha256": "6f8256a776968d394bae679572e41ce572fd45c72074b98f9a8eb8b4f160e06f"
+            },
+            {
+              "source": "skills/subagent-driven-development/scripts/sdd-workspace",
+              "destination": "scripts/sdd-workspace",
+              "sha256": "de3af5252fa595fc2000ba05cf69e06187d5c8aae9d283cced4c167ad1813061"
+            },
+            {
+              "source": "skills/subagent-driven-development/scripts/task-brief",
+              "destination": "scripts/task-brief",
+              "sha256": "0f244a12e146393c552ba62069d3eedcc85cb3f76de67b01f4e11219e5ebbcd8"
+            },
+            {
+              "source": "skills/subagent-driven-development/SKILL.md",
+              "destination": "SKILL.md",
+              "sha256": "1baf70e307bde682c462513c86116333f1f066168c6710f45145bf5f0b00828d"
+            },
+            {
+              "source": "skills/subagent-driven-development/task-reviewer-prompt.md",
+              "destination": "task-reviewer-prompt.md",
+              "sha256": "61a04c2fb29907887d8babee1594f5e35ae26d461e7e584f5b7c283215165e08"
+            },
+            {
+              "source": "LICENSE",
+              "destination": "upstream-licenses/LICENSE",
+              "sha256": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400"
+            },
+            {
+              "local": "scripts/ai-devkit/skill-adapters/vendor-policy.yaml",
+              "destination": "agents/openai.yaml",
+              "sha256": "2e41c1267a52f6f328cdc4e676fc1bda07545633f8ed7b5854bb86882df53029"
+            }
+          ]
+        },
+        {
+          "name": "systematic-debugging",
+          "source": "skills/systematic-debugging",
+          "mode": "upstream",
+          "preserve_existing": false,
+          "license_files": [
+            "upstream-licenses/LICENSE"
+          ],
+          "license_metadata": null,
+          "files": [
+            {
+              "source": "skills/systematic-debugging/condition-based-waiting-example.ts",
+              "destination": "condition-based-waiting-example.ts",
+              "sha256": "40ae5ebe497fdf310200e43fe986552546d0a22837c0d39e855db1cfd33eb88e"
+            },
+            {
+              "source": "skills/systematic-debugging/condition-based-waiting.md",
+              "destination": "condition-based-waiting.md",
+              "sha256": "e89fec8400d6cd50f43407cec9fab50976ba4d55d0ec2eb51c0bd68036b54c26"
+            },
+            {
+              "source": "skills/systematic-debugging/defense-in-depth.md",
+              "destination": "defense-in-depth.md",
+              "sha256": "1e175fb86fc357e58c6aebf5441e481e1b7868b4380c0456b63a17eefbd18ba7"
+            },
+            {
+              "source": "skills/systematic-debugging/find-polluter.sh",
+              "destination": "find-polluter.sh",
+              "sha256": "dd7b8f13c4cc2a24b33ff87b18da9248f3e1c80a085c3316224f69ff0fa5c43c"
+            },
+            {
+              "source": "skills/systematic-debugging/root-cause-tracing.md",
+              "destination": "root-cause-tracing.md",
+              "sha256": "75b933b6a8c40bdb2031b10f21654395b56ec6ab6bc7b018c18d3fe57aeb7fb8"
+            },
+            {
+              "source": "skills/systematic-debugging/SKILL.md",
+              "destination": "SKILL.md",
+              "sha256": "51c6435d98c83c42c96ba7c35725a0b2c376cd487fb1a4e6bd0ddbe7e33ef202"
+            },
+            {
+              "source": "LICENSE",
+              "destination": "upstream-licenses/LICENSE",
+              "sha256": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400"
+            },
+            {
+              "local": "scripts/ai-devkit/skill-adapters/vendor-policy.yaml",
+              "destination": "agents/openai.yaml",
+              "sha256": "2e41c1267a52f6f328cdc4e676fc1bda07545633f8ed7b5854bb86882df53029"
+            }
+          ]
+        },
+        {
+          "name": "test-driven-development",
+          "source": "skills/test-driven-development",
+          "mode": "upstream",
+          "preserve_existing": false,
+          "license_files": [
+            "upstream-licenses/LICENSE"
+          ],
+          "license_metadata": null,
+          "files": [
+            {
+              "source": "skills/test-driven-development/SKILL.md",
+              "destination": "SKILL.md",
+              "sha256": "64b03fce4aee5a97a93160cea8111f3ba13a17b7c001db4bd5836d67fd10705d"
+            },
+            {
+              "source": "skills/test-driven-development/writing-good-tests.md",
+              "destination": "writing-good-tests.md",
+              "sha256": "51471c853306ff92ca8bb41dcaea05f31c0e46b03651f8f3c99754b7172f4ae1"
+            },
+            {
+              "source": "LICENSE",
+              "destination": "upstream-licenses/LICENSE",
+              "sha256": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400"
+            },
+            {
+              "local": "scripts/ai-devkit/skill-adapters/vendor-policy.yaml",
+              "destination": "agents/openai.yaml",
+              "sha256": "2e41c1267a52f6f328cdc4e676fc1bda07545633f8ed7b5854bb86882df53029"
+            }
+          ]
+        },
+        {
+          "name": "using-git-worktrees",
+          "source": "skills/using-git-worktrees",
+          "mode": "upstream",
+          "preserve_existing": false,
+          "license_files": [
+            "upstream-licenses/LICENSE"
+          ],
+          "license_metadata": null,
+          "files": [
+            {
+              "source": "skills/using-git-worktrees/SKILL.md",
+              "destination": "SKILL.md",
+              "sha256": "8cfb86f121269e8f7f12361e6795c4f6738828340e28964c9229d365666c9edd"
+            },
+            {
+              "source": "LICENSE",
+              "destination": "upstream-licenses/LICENSE",
+              "sha256": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400"
+            },
+            {
+              "local": "scripts/ai-devkit/skill-adapters/vendor-policy.yaml",
+              "destination": "agents/openai.yaml",
+              "sha256": "2e41c1267a52f6f328cdc4e676fc1bda07545633f8ed7b5854bb86882df53029"
+            }
+          ]
+        },
+        {
+          "name": "using-superpowers",
+          "source": "skills/using-superpowers",
+          "mode": "upstream",
+          "preserve_existing": false,
+          "license_files": [
+            "upstream-licenses/LICENSE"
+          ],
+          "license_metadata": null,
+          "files": [
+            {
+              "source": "skills/using-superpowers/references/antigravity-tools.md",
+              "destination": "references/antigravity-tools.md",
+              "sha256": "4880f6de3da4e32f9659ebe7a72b9e0ebfff04e028c2ed96173f86d0387a04c0"
+            },
+            {
+              "source": "skills/using-superpowers/references/claude-code-tools.md",
+              "destination": "references/claude-code-tools.md",
+              "sha256": "21479a3fee27448cab8748a3b5687e53bb257883bda9c070426f9a1ab5cebf1b"
+            },
+            {
+              "source": "skills/using-superpowers/references/codex-tools.md",
+              "destination": "references/codex-tools.md",
+              "sha256": "1a38ad9b188c393052f58d95657a1c35ea6aafc8b5a27f198f3922912f70bbe7"
+            },
+            {
+              "source": "skills/using-superpowers/references/gemini-tools.md",
+              "destination": "references/gemini-tools.md",
+              "sha256": "62b9157bcb0ee3c6784e3d0da0798ddfa5872f9e0c34bea48f3079dabea71965"
+            },
+            {
+              "source": "skills/using-superpowers/references/hermes-tools.md",
+              "destination": "references/hermes-tools.md",
+              "sha256": "e2185c976a3c87503910e05e2aea58cc89bc8e569bb624b93df9958ac47a9190"
+            },
+            {
+              "source": "skills/using-superpowers/references/muse-tools.md",
+              "destination": "references/muse-tools.md",
+              "sha256": "5a1da5c575fe18456ca71cd47ebfd8a38c745f8d82a67fe64d5b83080000eeb3"
+            },
+            {
+              "source": "skills/using-superpowers/references/pi-tools.md",
+              "destination": "references/pi-tools.md",
+              "sha256": "703dbc83d23ecab9c6f388460c38abc482e9dee2fe6772a8c7a255152ad3a4d5"
+            },
+            {
+              "source": "skills/using-superpowers/SKILL.md",
+              "destination": "SKILL.md",
+              "sha256": "82c5c8866ad7f5dd4440ce66bd7806ba48a2f13771beae5cf112e53f08fe36ba"
+            },
+            {
+              "source": "LICENSE",
+              "destination": "upstream-licenses/LICENSE",
+              "sha256": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400"
+            },
+            {
+              "local": "scripts/ai-devkit/skill-adapters/vendor-policy.yaml",
+              "destination": "agents/openai.yaml",
+              "sha256": "2e41c1267a52f6f328cdc4e676fc1bda07545633f8ed7b5854bb86882df53029"
+            }
+          ]
+        },
+        {
+          "name": "verification-before-completion",
+          "source": "skills/verification-before-completion",
+          "mode": "upstream",
+          "preserve_existing": false,
+          "license_files": [
+            "upstream-licenses/LICENSE"
+          ],
+          "license_metadata": null,
+          "files": [
+            {
+              "source": "skills/verification-before-completion/SKILL.md",
+              "destination": "SKILL.md",
+              "sha256": "2befe7fc55bcadaa3d97dd9e8efeb633d2561c0ebe74c5a8b17c4d9e7e4520b3"
+            },
+            {
+              "source": "LICENSE",
+              "destination": "upstream-licenses/LICENSE",
+              "sha256": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400"
+            },
+            {
+              "local": "scripts/ai-devkit/skill-adapters/vendor-policy.yaml",
+              "destination": "agents/openai.yaml",
+              "sha256": "2e41c1267a52f6f328cdc4e676fc1bda07545633f8ed7b5854bb86882df53029"
+            }
+          ]
+        },
+        {
+          "name": "writing-plans",
+          "source": "skills/writing-plans",
+          "mode": "upstream",
+          "preserve_existing": false,
+          "license_files": [
+            "upstream-licenses/LICENSE"
+          ],
+          "license_metadata": null,
+          "files": [
+            {
+              "source": "skills/writing-plans/SKILL.md",
+              "destination": "SKILL.md",
+              "sha256": "a6c67c1900064347c2a329990dd3c555657c51c3ec53b259a08aa01a2c26139a"
+            },
+            {
+              "source": "LICENSE",
+              "destination": "upstream-licenses/LICENSE",
+              "sha256": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400"
+            },
+            {
+              "local": "scripts/ai-devkit/skill-adapters/vendor-policy.yaml",
+              "destination": "agents/openai.yaml",
+              "sha256": "2e41c1267a52f6f328cdc4e676fc1bda07545633f8ed7b5854bb86882df53029"
+            }
+          ]
+        },
+        {
+          "name": "writing-skills",
+          "source": "skills/writing-skills",
+          "mode": "upstream",
+          "preserve_existing": false,
+          "license_files": [
+            "upstream-licenses/LICENSE"
+          ],
+          "license_metadata": null,
+          "files": [
+            {
+              "source": "skills/writing-skills/references/anthropic-best-practices.md",
+              "destination": "references/anthropic-best-practices.md",
+              "sha256": "217629b356c09c9bd11017c9788e8fc654ca1b32c92d4a51cd490e16dd65e59a"
+            },
+            {
+              "source": "skills/writing-skills/references/bulletproofing.md",
+              "destination": "references/bulletproofing.md",
+              "sha256": "9397023e6bc85b556a57f3097371363bf03e28e755c57f403f470bcda90e0a23"
+            },
+            {
+              "source": "skills/writing-skills/references/CLAUDE_MD_TESTING.md",
+              "destination": "references/CLAUDE_MD_TESTING.md",
+              "sha256": "0b379a3415e185d3c434b3ad283d8aa132f3022c2a4f210f168865b5986bcef0"
+            },
+            {
+              "source": "skills/writing-skills/references/discovery.md",
+              "destination": "references/discovery.md",
+              "sha256": "c6bbc74af3be90f693f7cbc986af6fa94e8df75f65109b52e96032587f5b92af"
+            },
+            {
+              "source": "skills/writing-skills/references/flowcharts.md",
+              "destination": "references/flowcharts.md",
+              "sha256": "8b1f542391f274f0d33f3457ac099a3d317d6877eaa3b8d3b1ebef151b55fda7"
+            },
+            {
+              "source": "skills/writing-skills/references/graphviz-conventions.dot",
+              "destination": "references/graphviz-conventions.dot",
+              "sha256": "e2890a593c91370e384b42f2f67b1a6232c9e69dddea7891a0c1c46d7b20b694"
+            },
+            {
+              "source": "skills/writing-skills/references/persuasion-principles.md",
+              "destination": "references/persuasion-principles.md",
+              "sha256": "a51bc9bf75189ea73a27b3fb504a2fdfdb966fb1f7f1cdf03203230a216ccc03"
+            },
+            {
+              "source": "skills/writing-skills/references/testing-skills-with-subagents.md",
+              "destination": "references/testing-skills-with-subagents.md",
+              "sha256": "ed8a6862c085900135962390530d9dc7637ad6d650b4324ce3b051287a5c3f22"
+            },
+            {
+              "source": "skills/writing-skills/render-graphs.js",
+              "destination": "render-graphs.js",
+              "sha256": "c7f412cc629461c4d10287e668731874c0497707023e3e3f74a5355eb2cee196"
+            },
+            {
+              "source": "skills/writing-skills/SKILL.md",
+              "destination": "SKILL.md",
+              "sha256": "8cb3ac68c6d8c4bb46886b998b09af7989643cab8bd0e46ee86dd62e64546bbe"
+            },
+            {
+              "source": "LICENSE",
+              "destination": "upstream-licenses/LICENSE",
+              "sha256": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400"
+            },
+            {
+              "local": "scripts/ai-devkit/skill-adapters/vendor-policy.yaml",
+              "destination": "agents/openai.yaml",
+              "sha256": "2e41c1267a52f6f328cdc4e676fc1bda07545633f8ed7b5854bb86882df53029"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "repo": "nextlevelbuilder/ui-ux-pro-max-skill",
+      "revision": "ed766d3bf62f32c8d27762ad49abdc3a4744c84f",
+      "source_url": "https://github.com/nextlevelbuilder/ui-ux-pro-max-skill",
+      "installation": "project-vendored-skills",
+      "skills": [
+        {
+          "name": "ui-ux-pro-max",
+          "source": ".claude/skills/ui-ux-pro-max",
+          "mode": "upstream",
+          "preserve_existing": true,
+          "license_files": [
+            "upstream-licenses/LICENSE"
+          ],
+          "license_metadata": null,
+          "files": [
+            {
+              "source": ".claude/skills/ui-ux-pro-max/data/app-interface.csv",
+              "destination": "data/app-interface.csv",
+              "sha256": "331e7cf2c0b222d80c566c5f255c63cb339f65bfd02e471a720f28e4864a9f08"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/data/catalog-summary.json",
+              "destination": "data/catalog-summary.json",
+              "sha256": "5958a771e0358ec494b2eadceddd7e6d153ebf964f7a87dc80790c58ba50bda0"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/data/charts.csv",
+              "destination": "data/charts.csv",
+              "sha256": "80045f5793cbeca3b1373831851c992444a38967960cbba900c1472f1420e978"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/data/colors.csv",
+              "destination": "data/colors.csv",
+              "sha256": "f14cc97bc4c3527e6181b2ec3231704271249ca4ad56dcaa9bf562ab795a3dd7"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/data/data-provenance.json",
+              "destination": "data/data-provenance.json",
+              "sha256": "d766d1afb9fcdce89dbba580161b3dad260702a18871b12ab7f762eeaf8883e8"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/data/google-font-licenses.json",
+              "destination": "data/google-font-licenses.json",
+              "sha256": "35688523f2955795caa1a47c53b83099e60c1708461476f9cc3a050cf3b0148a"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/data/google-fonts.csv",
+              "destination": "data/google-fonts.csv",
+              "sha256": "1c8c3b2ea1faf6a1012da463756def8b3889db33f2226f0343bb4daa80307d03"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/data/icons.csv",
+              "destination": "data/icons.csv",
+              "sha256": "50816c6012030178195a16ee481ebf58b47bd985d70e8ec58886cc83f6eddafc"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/data/landing.csv",
+              "destination": "data/landing.csv",
+              "sha256": "9a2edd3bb676c2a58f00ade7a062e285222d4297bfd847c8d5b056f0dbbf52d0"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/data/motion.csv",
+              "destination": "data/motion.csv",
+              "sha256": "381affe8df8ea1f66fbbda2598827f9f54299107bbe6a1b4e9b68f6b62091ceb"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/data/phosphor-icons-upstream.json",
+              "destination": "data/phosphor-icons-upstream.json",
+              "sha256": "2399325233b277b5c97a80e6a5e8941154f5d057beee4e7613db87c87d700236"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/data/products.csv",
+              "destination": "data/products.csv",
+              "sha256": "2b78d254f0fe0cc137ee811df280215c257868df24d2041264624d01f747f511"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/data/react-performance.csv",
+              "destination": "data/react-performance.csv",
+              "sha256": "3d925802539abac5afeb63ae8aa1960b7229ad271b3a47caed40ab2d97ad0734"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/data/stacks/angular.csv",
+              "destination": "data/stacks/angular.csv",
+              "sha256": "704be83f2bad30c7e6de01afb113ffa01e0c458762f48b7102f31ba2367b5553"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/data/stacks/astro.csv",
+              "destination": "data/stacks/astro.csv",
+              "sha256": "2c2f55fadaafc05e04cc321c8194a1a28b656e6757fe2ba316f41b16428299c6"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/data/stacks/avalonia.csv",
+              "destination": "data/stacks/avalonia.csv",
+              "sha256": "442fca14675a020683473e7e49f08abb27b9df0765c80efe54aef61f1a4ac258"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/data/stacks/flutter.csv",
+              "destination": "data/stacks/flutter.csv",
+              "sha256": "64dba0ac17349f28bce517a0f5f48c54d9ed2e487ec0c0258303463b382f41a0"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/data/stacks/html-tailwind.csv",
+              "destination": "data/stacks/html-tailwind.csv",
+              "sha256": "d05a581d20af57b8ca0104a6d31d90a07c437d500662a96c3029fc2f9a4678ee"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/data/stacks/javafx.csv",
+              "destination": "data/stacks/javafx.csv",
+              "sha256": "2e819b8d5abdd23ad4dae0991650fdb57af497aabd68b37463aa9c442944c869"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/data/stacks/jetpack-compose.csv",
+              "destination": "data/stacks/jetpack-compose.csv",
+              "sha256": "699de218b286948eaec7d15767b6e1350ee299167e49bf476d82e3ff58724e0a"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/data/stacks/laravel.csv",
+              "destination": "data/stacks/laravel.csv",
+              "sha256": "854ea4daa5fc61292d22235ad33b49ba3fe22423c3de8d3cb03758ffed3b59f9"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/data/stacks/nextjs.csv",
+              "destination": "data/stacks/nextjs.csv",
+              "sha256": "ecd2c27b2ea0127d203ae726060efcdd7335b5e83f96b99e4f3befbbfeebd5a4"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/data/stacks/nuxt-ui.csv",
+              "destination": "data/stacks/nuxt-ui.csv",
+              "sha256": "9c0179d559abe39ad63b958b54cb29c82be1dd20706430476096ea8967bfa328"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/data/stacks/nuxtjs.csv",
+              "destination": "data/stacks/nuxtjs.csv",
+              "sha256": "3d9b54ed2d151bd9c86e9e5609b8a6f88a00c4c52fa601a30af96c49b2c4d176"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/data/stacks/react-native.csv",
+              "destination": "data/stacks/react-native.csv",
+              "sha256": "ba31dd9c0c04da6bc02a74448bf121f9c0728ae5ba3b4d47b487778b0a1135b5"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/data/stacks/react.csv",
+              "destination": "data/stacks/react.csv",
+              "sha256": "4dd176a9787e5c6306b5df94158d75955adcdc6edab41ce5286641a5842303c1"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/data/stacks/shadcn.csv",
+              "destination": "data/stacks/shadcn.csv",
+              "sha256": "e56cfde5b74907836ac3582a4779d5b7f3d206a702ab81b8669a1b668c3eeb51"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/data/stacks/svelte.csv",
+              "destination": "data/stacks/svelte.csv",
+              "sha256": "f6e379ba802941ba26b01d4ffbe3cd39120f2587659a1d93851c707f66bc13db"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/data/stacks/swiftui.csv",
+              "destination": "data/stacks/swiftui.csv",
+              "sha256": "bdd9231ff3ad658f4e7c063e1eb49df2fd09ac8d90631a86df899b39833b9623"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/data/stacks/threejs.csv",
+              "destination": "data/stacks/threejs.csv",
+              "sha256": "155d583b9c64da0df4b6c6cb060c02eab222505e0734d6353da02c9e2b5d982b"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/data/stacks/uno.csv",
+              "destination": "data/stacks/uno.csv",
+              "sha256": "a0474363e4225b5367214d5675fd3e075f137026f9500f0d04357882ef4f6d48"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/data/stacks/uwp.csv",
+              "destination": "data/stacks/uwp.csv",
+              "sha256": "c409f08c1fbba1f1029f1acaa554e7b4471cc85517a5751c9f2e62465badcd5c"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/data/stacks/vue.csv",
+              "destination": "data/stacks/vue.csv",
+              "sha256": "b655f1ebb9dff2652d15981f31b1784c8a6d4759efd2815a14f3088257569f95"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/data/stacks/winui.csv",
+              "destination": "data/stacks/winui.csv",
+              "sha256": "e676dc1c13ee6c205c40b0746f1335150a346c7a49a0616d2545bc3d2c930c85"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/data/stacks/wpf.csv",
+              "destination": "data/stacks/wpf.csv",
+              "sha256": "9781a9950b20333637b30a02e498b7efca21b618a3eeb8665836f3ac6e974da7"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/data/styles.csv",
+              "destination": "data/styles.csv",
+              "sha256": "a9b6cadbd1cb9e7cb8398a3b445e0691d01e42ed5e5efa60a5d0c08c99c8100d"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/data/typography.csv",
+              "destination": "data/typography.csv",
+              "sha256": "321fc446e89024488ebae96dda93efc4d2307bd8bddb240857ad51364f6782c8"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/data/ui-reasoning.csv",
+              "destination": "data/ui-reasoning.csv",
+              "sha256": "60b8b1a0fc426d65c8d536fbd348e89e6c6484ab9cb54ddbcfe85b4339d960f9"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/data/ux-guidelines.csv",
+              "destination": "data/ux-guidelines.csv",
+              "sha256": "9c473c1104e93f3d985f2d46d8854735e1a1deb8e0ac5ecd39c7e3b04e5d7528"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/references/pro-rules.md",
+              "destination": "references/pro-rules.md",
+              "sha256": "d28442d61c310b49c054a4ea736f89fb3008beebdbbc38c4b3a540b8f7fadf23"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/references/quick-reference.md",
+              "destination": "references/quick-reference.md",
+              "sha256": "a2628145f48f076dda3d0f75e26a066a6590d4762da5aa4bb9bdd47782aa93cb"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/scripts/core.py",
+              "destination": "scripts/core.py",
+              "sha256": "caf92bdcf2579c9a7d6af4f53c54ee9d3c8f05472cfab77aaec38bef120ec63e"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/scripts/design_system.py",
+              "destination": "scripts/design_system.py",
+              "sha256": "043ed3f404214869ffbf4c8d529afc6c6ceddb211fa4726d67d7a03edf7265db"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/scripts/preview.py",
+              "destination": "scripts/preview.py",
+              "sha256": "2900f6b4307439c20083aa6a630332f9e8ac6fd95901bd703f75fa9a75b84fbb"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/scripts/reasoning_contract.py",
+              "destination": "scripts/reasoning_contract.py",
+              "sha256": "b8bac1af82aa280d3e06f00aabaeac4337e632996b07fed874e2b6ee6e9c5913"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/scripts/search.py",
+              "destination": "scripts/search.py",
+              "sha256": "6b52ebb01480058cab145d3c2cb57880a529e522c0781cf8cd873fa55c9b9f1d"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/scripts/tests/fixtures/catalogs/google-api.json",
+              "destination": "scripts/tests/fixtures/catalogs/google-api.json",
+              "sha256": "22d8dc81a7d6827b7e8b64b53e7d184210fb9759e8e294e0d5133c81cc460176"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/scripts/tests/fixtures/catalogs/google-catalog.json",
+              "destination": "scripts/tests/fixtures/catalogs/google-catalog.json",
+              "sha256": "c608ad5c4084ebc50a4bbbfb69ea2456c01fd5519c457e18410fffd250ae948f"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/scripts/tests/fixtures/catalogs/google-existing.csv",
+              "destination": "scripts/tests/fixtures/catalogs/google-existing.csv",
+              "sha256": "4e0761b839dc6b2187a370e82eddc0aed8a7ff10c09e28dd814bb3656dac595b"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/scripts/tests/fixtures/catalogs/google-metadata.json",
+              "destination": "scripts/tests/fixtures/catalogs/google-metadata.json",
+              "sha256": "30bffc29ae348416a2de2f9c6c418e768e4578f136b0f4bac5d2f70124f2e9ba"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/scripts/tests/fixtures/catalogs/google-overrides.json",
+              "destination": "scripts/tests/fixtures/catalogs/google-overrides.json",
+              "sha256": "6243a48a4619986768c4628e2d0c98ff195beba71ba9be5df8f0c52fc6d90c0b"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/scripts/tests/fixtures/catalogs/icons-curated.csv",
+              "destination": "scripts/tests/fixtures/catalogs/icons-curated.csv",
+              "sha256": "68362c9a700c13b96f000784a0198c1c7e117a7088a01c85744e44233038fe9d"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/scripts/tests/fixtures/catalogs/phosphor-core.json",
+              "destination": "scripts/tests/fixtures/catalogs/phosphor-core.json",
+              "sha256": "ae4d0bb076240824e1b643c2270d1f8cc0952a69502ec1e622b7dedd85b930bb"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/scripts/tests/fixtures/catalogs/phosphor-package.json",
+              "destination": "scripts/tests/fixtures/catalogs/phosphor-package.json",
+              "sha256": "500588c757d6de03e3d7e69b27a8b8b1f88ccf6bb0333e4c1e9b0d6a4f112475"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/scripts/tests/fixtures/catalogs/phosphor-react-exports.json",
+              "destination": "scripts/tests/fixtures/catalogs/phosphor-react-exports.json",
+              "sha256": "d79f2ee0afdbc2f87776733e145df3538a16a25d7c2fba0056bb48295dad0ded"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/scripts/tests/fixtures/catalogs/phosphor-react-package.json",
+              "destination": "scripts/tests/fixtures/catalogs/phosphor-react-package.json",
+              "sha256": "1c57a1d76bcc0cdd3632d4c18b9c0e79576b4591df39831c9607e5d0eb4f2cec"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/scripts/tests/fixtures/relevance-baseline.json",
+              "destination": "scripts/tests/fixtures/relevance-baseline.json",
+              "sha256": "0df200fc54c1cb97a52d6775e7f501509163cea8f8b73fd7268429bc1f835afe"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/scripts/tests/fixtures/relevance-cases.json",
+              "destination": "scripts/tests/fixtures/relevance-cases.json",
+              "sha256": "e77d36eebbf6ddc2860946a02cdb659351da6c09f2688f1ed30939a418099646"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/scripts/tests/fixtures/relevance-thresholds.json",
+              "destination": "scripts/tests/fixtures/relevance-thresholds.json",
+              "sha256": "3a588049c839fd9a2ddb5b29a4ac696d9cdc9823a6d90485bb9ba2a6d59fb685"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/scripts/tests/test_catalog_refresh.py",
+              "destination": "scripts/tests/test_catalog_refresh.py",
+              "sha256": "3e2ca5d12702318f641ae62d0c14f22a3bcc84d84e79b863c0e947d475604adb"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/scripts/tests/test_catalog_summary_line_endings.py",
+              "destination": "scripts/tests/test_catalog_summary_line_endings.py",
+              "sha256": "fa6ff09f0ec2c99013588c77397f5082dddebe8f467e94c5f8378ec9595f4989"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/scripts/tests/test_core.py",
+              "destination": "scripts/tests/test_core.py",
+              "sha256": "3527fe2f4b852f69f07c17ddc0d615d9a6e025c924e45a33985579a94a8d2118"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/scripts/tests/test_core_data_quality.py",
+              "destination": "scripts/tests/test_core_data_quality.py",
+              "sha256": "3ffc6b4905c9ea26d7ac4527ab154d153584231aee71b2ae4bd017977fa09cc5"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/scripts/tests/test_data_contracts.py",
+              "destination": "scripts/tests/test_data_contracts.py",
+              "sha256": "6c819a2596520e47f4f459ed6b763fec5fb71e35a8074563f8c35432fc5c9ced"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/scripts/tests/test_design_system_mode.py",
+              "destination": "scripts/tests/test_design_system_mode.py",
+              "sha256": "95ad2c154349f7021f55a558f8dcdd71df1a24fcf531a4364a8e49526a0865ef"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/scripts/tests/test_design_system_preview.py",
+              "destination": "scripts/tests/test_design_system_preview.py",
+              "sha256": "e425adfcdc64abfb3be598dadd39624cf8a700db58b97c0f51ea116abecb5caa"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/scripts/tests/test_design_system_stack.py",
+              "destination": "scripts/tests/test_design_system_stack.py",
+              "sha256": "83d09ffe8cfbf7b265f362129f061dfe8e5e167ce5db43adaead197cabc9ca38"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/scripts/tests/test_design_system_tokens.py",
+              "destination": "scripts/tests/test_design_system_tokens.py",
+              "sha256": "a23e0207074079390caf5c4720b8f4c96d8d8c4dac18a448826553fb6561b4f7"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/scripts/tests/test_ime_composition.py",
+              "destination": "scripts/tests/test_ime_composition.py",
+              "sha256": "7d4fc32b18ccfca02835a48163c93a36f44f9a794d25aaca888bba0b2127c05e"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/scripts/tests/test_map_guidance.py",
+              "destination": "scripts/tests/test_map_guidance.py",
+              "sha256": "1564c10c01676423c32de146559f7b4023423f9f374ad6f88d205debf6196e4f"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/scripts/tests/test_map_product_types.py",
+              "destination": "scripts/tests/test_map_product_types.py",
+              "sha256": "36f70fa5cd0ed71084be2cbf2eac20f59f3304c60ba1ce8b7e8c7690a11f4d77"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/scripts/tests/test_native_desktop_stack_freshness.py",
+              "destination": "scripts/tests/test_native_desktop_stack_freshness.py",
+              "sha256": "3942845712b9a829323cd3568511483135f2a8c7cd79ccf61679da4b0f624dbb"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/scripts/tests/test_relevance_evaluator.py",
+              "destination": "scripts/tests/test_relevance_evaluator.py",
+              "sha256": "2fe56a4d6fe5fff15ff592274b0eeaba925146cefea6c0fa29d8f1b77c9aca1f"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/scripts/tests/test_rtl_support.py",
+              "destination": "scripts/tests/test_rtl_support.py",
+              "sha256": "fb1c42f782d1929959c5adaefb8169b187b1446a17720ed4f0691b1cd3bb7898"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/scripts/tests/test_skill_script_paths.py",
+              "destination": "scripts/tests/test_skill_script_paths.py",
+              "sha256": "7cec24b94be771bc60bc84f8993e614bb16d4047930e1dd3d3bed91628311d44"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/scripts/tests/test_style_taxonomy.py",
+              "destination": "scripts/tests/test_style_taxonomy.py",
+              "sha256": "58c14be6c741de5382e3aeca858480570ba96d374532c3b22f44851a02d3076b"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/scripts/tests/test_text_layout_resilience.py",
+              "destination": "scripts/tests/test_text_layout_resilience.py",
+              "sha256": "b51d32ee8a15505b87cb81957fb2d1b385e041e8beb4463c311d236bfd29ebd4"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/scripts/tests/test_web_stack_freshness.py",
+              "destination": "scripts/tests/test_web_stack_freshness.py",
+              "sha256": "83a6d597410f442441cdb17d0913be151404a608ada6a2487dd2bfe2fbf31e5d"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/scripts/validate_data.py",
+              "destination": "scripts/validate_data.py",
+              "sha256": "e31ef4e1db1e6bb7910fb14b2a4dc139c513bca17d1e2827b292bde87d7120ca"
+            },
+            {
+              "source": ".claude/skills/ui-ux-pro-max/SKILL.md",
+              "destination": "SKILL.md",
+              "sha256": "bee6aa0382bc15099715ad8f0b11fdb224932eb516a4ea9134a2d7d38f5fcde4"
+            },
+            {
+              "source": "LICENSE",
+              "destination": "upstream-licenses/LICENSE",
+              "sha256": "738f69dfa83db5c347c678fb9d90e560877059f0de93a327c39001bff92dc014"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "repo": "vercel-labs/agent-skills",
+      "revision": "1a2c79d4e6c4a2283dc2c614b6538cbe1ed5ca62",
+      "source_url": "https://github.com/vercel-labs/agent-skills",
+      "installation": "project-vendored-skills",
+      "skills": [
+        {
+          "name": "vercel-react-best-practices",
+          "source": "skills/react-best-practices",
+          "mode": "upstream",
+          "preserve_existing": true,
+          "license_files": [],
+          "license_metadata": "MIT",
+          "files": [
+            {
+              "source": "skills/react-best-practices/AGENTS.md",
+              "destination": "AGENTS.md",
+              "sha256": "fc93e7421177bbf869cce892bc60a6c83a4517d974bc3bf65c4e2c1e58a6ccf6"
+            },
+            {
+              "source": "skills/react-best-practices/metadata.json",
+              "destination": "metadata.json",
+              "sha256": "c4e18bac3290fbe1b471a605867d4df68b03144ea26b8befdbe8f9d8fd124354"
+            },
+            {
+              "source": "skills/react-best-practices/README.md",
+              "destination": "README.md",
+              "sha256": "9eafb2123d3b8b2aef41fba0db2648a3f4f49996f8c7c8bb2c86263befd8b48a"
+            },
+            {
+              "source": "skills/react-best-practices/rules/_sections.md",
+              "destination": "rules/_sections.md",
+              "sha256": "01c59969e4e867f0708c8f8ef9c6d87fab9a07d0586244f429ff84013db8a115"
+            },
+            {
+              "source": "skills/react-best-practices/rules/_template.md",
+              "destination": "rules/_template.md",
+              "sha256": "99df2a3ea088c6c22de2484ddc7e964d0e9923846f44c63380343ecc64455442"
+            },
+            {
+              "source": "skills/react-best-practices/rules/advanced-effect-event-deps.md",
+              "destination": "rules/advanced-effect-event-deps.md",
+              "sha256": "55ed8f9f27a1bff803d6fa55828176207714b02123cbb97ddb8a90d88024a723"
+            },
+            {
+              "source": "skills/react-best-practices/rules/advanced-event-handler-refs.md",
+              "destination": "rules/advanced-event-handler-refs.md",
+              "sha256": "a3097edeecfb2ff6851cd66ed8cdf0617c3c88180504bee824aa6e75a215bbbc"
+            },
+            {
+              "source": "skills/react-best-practices/rules/advanced-init-once.md",
+              "destination": "rules/advanced-init-once.md",
+              "sha256": "3e4dc22173eb0e2b6dcf583e3babd862b8696328f8f59aee7c4d746c5bc05f6c"
+            },
+            {
+              "source": "skills/react-best-practices/rules/advanced-use-latest.md",
+              "destination": "rules/advanced-use-latest.md",
+              "sha256": "8a3f64dfe5a77d1564248faf17fe662ae75b55d497a243cb30b38eb07ccbbf9a"
+            },
+            {
+              "source": "skills/react-best-practices/rules/async-api-routes.md",
+              "destination": "rules/async-api-routes.md",
+              "sha256": "523338540d73427dc14c0cbb19f2741ebccdf8b105a7b2c1b33d2905cf237a42"
+            },
+            {
+              "source": "skills/react-best-practices/rules/async-cheap-condition-before-await.md",
+              "destination": "rules/async-cheap-condition-before-await.md",
+              "sha256": "03107c1f70a293cd58a8abc5474c5548e20ea4efdf01b6d45aae7ad0ac1cb32c"
+            },
+            {
+              "source": "skills/react-best-practices/rules/async-defer-await.md",
+              "destination": "rules/async-defer-await.md",
+              "sha256": "f3c142d090615abdcc99d31c123be37b31f0f1ed8d9ec9f7789a3bc6883ae0fb"
+            },
+            {
+              "source": "skills/react-best-practices/rules/async-dependencies.md",
+              "destination": "rules/async-dependencies.md",
+              "sha256": "16ef469f877e30c6b8e1e1b4bc3e527312fa3c6318cb785a4eca186ea236131a"
+            },
+            {
+              "source": "skills/react-best-practices/rules/async-parallel.md",
+              "destination": "rules/async-parallel.md",
+              "sha256": "6d2f841896279e976dfcdc1ac89e70771ac188baadfd43c096b5706cb838b961"
+            },
+            {
+              "source": "skills/react-best-practices/rules/async-suspense-boundaries.md",
+              "destination": "rules/async-suspense-boundaries.md",
+              "sha256": "de05fedac2eb7ae563b887b5a424464ec3dfaf84e5b7797467ebe2a796ac8afc"
+            },
+            {
+              "source": "skills/react-best-practices/rules/bundle-analyzable-paths.md",
+              "destination": "rules/bundle-analyzable-paths.md",
+              "sha256": "62090b5c815fd71bf1133dce754f51abc16a9456d0ccd025fd627de27726e92a"
+            },
+            {
+              "source": "skills/react-best-practices/rules/bundle-barrel-imports.md",
+              "destination": "rules/bundle-barrel-imports.md",
+              "sha256": "e648f6d54525f07a691357040ca5bff6ea3424788a91ff63812adb29622a671b"
+            },
+            {
+              "source": "skills/react-best-practices/rules/bundle-conditional.md",
+              "destination": "rules/bundle-conditional.md",
+              "sha256": "09c8259c3efb04fc0abb8e412ccbda217c222ae8118516283e571c995fe3a7d4"
+            },
+            {
+              "source": "skills/react-best-practices/rules/bundle-defer-third-party.md",
+              "destination": "rules/bundle-defer-third-party.md",
+              "sha256": "3719fb47b191e8db4fe22686ec88448ad5af9e6838585425abbe103d0b642e37"
+            },
+            {
+              "source": "skills/react-best-practices/rules/bundle-dynamic-imports.md",
+              "destination": "rules/bundle-dynamic-imports.md",
+              "sha256": "401817a7369f315fc5a68a1095742ff7d53d0461906880dc9d64a41495ee1986"
+            },
+            {
+              "source": "skills/react-best-practices/rules/bundle-preload.md",
+              "destination": "rules/bundle-preload.md",
+              "sha256": "d1f7cc28da7cd5ab249acd287edc5b761afcfb194e9cb62cd44c5f3543db2de2"
+            },
+            {
+              "source": "skills/react-best-practices/rules/client-event-listeners.md",
+              "destination": "rules/client-event-listeners.md",
+              "sha256": "242a873349febc1ce685e85617994784dbab92c2eaa68aed7fed5a83e7680e93"
+            },
+            {
+              "source": "skills/react-best-practices/rules/client-localstorage-schema.md",
+              "destination": "rules/client-localstorage-schema.md",
+              "sha256": "0fb7cdf9dc93fdf22f87e3669f953fb9d4ac9b0be42eec4a29fe9a2560610b88"
+            },
+            {
+              "source": "skills/react-best-practices/rules/client-passive-event-listeners.md",
+              "destination": "rules/client-passive-event-listeners.md",
+              "sha256": "1f35016f9053de69e884ee9be00654e37979c2ca85f5e57764dc2626ff7acb4b"
+            },
+            {
+              "source": "skills/react-best-practices/rules/client-swr-dedup.md",
+              "destination": "rules/client-swr-dedup.md",
+              "sha256": "644652c39c6cc00de8d1c77a7273612e868dc3f7edda30764164c12ec0f764a3"
+            },
+            {
+              "source": "skills/react-best-practices/rules/js-batch-dom-css.md",
+              "destination": "rules/js-batch-dom-css.md",
+              "sha256": "480b891b9eaf96e929dc1e964274a4828e3a78009b7d00ccd965a0d425215959"
+            },
+            {
+              "source": "skills/react-best-practices/rules/js-cache-function-results.md",
+              "destination": "rules/js-cache-function-results.md",
+              "sha256": "3daaa11d24f4295cb6be8bc6f407f2ce83cc7b5bd1f0e68891ea8ab835721dc7"
+            },
+            {
+              "source": "skills/react-best-practices/rules/js-cache-property-access.md",
+              "destination": "rules/js-cache-property-access.md",
+              "sha256": "73e47431e74878a927061bf0ddc7cd91a7556cb35d2573f3421e82300d9ae311"
+            },
+            {
+              "source": "skills/react-best-practices/rules/js-cache-storage.md",
+              "destination": "rules/js-cache-storage.md",
+              "sha256": "11b826b0433898c1ece2d3547010d8e77db9fb240185748c45db91493de9b6cc"
+            },
+            {
+              "source": "skills/react-best-practices/rules/js-combine-iterations.md",
+              "destination": "rules/js-combine-iterations.md",
+              "sha256": "71add08aeeb43091d4ff4c0b2842cce8b4bdef8ad3e732cc034bb5a84827e746"
+            },
+            {
+              "source": "skills/react-best-practices/rules/js-early-exit.md",
+              "destination": "rules/js-early-exit.md",
+              "sha256": "925ce5ce87f3347186ca62212f29cc6baa2b8c85a96d2720ad07c3d0abf781c0"
+            },
+            {
+              "source": "skills/react-best-practices/rules/js-flatmap-filter.md",
+              "destination": "rules/js-flatmap-filter.md",
+              "sha256": "9e5b166a41914d975bef7635467f8fb32cd98b5c3126c0bc6f163490812fb5f0"
+            },
+            {
+              "source": "skills/react-best-practices/rules/js-hoist-regexp.md",
+              "destination": "rules/js-hoist-regexp.md",
+              "sha256": "f9e9aef2f7c2307dd7310f283df85dcada45fc43e9bb941b0c3aa414dec21ec4"
+            },
+            {
+              "source": "skills/react-best-practices/rules/js-index-maps.md",
+              "destination": "rules/js-index-maps.md",
+              "sha256": "5df1bdc2cfabb2c98abd55d26762e5c18189535c2e686184f426082e62920391"
+            },
+            {
+              "source": "skills/react-best-practices/rules/js-length-check-first.md",
+              "destination": "rules/js-length-check-first.md",
+              "sha256": "8b54a311c826b299272f29187fc58bc55772a04c4a72eeb29456ee96dc9fc624"
+            },
+            {
+              "source": "skills/react-best-practices/rules/js-min-max-loop.md",
+              "destination": "rules/js-min-max-loop.md",
+              "sha256": "87dfb67e2f39df6ad8bcfb5b78c5fb364d3c07554ad188a202408d99f3763421"
+            },
+            {
+              "source": "skills/react-best-practices/rules/js-request-idle-callback.md",
+              "destination": "rules/js-request-idle-callback.md",
+              "sha256": "ee08f83905b4011abbc33d594033157d77561b5bbd9b36b04f0f409581ffec32"
+            },
+            {
+              "source": "skills/react-best-practices/rules/js-set-map-lookups.md",
+              "destination": "rules/js-set-map-lookups.md",
+              "sha256": "a7fd781a6ba9ad49065961b6f9a90ef486bf6b648390e1a08704025f98e1642b"
+            },
+            {
+              "source": "skills/react-best-practices/rules/js-tosorted-immutable.md",
+              "destination": "rules/js-tosorted-immutable.md",
+              "sha256": "d0a5e1b0fec48a0a81397957e2f068e224329f7c42cb5feeed8aae6fa64025e8"
+            },
+            {
+              "source": "skills/react-best-practices/rules/rendering-activity.md",
+              "destination": "rules/rendering-activity.md",
+              "sha256": "1e5e7eaf3555e61d6a2e900089c676527d26259501db5594f59544b6c664f85a"
+            },
+            {
+              "source": "skills/react-best-practices/rules/rendering-animate-svg-wrapper.md",
+              "destination": "rules/rendering-animate-svg-wrapper.md",
+              "sha256": "9c6ae0ca7a51434e803887c64cded760956579a1452ccb80a461a03f9c937c77"
+            },
+            {
+              "source": "skills/react-best-practices/rules/rendering-conditional-render.md",
+              "destination": "rules/rendering-conditional-render.md",
+              "sha256": "2ec2fa23c4148285144687050c52369adba3da2fbe3d486f8d3e0aad8f06f2bc"
+            },
+            {
+              "source": "skills/react-best-practices/rules/rendering-content-visibility.md",
+              "destination": "rules/rendering-content-visibility.md",
+              "sha256": "64eee6d5b916fe74df33363994b27fc7f71bea3bcedc7ee04bda23107ca3e6e4"
+            },
+            {
+              "source": "skills/react-best-practices/rules/rendering-hoist-jsx.md",
+              "destination": "rules/rendering-hoist-jsx.md",
+              "sha256": "93b229560fae92005ed9a2a829064607b39b2e984e92d221d05b2d41df2b7c0e"
+            },
+            {
+              "source": "skills/react-best-practices/rules/rendering-hydration-no-flicker.md",
+              "destination": "rules/rendering-hydration-no-flicker.md",
+              "sha256": "dc7ab358c67c177bca6e6f360fbc935ebe4efa928c0ba3ebd3f9f3d9e2000ca3"
+            },
+            {
+              "source": "skills/react-best-practices/rules/rendering-hydration-suppress-warning.md",
+              "destination": "rules/rendering-hydration-suppress-warning.md",
+              "sha256": "915bacb934e2927d84b37a3f3d225a47b309ac8f9e494ed2bcb66ce07c5676a2"
+            },
+            {
+              "source": "skills/react-best-practices/rules/rendering-resource-hints.md",
+              "destination": "rules/rendering-resource-hints.md",
+              "sha256": "351b1095d641717b930f1b2253282b7120af3023bc74e06c17675168d4286864"
+            },
+            {
+              "source": "skills/react-best-practices/rules/rendering-script-defer-async.md",
+              "destination": "rules/rendering-script-defer-async.md",
+              "sha256": "4cea07b7875ba7fc2c7465ff23b63a2bb334f90aaf2d9293d38d67b05fdb32ab"
+            },
+            {
+              "source": "skills/react-best-practices/rules/rendering-svg-precision.md",
+              "destination": "rules/rendering-svg-precision.md",
+              "sha256": "ed468533f6e95f622859c884b122cf21f9f593ed6bb3d500a54de4b9f9bcb9fb"
+            },
+            {
+              "source": "skills/react-best-practices/rules/rendering-usetransition-loading.md",
+              "destination": "rules/rendering-usetransition-loading.md",
+              "sha256": "3a1249c3f13026b6f54ab5712c388df219d6af01b12aa542749acd99a46f4bc1"
+            },
+            {
+              "source": "skills/react-best-practices/rules/rerender-defer-reads.md",
+              "destination": "rules/rerender-defer-reads.md",
+              "sha256": "234050a77faf50cb306be10a9e15bd4421134ab5907e75f13e6d78e2bd262dc9"
+            },
+            {
+              "source": "skills/react-best-practices/rules/rerender-dependencies.md",
+              "destination": "rules/rerender-dependencies.md",
+              "sha256": "17eb5830956fb56486fd3cfc7431f5849d39751730c05ad9e77dd4f0c27169c5"
+            },
+            {
+              "source": "skills/react-best-practices/rules/rerender-derived-state-no-effect.md",
+              "destination": "rules/rerender-derived-state-no-effect.md",
+              "sha256": "cb11ec76f50aa7b6847269f02d79b120c889a30d9ecd2c1d578f75144419c77a"
+            },
+            {
+              "source": "skills/react-best-practices/rules/rerender-derived-state.md",
+              "destination": "rules/rerender-derived-state.md",
+              "sha256": "1c326bb67b01fb084eb00c8911b0a7cff54681c2315b629f88e49b64eaa6481d"
+            },
+            {
+              "source": "skills/react-best-practices/rules/rerender-functional-setstate.md",
+              "destination": "rules/rerender-functional-setstate.md",
+              "sha256": "5e68df6b2ae8058e67f476ff1ac67bde159f5a9d18df439e46eabcdeb7b52e58"
+            },
+            {
+              "source": "skills/react-best-practices/rules/rerender-lazy-state-init.md",
+              "destination": "rules/rerender-lazy-state-init.md",
+              "sha256": "4ae844740f266fc8cbf050701230286624a2440ec5be67b9a63d9edc3c580573"
+            },
+            {
+              "source": "skills/react-best-practices/rules/rerender-memo-with-default-value.md",
+              "destination": "rules/rerender-memo-with-default-value.md",
+              "sha256": "81c47476564ad8a79fc68fc442734255ca7d6829424359464503fda0a9f9a0dd"
+            },
+            {
+              "source": "skills/react-best-practices/rules/rerender-memo.md",
+              "destination": "rules/rerender-memo.md",
+              "sha256": "1f258990c2f27ff6256b3cc5c43300631bb3f0d81f749aed08d07fcdcc131dd1"
+            },
+            {
+              "source": "skills/react-best-practices/rules/rerender-move-effect-to-event.md",
+              "destination": "rules/rerender-move-effect-to-event.md",
+              "sha256": "abc2cbf167bee056743023351e96806a411d3398da8802093620aecf0721f029"
+            },
+            {
+              "source": "skills/react-best-practices/rules/rerender-no-inline-components.md",
+              "destination": "rules/rerender-no-inline-components.md",
+              "sha256": "1cc32907a770272524ba682eef9e7efdd8ad4533b6f89b718a1fcd7d1d0eb6a3"
+            },
+            {
+              "source": "skills/react-best-practices/rules/rerender-simple-expression-in-memo.md",
+              "destination": "rules/rerender-simple-expression-in-memo.md",
+              "sha256": "5bdcf2d1558ba5204e643c887b7b4060f89630969425651eb68e96427d97f800"
+            },
+            {
+              "source": "skills/react-best-practices/rules/rerender-split-combined-hooks.md",
+              "destination": "rules/rerender-split-combined-hooks.md",
+              "sha256": "6f45d703343484ef9acef9388397f3642966ae6a5a258899a0cf1f9977cfbf6c"
+            },
+            {
+              "source": "skills/react-best-practices/rules/rerender-transitions.md",
+              "destination": "rules/rerender-transitions.md",
+              "sha256": "60f4033909a62df5e5b8c601494f9e50a562e2f8c1c2d81eac24f38142265f1c"
+            },
+            {
+              "source": "skills/react-best-practices/rules/rerender-use-deferred-value.md",
+              "destination": "rules/rerender-use-deferred-value.md",
+              "sha256": "8c3579576a61a949884167745dcfaf1d5426ba305cc61fd0a79602d70fda4909"
+            },
+            {
+              "source": "skills/react-best-practices/rules/rerender-use-ref-transient-values.md",
+              "destination": "rules/rerender-use-ref-transient-values.md",
+              "sha256": "f1a649af9d1d0b5c762f6c9c4c1c70c90d7df82aa10296ee87aadb78c1b76c54"
+            },
+            {
+              "source": "skills/react-best-practices/rules/server-after-nonblocking.md",
+              "destination": "rules/server-after-nonblocking.md",
+              "sha256": "d0b8d24a3db9f0f65f9e2bddbf230b0e03a5f60e1229d93a4a18f5e7a991c7c2"
+            },
+            {
+              "source": "skills/react-best-practices/rules/server-auth-actions.md",
+              "destination": "rules/server-auth-actions.md",
+              "sha256": "a2ca8aa102839251c7971ec784560fab943c20b36fe6f80365d4110c13260c23"
+            },
+            {
+              "source": "skills/react-best-practices/rules/server-cache-lru.md",
+              "destination": "rules/server-cache-lru.md",
+              "sha256": "1924b64561841923b88a657085097a0aeba3e0ba2d5470b9f5c15cc10d6ae70f"
+            },
+            {
+              "source": "skills/react-best-practices/rules/server-cache-react.md",
+              "destination": "rules/server-cache-react.md",
+              "sha256": "fddeea6c870bb3da4134b61d54b7d09b83d2603f929b7547cd3dc1dc269edd5c"
+            },
+            {
+              "source": "skills/react-best-practices/rules/server-dedup-props.md",
+              "destination": "rules/server-dedup-props.md",
+              "sha256": "c2747424cdac46be62f835f245a0aa887b0090b416d28e2ac8676702645eeb37"
+            },
+            {
+              "source": "skills/react-best-practices/rules/server-hoist-static-io.md",
+              "destination": "rules/server-hoist-static-io.md",
+              "sha256": "5abea4dd882b13661bd5f7dfb93f9e547d5f08176c61c448ade91b210ed5d49f"
+            },
+            {
+              "source": "skills/react-best-practices/rules/server-no-shared-module-state.md",
+              "destination": "rules/server-no-shared-module-state.md",
+              "sha256": "4d869bf1cd2f1632e5ca4c0e64b1cf0e71c5f5a0f940bc8a22174d205e735ed7"
+            },
+            {
+              "source": "skills/react-best-practices/rules/server-parallel-fetching.md",
+              "destination": "rules/server-parallel-fetching.md",
+              "sha256": "569a2e9fc04f9606686cd75c5894ef8781b502786a7fffe241396846c7733472"
+            },
+            {
+              "source": "skills/react-best-practices/rules/server-parallel-nested-fetching.md",
+              "destination": "rules/server-parallel-nested-fetching.md",
+              "sha256": "ad5d9656984d4a959997a2367bf59cc6632297b4634a1dd13a087939d83f30b3"
+            },
+            {
+              "source": "skills/react-best-practices/rules/server-serialization.md",
+              "destination": "rules/server-serialization.md",
+              "sha256": "f4c7d68b29c82381baad059c4a7f09e868e71ec9c3115a26ad3ae7d24c0dfe1f"
+            },
+            {
+              "source": "skills/react-best-practices/SKILL.md",
+              "destination": "SKILL.md",
+              "sha256": "71ed7794962fa6e803ee83030517b5b93a9f70fbfeb431ec4535c5480a8d8355"
+            }
+          ]
+        },
+        {
+          "name": "vercel-react-native-skills",
+          "source": "skills/react-native-skills",
+          "mode": "upstream",
+          "preserve_existing": true,
+          "license_files": [],
+          "license_metadata": "MIT",
+          "files": [
+            {
+              "source": "skills/react-native-skills/AGENTS.md",
+              "destination": "AGENTS.md",
+              "sha256": "72996343b8260800fbeb9af63ddaed91f14b65dc547e0922f9f8e9bd72076cbf"
+            },
+            {
+              "source": "skills/react-native-skills/metadata.json",
+              "destination": "metadata.json",
+              "sha256": "59ee2274cadbd95b2220727028f0dbc26d3e0251e7937226edc9e7640756ba21"
+            },
+            {
+              "source": "skills/react-native-skills/README.md",
+              "destination": "README.md",
+              "sha256": "d60d7623005a833b928be6a109ed9d14dea43d7217fb534e8f2e4de5fc1f0ddf"
+            },
+            {
+              "source": "skills/react-native-skills/rules/_sections.md",
+              "destination": "rules/_sections.md",
+              "sha256": "21d7445e92bd7d393b420118c3fb9ebbf30aaf123a15143afb6c0b1b562cfdfd"
+            },
+            {
+              "source": "skills/react-native-skills/rules/_template.md",
+              "destination": "rules/_template.md",
+              "sha256": "99df2a3ea088c6c22de2484ddc7e964d0e9923846f44c63380343ecc64455442"
+            },
+            {
+              "source": "skills/react-native-skills/rules/animation-derived-value.md",
+              "destination": "rules/animation-derived-value.md",
+              "sha256": "689228e9d59227934f296563963951aa9368be0afb2a188f650de161203b1862"
+            },
+            {
+              "source": "skills/react-native-skills/rules/animation-gesture-detector-press.md",
+              "destination": "rules/animation-gesture-detector-press.md",
+              "sha256": "69408d4be669e74689d865c5f50a22fc3a802d521fe493371761abd20526e58e"
+            },
+            {
+              "source": "skills/react-native-skills/rules/animation-gpu-properties.md",
+              "destination": "rules/animation-gpu-properties.md",
+              "sha256": "f885e4179445da27cbc225e0a4aa3ed9016fc3507ca6f864392ba7a9d0bd7516"
+            },
+            {
+              "source": "skills/react-native-skills/rules/design-system-compound-components.md",
+              "destination": "rules/design-system-compound-components.md",
+              "sha256": "dcb10900a58fcf57cca2e27c062d02df2325a7949e08fb45e9e05cc2b132b1a6"
+            },
+            {
+              "source": "skills/react-native-skills/rules/fonts-config-plugin.md",
+              "destination": "rules/fonts-config-plugin.md",
+              "sha256": "b92568774064a604e7a479d4c8d7263aed5609740e9161d2f2764bfff761905d"
+            },
+            {
+              "source": "skills/react-native-skills/rules/imports-design-system-folder.md",
+              "destination": "rules/imports-design-system-folder.md",
+              "sha256": "aa6337f7f2869a46a9141ec65e02c3da5c3bf051023899b82e0f0aef5bff8423"
+            },
+            {
+              "source": "skills/react-native-skills/rules/js-hoist-intl.md",
+              "destination": "rules/js-hoist-intl.md",
+              "sha256": "b4b08622465ffcd5e5961878eb8c6d7359aa242d16c990b59941c9111962fe46"
+            },
+            {
+              "source": "skills/react-native-skills/rules/list-performance-callbacks.md",
+              "destination": "rules/list-performance-callbacks.md",
+              "sha256": "db800e9dfe0080eb4954b96e2a362ee8344d08e08b1ed06bc8059450f3e6f0dd"
+            },
+            {
+              "source": "skills/react-native-skills/rules/list-performance-function-references.md",
+              "destination": "rules/list-performance-function-references.md",
+              "sha256": "b54470e41d578b207ee3223f6853efb7fbf8e5f83d9aecf8da16989072f99544"
+            },
+            {
+              "source": "skills/react-native-skills/rules/list-performance-images.md",
+              "destination": "rules/list-performance-images.md",
+              "sha256": "e88f16ac113c29230d674b7aa2c66c31d5772a74b1ea378d48a97b1143fe6c19"
+            },
+            {
+              "source": "skills/react-native-skills/rules/list-performance-inline-objects.md",
+              "destination": "rules/list-performance-inline-objects.md",
+              "sha256": "e2a80aac0f29c6abaf0163c1cc273d09cc8a0030ec077ca2022bbf5c309e4625"
+            },
+            {
+              "source": "skills/react-native-skills/rules/list-performance-item-expensive.md",
+              "destination": "rules/list-performance-item-expensive.md",
+              "sha256": "a68cc8ec5dba3c55761bd5df9dfd3d98485f63076868d3e03af15f1e58907ce3"
+            },
+            {
+              "source": "skills/react-native-skills/rules/list-performance-item-memo.md",
+              "destination": "rules/list-performance-item-memo.md",
+              "sha256": "38ec1d149ee485434d11c2b9e2101dfc914afadae4a0738ca905f26b05f708c1"
+            },
+            {
+              "source": "skills/react-native-skills/rules/list-performance-item-types.md",
+              "destination": "rules/list-performance-item-types.md",
+              "sha256": "eed225f4e9e504bfa7db01f5395d1402545cc47de8adf1829a9408cd5d158cf6"
+            },
+            {
+              "source": "skills/react-native-skills/rules/list-performance-virtualize.md",
+              "destination": "rules/list-performance-virtualize.md",
+              "sha256": "98cad308118acb4d6e8e975c0168ce56e2d48ca52ed47f23bc9a30667c066ada"
+            },
+            {
+              "source": "skills/react-native-skills/rules/monorepo-native-deps-in-app.md",
+              "destination": "rules/monorepo-native-deps-in-app.md",
+              "sha256": "8368b109027fcec1b8a81bfb99718aef2b64edaba77107f73d7c465cc5a14217"
+            },
+            {
+              "source": "skills/react-native-skills/rules/monorepo-single-dependency-versions.md",
+              "destination": "rules/monorepo-single-dependency-versions.md",
+              "sha256": "61c01b9eaab1e319bf078204231fb573bdfea3c43a6eb99e7ef73ee95d474ccc"
+            },
+            {
+              "source": "skills/react-native-skills/rules/navigation-native-navigators.md",
+              "destination": "rules/navigation-native-navigators.md",
+              "sha256": "6642dedb57e72f0b56df5fbc3d5b8aaa91fc4456932c12712cfd076d393f32c6"
+            },
+            {
+              "source": "skills/react-native-skills/rules/react-compiler-destructure-functions.md",
+              "destination": "rules/react-compiler-destructure-functions.md",
+              "sha256": "8048926a4fa3fbd28fc0ecf4ba4c383a2f0ed06c2fd7330dd4a15d7f4e548044"
+            },
+            {
+              "source": "skills/react-native-skills/rules/react-compiler-reanimated-shared-values.md",
+              "destination": "rules/react-compiler-reanimated-shared-values.md",
+              "sha256": "3174303a72b6849ff0eda5cd9f9650f26baa5f31ed28d35a75076af714fb2ffc"
+            },
+            {
+              "source": "skills/react-native-skills/rules/react-state-dispatcher.md",
+              "destination": "rules/react-state-dispatcher.md",
+              "sha256": "7ec5b653e3ff8d9ca97d8d66981cce5590c0e49fa79ab708fd6324542b588870"
+            },
+            {
+              "source": "skills/react-native-skills/rules/react-state-fallback.md",
+              "destination": "rules/react-state-fallback.md",
+              "sha256": "eb76e386d71680bfdfc0ab64dba1221f4d3d0fdcb4980bb4a871381d58e9e58b"
+            },
+            {
+              "source": "skills/react-native-skills/rules/react-state-minimize.md",
+              "destination": "rules/react-state-minimize.md",
+              "sha256": "31b989de61defda1c61d8578c4700efd64a427218c3f3dbb7062a1666e1cbe43"
+            },
+            {
+              "source": "skills/react-native-skills/rules/rendering-no-falsy-and.md",
+              "destination": "rules/rendering-no-falsy-and.md",
+              "sha256": "7300fa45ac3a4968db144727a21052421bc62de9b5e9f6f59e28bd16d2fff001"
+            },
+            {
+              "source": "skills/react-native-skills/rules/rendering-text-in-text-component.md",
+              "destination": "rules/rendering-text-in-text-component.md",
+              "sha256": "fc67897b6126b6b5574f4d284a6c5b2282528fe89de8ec08e6cfd2a86ab5b235"
+            },
+            {
+              "source": "skills/react-native-skills/rules/scroll-position-no-state.md",
+              "destination": "rules/scroll-position-no-state.md",
+              "sha256": "70aa1ee679e755556d7b01b326431fe898d3c23ddba40d0da6bdac23c87a1525"
+            },
+            {
+              "source": "skills/react-native-skills/rules/state-ground-truth.md",
+              "destination": "rules/state-ground-truth.md",
+              "sha256": "9f3efc73d2e66a5deb3199c9774f42524cd6a0f69784af38301946be5d747cb5"
+            },
+            {
+              "source": "skills/react-native-skills/rules/ui-expo-image.md",
+              "destination": "rules/ui-expo-image.md",
+              "sha256": "c3c13cce3dd2cc7f8a9b4861e5743af98f62e28f5699f72f492e79a335cfae55"
+            },
+            {
+              "source": "skills/react-native-skills/rules/ui-image-gallery.md",
+              "destination": "rules/ui-image-gallery.md",
+              "sha256": "b34d1ba03710ed9622187716541ae618968e7d03bc28895c2ac918d3cc5853f1"
+            },
+            {
+              "source": "skills/react-native-skills/rules/ui-measure-views.md",
+              "destination": "rules/ui-measure-views.md",
+              "sha256": "170d058abc4900ea9e851e54f5e8b437ffffc2c9d3847ae35e30a515c8990c3d"
+            },
+            {
+              "source": "skills/react-native-skills/rules/ui-menus.md",
+              "destination": "rules/ui-menus.md",
+              "sha256": "5964adbecfe9aeb28d736a4eaacec6469a1c4ca3f48779d243eb38b6d181cfe9"
+            },
+            {
+              "source": "skills/react-native-skills/rules/ui-native-modals.md",
+              "destination": "rules/ui-native-modals.md",
+              "sha256": "d803493b3046ad31cbb2c189f1fffb948fd0055050e3c322589bd548421e23a8"
+            },
+            {
+              "source": "skills/react-native-skills/rules/ui-pressable.md",
+              "destination": "rules/ui-pressable.md",
+              "sha256": "52cdbad127d713d7d32c59ef74ab1bbd6dca211edc9b25993453f7f4545e79fa"
+            },
+            {
+              "source": "skills/react-native-skills/rules/ui-safe-area-scroll.md",
+              "destination": "rules/ui-safe-area-scroll.md",
+              "sha256": "3dd776caef2344d73529010940b50042861d06d31a192122a4df64bc06aed0e8"
+            },
+            {
+              "source": "skills/react-native-skills/rules/ui-scrollview-content-inset.md",
+              "destination": "rules/ui-scrollview-content-inset.md",
+              "sha256": "89e4bbe5e9a602660f4155e9d4c0dee09db1adf21c73f47213cd67ec896e5a13"
+            },
+            {
+              "source": "skills/react-native-skills/rules/ui-styling.md",
+              "destination": "rules/ui-styling.md",
+              "sha256": "cdef4d8b1a097b844e5992ab78e66a2dc604faf1e90f8d325a0eb116e8ef6a7e"
+            },
+            {
+              "source": "skills/react-native-skills/SKILL.md",
+              "destination": "SKILL.md",
+              "sha256": "4012750a5ccbe064ca04af3835d5d1b011979d2d09d9b6df1c8128fac58e0a66"
+            }
+          ]
+        },
+        {
+          "name": "web-design-guidelines",
+          "source": "skills/web-design-guidelines",
+          "mode": "upstream",
+          "preserve_existing": true,
+          "license_files": [],
+          "license_metadata": null,
+          "files": [
+            {
+              "source": "skills/web-design-guidelines/SKILL.md",
+              "destination": "SKILL.md",
+              "sha256": "f4647ca866a3accf763777f83e7682954f0187cd6bea7eea0399796652414e8f"
+            }
+          ]
+        },
+        {
+          "name": "vercel-composition-patterns",
+          "source": "skills/composition-patterns",
+          "mode": "upstream",
+          "preserve_existing": false,
+          "license_files": [],
+          "license_metadata": "MIT",
+          "files": [
+            {
+              "source": "skills/composition-patterns/AGENTS.md",
+              "destination": "AGENTS.md",
+              "sha256": "89e3ddd58fcf99a53a50e25dfd21b8cde1be5f10b7df6bacd3dfa6796932f516"
+            },
+            {
+              "source": "skills/composition-patterns/metadata.json",
+              "destination": "metadata.json",
+              "sha256": "49262ed5cb4186f31ee980cf8d990be0170c51efed4908d0464a1cff9905bd05"
+            },
+            {
+              "source": "skills/composition-patterns/README.md",
+              "destination": "README.md",
+              "sha256": "85915a43a6f0b4efe525e3cf6398dd866166da2025837c4460468a24a940da94"
+            },
+            {
+              "source": "skills/composition-patterns/rules/_sections.md",
+              "destination": "rules/_sections.md",
+              "sha256": "a174213b87e6911e2b766995a2cbaf8d1534057076e82fb79fe3f0ecb38047df"
+            },
+            {
+              "source": "skills/composition-patterns/rules/_template.md",
+              "destination": "rules/_template.md",
+              "sha256": "587f7d16b0660eb61fee4a4d3d7df2b3077d6835de170602c7d6e60bee559131"
+            },
+            {
+              "source": "skills/composition-patterns/rules/architecture-avoid-boolean-props.md",
+              "destination": "rules/architecture-avoid-boolean-props.md",
+              "sha256": "007555ebb020f4d552582a2c4db194db71a1fd33094012e5187bcfa4f8c392d5"
+            },
+            {
+              "source": "skills/composition-patterns/rules/architecture-compound-components.md",
+              "destination": "rules/architecture-compound-components.md",
+              "sha256": "f246af13dc269b521cf20eb8ad99a0cb645beac381c8c9b117262c34612c8457"
+            },
+            {
+              "source": "skills/composition-patterns/rules/patterns-children-over-render-props.md",
+              "destination": "rules/patterns-children-over-render-props.md",
+              "sha256": "7c45a0d21b3c4126a32cba916ee31adeae195386ad1dbbe6634aedb7457aa0ad"
+            },
+            {
+              "source": "skills/composition-patterns/rules/patterns-explicit-variants.md",
+              "destination": "rules/patterns-explicit-variants.md",
+              "sha256": "8c19e596e61807549d01ce8c6954c6358199f97a8511c0c02c625ec0efda8c0e"
+            },
+            {
+              "source": "skills/composition-patterns/rules/react19-no-forwardref.md",
+              "destination": "rules/react19-no-forwardref.md",
+              "sha256": "881830adb7534c4b2d70db426556646ad9837f5478f744f35641f635ada22227"
+            },
+            {
+              "source": "skills/composition-patterns/rules/state-context-interface.md",
+              "destination": "rules/state-context-interface.md",
+              "sha256": "09e73afbf9285fa416679cc864a287b9e8b821d0969272ab784295386d8c9bc3"
+            },
+            {
+              "source": "skills/composition-patterns/rules/state-decouple-implementation.md",
+              "destination": "rules/state-decouple-implementation.md",
+              "sha256": "76a8c1eb29a70d8996ab3f71260345af2f7bc89deab815a421d6c87c6591a9c3"
+            },
+            {
+              "source": "skills/composition-patterns/rules/state-lift-state.md",
+              "destination": "rules/state-lift-state.md",
+              "sha256": "74c54038a6c554c748fe31cec673b80861b5d920b7553cf78cdf10d18b4b759b"
+            },
+            {
+              "source": "skills/composition-patterns/SKILL.md",
+              "destination": "SKILL.md",
+              "sha256": "e38e0eaa609316b10423a9a138ed95e35099accd3f735585295c8a8f165c28a3"
+            },
+            {
+              "local": "scripts/ai-devkit/skill-adapters/vendor-policy.yaml",
+              "destination": "agents/openai.yaml",
+              "sha256": "2e41c1267a52f6f328cdc4e676fc1bda07545633f8ed7b5854bb86882df53029"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "repo": "mattpocock/skills",
+      "revision": "5863806dd4e15c63174bee4e7515a4256792ecfa",
+      "source_url": "https://github.com/mattpocock/skills",
+      "installation": "project-vendored-skills",
+      "skills": [
+        {
+          "name": "codebase-design",
+          "source": "skills/engineering/codebase-design",
+          "mode": "upstream",
+          "preserve_existing": false,
+          "license_files": [
+            "upstream-licenses/LICENSE"
+          ],
+          "license_metadata": null,
+          "files": [
+            {
+              "source": "skills/engineering/codebase-design/DEEPENING.md",
+              "destination": "DEEPENING.md",
+              "sha256": "f3dd099ce99289bd213914d8ee3e2429b78309c3957ca4583f7659551b1d53c1"
+            },
+            {
+              "source": "skills/engineering/codebase-design/DESIGN-IT-TWICE.md",
+              "destination": "DESIGN-IT-TWICE.md",
+              "sha256": "c222ab5a82e0405672eb9062d62496139a08828e45d07fc5f18e4952c10fac1a"
+            },
+            {
+              "source": "skills/engineering/codebase-design/SKILL.md",
+              "destination": "SKILL.md",
+              "sha256": "2c20617f87ec8af6a434859f381b2f061a69b530444e74eb39e78bb016a6d1e2"
+            },
+            {
+              "source": "LICENSE",
+              "destination": "upstream-licenses/LICENSE",
+              "sha256": "0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5"
+            },
+            {
+              "local": "scripts/ai-devkit/skill-adapters/vendor-policy.yaml",
+              "destination": "agents/openai.yaml",
+              "sha256": "2e41c1267a52f6f328cdc4e676fc1bda07545633f8ed7b5854bb86882df53029"
+            }
+          ]
+        },
+        {
+          "name": "diagnosing-bugs",
+          "source": "skills/engineering/diagnosing-bugs",
+          "mode": "upstream",
+          "preserve_existing": false,
+          "license_files": [
+            "upstream-licenses/LICENSE"
+          ],
+          "license_metadata": null,
+          "files": [
+            {
+              "source": "skills/engineering/diagnosing-bugs/scripts/hitl-loop.template.sh",
+              "destination": "scripts/hitl-loop.template.sh",
+              "sha256": "35103539fc36873eea36074769ad454f9379d6fc8b2dc0e26ce987fd3bfe5503"
+            },
+            {
+              "source": "skills/engineering/diagnosing-bugs/SKILL.md",
+              "destination": "SKILL.md",
+              "sha256": "849198df88cdb65fd0d97236604c1fca7ff2f22d2f705f9724a800d0266b118d"
+            },
+            {
+              "source": "LICENSE",
+              "destination": "upstream-licenses/LICENSE",
+              "sha256": "0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5"
+            },
+            {
+              "local": "scripts/ai-devkit/skill-adapters/vendor-policy.yaml",
+              "destination": "agents/openai.yaml",
+              "sha256": "2e41c1267a52f6f328cdc4e676fc1bda07545633f8ed7b5854bb86882df53029"
+            }
+          ]
+        },
+        {
+          "name": "domain-modeling",
+          "source": "skills/engineering/domain-modeling",
+          "mode": "upstream",
+          "preserve_existing": false,
+          "license_files": [
+            "upstream-licenses/LICENSE"
+          ],
+          "license_metadata": null,
+          "files": [
+            {
+              "source": "skills/engineering/domain-modeling/ADR-FORMAT.md",
+              "destination": "ADR-FORMAT.md",
+              "sha256": "944c92aa790e8fbdc9199640b170979abb8a34ba8d0fe18c2a01a63bce140ca0"
+            },
+            {
+              "source": "skills/engineering/domain-modeling/GLOSSARY-FORMAT.md",
+              "destination": "GLOSSARY-FORMAT.md",
+              "sha256": "21dcc40cdec8e151a829b98ab1517c1867bc444e3665134a98c6983411996801"
+            },
+            {
+              "source": "skills/engineering/domain-modeling/SKILL.md",
+              "destination": "SKILL.md",
+              "sha256": "7b925d7b1e341a2eeae33ad68a8a8c0ab889a38ddd22a7598e4c240e5a7556a3"
+            },
+            {
+              "source": "LICENSE",
+              "destination": "upstream-licenses/LICENSE",
+              "sha256": "0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5"
+            },
+            {
+              "local": "scripts/ai-devkit/skill-adapters/vendor-policy.yaml",
+              "destination": "agents/openai.yaml",
+              "sha256": "2e41c1267a52f6f328cdc4e676fc1bda07545633f8ed7b5854bb86882df53029"
+            }
+          ]
+        },
+        {
+          "name": "tdd",
+          "source": "skills/engineering/tdd",
+          "mode": "upstream",
+          "preserve_existing": false,
+          "license_files": [
+            "upstream-licenses/LICENSE"
+          ],
+          "license_metadata": null,
+          "files": [
+            {
+              "source": "skills/engineering/tdd/mocking.md",
+              "destination": "mocking.md",
+              "sha256": "3ceb807fdf4a47d6a93d4d9a891e5ba6d362a6247bd08adc451feebfc17361ef"
+            },
+            {
+              "source": "skills/engineering/tdd/SKILL.md",
+              "destination": "SKILL.md",
+              "sha256": "5505d25bbaa8fc14a79e4d20163936958992a2995b7f1dd1d6197edc9ed722e0"
+            },
+            {
+              "source": "skills/engineering/tdd/tests.md",
+              "destination": "tests.md",
+              "sha256": "859f9e592c188fda4fc7277dd180e4ce9c7a2e13f6efe1f6f29eccc9d28c106a"
+            },
+            {
+              "source": "LICENSE",
+              "destination": "upstream-licenses/LICENSE",
+              "sha256": "0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5"
+            },
+            {
+              "local": "scripts/ai-devkit/skill-adapters/vendor-policy.yaml",
+              "destination": "agents/openai.yaml",
+              "sha256": "2e41c1267a52f6f328cdc4e676fc1bda07545633f8ed7b5854bb86882df53029"
+            }
+          ]
+        },
+        {
+          "name": "to-spec",
+          "source": "skills/engineering/to-spec",
+          "mode": "upstream",
+          "preserve_existing": false,
+          "license_files": [
+            "upstream-licenses/LICENSE"
+          ],
+          "license_metadata": null,
+          "files": [
+            {
+              "source": "skills/engineering/to-spec/SKILL.md",
+              "destination": "SKILL.md",
+              "sha256": "43ad9cf318e5e7d3d1fa360253a37021796dc87a0c2e595ad262661a10f85088"
+            },
+            {
+              "source": "LICENSE",
+              "destination": "upstream-licenses/LICENSE",
+              "sha256": "0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5"
+            },
+            {
+              "local": "scripts/ai-devkit/skill-adapters/vendor-policy.yaml",
+              "destination": "agents/openai.yaml",
+              "sha256": "2e41c1267a52f6f328cdc4e676fc1bda07545633f8ed7b5854bb86882df53029"
+            }
+          ]
+        },
+        {
+          "name": "writing-for-agents",
+          "source": "skills/productivity/writing-for-agents",
+          "mode": "upstream",
+          "preserve_existing": false,
+          "license_files": [
+            "upstream-licenses/LICENSE"
+          ],
+          "license_metadata": null,
+          "files": [
+            {
+              "source": "skills/productivity/writing-for-agents/SKILL-MECHANICS.md",
+              "destination": "SKILL-MECHANICS.md",
+              "sha256": "c768e6307c7c10728c401c213f2c4ba71c542127eeb7ad2956aabd15a0fa0059"
+            },
+            {
+              "source": "skills/productivity/writing-for-agents/SKILL.md",
+              "destination": "SKILL.md",
+              "sha256": "551adca942227b44192edba88acd4e8db911f0121ce58ad16944ccf6a896a74a"
+            },
+            {
+              "source": "LICENSE",
+              "destination": "upstream-licenses/LICENSE",
+              "sha256": "0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5"
+            },
+            {
+              "local": "scripts/ai-devkit/skill-adapters/vendor-policy.yaml",
+              "destination": "agents/openai.yaml",
+              "sha256": "2e41c1267a52f6f328cdc4e676fc1bda07545633f8ed7b5854bb86882df53029"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "repo": "trailofbits/skills",
+      "revision": "149d7b21f4067765b82e67029730b42d228ef4b4",
+      "source_url": "https://github.com/trailofbits/skills",
+      "installation": "project-vendored-skills",
+      "skills": [
+        {
+          "name": "audit-context-building",
+          "source": "plugins/audit-context-building/skills/audit-context-building",
+          "mode": "upstream",
+          "preserve_existing": false,
+          "license_files": [
+            "upstream-licenses/LICENSE"
+          ],
+          "license_metadata": null,
+          "files": [
+            {
+              "source": "plugins/audit-context-building/skills/audit-context-building/assets/trail-of-bits-mark.svg",
+              "destination": "assets/trail-of-bits-mark.svg",
+              "sha256": "4bf74c789b38dcf6ad762c136b6832363d27ae19fbaa9a18ec18d66ecce6ca05"
+            },
+            {
+              "source": "plugins/audit-context-building/skills/audit-context-building/resources/ANALYSIS_FORMAT.md",
+              "destination": "resources/ANALYSIS_FORMAT.md",
+              "sha256": "029532945776fb0fcbc866f19cd6114fe4152cd3dea1c0f44b266ec13a2cc6e8"
+            },
+            {
+              "source": "plugins/audit-context-building/skills/audit-context-building/resources/DOMAIN_NOTES.md",
+              "destination": "resources/DOMAIN_NOTES.md",
+              "sha256": "ca3090f7f8d18f7145b253b283f5d33c36b314cea231aae8466bf23f122e2ed1"
+            },
+            {
+              "source": "plugins/audit-context-building/skills/audit-context-building/resources/FUNCTION_MICRO_ANALYSIS_EXAMPLE.md",
+              "destination": "resources/FUNCTION_MICRO_ANALYSIS_EXAMPLE.md",
+              "sha256": "3351010d83b61bfb34a0359498f153817fdfa6528cead54536b06e035ff2399c"
+            },
+            {
+              "source": "plugins/audit-context-building/skills/audit-context-building/SKILL.md",
+              "destination": "SKILL.md",
+              "sha256": "33fa693dc6e166cfa4919e4373cb6578c009d296234c2ae7cb3cd4e79b443765"
+            },
+            {
+              "source": "LICENSE",
+              "destination": "upstream-licenses/LICENSE",
+              "sha256": "7abe19ec9bb73b36141b999b861d24ad855e808bafe0f81e84cce28556f6c297"
+            },
+            {
+              "local": "scripts/ai-devkit/skill-adapters/vendor-policy.yaml",
+              "destination": "agents/openai.yaml",
+              "sha256": "2e41c1267a52f6f328cdc4e676fc1bda07545633f8ed7b5854bb86882df53029"
+            }
+          ]
+        },
+        {
+          "name": "differential-review",
+          "source": "plugins/differential-review/skills/differential-review",
+          "mode": "upstream",
+          "preserve_existing": false,
+          "license_files": [
+            "upstream-licenses/LICENSE"
+          ],
+          "license_metadata": null,
+          "files": [
+            {
+              "source": "plugins/differential-review/skills/differential-review/adversarial.md",
+              "destination": "adversarial.md",
+              "sha256": "3cb823f38c6e551cbcf5f72325d2bb219dacdad774072519c31d50d92db19800"
+            },
+            {
+              "source": "plugins/differential-review/skills/differential-review/assets/trail-of-bits-mark.svg",
+              "destination": "assets/trail-of-bits-mark.svg",
+              "sha256": "4bf74c789b38dcf6ad762c136b6832363d27ae19fbaa9a18ec18d66ecce6ca05"
+            },
+            {
+              "source": "plugins/differential-review/skills/differential-review/methodology.md",
+              "destination": "methodology.md",
+              "sha256": "16b335d24cf2145e3dc4a37f50056550d29db2efa20e6df78fec95ec1e6fb0b4"
+            },
+            {
+              "source": "plugins/differential-review/skills/differential-review/patterns.md",
+              "destination": "patterns.md",
+              "sha256": "52abb18abbc73502a3d3b2f36a7a035adc1db40fd812d1d5424cf065036a06e9"
+            },
+            {
+              "source": "plugins/differential-review/skills/differential-review/reporting.md",
+              "destination": "reporting.md",
+              "sha256": "0016876dc6f158e926448bff1b6f634796757c7afe09dff177cfe30250724fc4"
+            },
+            {
+              "source": "plugins/differential-review/skills/differential-review/SKILL.md",
+              "destination": "SKILL.md",
+              "sha256": "f9af6a8193fc1a9f8ca3c54bb8d19095a5f20c9472ca6d014488bbde50b67da0"
+            },
+            {
+              "source": "LICENSE",
+              "destination": "upstream-licenses/LICENSE",
+              "sha256": "7abe19ec9bb73b36141b999b861d24ad855e808bafe0f81e84cce28556f6c297"
+            },
+            {
+              "local": "scripts/ai-devkit/skill-adapters/vendor-policy.yaml",
+              "destination": "agents/openai.yaml",
+              "sha256": "2e41c1267a52f6f328cdc4e676fc1bda07545633f8ed7b5854bb86882df53029"
+            }
+          ]
+        },
+        {
+          "name": "sharp-edges",
+          "source": "plugins/sharp-edges/skills/sharp-edges",
+          "mode": "upstream",
+          "preserve_existing": false,
+          "license_files": [
+            "upstream-licenses/LICENSE"
+          ],
+          "license_metadata": null,
+          "files": [
+            {
+              "source": "plugins/sharp-edges/skills/sharp-edges/assets/trail-of-bits-mark.svg",
+              "destination": "assets/trail-of-bits-mark.svg",
+              "sha256": "4bf74c789b38dcf6ad762c136b6832363d27ae19fbaa9a18ec18d66ecce6ca05"
+            },
+            {
+              "source": "plugins/sharp-edges/skills/sharp-edges/references/auth-patterns.md",
+              "destination": "references/auth-patterns.md",
+              "sha256": "1fbf526ca1db7204f9ebb1bf4eb3c48c544676623d23e5d28e01f6f63c355be2"
+            },
+            {
+              "source": "plugins/sharp-edges/skills/sharp-edges/references/case-studies.md",
+              "destination": "references/case-studies.md",
+              "sha256": "2e81a320728b4597bf84c490176d5bf212f1e6ba6f87aafba61ad1734de35332"
+            },
+            {
+              "source": "plugins/sharp-edges/skills/sharp-edges/references/config-patterns.md",
+              "destination": "references/config-patterns.md",
+              "sha256": "1d99f2716f7bef18efe71015ce0c56e0f4961c042faa503d796d6d4d1626fdc6"
+            },
+            {
+              "source": "plugins/sharp-edges/skills/sharp-edges/references/crypto-apis.md",
+              "destination": "references/crypto-apis.md",
+              "sha256": "8baddc83a1f964d6d8b15678d60a37c93029c18dc162bd7c00895e585ff1a825"
+            },
+            {
+              "source": "plugins/sharp-edges/skills/sharp-edges/references/lang-c.md",
+              "destination": "references/lang-c.md",
+              "sha256": "d077d711c73749c924eae81c06018b14bbf1ec9b93d71723c472b43df5d7d5ae"
+            },
+            {
+              "source": "plugins/sharp-edges/skills/sharp-edges/references/lang-csharp.md",
+              "destination": "references/lang-csharp.md",
+              "sha256": "8fa9e93d36c0e1397b7ca81307163370fc43cf700215b7c6d7aa1b09fdb91fb4"
+            },
+            {
+              "source": "plugins/sharp-edges/skills/sharp-edges/references/lang-go.md",
+              "destination": "references/lang-go.md",
+              "sha256": "839c0e7b4e3fa2f3b37c651e926aa59d69d20bfef5e67f569eedacf11354844d"
+            },
+            {
+              "source": "plugins/sharp-edges/skills/sharp-edges/references/lang-java.md",
+              "destination": "references/lang-java.md",
+              "sha256": "3b93b6049f7e0e356a1ffebc0b4642f3cef315d90be45b63e15c8c4814f9ebeb"
+            },
+            {
+              "source": "plugins/sharp-edges/skills/sharp-edges/references/lang-javascript.md",
+              "destination": "references/lang-javascript.md",
+              "sha256": "cf72f55d31318666942a8d1d64340befc3c4e7223afc2ca196e6a776ffa4c895"
+            },
+            {
+              "source": "plugins/sharp-edges/skills/sharp-edges/references/lang-kotlin.md",
+              "destination": "references/lang-kotlin.md",
+              "sha256": "c891148c10a4941c3396416a10ac64512eb3a9e13ea5eeaec3902da4b51501dd"
+            },
+            {
+              "source": "plugins/sharp-edges/skills/sharp-edges/references/lang-php.md",
+              "destination": "references/lang-php.md",
+              "sha256": "7960d9773874cf06c5b470a5ca3ab406d896e66b71e713d809bc1ecfcab63485"
+            },
+            {
+              "source": "plugins/sharp-edges/skills/sharp-edges/references/lang-python.md",
+              "destination": "references/lang-python.md",
+              "sha256": "36543becc25b4e3f41eaedcab62e9b204657e6742b8ac95e405bcd040d33bf03"
+            },
+            {
+              "source": "plugins/sharp-edges/skills/sharp-edges/references/lang-ruby.md",
+              "destination": "references/lang-ruby.md",
+              "sha256": "d9ba749caaccb8a3bb39e2199b2062c0957cf48739218ba8022d49be5cba2088"
+            },
+            {
+              "source": "plugins/sharp-edges/skills/sharp-edges/references/lang-rust.md",
+              "destination": "references/lang-rust.md",
+              "sha256": "3d14993ea70b2b2df3fc0f388cbd1631470895c27ccbd9d764296d1da8f5b6ee"
+            },
+            {
+              "source": "plugins/sharp-edges/skills/sharp-edges/references/lang-swift.md",
+              "destination": "references/lang-swift.md",
+              "sha256": "a64ab8692db0f3e43526088c63c7fdcb7354d1b24e6fe7ca759aea3260890e04"
+            },
+            {
+              "source": "plugins/sharp-edges/skills/sharp-edges/references/language-specific.md",
+              "destination": "references/language-specific.md",
+              "sha256": "4522b4a37cfd7d3aa689209dfd4569f3b39074bd1f5987a36a6e819f501141b6"
+            },
+            {
+              "source": "plugins/sharp-edges/skills/sharp-edges/SKILL.md",
+              "destination": "SKILL.md",
+              "sha256": "3b69a709c2f8f0cfcf57d40a3186e166f307865cc8ed924be4098e549a121e9c"
+            },
+            {
+              "source": "LICENSE",
+              "destination": "upstream-licenses/LICENSE",
+              "sha256": "7abe19ec9bb73b36141b999b861d24ad855e808bafe0f81e84cce28556f6c297"
+            },
+            {
+              "local": "scripts/ai-devkit/skill-adapters/vendor-policy.yaml",
+              "destination": "agents/openai.yaml",
+              "sha256": "2e41c1267a52f6f328cdc4e676fc1bda07545633f8ed7b5854bb86882df53029"
+            }
+          ]
+        },
+        {
+          "name": "variant-analysis",
+          "source": "plugins/variant-analysis/skills/variant-analysis",
+          "mode": "upstream",
+          "preserve_existing": false,
+          "license_files": [
+            "upstream-licenses/LICENSE"
+          ],
+          "license_metadata": null,
+          "files": [
+            {
+              "source": "plugins/variant-analysis/skills/variant-analysis/assets/trail-of-bits-mark.svg",
+              "destination": "assets/trail-of-bits-mark.svg",
+              "sha256": "4bf74c789b38dcf6ad762c136b6832363d27ae19fbaa9a18ec18d66ecce6ca05"
+            },
+            {
+              "source": "plugins/variant-analysis/skills/variant-analysis/references/reporting.md",
+              "destination": "references/reporting.md",
+              "sha256": "07a1d8f25537ec3da44b7c6e484bf922ab2eeaee733ced6df423df7bea517906"
+            },
+            {
+              "source": "plugins/variant-analysis/skills/variant-analysis/references/root-cause.md",
+              "destination": "references/root-cause.md",
+              "sha256": "b4556f22adadc894b22c8df01d98bb94596d4e035386c780fbca73594014660c"
+            },
+            {
+              "source": "plugins/variant-analysis/skills/variant-analysis/references/searching.md",
+              "destination": "references/searching.md",
+              "sha256": "22834e63e7412220feec9bd1d4cfd9298c17679489ad66d13be450928bf5d158"
+            },
+            {
+              "source": "plugins/variant-analysis/skills/variant-analysis/references/triage.md",
+              "destination": "references/triage.md",
+              "sha256": "f1f0277096ae41641be311c783f2f7a1c677c2c6b6e8a485986d8d5ed7fa3653"
+            },
+            {
+              "source": "plugins/variant-analysis/skills/variant-analysis/resources/codeql/cpp.ql",
+              "destination": "resources/codeql/cpp.ql",
+              "sha256": "efd574081969d2bdd19e1756302d843fdbf936968a72de62eb24d66db43efc0c"
+            },
+            {
+              "source": "plugins/variant-analysis/skills/variant-analysis/resources/codeql/go.ql",
+              "destination": "resources/codeql/go.ql",
+              "sha256": "d3fa419af29bb15bf81510c54bc1ce0cf55f5b7adbdbf79cc2c8cd922d2365fb"
+            },
+            {
+              "source": "plugins/variant-analysis/skills/variant-analysis/resources/codeql/java.ql",
+              "destination": "resources/codeql/java.ql",
+              "sha256": "ee4a92a5cbde67304d17a2c5fb739fe9acf1d39ebac9406e3d3a2c1cbbbb19c1"
+            },
+            {
+              "source": "plugins/variant-analysis/skills/variant-analysis/resources/codeql/javascript.ql",
+              "destination": "resources/codeql/javascript.ql",
+              "sha256": "b6ceaa3acb6ba6fa89903c14c8fd3aa7cf48316e6b2588dcacae51bb423b3526"
+            },
+            {
+              "source": "plugins/variant-analysis/skills/variant-analysis/resources/codeql/python.ql",
+              "destination": "resources/codeql/python.ql",
+              "sha256": "135ec55760e1e827065e34b002c6d954b4c4293d07233a93d7ff31d9d97528a9"
+            },
+            {
+              "source": "plugins/variant-analysis/skills/variant-analysis/resources/semgrep/cpp.yaml",
+              "destination": "resources/semgrep/cpp.yaml",
+              "sha256": "41f034c9a5967cc3b87bf5880243ed21f633017111489ee843dd5d002271b10a"
+            },
+            {
+              "source": "plugins/variant-analysis/skills/variant-analysis/resources/semgrep/go.yaml",
+              "destination": "resources/semgrep/go.yaml",
+              "sha256": "8a8257eb8e0a7150cb7dffa2b64813691fd560de24b0f85fa6640ec2bfc6595f"
+            },
+            {
+              "source": "plugins/variant-analysis/skills/variant-analysis/resources/semgrep/java.yaml",
+              "destination": "resources/semgrep/java.yaml",
+              "sha256": "5be3990b052bc9ce5e1aa203d1f3c93cb3cde7d46eba463c24c661fc6b342902"
+            },
+            {
+              "source": "plugins/variant-analysis/skills/variant-analysis/resources/semgrep/javascript.yaml",
+              "destination": "resources/semgrep/javascript.yaml",
+              "sha256": "2f97e3545fcac449820c2d058bcb9cc36822e238b6249efa3a5dcb4f5f576912"
+            },
+            {
+              "source": "plugins/variant-analysis/skills/variant-analysis/resources/semgrep/python.yaml",
+              "destination": "resources/semgrep/python.yaml",
+              "sha256": "c1ce15574569d45555d582707db030b226763d81b2d521d9e61d6067440948f2"
+            },
+            {
+              "source": "plugins/variant-analysis/skills/variant-analysis/resources/variant-report-template.md",
+              "destination": "resources/variant-report-template.md",
+              "sha256": "03333c762318a89dd819784a62695f7660713479a5009a15189314400836202f"
+            },
+            {
+              "source": "plugins/variant-analysis/skills/variant-analysis/SKILL.md",
+              "destination": "SKILL.md",
+              "sha256": "7b6b78e499bcb88d05c68254ffc91ebc28edabf4e9808adcc40e2628ebb9407e"
+            },
+            {
+              "source": "LICENSE",
+              "destination": "upstream-licenses/LICENSE",
+              "sha256": "7abe19ec9bb73b36141b999b861d24ad855e808bafe0f81e84cce28556f6c297"
+            },
+            {
+              "local": "scripts/ai-devkit/skill-adapters/vendor-policy.yaml",
+              "destination": "agents/openai.yaml",
+              "sha256": "2e41c1267a52f6f328cdc4e676fc1bda07545633f8ed7b5854bb86882df53029"
+            }
+          ]
+        },
+        {
+          "name": "supply-chain-risk-auditor",
+          "source": "plugins/supply-chain-risk-auditor/skills/supply-chain-risk-auditor",
+          "mode": "upstream",
+          "preserve_existing": false,
+          "license_files": [
+            "upstream-licenses/LICENSE"
+          ],
+          "license_metadata": null,
+          "files": [
+            {
+              "source": "plugins/supply-chain-risk-auditor/skills/supply-chain-risk-auditor/assets/trail-of-bits-mark.svg",
+              "destination": "assets/trail-of-bits-mark.svg",
+              "sha256": "4bf74c789b38dcf6ad762c136b6832363d27ae19fbaa9a18ec18d66ecce6ca05"
+            },
+            {
+              "source": "plugins/supply-chain-risk-auditor/skills/supply-chain-risk-auditor/scripts/collect.py",
+              "destination": "scripts/collect.py",
+              "sha256": "fd75cffad628980a6da521b5d3a40fb5dd16c5bb9ad63a25245e5208d08abff7"
+            },
+            {
+              "source": "plugins/supply-chain-risk-auditor/skills/supply-chain-risk-auditor/scripts/model.py",
+              "destination": "scripts/model.py",
+              "sha256": "78a20954b76e81216991b57453ceddbdb867035a0d6993b98cfa05a7f8d008d3"
+            },
+            {
+              "source": "plugins/supply-chain-risk-auditor/skills/supply-chain-risk-auditor/scripts/pyproject.toml",
+              "destination": "scripts/pyproject.toml",
+              "sha256": "a79ec30039ce3bc90544b9d833f7edc128232821575736f659d2b2ca0a601f3b"
+            },
+            {
+              "source": "plugins/supply-chain-risk-auditor/skills/supply-chain-risk-auditor/scripts/render.py",
+              "destination": "scripts/render.py",
+              "sha256": "9d6091645c8a8edf5c50d24bd70ff881efa30b920d93b46ea1775ee2dd328bc7"
+            },
+            {
+              "source": "plugins/supply-chain-risk-auditor/skills/supply-chain-risk-auditor/scripts/sources.py",
+              "destination": "scripts/sources.py",
+              "sha256": "4eb66952dca285b4790d1193b39f240e8015025ee054a215f4c696cbba2478e2"
+            },
+            {
+              "source": "plugins/supply-chain-risk-auditor/skills/supply-chain-risk-auditor/scripts/test_collect.py",
+              "destination": "scripts/test_collect.py",
+              "sha256": "ea4f25bdab0add75d500b22ba5eb9f993d3695d974cd3f92b418f5cff07e00da"
+            },
+            {
+              "source": "plugins/supply-chain-risk-auditor/skills/supply-chain-risk-auditor/scripts/test_model.py",
+              "destination": "scripts/test_model.py",
+              "sha256": "92059fe937c50f1502d71df2ddc4f123e8e2647fc0f4f7b270727ef9a2004f5c"
+            },
+            {
+              "source": "plugins/supply-chain-risk-auditor/skills/supply-chain-risk-auditor/scripts/test_render.py",
+              "destination": "scripts/test_render.py",
+              "sha256": "319970fd010d6bf5fbf79b595e8fc918c5e74645b718f495f2479aef3ea8cc16"
+            },
+            {
+              "source": "plugins/supply-chain-risk-auditor/skills/supply-chain-risk-auditor/scripts/test_sources.py",
+              "destination": "scripts/test_sources.py",
+              "sha256": "5c0a993d747e3ed29972272a18a14dd46b6f897bdfff7e147d0a9e9b4b4b6511"
+            },
+            {
+              "source": "plugins/supply-chain-risk-auditor/skills/supply-chain-risk-auditor/scripts/uv.lock",
+              "destination": "scripts/uv.lock",
+              "sha256": "99598cc397a42c945abbc9d839d1c61f1852f414660ce41e2e68bd9cdf664100"
+            },
+            {
+              "source": "plugins/supply-chain-risk-auditor/skills/supply-chain-risk-auditor/SKILL.md",
+              "destination": "SKILL.md",
+              "sha256": "a1254b7f8d3a1731a9a7e1f9cd6c67b59cf84ed6ef7c7fb455db9a14c528ceb4"
+            },
+            {
+              "source": "LICENSE",
+              "destination": "upstream-licenses/LICENSE",
+              "sha256": "7abe19ec9bb73b36141b999b861d24ad855e808bafe0f81e84cce28556f6c297"
+            },
+            {
+              "local": "scripts/ai-devkit/skill-adapters/vendor-policy.yaml",
+              "destination": "agents/openai.yaml",
+              "sha256": "2e41c1267a52f6f328cdc4e676fc1bda07545633f8ed7b5854bb86882df53029"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "repo": "pbakaus/impeccable",
+      "revision": "d41d9860b0094dcb68030657da63461212835aaa",
+      "source_url": "https://github.com/pbakaus/impeccable",
+      "installation": "project-vendored-skills",
+      "skills": [
+        {
+          "name": "impeccable",
+          "source": ".agents/skills/impeccable",
+          "mode": "text-only-codex-adapter",
+          "preserve_existing": false,
+          "license_files": [
+            "upstream-licenses/LICENSE",
+            "upstream-licenses/NOTICE.md"
+          ],
+          "license_metadata": null,
+          "files": [
+            {
+              "source": ".agents/skills/impeccable/reference/adapt.md",
+              "destination": "reference/adapt.md",
+              "sha256": "fa68e46b9d163923717da6b3826782ded4a4d32434553994b5dd10bdf08d7399"
+            },
+            {
+              "source": ".agents/skills/impeccable/reference/adapt.native.md",
+              "destination": "reference/adapt.native.md",
+              "sha256": "2455a2613e1fa29b986521c73cbad9424ccda70ef6cbe505779dbca5e16272a2"
+            },
+            {
+              "source": ".agents/skills/impeccable/reference/android.md",
+              "destination": "reference/android.md",
+              "sha256": "43780abcf10ac12a569d98001ae38af2b337727a0f7ce66268246ac1d54b5d34"
+            },
+            {
+              "source": ".agents/skills/impeccable/reference/animate.md",
+              "destination": "reference/animate.md",
+              "sha256": "d314f507b836dcc0b71d8080f0a0677af3f45bf732dbcb06f398b76cdf15fe29"
+            },
+            {
+              "source": ".agents/skills/impeccable/reference/audit.md",
+              "destination": "reference/audit.md",
+              "sha256": "c1cc198c61bf4cc32416210f490e9245ecf58d57c17d4a0659f79da0f6ffac2b"
+            },
+            {
+              "source": ".agents/skills/impeccable/reference/audit.native.md",
+              "destination": "reference/audit.native.md",
+              "sha256": "6cc2f43ba8f8642292b59093c54d53fa5c45cd6813773dc5a08ed527dbd91346"
+            },
+            {
+              "source": ".agents/skills/impeccable/reference/bolder.md",
+              "destination": "reference/bolder.md",
+              "sha256": "05b78fb0595e4d5afbf5f17470c84e89cf82f205fea3a6e9b6d8d779b7c4aab1"
+            },
+            {
+              "source": ".agents/skills/impeccable/reference/clarify.md",
+              "destination": "reference/clarify.md",
+              "sha256": "173dd66abe65633910dcb04a51f40d6ff2a793f87088f022a02fc4cad24dd133"
+            },
+            {
+              "source": ".agents/skills/impeccable/reference/colorize.md",
+              "destination": "reference/colorize.md",
+              "sha256": "bc5f71f1129d0f2c310d913d07c8dc609a1d25644121bd78c308f42d52a0b9e9"
+            },
+            {
+              "source": ".agents/skills/impeccable/reference/component-review.md",
+              "destination": "reference/component-review.md",
+              "sha256": "10489e5265e49a4ef2737cd0e674c149ed41e1f703efe922e53ea3c91e833427"
+            },
+            {
+              "source": ".agents/skills/impeccable/reference/craft-floor.md",
+              "destination": "reference/craft-floor.md",
+              "sha256": "808a50e0e6c74617a07b0eaf7fd80f58d8e48a13f48e47c658c7534b1724e5c2"
+            },
+            {
+              "source": ".agents/skills/impeccable/reference/craft.md",
+              "destination": "reference/craft.md",
+              "sha256": "9205e222bc6565b37fb504ceec93233c2d2a456802b69d16e6b1c44723907c4c"
+            },
+            {
+              "source": ".agents/skills/impeccable/reference/critique-rubric.md",
+              "destination": "reference/critique-rubric.md",
+              "sha256": "ba070404e3f61c62b40c25a5d096b803825408de12a0fbb559b1587c89692866"
+            },
+            {
+              "source": ".agents/skills/impeccable/reference/critique.md",
+              "destination": "reference/critique.md",
+              "sha256": "945c46add59c1519b137263b1dc7b68d631f65f4e48c6bac1a944499dbbbdb42"
+            },
+            {
+              "source": ".agents/skills/impeccable/reference/degraded/asset-producer.md",
+              "destination": "reference/degraded/asset-producer.md",
+              "sha256": "cf726ce0c7dd1005078fbf560745d4114afe363319648cc9de42d1536370d117"
+            },
+            {
+              "source": ".agents/skills/impeccable/reference/degraded/documenter.md",
+              "destination": "reference/degraded/documenter.md",
+              "sha256": "5a175082e1357b20cbf25c965e18b520700aa441d9fdb76757cc43fc590b9305"
+            },
+            {
+              "source": ".agents/skills/impeccable/reference/degraded/finish-reviewer.md",
+              "destination": "reference/degraded/finish-reviewer.md",
+              "sha256": "cb47276e5195f65b42c54b693f8f9b2078f93b6aa55a301ada797790df2bf37b"
+            },
+            {
+              "source": ".agents/skills/impeccable/reference/degraded/manual-edit-applier.md",
+              "destination": "reference/degraded/manual-edit-applier.md",
+              "sha256": "357b19acc7ef688c337a4f020633a49db23c84620b13636f9ff20d3ab934df1a"
+            },
+            {
+              "source": ".agents/skills/impeccable/reference/degraded/motion-reviewer.md",
+              "destination": "reference/degraded/motion-reviewer.md",
+              "sha256": "363003cd992724abdec08c30d54e79e33829d1938b5f875a7770be98d15e043f"
+            },
+            {
+              "source": ".agents/skills/impeccable/reference/delight.md",
+              "destination": "reference/delight.md",
+              "sha256": "098a891028ce59c212b747d3c70468dd750aff7053a703d1336045ed31e0da7c"
+            },
+            {
+              "source": ".agents/skills/impeccable/reference/distill.md",
+              "destination": "reference/distill.md",
+              "sha256": "dcf3b5ccf15d5d048114291129685faf9639d15f4def15ab0a68e4acdc1ef94a"
+            },
+            {
+              "source": ".agents/skills/impeccable/reference/doctor.md",
+              "destination": "reference/doctor.md",
+              "sha256": "33aff200de6f76a74b333d7ae4f7d2f4fc2a0da4c1a57264567d88eb8f33b52b"
+            },
+            {
+              "source": ".agents/skills/impeccable/reference/document.md",
+              "destination": "reference/document.md",
+              "sha256": "226b55902f9404a8862090f9f273e699a6088fb87dd034600bf0850dbc06ea5a"
+            },
+            {
+              "source": ".agents/skills/impeccable/reference/extract.md",
+              "destination": "reference/extract.md",
+              "sha256": "5477ae97189e5c1236cee71a25a5ae50014429a5a2e6da28355c8021a6cdeddd"
+            },
+            {
+              "source": ".agents/skills/impeccable/reference/foundations.md",
+              "destination": "reference/foundations.md",
+              "sha256": "0d39efab1603887e258c982cc979861e8dcf25b306d2fa74bd4c847886b41d56"
+            },
+            {
+              "source": ".agents/skills/impeccable/reference/generate.md",
+              "destination": "reference/generate.md",
+              "sha256": "11385badfb532196cec249e73bac2b7f58ada033ed8c4b02b9f0d64ddb46f0dc"
+            },
+            {
+              "source": ".agents/skills/impeccable/reference/harden.md",
+              "destination": "reference/harden.md",
+              "sha256": "4167eb7fc456cdfe09ff0ac2dbcb5e59cee57e590137aab6cc8ec08aafb6d775"
+            },
+            {
+              "source": ".agents/skills/impeccable/reference/hooks.md",
+              "destination": "reference/hooks.md",
+              "sha256": "6e4baca40d38a3829b5140b6f21c7cd30610c2ee11336966d758017fe94899f6"
+            },
+            {
+              "source": ".agents/skills/impeccable/reference/init.md",
+              "destination": "reference/init.md",
+              "sha256": "c2826a6369f86a325e84edb324021753fa8331b86f22a23c884b0b36b7a15488"
+            },
+            {
+              "source": ".agents/skills/impeccable/reference/ios.md",
+              "destination": "reference/ios.md",
+              "sha256": "40c87038b5f75147a5952a96237acf312a327bf70c1bcd8e0a5f064625ae9668"
+            },
+            {
+              "source": ".agents/skills/impeccable/reference/layout.md",
+              "destination": "reference/layout.md",
+              "sha256": "0bc7d7971b3edf2acd0580e847458dc6d84129d90715b452799ace3bed815c7c"
+            },
+            {
+              "source": ".agents/skills/impeccable/reference/live-setup.md",
+              "destination": "reference/live-setup.md",
+              "sha256": "1b4178820b9ffe559cde6e3d63ac8a0cbab1e8aeb72e9ef4c6ef69e41aab436d"
+            },
+            {
+              "source": ".agents/skills/impeccable/reference/live.md",
+              "destination": "reference/live.md",
+              "sha256": "bd9443e8ac4dfdefe17f7e5cd8402fbb7de42e89308783636fc40643de1f130c"
+            },
+            {
+              "source": ".agents/skills/impeccable/reference/mode-operate.md",
+              "destination": "reference/mode-operate.md",
+              "sha256": "7a52dd7a94ee75f6ae89542c86a1b6e1d306812b16e0d9dbf12d4acad44d148b"
+            },
+            {
+              "source": ".agents/skills/impeccable/reference/mode-persuade.md",
+              "destination": "reference/mode-persuade.md",
+              "sha256": "21e78c8a77badb3f83290cd4577ed3b24bd4dd3b57136d7da75733d4f3ee9ac0"
+            },
+            {
+              "source": ".agents/skills/impeccable/reference/mode-read.md",
+              "destination": "reference/mode-read.md",
+              "sha256": "a569989e6a3d6453b4c45e9474e162a15cc54e11732ac6baa7990a6e7cccc0b5"
+            },
+            {
+              "source": ".agents/skills/impeccable/reference/new-work-comp.md",
+              "destination": "reference/new-work-comp.md",
+              "sha256": "4994bf8c6a74c623aeddd8b540e6278ffba5a35b6229d25fd4525aee30a29e1e"
+            },
+            {
+              "source": ".agents/skills/impeccable/reference/new-work-world.md",
+              "destination": "reference/new-work-world.md",
+              "sha256": "a0ca7486961f8154141c0382474f47b57d93a2c98a063ececdd6de72c4de946f"
+            },
+            {
+              "source": ".agents/skills/impeccable/reference/new-work.md",
+              "destination": "reference/new-work.md",
+              "sha256": "e4df7aae0564c28d7fe7d43332b8b5462e6903a6e20a65e910d9be28116c25e3"
+            },
+            {
+              "source": ".agents/skills/impeccable/reference/onboard.md",
+              "destination": "reference/onboard.md",
+              "sha256": "fde093391d5b8ce6a68c99c60be993f14486ec6be0bc12415fdc93b39c56c192"
+            },
+            {
+              "source": ".agents/skills/impeccable/reference/operate.md",
+              "destination": "reference/operate.md",
+              "sha256": "a9d2203acd45ca33a13d5c68b02b23ed512425ac15f0e8438318ed124b43729d"
+            },
+            {
+              "source": ".agents/skills/impeccable/reference/optimize.md",
+              "destination": "reference/optimize.md",
+              "sha256": "092c85e5a644e6e528aaff0f341ee1ed57e012c195162fef0a5fc97605f9bb73"
+            },
+            {
+              "source": ".agents/skills/impeccable/reference/overdrive.md",
+              "destination": "reference/overdrive.md",
+              "sha256": "ad0465df104431974d2cca39a910c84c72afad3addb1ddd4c8bf418dffdb653c"
+            },
+            {
+              "source": ".agents/skills/impeccable/reference/polish.md",
+              "destination": "reference/polish.md",
+              "sha256": "81666fc7f783b4e3514db6554e713dc0479bd9cdedb06e93d15f8b579aae869a"
+            },
+            {
+              "source": ".agents/skills/impeccable/reference/quieter.md",
+              "destination": "reference/quieter.md",
+              "sha256": "e3bfcb08302cf14347f2a09de6460b1ec8df12dbf2c7d8474bede9a159298c3a"
+            },
+            {
+              "source": ".agents/skills/impeccable/reference/region-map.md",
+              "destination": "reference/region-map.md",
+              "sha256": "778cedc9199b407d3e23fa1041e38d548b00b1101a33517aa2a2eb299f9d0edc"
+            },
+            {
+              "source": ".agents/skills/impeccable/reference/routing.md",
+              "destination": "reference/routing.md",
+              "sha256": "77ae09542fbc10aa4e8b119d6fd19359908a47c13c30068d6a150bfdb50e3e10"
+            },
+            {
+              "source": ".agents/skills/impeccable/reference/shape.md",
+              "destination": "reference/shape.md",
+              "sha256": "a55f016c046cb6a27c55bd7f346375aeb506a755c4fbca19a5f92dbd42309c23"
+            },
+            {
+              "source": ".agents/skills/impeccable/reference/typeset.md",
+              "destination": "reference/typeset.md",
+              "sha256": "f943b43e009cedb13e97ab3c44049950b905b36b4325cfefc2155ea810d1b626"
+            },
+            {
+              "source": ".agents/skills/impeccable/reference/visualize.md",
+              "destination": "reference/visualize.md",
+              "sha256": "4a32d4f3eb29db217c210135680896f3e26907b2a9d53cc0126279116520af80"
+            },
+            {
+              "local": "scripts/ai-devkit/skill-adapters/impeccable/SKILL.md",
+              "destination": "SKILL.md",
+              "sha256": "d347ea9ae23a4ed0203180972015ed8e9470cbfee3a20a27775499f01c3b9776"
+            },
+            {
+              "source": ".agents/skills/impeccable/SKILL.md",
+              "destination": "upstream/SKILL.original.md",
+              "sha256": "12d15997482e6d0734c5f2dcc4f62cea7bcba19953940214cffa5c6a7758aa93"
+            },
+            {
+              "source": "LICENSE",
+              "destination": "upstream-licenses/LICENSE",
+              "sha256": "02bb8c3b4e70190e3986c0404ad2fd8d639b4f534252d82379cc1b502b6d1812"
+            },
+            {
+              "source": "NOTICE.md",
+              "destination": "upstream-licenses/NOTICE.md",
+              "sha256": "c60a093c2845fd9fb82f9c6f742ece31f379f8190b535309d32d66c45ccffdcb"
+            },
+            {
+              "local": "scripts/ai-devkit/skill-adapters/vendor-policy.yaml",
+              "destination": "agents/openai.yaml",
+              "sha256": "2e41c1267a52f6f328cdc4e676fc1bda07545633f8ed7b5854bb86882df53029"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "repo": "Leonxlnx/taste-skill",
+      "revision": "f6b76575f949707b4e3c37cd86cb44b0b98643e8",
+      "source_url": "https://github.com/Leonxlnx/taste-skill",
+      "installation": "project-vendored-skills",
+      "skills": [
+        {
+          "name": "design-taste-frontend",
+          "source": "skills/taste-skill",
+          "mode": "text-only-codex-adapter",
+          "preserve_existing": false,
+          "license_files": [
+            "upstream-licenses/LICENSE"
+          ],
+          "license_metadata": null,
+          "files": [
+            {
+              "source": "skills/taste-skill/assets/effects/README.md",
+              "destination": "assets/effects/README.md",
+              "sha256": "23864c91d03dbb6ef601bbf5de26d006c7119a89dccb026d4b6d45aeac106853"
+            },
+            {
+              "source": "skills/taste-skill/assets/objects/_print-core/README.md",
+              "destination": "assets/objects/_print-core/README.md",
+              "sha256": "2cfca914e02eb449f92791ff724b4f60a83e214dccf236ef406d15f2fb80b18c"
+            },
+            {
+              "source": "skills/taste-skill/assets/objects/_scenes/README.md",
+              "destination": "assets/objects/_scenes/README.md",
+              "sha256": "710c1232da60a3e566ef3d9d5e008928772d48c51e00d7cb2885366c564174f9"
+            },
+            {
+              "source": "skills/taste-skill/assets/objects/photo-kit/README.md",
+              "destination": "assets/objects/photo-kit/README.md",
+              "sha256": "4d2bd2aa697462768ab029b5253c2ac593358b1d9f2bc95a27a55b05eb865d21"
+            },
+            {
+              "source": "skills/taste-skill/assets/objects/product-render/README.md",
+              "destination": "assets/objects/product-render/README.md",
+              "sha256": "38473a77ee65f24725dfbace0a4652184e061a12a10d15ca3f473733452ffb79"
+            },
+            {
+              "source": "skills/taste-skill/references/backgrounds.md",
+              "destination": "references/backgrounds.md",
+              "sha256": "b8d593ffaadcc390503d86fc094ed3bf4e070c1ee7927c1e1c1251443409c9c1"
+            },
+            {
+              "source": "skills/taste-skill/references/cards.md",
+              "destination": "references/cards.md",
+              "sha256": "f70d8c41c55ff7e777b5ce51cbe61fee05c024b268c744beb53528ec8a4869a1"
+            },
+            {
+              "source": "skills/taste-skill/references/copy-moves.md",
+              "destination": "references/copy-moves.md",
+              "sha256": "6e5c7eb52ab5cbe61c07eb936c3d17d4432f02dbae2da1f1bbab5e9aef7b2400"
+            },
+            {
+              "source": "skills/taste-skill/references/copy-registers.md",
+              "destination": "references/copy-registers.md",
+              "sha256": "8e2e6d5b9ef09e38bfdd2f1c9a32796bd91c1f3f99c6c51abbbe89d99119d6fd"
+            },
+            {
+              "source": "skills/taste-skill/references/copy-tells.md",
+              "destination": "references/copy-tells.md",
+              "sha256": "e113d4f788f64e44e92cefa0823be4cf0662f2806ed87f91aa52d9cf8877d6ed"
+            },
+            {
+              "source": "skills/taste-skill/references/copy-voice.md",
+              "destination": "references/copy-voice.md",
+              "sha256": "3a287b8f10384229aa52e6d75480fddc377aafd05f7d0ee9d1a180d2ebf44e8a"
+            },
+            {
+              "source": "skills/taste-skill/references/copy.md",
+              "destination": "references/copy.md",
+              "sha256": "607520bc4213e06e6635f4fa44915d3fb5482b5b2e3779faa0a5c9d2abcc9e69"
+            },
+            {
+              "source": "skills/taste-skill/references/diagrams.md",
+              "destination": "references/diagrams.md",
+              "sha256": "2aafd9ad74d2fc620174c23aa48f9ce6201ce33c1b441630973af9509a9b723e"
+            },
+            {
+              "source": "skills/taste-skill/references/effects-creative.md",
+              "destination": "references/effects-creative.md",
+              "sha256": "5d91932981577d300c8f1b2907811335777552eccb333b07c50ef5b1c000bbc9"
+            },
+            {
+              "source": "skills/taste-skill/references/effects-objects.md",
+              "destination": "references/effects-objects.md",
+              "sha256": "053eb08058dfa970cda3cb71ee469d14025fb86c4eb8d70b4a112ef47760c4cb"
+            },
+            {
+              "source": "skills/taste-skill/references/effects-usage.md",
+              "destination": "references/effects-usage.md",
+              "sha256": "4522bce7971e31e776c845b008b6f40997ab97a68d49cf2bb4493f72798a5342"
+            },
+            {
+              "source": "skills/taste-skill/references/gate.md",
+              "destination": "references/gate.md",
+              "sha256": "14946f5ad6b4abdf6dad65a693b2eeb98912e8253b9c4f10da0840e4efafc651"
+            },
+            {
+              "source": "skills/taste-skill/references/icons.md",
+              "destination": "references/icons.md",
+              "sha256": "d385f027d63d488a27ae63bef8bcff2cb4358e74cb0ad7454e4e9da6a49f8381"
+            },
+            {
+              "source": "skills/taste-skill/references/layout-v4.md",
+              "destination": "references/layout-v4.md",
+              "sha256": "6316217db46993977700cf4203cc29f96cad0d7bf3a97e877241b1be0901fd19"
+            },
+            {
+              "source": "skills/taste-skill/references/moments.md",
+              "destination": "references/moments.md",
+              "sha256": "eee7b8e18aaa268ac6ea31b58d7444b164ff10b1cf0ccea93b02904b9a0dd9e7"
+            },
+            {
+              "source": "skills/taste-skill/references/motion.md",
+              "destination": "references/motion.md",
+              "sha256": "d7bc6fe01cab8a1c1e921309291828c68f875a25907317279842cf306391c373"
+            },
+            {
+              "source": "skills/taste-skill/references/perf.md",
+              "destination": "references/perf.md",
+              "sha256": "fcf55304221bd2b371ba3a80dd2e9efa1e176c104c1d28eac1dd266f804871c8"
+            },
+            {
+              "source": "skills/taste-skill/references/photos.md",
+              "destination": "references/photos.md",
+              "sha256": "b115cafc205ee20f19e6e90d061d24d31460966f1bd4315fb3434ca2d560c33e"
+            },
+            {
+              "source": "skills/taste-skill/references/scenes.md",
+              "destination": "references/scenes.md",
+              "sha256": "3de1b89ecd2b9b9777b8b04f69c5e5a2fc0fb8dbff0f3feb06f2fe9e5b90599b"
+            },
+            {
+              "source": "skills/taste-skill/references/sections-library.md",
+              "destination": "references/sections-library.md",
+              "sha256": "ce1c6bc27c41a3b49430a9ad3f06e02efd22471b869e4d3ea802a947ae6fb0c9"
+            },
+            {
+              "source": "skills/taste-skill/references/sections.md",
+              "destination": "references/sections.md",
+              "sha256": "999cb82dba04d205052725e93a240fcb59be1c1d7ab31129a191eb6f4ee31e89"
+            },
+            {
+              "source": "skills/taste-skill/references/system.md",
+              "destination": "references/system.md",
+              "sha256": "f6bfbdb36b49c4584b4fd10ff24e9e97098bd93d09da3e08e8424500ee641d01"
+            },
+            {
+              "local": "scripts/ai-devkit/skill-adapters/design-taste-frontend/SKILL.md",
+              "destination": "SKILL.md",
+              "sha256": "21300bedab979ed126de5e0033eda3e165586dfe186501b704b6b4fd6a7dd51d"
+            },
+            {
+              "source": "skills/taste-skill/SKILL.md",
+              "destination": "upstream/SKILL.original.md",
+              "sha256": "0c7a5852a5217be79cab422c6d58329b776f0c25bd6da8a7a01707ce75be6206"
+            },
+            {
+              "source": "LICENSE",
+              "destination": "upstream-licenses/LICENSE",
+              "sha256": "4575a543ab88dad12ccea7d97e563d0bce5b448b06072e65d3264497dad326df"
+            },
+            {
+              "local": "scripts/ai-devkit/skill-adapters/vendor-policy.yaml",
+              "destination": "agents/openai.yaml",
+              "sha256": "2e41c1267a52f6f328cdc4e676fc1bda07545633f8ed7b5854bb86882df53029"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "repo": "anthropics/skills",
+      "revision": "e4bb5d960d87126ff3b3a8af1a104b7db67560ba",
+      "source_url": "https://github.com/anthropics/skills",
+      "installation": "project-vendored-skills",
+      "skills": [
+        {
+          "name": "anthropic-frontend-design",
+          "source": "skills/frontend-design",
+          "mode": "text-only-codex-adapter",
+          "preserve_existing": false,
+          "license_files": [
+            "upstream-licenses/skills/frontend-design/LICENSE.txt"
+          ],
+          "license_metadata": "Complete terms in LICENSE.txt",
+          "files": [
+            {
+              "local": "scripts/ai-devkit/skill-adapters/anthropic-frontend-design/SKILL.md",
+              "destination": "SKILL.md",
+              "sha256": "90f3710f5b699abf8fd52b3b531092f50c78d663f74aa3b988f4678361613f3c"
+            },
+            {
+              "source": "skills/frontend-design/SKILL.md",
+              "destination": "upstream/SKILL.original.md",
+              "sha256": "d91970639e9f5c37682ac7ab60094d35f1c7c1f38d731bd56396563aee10c1d3"
+            },
+            {
+              "source": "skills/frontend-design/LICENSE.txt",
+              "destination": "upstream-licenses/skills/frontend-design/LICENSE.txt",
+              "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594"
+            },
+            {
+              "local": "scripts/ai-devkit/skill-adapters/vendor-policy.yaml",
+              "destination": "agents/openai.yaml",
+              "sha256": "2e41c1267a52f6f328cdc4e676fc1bda07545633f8ed7b5854bb86882df53029"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "repo": "anthropics/claude-plugins-official",
+      "revision": "e6143c9807a001832badb63e89d58ffe25d542ec",
+      "source_url": "https://github.com/anthropics/claude-plugins-official",
+      "requested_source": "https://github.com/anthropics/claude-code",
+      "installation": "project-vendored-skills",
+      "skills": [
+        {
+          "name": "pr-review-toolkit",
+          "source": "plugins/pr-review-toolkit",
+          "mode": "text-only-codex-adapter",
+          "preserve_existing": false,
+          "license_files": [
+            "LICENSE"
+          ],
+          "files": [
+            {
+              "local": "scripts/ai-devkit/skill-adapters/pr-review-toolkit/SKILL.md",
+              "destination": "SKILL.md",
+              "sha256": "7f7d4dd4e367634a14dda4fac014dc42cb5a47f44e516964ccd9109877924575"
+            },
+            {
+              "source": "plugins/pr-review-toolkit/agents/code-reviewer.md",
+              "destination": "agents/code-reviewer.md",
+              "sha256": "019395c3ce457460115cc703e2f4a86fed4bbe560dc58355051c4d877155d366"
+            },
+            {
+              "source": "plugins/pr-review-toolkit/agents/code-simplifier.md",
+              "destination": "agents/code-simplifier.md",
+              "sha256": "976ddb22b84bc5a714216531a75db5e73169554add6b953442beeedb49b56891"
+            },
+            {
+              "source": "plugins/pr-review-toolkit/agents/comment-analyzer.md",
+              "destination": "agents/comment-analyzer.md",
+              "sha256": "4a9c1f2eb8234a4b9231983e75739663d512e1aed242388964a165a719b84698"
+            },
+            {
+              "source": "plugins/pr-review-toolkit/agents/pr-test-analyzer.md",
+              "destination": "agents/pr-test-analyzer.md",
+              "sha256": "fcb1cde9ba7b21694b508766a8d6a79bc91bed9982f828f816210059934f46b4"
+            },
+            {
+              "source": "plugins/pr-review-toolkit/agents/silent-failure-hunter.md",
+              "destination": "agents/silent-failure-hunter.md",
+              "sha256": "fa9b0daec5a267e7e66435cc48b3328301fc9f70c3af259fe248881327a1babc"
+            },
+            {
+              "source": "plugins/pr-review-toolkit/agents/type-design-analyzer.md",
+              "destination": "agents/type-design-analyzer.md",
+              "sha256": "c1cf67843d3c4fd27ddf6b24aa92521414b16c01610e7f7e87212c7b8681198d"
+            },
+            {
+              "source": "plugins/pr-review-toolkit/commands/review-pr.md",
+              "destination": "commands/review-pr.md",
+              "sha256": "5e70c17293a044e1bf9d092c80b5da8b4fd5802ebb07dc53993dec4ba7ce2fc4"
+            },
+            {
+              "source": "plugins/pr-review-toolkit/LICENSE",
+              "destination": "LICENSE",
+              "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+            },
+            {
+              "source": "plugins/pr-review-toolkit/README.md",
+              "destination": "README.md",
+              "sha256": "364cb1d46aa64a01016e4ef5f41dfea5bd5e3cf530459409a376feba93dd2b49"
+            },
+            {
+              "local": "scripts/ai-devkit/skill-adapters/vendor-policy.yaml",
+              "destination": "agents/openai.yaml",
+              "sha256": "2e41c1267a52f6f328cdc4e676fc1bda07545633f8ed7b5854bb86882df53029"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

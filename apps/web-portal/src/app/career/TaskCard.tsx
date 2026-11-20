@@ -7,10 +7,24 @@ const fits = {fits:'Совместима с планом',tight:'Не помещ
 const levels = {starter:'Стартовая',standard:'Обычная',advanced:'Сложная'};
 const currency = new Intl.NumberFormat('ru-RU',{style:'currency',currency:'RUB',maximumFractionDigits:2});
 
-export function TaskCard({task,company,state,fit,children}:{task:CareerTaskView;company:string;state:string;fit?:Fit;children?:ReactNode}) {
+export function TaskCard({task,company,state,fit,favorite,children}:{
+  task: CareerTaskView;
+  company: string;
+  state: string;
+  fit?: Fit;
+  favorite?: { saved: boolean; disabled: boolean; toggle: () => void };
+  children?: ReactNode;
+}) {
   return <article className={`${s.card} ${s.taskCard}`}>
     <div className={s.row}><span className={s.tag}>{state}</span><span className={s.muted}>{levels[task.level as keyof typeof levels]||'Обычная'}</span>{fit&&<span className={fit.fit==='tight'||fit.fit==='blocked'?s.warningTag:s.tag}>{fits[fit.fit]}</span>}</div>
-    <h2>{task.title}</h2><p className={s.muted}>{company}{task.skill?` · ${task.skill}`:''}</p>
+    <div className={s.taskHeading}>
+      <h2>{task.title}</h2>
+      {favorite && <button type="button" className={favorite.saved ? s.active : s.button}
+        aria-pressed={favorite.saved} aria-label={`Избранное: ${task.title}`}
+        disabled={favorite.disabled} onClick={favorite.toggle}>
+        {favorite.saved ? 'В избранном' : 'В избранное'}
+      </button>}
+    </div><p className={s.muted}>{company}{task.skill?` · ${task.skill}`:''}</p>
     {task.moderationStatus==='suspended'&&<p className={s.notice}>Условия задачи проверяются. Новые отклики ограничены; существующие работы автоматически не отменяются.</p>}
     {task.moderationReason&&<p>Решение карьерного центра: {task.moderationReason}</p>}
     <div className={s.taskTerms}><strong>{currency.format(task.rewardKopecks/100)}</strong><span>{task.hours} ч.</span><span>До {new Date(task.deadline+'T12:00:00').toLocaleDateString('ru-RU')}</span><span>{task.profiled?'Профильная':'Непрофильная'}</span></div>

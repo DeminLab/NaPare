@@ -204,7 +204,6 @@ footer {
   margin: 0;
   padding: 12px;
 }
-.login-restore-gate,
 .home-session-gate {
   align-items: center;
   background: #f7f8fc;
@@ -217,21 +216,6 @@ footer {
   position: fixed;
   inset: 0;
   z-index: 1000;
-}
-.login-restore-gate {
-  flex-direction: column;
-  padding: 24px;
-  text-align: center;
-}
-.login-restore-gate button {
-  background: #fff;
-  border: 1px solid var(--color-control-border);
-  border-radius: 10px;
-  color: var(--color-text);
-  cursor: pointer;
-  font: inherit;
-  min-height: 44px;
-  padding: 10px 16px;
 }
 .home-session-gate {
   font-size: 15px;
@@ -2296,4 +2280,24 @@ body { background: #f7f8fc; color: #111b34; }
   .portal-header .text-link {
     transition: none;
   }
+}
+
+
+.login-manual-action {
+  min-height: 44px;
+  padding-inline: 2px;
+  border: 0;
+  background: transparent;
+  color: var(--color-brand);
+  font: inherit;
+  font-weight: 650;
+  text-align: left;
+  cursor: pointer;
+}
+
+@media (max-width: 639px) {
+  .login-focused .login-brand { margin-bottom: 22px; }
+  .login-focused .login-card h1 { margin-bottom: 18px; }
+  .login-focused .login-form input { font-size: 16px; }
+  .portal-header + .hero { min-height: auto; padding-block: 104px 34px; }
 }

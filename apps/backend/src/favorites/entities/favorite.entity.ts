@@ -2,6 +2,7 @@ import { Column, CreateDateColumn, Entity, Index, PrimaryGeneratedColumn, Update
 
 export const FAVORITE_KINDS = ['group', 'teacher'] as const;
 export type FavoriteKind = typeof FAVORITE_KINDS[number];
+export const CAREER_FAVORITE_KIND = 'career_task' as const;
 
 @Entity('user_favorites')
 @Index('UQ_user_favorites_owner_kind_external', ['userId', 'organizationId', 'kind', 'externalId'], { unique: true })
@@ -17,7 +18,7 @@ export class Favorite {
   organizationId: string;
 
   @Column({ type: 'varchar', length: 16 })
-  kind: FavoriteKind;
+  kind: FavoriteKind | typeof CAREER_FAVORITE_KIND;
 
   @Column({ type: 'varchar', length: 220 })
   externalId: string;

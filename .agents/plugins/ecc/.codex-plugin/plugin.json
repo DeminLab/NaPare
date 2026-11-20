@@ -1,0 +1,9 @@
+{
+  "name": "ecc",
+  "version": "2.2.3",
+  "description": "Project-scoped Everything Claude Code catalog and workflows adapted for NaPare.",
+  "interface": {
+    "displayName": "ECC for NaPare",
+    "shortDescription": "Everything Claude Code workflows with NaPare project boundaries."
+  }
+}

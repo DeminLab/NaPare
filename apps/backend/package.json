@@ -4,7 +4,7 @@
   "private": true,
   "description": "НаПаре Backend API",
   "scripts": {
-    "build": "nest build",
+    "build": "nest build --path tsconfig.build.json",
     "dev": "nest start --watch",
     "start": "node dist/main",
     "start:prod": "node dist/main",
@@ -13,7 +13,7 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "typeorm": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js",
+    "typeorm": "ts-node --project tsconfig.json --transpile-only -r tsconfig-paths/register ./node_modules/typeorm/cli.js",
     "typeorm:migration:generate": "pnpm typeorm migration:generate -d src/config/database.config.ts",
     "typeorm:migration:run": "pnpm typeorm migration:run -d src/config/database.config.ts",
     "typeorm:migration:revert": "pnpm typeorm migration:revert -d src/config/database.config.ts"

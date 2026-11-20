@@ -47,6 +47,21 @@ suite('Queued schedule import: real HTTP/JWT/PostgreSQL FORCE RLS', () => {
     }
   }, 60000);
   afterAll(async () => { if (f) await f.app.close(); });
+  it('highlights overlapping groups, teachers and rooms in the import preview', async () => {
+    const rows = [
+      row('conflict-a', { teacher: 'Иванова М.', room: '203' }),
+      row('conflict-b', { startTime: '02:00', endTime: '03:00', teacher: 'иванова м.', room: '203' }),
+      row('adjacent', { startTime: '03:00', endTime: '04:00', teacher: 'Иванова М.', room: '203' }),
+      row('cancelled', { teacher: 'Иванова М.', room: '203', status: 'cancelled' }),
+    ];
+    const { body } = await submit(payload('overlap-preview', { dryRun: true, content: JSON.stringify(rows) })).expect(201);
+    const warnings = body.warnings.filter(warning => warning.message.includes('пересечение'));
+    expect(warnings).toHaveLength(3);
+    for (const resource of ['группа', 'преподаватель', 'аудитория']) {
+      expect(warnings).toContainEqual({ row: 2, externalId: 'conflict-b', message: `Возможное пересечение: ${resource}, строка 1.` });
+    }
+    expect(await f.db.getRepository(Lesson).countBy({ source: 'university-import:overlap-preview' })).toBe(0);
+  });
   it('creates and idempotently repeats an import, preserving local day and immutable delta journal', async () => {
     const key = randomUUID(), data = payload('first', { idempotencyKey: key });
     const first = await submit(data).expect(201);

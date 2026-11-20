@@ -51,10 +51,15 @@ export class AllExceptionsFilter implements ExceptionFilter {
       }
     }
 
-    this.logger.error(
-      `${request.method} ${request.url} - ${status}`,
-      exception instanceof Error ? exception.stack : '',
-    );
+    const route = request.path || request.url.split('?')[0];
+    const summary = `${request.method} ${route} - ${status}`;
+    if (status >= 500) {
+      this.logger.error(summary, exception instanceof Error ? exception.stack : '');
+    } else if (status >= 400) {
+      this.logger.warn(summary);
+    } else {
+      this.logger.log(summary);
+    }
 
     if (status >= 500 && Sentry.getCurrentHub().getClient()) {
       // Do not send exception text, SQL, credentials, personal data or raw URLs.
@@ -70,7 +75,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       message,
       ...(details ? { details } : {}),
       timestamp: new Date().toISOString(),
-      path: request.url,
+      path: route,
     });
   }
 

@@ -134,11 +134,13 @@ pnpm --filter @napare/backend exec ts-node --transpile-only test/update-role-pol
 | `PATCH /api/v1/career/portfolio/:id` | JwtAuthGuard | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
 | `POST /api/v1/career/tasks/:id/publish` | JwtAuthGuard | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
 | `POST /api/v1/career/notices/:id/read` | JwtAuthGuard | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
+| `DELETE /api/v1/career/tasks/:id/favorite` | JwtAuthGuard, RolesGuard | 200 | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 403 |
 | `POST /api/v1/career/admissions` | JwtAuthGuard | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
 | `POST /api/v1/career/works/:id/review` | JwtAuthGuard | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
 | `PUT /api/v1/career/availability` | JwtAuthGuard | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
 | `PUT /api/v1/career/portfolio/:id/description` | JwtAuthGuard | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
 | `PUT /api/v1/career/profile` | JwtAuthGuard | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
+| `PUT /api/v1/career/tasks/:id/favorite` | JwtAuthGuard, RolesGuard | 200 | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 403 |
 | `POST /api/v1/career/applications/:id/select` | JwtAuthGuard | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
 | `GET /api/v1/career/student/admissions` | JwtAuthGuard | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
 | `GET /api/v1/career/student/portfolio` | JwtAuthGuard | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
@@ -414,6 +416,14 @@ pnpm --filter @napare/backend exec ts-node --transpile-only test/update-role-pol
 | `GET /api/v1/users/:id` | JwtAuthGuard | 200 | 403 | 403 | 403 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
 | `GET /api/v1/users/me` | JwtAuthGuard | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
 | `PATCH /api/v1/users/me` | JwtAuthGuard | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
+| `GET /api/v1/career/vacancies/:id/applications` | JwtAuthGuard | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
+| `PUT /api/v1/career/vacancies/:id/application` | JwtAuthGuard | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
+| `PATCH /api/v1/career/vacancies/:id/close` | JwtAuthGuard | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
+| `POST /api/v1/career/vacancies` | JwtAuthGuard | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
+| `GET /api/v1/career/vacancies` | JwtAuthGuard | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
+| `PUT /api/v1/career/vacancies/:vacancyId/applications/:id/interview` | JwtAuthGuard | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
+| `PATCH /api/v1/career/vacancies/applications/:id/interview` | JwtAuthGuard | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
+| `PATCH /api/v1/career/vacancies/:id/review` | JwtAuthGuard | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
 
 ## Объявления без JwtAuthGuard
 

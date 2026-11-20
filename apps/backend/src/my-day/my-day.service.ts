@@ -1,5 +1,6 @@
-import { BadRequestException, Injectable } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 
+import { CareerService } from "../career/career.service";
 import { ScheduleService } from "../schedule/schedule.service";
 import { PairSpaceService } from "../pair-space/pair-space.service";
 import { AbsencesService } from "../absences/absences.service";
@@ -9,75 +10,10 @@ import { PairSpace } from "../pair-space/entities/pair-space.entity";
 import { Lesson } from "../schedule/entities/lesson.entity";
 import { PaginationQueryDto } from "../common/dto/pagination-query.dto";
 
+import { addCalendarDays, getDateKeyInTimeZone, getDateTimeInTimeZone } from "../schedule/utils/zoned-calendar";
+
 const PREPARATION_LOOKAHEAD_DAYS = 30;
 const SCHEDULE_PAGE_SIZE = 100;
-
-function getDateKeyInTimeZone(date: Date, timeZone: string): string {
-  let parts: Intl.DateTimeFormatPart[];
-  try {
-    parts = new Intl.DateTimeFormat("en-CA", {
-      timeZone,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    }).formatToParts(date);
-  } catch {
-    throw new BadRequestException("timeZone must be a valid IANA timezone");
-  }
-  const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
-  return `${values.year}-${values.month}-${values.day}`;
-}
-
-function addCalendarDays(dateKey: string, days: number): string {
-  const date = new Date(`${dateKey}T00:00:00.000Z`);
-  date.setUTCDate(date.getUTCDate() + days);
-  return date.toISOString().slice(0, 10);
-}
-
-function getDateTimeInTimeZone(
-  dateKey: string,
-  hour: number,
-  minute: number,
-  second: number,
-  millisecond: number,
-  timeZone: string,
-): Date {
-  const [year, month, day] = dateKey.split("-").map(Number);
-  const targetWallTime = Date.UTC(year, month - 1, day, hour, minute, second, millisecond);
-  const formatter = new Intl.DateTimeFormat("en-US", {
-    timeZone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hourCycle: "h23",
-  });
-  let timestamp = targetWallTime;
-
-  // Resolve the UTC instant for a local wall-clock time. Two adjustments are
-  // enough for standard/DST offsets, including zones that are not whole hours.
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    const values = Object.fromEntries(
-      formatter.formatToParts(new Date(timestamp)).map(({ type, value }) => [type, value]),
-    );
-    const observedWallTime = Date.UTC(
-      Number(values.year),
-      Number(values.month) - 1,
-      Number(values.day),
-      Number(values.hour),
-      Number(values.minute),
-      Number(values.second),
-      millisecond,
-    );
-    const adjustment = targetWallTime - observedWallTime;
-    if (!adjustment) break;
-    timestamp += adjustment;
-  }
-
-  return new Date(timestamp);
-}
 
 @Injectable()
 export class MyDayService {
@@ -86,6 +22,7 @@ export class MyDayService {
     private readonly pairSpaceService: PairSpaceService,
     private readonly absencesService: AbsencesService,
     private readonly notificationsService: NotificationsService,
+    private readonly careerService: CareerService,
   ) {}
 
   async getMyDay(
@@ -198,13 +135,24 @@ export class MyDayService {
     const absences = [...new Map(absencePages.flatMap(page => page.data).map(absence => [absence.id, absence])).values()];
 
     // Get unread notifications count
-    const unreadCount = await this.notificationsService.getUnreadCount(userId);
+    const [unreadCount, careerDeadlines, careerInterviews] = await Promise.all([
+      this.notificationsService.getUnreadCount(userId),
+      role === UserRole.STUDENT
+        ? this.careerService.listStudentDeadlines(userId, organizationId, today, addCalendarDays(today, 6))
+        : [],
+      role === UserRole.STUDENT
+        ? this.careerService.listStudentInterviews(userId, organizationId, dayStart,
+          getDateTimeInTimeZone(addCalendarDays(today, 7), 0, 0, 0, 0, timeZone))
+        : [],
+    ]);
 
     return {
       date: today,
       lessons,
       pairSpaces,
       upcomingPreparations,
+      careerDeadlines,
+      careerInterviews,
       absences: absences.filter(
         (absence) => new Date(absence.startDate) <= dayEnd && new Date(absence.endDate) >= dayStart,
       ),

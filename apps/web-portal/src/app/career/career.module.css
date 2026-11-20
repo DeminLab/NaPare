@@ -92,3 +92,29 @@
   .card { padding: 18px; }
   .tabs { scrollbar-width: thin; }
 }
+
+.taskHeading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .5rem 1rem; }
+.taskHeading h2 { min-width: 0; overflow-wrap: anywhere; }
+
+@media (max-width: 540px) {
+  .planningSummary > .row { flex-direction: column; align-items: flex-start; gap: .75rem; }
+}
+
+.card .vacancyTitle { margin-top: 14px; overflow-wrap: anywhere; }
+.vacancyActions { border-top: 1px solid var(--workspace-border, #e3e8f2); padding-top: 14px; margin-top: 14px; }
+
+.mobileSections { display: none; }
+.careerWorkspace .back { display: inline-flex; min-height: 44px; align-items: center; margin-left: auto; }
+.careerWorkspace .notice summary { min-height: 36px; }
+
+@media (max-width: 720px) {
+  .careerWorkspace .top { margin-bottom: 12px; gap: 12px; }
+  .careerWorkspace .hero { display: flex; flex-wrap: wrap; align-items: center; margin-bottom: 16px; gap: 6px 12px; }
+  .careerWorkspace .hero h1 { margin: 0; }
+  .careerWorkspace .hero p { display: none; }
+  .careerWorkspace .tabs { display: none; }
+  .mobileSections { display: grid; gap: 12px; margin-bottom: 16px; }
+  .primarySections { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .primarySections button { min-width: 0; white-space: normal; }
+  .mobileSections select { font-size: 16px; }
+}

@@ -8,7 +8,7 @@ import { apiFetch, getUnreadCount, getUser, isLoggedIn, logout, readUserCache, S
 import { useCurationContext } from '@napare/ui/curation';
 
 const groups: WorkspaceNavGroup[] = [
-  { label: 'Главное', items: [{ href: '/today', label: 'Сегодня', icon: 'home', keywords: ['мой день', 'сейчас', 'дальше'] }, { href: '/week', activePaths: ['/month'], label: 'Расписание', mobileLabel: 'Неделя', icon: 'calendar', keywords: ['день', 'неделя', 'месяц'] }, { href: '/pair-space', label: 'Подготовка', mobileLabel: 'К паре', icon: 'book', keywords: ['материалы', 'задания', 'пространства пар'] }, { href: '/notifications', label: 'Уведомления', mobileLabel: 'Увед.', icon: 'bell' }] },
+  { label: 'Главное', items: [{ href: '/today', label: 'Сегодня', icon: 'home', keywords: ['мой день', 'сейчас', 'дальше'] }, { href: '/week', activePaths: ['/month'], label: 'Расписание', icon: 'calendar', keywords: ['день', 'неделя', 'месяц'] }, { href: '/pair-space', label: 'Подготовка', mobileLabel: 'К паре', icon: 'book', keywords: ['материалы', 'задания', 'пространства пар'] }, { href: '/notifications', label: 'Уведомления', mobileLabel: 'Увед.', icon: 'bell' }] },
   { label: 'Другие действия', items: [{ href: '/absences', label: 'Сообщить об отсутствии', icon: 'clipboard' }, { href: '/groups', label: 'Избранное расписание', icon: 'users' }] },
   { label: 'Аккаунт', items: [{ href: '/profile', label: 'Профиль', icon: 'user' }, { href: '/settings', label: 'Настройки', icon: 'settings' }, { href: '/connections', label: 'Подключения аккаунта', icon: 'plug' }] },
 ];
@@ -19,15 +19,18 @@ const searchWorkspace = async (query: string, signal: AbortSignal) => searchComm
 export default function StudentShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  // Paint instantly from the cached profile; the fresh /users/me response reconciles in the background.
-  const [user, setUser] = useState<StudentUser | null>(() => (isLoggedIn() ? readUserCache() : null));
+  const [user, setUser] = useState<StudentUser | null>(null);
   const [unread, setUnread] = useState(0);
   const curation = useCurationContext(apiFetch, Boolean(user));
 
   useEffect(() => {
     if (!isLoggedIn()) { router.push('/login'); return; }
-    getUser().then(setUser).catch(() => router.push('/login'));
-    getUnreadCount().then(setUnread).catch(() => undefined);
+    // SSR and the first client render share the same state. Read the browser cache after hydration.
+    setUser(readUserCache());
+    let active = true;
+    getUser().then(profile => { if (active) setUser(profile); }).catch(() => { if (active) router.push('/login'); });
+    getUnreadCount().then(count => { if (active) setUnread(count); }).catch(() => undefined);
+    return () => { active = false; };
   }, [router]);
 
   const commands: WorkspaceCommand[] = [

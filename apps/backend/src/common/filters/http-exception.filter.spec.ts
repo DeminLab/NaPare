@@ -11,7 +11,8 @@ jest.mock('@sentry/node', () => ({
 describe('AllExceptionsFilter', () => {
   beforeEach(() => jest.clearAllMocks());
   it('returns one machine-readable validation error shape', () => {
-    const logger = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+    const errorLogger = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+    const warningLogger = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
     const json = jest.fn();
     const status = jest.fn().mockReturnValue({ json });
     const host = {
@@ -27,6 +28,8 @@ describe('AllExceptionsFilter', () => {
     );
 
     expect(status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
+    expect(warningLogger).toHaveBeenCalledWith('POST /api/v1/auth/login - 400');
+    expect(errorLogger).not.toHaveBeenCalled();
     expect(Sentry.captureMessage).not.toHaveBeenCalled();
     expect(json).toHaveBeenCalledWith(expect.objectContaining({
       statusCode: 400,
@@ -35,7 +38,8 @@ describe('AllExceptionsFilter', () => {
       details: ['email must be an email'],
       path: '/api/v1/auth/login',
     }));
-    logger.mockRestore();
+    errorLogger.mockRestore();
+    warningLogger.mockRestore();
   });
 
   it('reports server errors without private exception or request details', () => {
@@ -49,6 +53,7 @@ describe('AllExceptionsFilter', () => {
     expect(Sentry.captureMessage).toHaveBeenCalledWith('Backend request failed', {
       level: 'error', tags: { http_status: '500', http_method: 'POST' },
     });
+    expect(logger).toHaveBeenCalledWith('POST /private - 500', expect.any(String));
     expect(JSON.stringify((Sentry.captureMessage as jest.Mock).mock.calls)).not.toContain('secret');
     logger.mockRestore();
   });

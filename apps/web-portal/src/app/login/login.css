@@ -12,49 +12,6 @@
     #f5f7fc;
 }
 
-/* Session-restore hint becomes a floating pill instead of a full-screen gate. */
-.login-layout.login-focused .login-restore-gate {
-  align-items: center;
-  background: rgb(255 255 255 / 0.92);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid #e3e8f2;
-  border-radius: 999px;
-  box-shadow: 0 10px 30px rgb(23 32 51 / 0.1);
-  flex-direction: row;
-  flex-wrap: wrap;
-  font-size: 14px;
-  gap: 12px;
-  inset: 16px auto auto 50%;
-  justify-content: center;
-  min-height: 0;
-  padding: 10px 12px 10px 18px;
-  text-align: left;
-  transform: translateX(-50%);
-  width: max-content;
-  max-width: calc(100% - 32px);
-  z-index: 20;
-}
-.login-layout.login-focused .login-restore-gate button {
-  background: var(--color-brand);
-  border: 0;
-  border-radius: 999px;
-  color: var(--color-on-brand);
-  font-size: 13px;
-  font-weight: 700;
-  min-height: 36px;
-  padding: 6px 14px;
-  transition: background 160ms ease, transform 160ms ease;
-}
-.login-layout.login-focused .login-restore-gate button:hover { background: var(--color-brand-strong); transform: translateY(-1px); }
-.login-layout.login-focused .login-restore-gate .home-session-spinner {
-  border-color: rgb(81 70 232 / 0.25);
-  border-top-color: var(--color-brand);
-  flex-shrink: 0;
-  height: 16px;
-  width: 16px;
-}
-
 /* ── Left hero panel ─────────────────────────────────────── */
 
 .login-hero-aside {

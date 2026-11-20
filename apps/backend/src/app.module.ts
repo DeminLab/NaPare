@@ -59,6 +59,7 @@ import { TenantOrganizationAlias1700000000046 } from './migrations/1700000000046
 import { UserRoles1700000000047 } from './migrations/1700000000047-UserRoles';
 import { AcademicTerm1700000000048 } from './migrations/1700000000048-AcademicTerm';
 import { Invites1700000000049 } from './migrations/1700000000049-Invites';
+import { CareerVacancies1700000000052 } from './migrations/1700000000052-CareerVacancies';
 import { ImportRuns1700000000050 } from './migrations/1700000000050-ImportRuns';
 import { TelemetryModule } from './telemetry/telemetry.module';
 import { EventsModule } from './events/events.module';
@@ -136,6 +137,7 @@ import { SearchModule } from './search/search.module';
               // TZ 9.3: import journal table comes from synchronize above;
               // this installs the tenant policies plus the FR-IMP-08 threshold.
               await new ImportRuns1700000000050().up(runner);
+              await new CareerVacancies1700000000052().up(runner);
             }
             finally { await runner.release(); }
           }

@@ -19,5 +19,6 @@ The repository does not contain an active Kubernetes or Terraform deployment. Cl
 - Docker Nginx may bind to loopback; external access also depends on host Nginx, DNS, firewall and TLS.
 - Production database/Redis ports should not be exposed publicly. Confirm actual bindings in Compose before rollout.
 - Never use `docker compose down -v` on a server with persistent data.
+- The Compose Nginx gateway blocks sensitive-file and scanner paths before proxying; `/student/career` is a GET-only legacy redirect to `/career`, while other methods return 405. Validate config with `nginx -t` in the Nginx image before rollout.
 
 See [monitoring](monitoring.md) for current signals and [runbooks](runbooks.md) for repository-backed diagnostics.

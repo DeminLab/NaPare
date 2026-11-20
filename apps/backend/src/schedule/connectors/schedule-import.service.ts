@@ -43,6 +43,33 @@ const ROLLBACK_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
 const normalizeName = (name: string) => name.trim().toLocaleLowerCase('ru-RU');
 
 /** One planned mutation of a source row; `apply` executes exactly this list. */
+function importedOverlapWarnings(rows: Array<{ lesson: NormalizedScheduleLesson; groupId: string }>): ScheduleImportRowIssue[] {
+  const latestEnds = new Map<string, { end: number; lesson: NormalizedScheduleLesson }>();
+  const warnings: ScheduleImportRowIssue[] = [];
+  const active = rows.filter(({ lesson }) => !lesson.cancelled)
+    .sort((a, b) => Date.parse(a.lesson.startDate) - Date.parse(b.lesson.startDate));
+
+  for (const { lesson, groupId } of active) {
+    const start = Date.parse(lesson.startDate);
+    const end = Date.parse(lesson.endDate);
+    const teacher = lesson.sourceTeacherId || normalizeName(lesson.teacherName || '');
+    const room = normalizeName(lesson.room || '');
+    const resources = [['группа', groupId], ['преподаватель', teacher], ['аудитория', room]];
+    for (const [label, identifier] of resources) {
+      if (!identifier) continue;
+      const key = `${label}:${identifier}`;
+      const prior = latestEnds.get(key);
+      if (prior && prior.end > start) {
+        const other = prior.lesson.row ? `строка ${prior.lesson.row}` : `занятие ${prior.lesson.externalId}`;
+        warnings.push({ row: lesson.row ?? 0, externalId: lesson.externalId, message: `Возможное пересечение: ${label}, ${other}.` });
+      }
+      if (!prior || end > prior.end) latestEnds.set(key, { end, lesson });
+    }
+  }
+
+  return warnings;
+}
+
 type ImportOp =
   | { kind: 'upsert'; input: NormalizedScheduleLesson; group: Group; old?: Lesson; before: JsonObject; after: JsonObject }
   | { kind: 'cancel'; lesson: Lesson };
@@ -416,7 +443,7 @@ export class ScheduleImportService implements OnModuleInit, OnModuleDestroy, Sch
     const plan: ScheduleImportPlan = {
       summary,
       rows,
-      warnings: payload.rowWarnings ?? [],
+      warnings: [...(payload.rowWarnings ?? []), ...importedOverlapWarnings(resolved.map(({ lesson, group }) => ({ lesson, groupId: group!.id })))],
       errors: payload.rowIssues ?? [],
       confirmationWarnings: confirmationWarnings(decision.reasons, { changed: summary.updated + summary.deleted, existingActive, threshold, errors: summary.errors, validRows: payload.lessons.length }),
       existingActive,

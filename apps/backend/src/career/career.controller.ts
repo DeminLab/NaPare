@@ -1,9 +1,12 @@
 import { CareerPlanningService } from './career-planning.service';
 import { CareerAiService } from './career-ai.service';
-import { Query, Body, Controller, Get, Header, Param, ParseUUIDPipe, Post, Put, Patch, Request, UseGuards } from '@nestjs/common';
+import { Query, Body, Controller, Delete, Get, Header, Param, ParseUUIDPipe, Post, Put, Patch, Request, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { Roles } from '../common/decorators/roles.decorator';
+import { UserRole } from '../auth/interfaces/user-role';
 import { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { CareerService } from './career.service';
 import { CareerModerationService } from './career-moderation.service';
@@ -36,7 +39,7 @@ export class CareerController {
   @Get('student/portfolio') @ApiOperation({summary:'Страничные кейсы и агрегаты портфолио текущего студента'}) studentPortfolio(@Request() req:CareerRequest,@Query('offset') offset?:string,@Query('limit') limit?:string){return this.service.listStudentPortfolio(req.user,{offset,limit});}
   @Post('tests') createTest(@Request() req:CareerRequest,@Body() dto:CareerTestDto){return this.service.createTest(req.user,dto);}
   @Post('tests/:id/attempts') attempt(@Request() req:CareerRequest,@Param('id',ParseUUIDPipe) id:string,@Body() dto:CareerAttemptDto){return this.service.attempt(req.user,id,dto);}
-  @Get('tasks') @ApiOperation({summary:'Страничный список карьерных задач в границах доступного кабинета'}) taskList(@Request() req:CareerRequest,@Query('workspace') workspace?:string,@Query('offset') offset?:string,@Query('limit') limit?:string,@Query('q') q?:string,@Query('category') category?:string,@Query('state') state?:string){return this.service.listTasks(req.user,workspace,{offset,limit,q,category,state});}
+  @Get('tasks') @ApiOperation({summary:'Страничный список карьерных задач в границах доступного кабинета'}) taskList(@Request() req:CareerRequest,@Query('workspace') workspace?:string,@Query('offset') offset?:string,@Query('limit') limit?:string,@Query('q') q?:string,@Query('category') category?:string,@Query('state') state?:string,@Query('saved') saved?:string){return this.service.listTasks(req.user,workspace,{offset,limit,q,category,state,saved});}
   @Get('workflows') @ApiOperation({summary:'Страничные отклики и работы в границах доступного кабинета'}) workflowList(@Request() req:CareerRequest,@Query('workspace') workspace?:string,@Query('kind') kind?:string,@Query('offset') offset?:string,@Query('limit') limit?:string,@Query('q') q?:string,@Query('state') state?:string){return this.service.listWorkflows(req.user,workspace,{kind,offset,limit,q,state});}
   @Get('center/reviews') @ApiOperation({summary:'Страничные очереди профилей и допусков карьерного центра'}) centerReviews(@Request() req:CareerRequest,@Query('kind') kind?:string,@Query('offset') offset?:string,@Query('limit') limit?:string,@Query('q') q?:string,@Query('state') state?:string){return this.service.listCenterReviews(req.user,{kind,offset,limit,q,state});}
   @Get('partnerships') @ApiOperation({summary:'Страничные партнёрства в границах центра или активных компаний'}) partnerships(@Request() req:CareerRequest,@Query('workspace') workspace?:string,@Query('offset') offset?:string,@Query('limit') limit?:string,@Query('q') q?:string,@Query('state') state?:string){return this.service.listPartnerships(req.user,workspace,{offset,limit,q,state});}
@@ -55,6 +58,20 @@ export class CareerController {
   @Post('tasks') createTask(@Request() req:CareerRequest,@Body() dto:CareerTaskDto){return this.service.createTask(req.user,dto);}
   @Post('tasks/:id/publish') publishTask(@Request() req:CareerRequest,@Param('id',ParseUUIDPipe) id:string){return this.moderation.publish(req.user,id);}
   @Post('tasks/:id/approve') approveTask(@Request() req:CareerRequest,@Param('id',ParseUUIDPipe) id:string){return this.moderation.decide(req.user,id,'approve');}
+  @Put('tasks/:id/favorite')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.STUDENT)
+  saveTask(@Request() req: CareerRequest, @Param('id', ParseUUIDPipe) id: string) {
+    return this.service.saveTask(req.user, id);
+  }
+
+  @Delete('tasks/:id/favorite')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.STUDENT)
+  removeSavedTask(@Request() req: CareerRequest, @Param('id', ParseUUIDPipe) id: string) {
+    return this.service.removeSavedTask(req.user, id);
+  }
+
   @Post('tasks/:id/apply') apply(@Request() req:CareerRequest,@Param('id',ParseUUIDPipe) id:string,@Body() dto:CareerMessageDto){return this.service.apply(req.user,id,dto);}
   @Post('applications/:id/select') select(@Request() req:CareerRequest,@Param('id',ParseUUIDPipe) id:string){return this.service.select(req.user,id);}
   @Post('works/:id/submit') submit(@Request() req:CareerRequest,@Param('id',ParseUUIDPipe) id:string,@Body() dto:CareerSubmissionDto){return this.service.submit(req.user,id,dto);}

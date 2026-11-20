@@ -5,6 +5,7 @@ import { CuratorAssignment } from '../src/curation/entities/curator-assignment.e
 import { AbsenceConfirmation } from '../src/absences/entities/absence-confirmation.entity';
 import { AuditLog } from '../src/common/entities/audit-log.entity';
 import { EventRecord } from '../src/events/entities/event-record.entity';
+import { Lesson } from '../src/schedule/entities/lesson.entity';
 import { User } from '../src/users/entities/user.entity';
 
 const suite = process.env.CURATION_TEST_DATABASE_URL ? describe : describe.skip;
@@ -33,6 +34,30 @@ suite('Curation: real PostgreSQL, HTTP and existing JWT sessions', () => {
     expect(await fixture.db.getRepository(CuratorAssignment).count()).toBe(1);
     const result = await get('/curation/groups', 'legacy').expect(200);
     expect(result.body.data.map((g: { id: string }) => g.id)).toEqual([fixture.groups[1].id]);
+  });
+  it('keeps schedule changes scoped to the student group and teacher with truthful totals', async () => {
+    const lessons = fixture.db.getRepository(Lesson);
+    const { id, createdAt, updatedAt, ...template } = fixture.lesson;
+    void createdAt; void updatedAt;
+    await lessons.update(id, { isChanged: true });
+    const otherGroup = await lessons.save({ ...template, groupId: fixture.groups[2].id, isChanged: true });
+    const unassigned = await lessons.save({ ...template, teacherId: null, groupId: fixture.groups[1].id, isChanged: true });
+    const foreign = await lessons.save({
+      ...template, organizationId: fixture.otherUni.id, groupId: fixture.groups[3].id,
+      teacherId: fixture.users.outsider.id, isChanged: true,
+    });
+
+    const path = '/schedule/changes?date=' + fixture.lesson.startDate.toISOString().slice(0, 10);
+    try {
+      expect((await get(path).expect(200)).body).toMatchObject({ data: [{ id }], meta: { total: 1 } });
+      const teacher = (await get(path, 'teacher').expect(200)).body;
+      expect(teacher.meta.total).toBe(2);
+      expect(teacher.data.map((row: Lesson) => row.id)).toEqual(expect.arrayContaining([id, otherGroup.id]));
+      expect((await get(path, 'admin').expect(200)).body.meta.total).toBe(3);
+    } finally {
+      await lessons.update(id, { isChanged: false });
+      await lessons.delete([otherGroup.id, unassigned.id, foreign.id]);
+    }
   });
   it('requires authentication and rejects unknown query fields', async () => {
     await http().get('/api/v1/curation/context').expect(401);

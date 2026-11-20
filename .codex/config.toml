@@ -1,0 +1,46 @@
+# NaPare AI DevKit: project scope. No model, credentials, or permission overrides.
+[agents]
+enabled = true
+max_concurrent_threads_per_session = 3
+
+[plugins."ecc@napare-local"]
+enabled = true
+
+[mcp_servers.context7]
+command = "node"
+args = ["scripts/ai-devkit/mcp.mjs", "context7"]
+env_vars = ["CONTEXT7_API_KEY"]
+startup_timeout_sec = 45
+
+[mcp_servers.playwright]
+command = "node"
+args = ["scripts/ai-devkit/mcp.mjs", "playwright"]
+startup_timeout_sec = 45
+
+[mcp_servers.chrome_devtools]
+command = "node"
+args = ["scripts/ai-devkit/mcp.mjs", "chrome_devtools"]
+startup_timeout_sec = 45
+
+[mcp_servers.dbhub]
+command = "node"
+args = ["scripts/ai-devkit/mcp.mjs", "dbhub"]
+startup_timeout_sec = 45
+
+# Preserve global connection names. Restrict GitHub operations to reads for DevKit.
+[mcp_servers.github]
+url = "https://api.githubcopilot.com/mcp/"
+bearer_token_env_var = "GITHUB_PAT_TOKEN"
+http_headers = { "X-MCP-Readonly" = "true" }
+
+[mcp_servers.figma]
+url = "https://mcp.figma.com/mcp"
+
+[mcp_servers.sentry]
+url = "https://mcp.sentry.dev/mcp"
+
+# Runtime diagnostics require Next.js 16+. NaPare currently pins 15.5.28.
+[mcp_servers.next_devtools]
+command = "node"
+args = ["scripts/ai-devkit/mcp.mjs", "next_devtools"]
+enabled = false

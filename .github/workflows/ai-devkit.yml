@@ -1,0 +1,50 @@
+name: AI DevKit configuration
+
+on:
+  pull_request:
+    paths:
+      - '.agents/skills/**'
+      - '.agents/plugins/**'
+      - '.codex/**'
+      - 'scripts/ai-devkit/**'
+      - 'docs/ai-devkit/**'
+      - 'docs/ecc/**'
+      - 'AGENTS.md'
+      - 'CLAUDE.md'
+      - '.github/workflows/ai-devkit.yml'
+  push:
+    branches: [main]
+    paths:
+      - '.agents/skills/**'
+      - '.agents/plugins/**'
+      - '.codex/**'
+      - 'scripts/ai-devkit/**'
+      - 'docs/ai-devkit/**'
+      - 'docs/ecc/**'
+      - 'AGENTS.md'
+      - 'CLAUDE.md'
+      - '.github/workflows/ai-devkit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-verification:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: scripts/ai-devkit/runtime/package-lock.json
+      - run: npm ci --prefix scripts/ai-devkit/runtime --ignore-scripts --no-audit --no-fund
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python scripts/ai-devkit/install-vendor-skills.py
+      - run: node scripts/ai-devkit/verify.mjs
+      - run: python scripts/ai-devkit/install-ecc-references.py --check
+      - run: node --test scripts/ai-devkit/ecc-session-start.test.mjs
+      - run: npm audit --prefix scripts/ai-devkit/runtime --omit=dev --audit-level=high

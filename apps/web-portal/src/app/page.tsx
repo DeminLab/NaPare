@@ -4,6 +4,7 @@ import { Icon, type IconName } from "@napare/ui";
 import { ProductShowcase } from "../components/ProductShowcase";
 import { MaxLaunchAuth } from "../components/MaxLaunchAuth";
 import { HomeSessionRestore } from "../components/HomeSessionRestore";
+import { PortalPageMenu } from "../components/PortalPageMenu";
 import HomeSEO from "../components/HomeSEO";
 
 const roles = [
@@ -92,21 +93,7 @@ export default function HomePage() {
           <a href="#how">Как начать</a>
           <a href="#faq">Вопросы</a>
         </nav>
-        <details className="portal-menu">
-          <summary aria-label="Меню сайта" aria-controls="mobile-page-nav">
-            <span className="menu-lines" aria-hidden="true"><span /><span /></span>
-          </summary>
-          <nav id="mobile-page-nav" className="portal-menu-panel" aria-label="Разделы страницы">
-            <a href="#problem">Зачем НаПаре</a>
-            <a href="#features">Возможности</a>
-            <a href="#interface">Интерфейс</a>
-            <a href="#roles">Роли</a>
-            <a href="#career">Практика</a>
-            <a href="#launch">Университету</a>
-            <a href="#how">Как начать</a>
-            <a href="#faq">Вопросы и поддержка</a>
-          </nav>
-        </details>
+        <PortalPageMenu />
         <Link href="/login" className="text-link">
           Войти
         </Link>
@@ -125,12 +112,10 @@ export default function HomePage() {
         />
         <div className="hero-inner">
           <div className="hero-copy">
-            <p className="eyebrow">Учёба и первый профессиональный опыт</p>
-            <h1>Учитесь. Пробуйте профессию. Собирайте опыт.</h1>
+            <h1>Расписание, учёба и первый опыт</h1>
             <p className="lead">
-              Следите за расписанием и изменениями, готовьтесь к парам и
-              работайте с материалами занятия. Для первого профессионального
-              опыта есть отдельный раздел с задачами работодателей.
+              Проверяйте расписание, открывайте материалы к парам и находите
+              проектные задачи от работодателей.
             </p>
             <div className="hero-actions">
               <Link href="/login" className="primary-action">

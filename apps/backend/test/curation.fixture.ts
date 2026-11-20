@@ -15,6 +15,7 @@ import { CuratorAssignments1700000000020 } from '../src/migrations/1700000000020
 import { TenantRowSecurity1700000000029 } from '../src/migrations/1700000000029-TenantRowSecurity';
 import { OfficeReports1700000000042 } from '../src/migrations/1700000000042-OfficeReports';
 import { TenantOrganizationAlias1700000000046 } from '../src/migrations/1700000000046-TenantOrganizationAlias';
+import { CareerVacancies1700000000052 } from '../src/migrations/1700000000052-CareerVacancies';
 import { Invites1700000000049 } from '../src/migrations/1700000000049-Invites';
 import { TenantContext } from '../src/common/tenant/tenant-context';
 import { fixtureDatabase } from './tenant-database.fixture';
@@ -81,6 +82,7 @@ export async function createCurationFixture(url: string, options: { organization
     // Migration 29 above re-created the invite policies without their relation
     // predicate; re-run 49 (idempotent) so the public claim path keeps working.
     await new Invites1700000000049().up(runner);
+    await new CareerVacancies1700000000052().up(runner);
   } finally { await runner.release(); }
   const now = new Date(); now.setHours(8, 30, 0, 0);
   const lesson = await db.getRepository(Lesson).save({ organizationId: uni.id, groupId: groups[0].id, teacherId: users.teacher.id, subject: 'Технологии программирования', teacherName: 'Соколова М.', groupName: groups[0].name, startDate: now, endDate: new Date(now.getTime() + 5400000), startTime: '08:30', endTime: '10:00', dayOfWeek: now.getDay(), pairNumber: 1, room: '416' });

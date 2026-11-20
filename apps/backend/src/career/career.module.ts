@@ -18,5 +18,9 @@ import { CompanyVerificationService } from './company-verification.service';
 import { CompanyVerificationController } from './company-verification.controller';
 import { CareerController, CareerAccountsController } from './career.controller';
 
-@Module({ imports: [TypeOrmModule.forFeature([...Object.values(entities), User, University, AuditLog ]), AuthModule, ScheduleModule], providers: [CareerService, CareerAiService, CareerPlanningService, CareerReportService, CompanyRegistryService, CompanyVerificationService, CareerModerationService], controllers: [CareerController, CareerAccountsController, CareerReportController, CompanyVerificationController, CareerModerationController] })
+import { CareerVacancy, CareerVacancyApplication } from './vacancies.entity';
+import { VacanciesController } from './vacancies.controller';
+import { VacanciesService } from './vacancies.service';
+
+@Module({ imports: [TypeOrmModule.forFeature([...Object.values(entities), User, University, AuditLog, CareerVacancy, CareerVacancyApplication ]), AuthModule, ScheduleModule], exports: [CareerService], providers: [CareerService, VacanciesService, CareerAiService, CareerPlanningService, CareerReportService, CompanyRegistryService, CompanyVerificationService, CareerModerationService], controllers: [CareerController, VacanciesController, CareerAccountsController, CareerReportController, CompanyVerificationController, CareerModerationController] })
 export class CareerModule {}

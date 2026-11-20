@@ -1,14 +1,14 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Favorite, FavoriteKind } from './entities/favorite.entity';
+import { In, Repository } from 'typeorm';
+import { FAVORITE_KINDS, Favorite, FavoriteKind } from './entities/favorite.entity';
 
 @Injectable()
 export class FavoritesService {
   constructor(@InjectRepository(Favorite) private readonly favorites: Repository<Favorite>) {}
 
   list(userId: string, organizationId: string): Promise<Favorite[]> {
-    return this.favorites.find({ where: { userId, organizationId }, order: { kind: 'ASC', label: 'ASC' } });
+    return this.favorites.find({ where: { userId, organizationId, kind: In([...FAVORITE_KINDS]) }, order: { kind: 'ASC', label: 'ASC' } });
   }
 
   async add(userId: string, organizationId: string, kind: FavoriteKind, externalIdInput: string, labelInput: string): Promise<void> {

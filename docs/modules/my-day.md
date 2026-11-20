@@ -156,3 +156,9 @@ summary    = { totalLessons, changedLessons (lessons.isChanged), totalAbsences (
 - Изоляция тенанта: `universityId` берётся из JWT, глобальный `apps/backend/src/common/tenant/tenant-context.module.ts`.
 - Данные расписания могут поступать из rasp.\* (`apps/backend/src/rasp/rasp.module.ts`, `sibit-university-bootstrap.service.ts`) — отдельного эндпоинта «my-day из rasp» нет.
 - Сущность аудита `apps/backend/src/common/entities/audit-log.entity.ts` / `GET /admin/audit-log` к этому модулю не применяется (только чтение данных).
+
+## Сроки карьерных работ
+
+`careerDeadlines` содержит до трёх записей `{ id, title, deadline }` по работам студента из его вуза в статусах `in_progress` или `revision`. Окно начинается с даты «Моего дня» и длится семь календарных дней. Студент видит блок при наличии записей и может перейти в «Мои работы» в карьерном кабинете.
+
+`careerInterviews` возвращает до пяти подтверждённых собеседований текущего студента в своём вузе на ближайшие семь календарных дней. Поля `id`, `title`, `startsAt` и `endsAt` позволяют показать время и перейти к деталям на вкладке «Вакансии». Место встречи остаётся в карточке отклика.

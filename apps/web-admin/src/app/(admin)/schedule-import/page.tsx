@@ -1,11 +1,11 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState, type DragEvent as ReactDragEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent as ReactDragEvent } from 'react';
 import { ApiError, apiFetch, apiFetchText } from '@/lib/api';
 import { Alert, Badge, Button, Card, EmptyState, PageHeader, RequestState, Table, type BadgeVariant } from '@/components/ui';
 
 type Step = 1 | 2 | 3 | 4 | 5;
-interface PreviewRow { date: string; startTime: string; endTime: string; pairNumber: number; subject: string; teacher?: string; group: string; room?: string; }
+interface PreviewRow { id?: string; date: string; startTime: string; endTime: string; pairNumber: number; subject: string; teacher?: string; group: string; room?: string; }
 type PlanOutcome = 'created' | 'updated' | 'deleted' | 'unchanged' | 'error';
 interface RowIssue { row: number; message: string; externalId?: string }
 interface PlanRow { row: number; externalId: string; groupName: string; date: string; subject: string; outcome: PlanOutcome; message?: string }
@@ -34,13 +34,14 @@ const steps = ['Файл', 'Схема', 'Проверка', 'Просмотр',
 const PREVIEW_LIMIT = 100;
 const ISSUE_LIMIT = 50;
 const headerAliases: Record<keyof PreviewRow, string[]> = {
+  id: ['id', 'externalid', 'внешний id', 'идентификатор'],
   date: ['дата', 'date', 'startdate'], startTime: ['начало', 'время начала', 'starttime', 'start'], endTime: ['конец', 'время окончания', 'endtime', 'end'], pairNumber: ['номер пары', 'пара', 'pairnumber', 'pair'], subject: ['предмет', 'дисциплина', 'subject', 'title'], teacher: ['преподаватель', 'teacher', 'teachername'], group: ['группа', 'group', 'groupname'], room: ['аудитория', 'room'],
 };
 const fieldLabels: Array<{ key: keyof PreviewRow; label: string; required?: boolean }> = [
   { key: 'date', label: 'Дата', required: true }, { key: 'startTime', label: 'Начало', required: true },
   { key: 'endTime', label: 'Конец', required: true }, { key: 'pairNumber', label: 'Номер пары', required: true },
   { key: 'subject', label: 'Предмет', required: true }, { key: 'group', label: 'Группа', required: true },
-  { key: 'teacher', label: 'Преподаватель' }, { key: 'room', label: 'Аудитория' },
+  { key: 'teacher', label: 'Преподаватель' }, { key: 'room', label: 'Аудитория' }, { key: 'id', label: 'Внешний ID' },
 ];
 const outcomeMeta: Record<PlanOutcome, { label: string; variant: BadgeVariant }> = {
   created: { label: 'создано', variant: 'green' },
@@ -76,7 +77,7 @@ function rowFromRecord(record: Record<string, unknown>, mapping: Partial<Record<
     const key = Object.keys(record).find((candidate) => headerAliases[field].includes(normalize(candidate)));
     return key ? record[key] : undefined;
   };
-  return { date: dateOnly(value('date')), startTime: String(value('startTime') ?? '').trim(), endTime: String(value('endTime') ?? '').trim(), pairNumber: Number(value('pairNumber')), subject: String(value('subject') ?? '').trim(), teacher: String(value('teacher') ?? '').trim() || undefined, group: String(value('group') ?? '').trim(), room: String(value('room') ?? '').trim() || undefined };
+  return { id: String(value('id') ?? '').trim() || undefined, date: dateOnly(value('date')), startTime: String(value('startTime') ?? '').trim(), endTime: String(value('endTime') ?? '').trim(), pairNumber: Number(value('pairNumber')), subject: String(value('subject') ?? '').trim(), teacher: String(value('teacher') ?? '').trim() || undefined, group: String(value('group') ?? '').trim(), room: String(value('room') ?? '').trim() || undefined };
 }
 
 function parseCsvRecords(value: string): { headers: string[]; records: Record<string, unknown>[] } {
@@ -100,7 +101,12 @@ function parseJsonRecords(value: string): Record<string, unknown>[] {
 export default function ScheduleImportPage() {
   const [step, setStep] = useState<Step>(1); const [file, setFile] = useState<File | null>(null); const [rows, setRows] = useState<PreviewRow[]>([]); const [sourceRecords, setSourceRecords] = useState<Record<string, unknown>[]>([]); const [headers, setHeaders] = useState<string[]>([]); const [mapping, setMapping] = useState<Partial<Record<keyof PreviewRow, string>>>({}); const [dragging, setDragging] = useState(false); const [history, setHistory] = useState<HistoryItem[]>([]); const [loading, setLoading] = useState(false); const [error, setError] = useState(''); const [message, setMessage] = useState('');
   const [plan, setPlan] = useState<DryRunPlan | null>(null); const [dryRunning, setDryRunning] = useState(false); const [gate, setGate] = useState(false); const [reportLoading, setReportLoading] = useState<string | null>(null); const [lastRunId, setLastRunId] = useState<string | null>(null); const [rollbackState, setRollbackState] = useState<Record<string, RollbackState>>({});
-  useEffect(() => { try { setHistory(JSON.parse(localStorage.getItem('napare:import-history') || '[]')); } catch { setHistory([]); } }, []);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const [filePickerReady, setFilePickerReady] = useState(false);
+  useEffect(() => {
+    setFilePickerReady(true);
+    try { setHistory(JSON.parse(localStorage.getItem('napare:import-history') || '[]')); } catch { setHistory([]); }
+  }, []);
   const chooseFile = useCallback(async (selected: File) => {
     if (!isSupportedFile(selected)) { setError('Сейчас доступны CSV и JSON. Excel подключается после серверного детектора.'); return; }
     setError(''); setMessage(''); setFile(selected); setStep(2); setPlan(null); setGate(false);
@@ -109,9 +115,10 @@ export default function ScheduleImportPage() {
       const csv = selected.name.toLowerCase().endsWith('.csv');
       const csvData = csv ? parseCsvRecords(content) : null;
       const records = csvData?.records || parseJsonRecords(content);
-      const columns = csvData?.headers || Object.keys(records[0] || {});
+      const columns = csvData?.headers || [...new Set(records.flatMap(record => Object.keys(record)))];
       if (records.length > 1000) throw new Error('В файле больше 1 000 занятий. Разделите его на несколько файлов: строки не будут обрезаны автоматически.');
-      const nextMapping = Object.fromEntries(fieldLabels.map(({ key }) => [key, columns.find((column) => headerAliases[key].includes(normalize(column))) || ''])) as Partial<Record<keyof PreviewRow, string>>;
+      // Make the identity change explicit for files previously imported by row number.
+      const nextMapping = Object.fromEntries(fieldLabels.map(({ key }) => [key, key === 'id' ? '' : columns.find((column) => headerAliases[key].includes(normalize(column))) || ''])) as Partial<Record<keyof PreviewRow, string>>;
       setSourceRecords(records); setHeaders(columns); setMapping(nextMapping); setRows(records.map((record) => rowFromRecord(record, nextMapping)));
     } catch (reason) { setSourceRecords([]); setHeaders([]); setRows([]); setError(reason instanceof Error ? reason.message : 'Не удалось прочитать файл. Проверьте формат и кодировку.'); }
   }, []);
@@ -128,7 +135,7 @@ export default function ScheduleImportPage() {
     const slots = new Map<string, number>(); let conflicts = 0; let incomplete = 0;
     const issues: Array<{ row: number; fields: string[] }> = [];
     rows.forEach((row, index) => {
-      const fields = [!validDate(row.date) && 'Дата: нужен формат ГГГГ-ММ-ДД и существующая дата', !validTime(row.startTime) && 'Начало: время от 00:00 до 23:59', !validTime(row.endTime) && 'Конец: время от 00:00 до 23:59', validTime(row.startTime) && validTime(row.endTime) && row.endTime <= row.startTime && 'Конец должен быть позже начала', (!Number.isInteger(row.pairNumber) || row.pairNumber < 1) && 'Номер пары: положительное целое число', !row.subject && 'Предмет не указан', !row.group && 'Группа не указана'].filter((field): field is string => typeof field === 'string');
+      const fields = [!validDate(row.date) && 'Дата: нужен формат ГГГГ-ММ-ДД и существующая дата', !validTime(row.startTime) && 'Начало: время от 00:00 до 23:59', !validTime(row.endTime) && 'Конец: время от 00:00 до 23:59', validTime(row.startTime) && validTime(row.endTime) && row.endTime <= row.startTime && 'Конец должен быть позже начала', (!Number.isInteger(row.pairNumber) || row.pairNumber < 1) && 'Номер пары: положительное целое число', (row.id?.length ?? 0) > 200 && 'Внешний ID должен содержать до 200 символов', !row.subject && 'Предмет не указан', !row.group && 'Группа не указана'].filter((field): field is string => typeof field === 'string');
       if (fields.length) incomplete += 1;
       const slot = `${row.date}|${row.group}|${row.pairNumber}`;
       if (slots.has(slot)) { conflicts += 1; fields.push(`Повтор занятия из строки ${slots.get(slot)}`); } else slots.set(slot, index + (file?.name.toLowerCase().endsWith('.csv') ? 2 : 1));
@@ -191,10 +198,13 @@ export default function ScheduleImportPage() {
   const retry = () => { if (step === 5) void apply(); else if (step === 4) void runDryRun(); else if (file) void chooseFile(file); else reset(); };
   const changedPercent = plan ? Math.round(plan.changedRatio * 1000) / 10 : 0;
   return <div className="mx-auto max-w-[var(--layout-content-max)] space-y-6">
-    <PageHeader title="Импорт расписания" description="CSV или JSON · серверный dry-run и подтверждение перед применением" />
+    <PageHeader title="Импорт расписания" description="Загрузите CSV или JSON и проверьте изменения перед импортом" />
     <Card padding="sm" className="overflow-hidden">
-      <p className="mb-3 text-sm font-semibold text-[var(--color-brand)] sm:hidden" role="status">Шаг {step} из 5 · {steps[step - 1]}</p>
-      <ol aria-label="Этапы импорта" className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+      <div className="mb-2 grid grid-cols-5 gap-1.5 sm:hidden" aria-hidden="true">
+        {steps.map((label, index) => <span key={label} className={`h-1 rounded-full ${index < step ? 'bg-[var(--color-brand)]' : 'bg-slate-200'}`} />)}
+      </div>
+      <p className="text-sm font-semibold text-[var(--color-brand)] sm:hidden" role="status">Шаг {step} из 5 · {steps[step - 1]}</p>
+      <ol aria-label="Этапы импорта" className="hidden gap-3 sm:grid sm:grid-cols-5">
         {steps.map((label, index) => {
           const complete = step > index + 1;
           const current = step === index + 1;
@@ -207,13 +217,28 @@ export default function ScheduleImportPage() {
     </Card>
     {error && <RequestState title="Импорт остановлен" description={error} onRetry={retry} />}
     {message && <Alert tone="success" title="Расписание обновлено">{message}</Alert>}
-    {step === 1 && <Card className={`border-2 border-dashed p-6 text-center transition-colors sm:p-12 ${dragging ? 'border-[var(--color-brand)] bg-[var(--color-brand-soft)]' : 'border-[var(--color-brand)]/25 bg-[var(--color-brand-soft)]/30'}`}><div onDragEnter={(event) => { event.preventDefault(); setDragging(true); }} onDragOver={(event) => event.preventDefault()} onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragging(false); }} onDrop={onFileDrop}><input id="schedule-file" type="file" accept=".csv,.json" onClick={(event) => { event.currentTarget.value = ''; }} onChange={(event) => { const selected = event.target.files?.[0]; if (selected) void chooseFile(selected); }} className="sr-only" /><label htmlFor="schedule-file" className="mx-auto flex max-w-3xl cursor-pointer flex-col items-center rounded-[var(--radius-md)] py-4 focus-within:outline-none focus-within:ring-4 focus-within:ring-[var(--color-focus-ring)]"><span aria-hidden="true" className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-2xl text-[var(--color-brand)] shadow-sm">↑</span><span className="ds-card-title">Перетащите файл сюда или выберите на устройстве</span><span className="mt-2 max-w-lg text-sm leading-6 text-[var(--color-text-secondary)]">CSV или JSON до 1 000 занятий. Группы должны быть заранее заведены в структуре ВУЗа.</span><span className="mt-5 inline-flex min-h-[var(--control-height-md)] items-center rounded-[var(--radius-md)] bg-[var(--color-brand)] px-5 py-2 text-sm font-semibold text-white shadow-sm">Выбрать файл</span></label></div></Card>}
-    {step === 2 && <Card padding="lg"><div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="ds-card-title">Сопоставление полей</h2><p className="mt-1 text-sm text-[var(--color-text-secondary)]">Проверьте, какие столбцы файла соответствуют полям расписания.</p></div><Button variant="secondary" onClick={reset}>Выбрать другой файл</Button></div><p className="mt-1 break-all text-sm text-[var(--color-text-secondary)]">{file?.name} · {file ? (file.size / 1024).toFixed(1) : 0} КБ</p><div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{fieldLabels.map(({ key, label, required }) => <label key={key} className="block text-sm font-medium text-[var(--color-text)]">{label}{required && <span className="ml-1 text-[var(--color-danger)]" aria-hidden="true">*</span>}<select value={mapping[key] || ''} onChange={(event) => updateMapping(key, event.target.value)} className="ds-input mt-2 h-11 w-full px-3 text-sm focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus-ring)]"><option value="">Не сопоставлено</option>{headers.map((header) => <option key={header} value={header}>{header}</option>)}</select></label>)}</div><div className="mt-5"><Alert tone={rows.length ? 'info' : 'warning'} title={rows.length ? 'Схема готова к проверке' : 'Нет строк в файле'}>Отмеченные поля обязательны для импорта. Необязательные: преподаватель и аудитория.</Alert></div><Button className="mt-5" onClick={() => setStep(3)} disabled={!rows.length || fieldLabels.some(({ key, required }) => required && !mapping[key])}>Проверить записи</Button></Card>}
+    {step === 1 && (
+      <Card className={`border-2 border-dashed p-6 text-center transition-colors sm:p-12 ${dragging ? 'border-[var(--color-brand)] bg-[var(--color-brand-soft)]' : 'border-[var(--color-brand)]/25 bg-[var(--color-brand-soft)]/30'}`}>
+        <div className="mx-auto flex max-w-3xl flex-col items-center" onDragEnter={event => { event.preventDefault(); setDragging(true); }} onDragOver={event => event.preventDefault()} onDragLeave={event => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragging(false); }} onDrop={onFileDrop}>
+          <span aria-hidden="true" className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-2xl text-[var(--color-brand)] shadow-sm">↑</span>
+          <h2 className="ds-card-title">Файл с расписанием</h2>
+          <p className="mt-2 max-w-lg text-sm leading-6 text-[var(--color-text-secondary)]">CSV или JSON до 1 000 занятий. Группы должны быть заранее заведены в структуре ВУЗа.</p>
+          <input ref={fileInput} type="file" accept=".csv,.json" onChange={event => {
+            const selected = event.target.files?.[0];
+            event.target.value = '';
+            if (selected) void chooseFile(selected);
+          }} hidden />
+          <Button className="mt-4" disabled={!filePickerReady} onClick={() => fileInput.current?.click()}>Выбрать файл</Button>
+          <p className="mt-2 hidden text-xs text-[var(--color-text-secondary)] sm:block">Можно перетащить файл сюда.</p>
+        </div>
+      </Card>
+    )}
+    {step === 2 && <Card padding="lg"><div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="ds-card-title">Сопоставление полей</h2><p className="mt-1 text-sm text-[var(--color-text-secondary)]">Проверьте, какие столбцы файла соответствуют полям расписания.</p></div><Button variant="secondary" onClick={reset}>Выбрать другой файл</Button></div><p className="mt-1 break-all text-sm text-[var(--color-text-secondary)]">{file?.name} · {file ? (file.size / 1024).toFixed(1) : 0} КБ</p><div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{fieldLabels.map(({ key, label, required }) => <label key={key} className="block text-sm font-medium text-[var(--color-text)]">{label}{required && <span className="ml-1 text-[var(--color-danger)]" aria-hidden="true">*</span>}<select value={mapping[key] || ''} onChange={(event) => updateMapping(key, event.target.value)} className="ds-input mt-2 h-11 w-full px-3 text-sm focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus-ring)]"><option value="">Не сопоставлено</option>{headers.map((header) => <option key={header} value={header}>{header}</option>)}</select></label>)}</div><div className="mt-5"><Alert tone={rows.length ? 'info' : 'warning'} title={rows.length ? 'Схема готова к проверке' : 'Нет строк в файле'}>Для нового источника сопоставьте «Внешний ID» со стабильным идентификатором занятия. При повторном импорте используйте то же сопоставление, с которым файл импортировали раньше.</Alert></div><Button className="mt-5" onClick={() => setStep(3)} disabled={!rows.length || fieldLabels.some(({ key, required }) => required && !mapping[key])}>Проверить записи</Button></Card>}
     {step === 3 && <Card padding="lg"><div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="ds-card-title">Проверка записей</h2><p className="mt-1 text-sm text-[var(--color-text-secondary)]">Конфликты определяются по дате, группе и номеру пары.</p></div><Badge variant={validation.conflicts || validation.incomplete ? 'amber' : 'green'}>{validation.conflicts || validation.incomplete ? 'Требует проверки' : 'Готово к просмотру'}</Badge></div><div className="mt-5 grid gap-3 sm:grid-cols-3">{[{ label: 'Корректные строки', value: validation.valid, tone: 'success' }, { label: 'Неполные строки', value: validation.incomplete, tone: 'warning' }, { label: 'Дубли занятий', value: validation.conflicts, tone: 'danger' }].map((item) => <Alert key={item.label} tone={item.tone as 'success' | 'warning' | 'danger'} title={item.label}>{item.value}</Alert>)}</div>{validation.issues.length > 0 && <div className="mt-5"><h3 className="text-sm font-semibold">Исправьте строки файла</h3><ul className="mt-3 max-h-80 space-y-2 overflow-y-auto">{validation.issues.map(issue => <li key={issue.row} className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"><strong>Строка {issue.row}</strong><ul className="mt-1 list-inside list-disc">{issue.fields.map(field => <li key={field}>{field}</li>)}</ul></li>)}</ul><Button variant="secondary" className="mt-4" onClick={reset}>Выбрать исправленный файл</Button></div>}<Button className="mt-5" onClick={() => { setStep(4); void runDryRun(); }} disabled={validation.conflicts > 0 || validation.incomplete > 0}>Открыть предпросмотр</Button></Card>}
     {step === 4 && <Card padding="sm">
       <div className="flex flex-wrap items-start justify-between gap-3 border-b pb-3">
-        <div><h2 className="ds-card-title">Предпросмотр изменений</h2><p className="mt-1 text-sm text-[var(--color-text-secondary)]">Серверный dry-run: план рассчитан по текущему расписанию, ничего не применено.</p></div>
-        <Badge variant="slate">{plan ? `dry-run · ${plan.runId.slice(0, 8)}` : 'расчёт…'}</Badge>
+        <div><h2 className="ds-card-title">Предпросмотр изменений</h2><p className="mt-1 text-sm text-[var(--color-text-secondary)]">Сверьте результат с текущим расписанием перед подтверждением.</p></div>
+        <Badge variant="slate">{plan ? `План · ${plan.runId.slice(0, 8)}` : 'расчёт…'}</Badge>
       </div>
       {dryRunning && <p className="mt-4 text-sm text-[var(--color-text-secondary)]">Сервер рассчитывает план импорта: сверяет группы, существующие занятия и порог массового изменения…</p>}
       {!dryRunning && !plan && !error && <div className="mt-4"><EmptyState title="План не рассчитан" description="Нажмите «Рассчитать план», чтобы получить сводку, предупреждения и отчёт." action={<Button onClick={() => void runDryRun()}>Рассчитать план</Button>} /></div>}

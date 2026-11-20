@@ -32,7 +32,6 @@ const groups: WorkspaceNavGroup[] = [
       {
         href: "/week",
         label: "Расписание",
-        mobileLabel: "Неделя",
         icon: "calendar",
         keywords: ["неделя", "пары"],
       },
