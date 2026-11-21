@@ -249,8 +249,11 @@ export interface Me {
   email: string;
   firstName: string;
   lastName: string;
-  roles: string[];
-  organizationId?: string;
+  /** /users/me returns the account's primary role as a singular field. */
+  role: string;
+  /** Older locally cached profiles may still contain the previous roles array. */
+  roles?: string[];
+  organizationId?: string | null;
 }
 
 /** Last known profile so the workspace shell can paint before the network answers. */

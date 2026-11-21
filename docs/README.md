@@ -40,6 +40,8 @@ Project guides, reference material and historical records live under this direct
 - [Combined improvement verification](project-log/improvement-integration-2026-10-22.md) — integration branch, local test evidence and remaining requirements; no production changes.
 
 - [Repository baseline audit](audit/BASELINE.md) и [разрывы с ТЗ v1.1](audit/TZ-1.1-GAP-ANALYSIS.md) — датированный снимок состояния репозитория, расхождения с требованиями и риски; не подтверждение готовности к production.
+- [UX-аудит страниц и ТЗ улучшений, 20 ноября 2026](audit/UX-AUDIT-2026-11-20.md) — маршрутный инвентарь 76 URL-шаблонов, мобильный/desktop проход локального демо, подтверждённые UX-находки, приоритеты и критерии приёмки.
+- [Ролевое ТЗ на улучшение страниц, 20 ноября 2026](audit/UX-ROLE-PAGE-SPEC-2026-11-20.md) — вход во все 11 локальных ролей, браузерные наблюдения по рабочим кабинетам и требования по каждому маршруту; ограничения текущего responsive-прохода указаны явно.
 
 - [API](api/README.md) — API usage and contracts.
 - [University schedule import](integrations/schedule-import.md) — CSV/ICS/XLSX/Moodle/SIBIT formats, durable queue and change journal.

@@ -1,9 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { FormEvent, PointerEvent as ReactPointerEvent, useEffect, useRef, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import { Icon } from '@napare/ui';
 import { MaxLaunchAuth } from '../../components/MaxLaunchAuth';
+import { PortalFooter } from '../../components/PortalFooter';
+import { PortalHeader } from '../../components/PortalHeader';
 import './login.css';
 
 type Workspace = 'student' | 'staff' | 'admin' | 'developer' | 'career';
@@ -191,60 +193,17 @@ export default function LoginPage() {
     setSessionRestoreState('manual');
   }
 
-  const previewRef = useRef<HTMLDivElement | null>(null);
-
-  // The floating schedule preview tilts gently toward the cursor.
-  function tiltPreview(event: ReactPointerEvent<HTMLDivElement>) {
-    const card = previewRef.current;
-    if (!card || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const rect = card.getBoundingClientRect();
-    const px = (event.clientX - rect.left) / rect.width - 0.5;
-    const py = (event.clientY - rect.top) / rect.height - 0.5;
-    card.style.setProperty('--preview-ry', `${(px * 7).toFixed(2)}deg`);
-    card.style.setProperty('--preview-rx', `${(-py * 7).toFixed(2)}deg`);
-  }
-
-  function resetPreviewTilt() {
-    const card = previewRef.current;
-    if (!card) return;
-    card.style.setProperty('--preview-rx', '0deg');
-    card.style.setProperty('--preview-ry', '0deg');
-  }
-
   return (
-    <main className="login-layout login-focused">
-      <section className="login-hero-aside">
-        {/* Plain img (asset is served unoptimized anyway): next/image with priority
-            injects a preload link that mismatches SSR DOM and triggers hydration rebuild. */}
-        <img src="/brand/campus-learning.png" alt="" aria-hidden="true" className="login-hero-background" />
-        <div className="login-hero-aurora" aria-hidden="true"><span className="login-orb login-orb--indigo" /><span className="login-orb login-orb--sky" /></div>
-        <div className="login-hero-inner">
-          <Link href="/" className="brand login-hero-brand"><img src="/brand/np-mark.png" alt="" width={34} height={34} />НаПаре</Link>
-          <div className="login-hero-body">
-            <div className="login-hero-copy">
-              <p className="eyebrow">Цифровая платформа университета</p>
-              <h2>Учебный день — <em>в одном месте</em></h2>
-              <p className="login-hero-lead">Расписание и изменения, материалы пары и связь с группой — без десятка чатов и вкладок.</p>
-              <ul className="login-hero-points">
-                <li><Icon name="check" size={16} /> Актуальное расписание на каждый день</li>
-                <li><Icon name="check" size={16} /> Уведомления об изменениях пар</li>
-                <li><Icon name="check" size={16} /> Пространство каждой пары</li>
-              </ul>
-            </div>
-            <div className="login-hero-preview" ref={previewRef} onPointerMove={tiltPreview} onPointerLeave={resetPreviewTilt}>
-              <div className="login-preview-head"><span className="login-preview-title">Сегодня · 3 пары</span><span className="login-preview-badge">1 изменение</span></div>
-              <div className="login-preview-lesson is-current"><time>09:00</time><span className="login-preview-mark" /><div className="login-preview-lesson-copy"><strong>Математический анализ</strong><small>Ауд. 301 · Открыто сейчас</small></div><span className="login-preview-status"><span className="login-preview-pulse" />Сейчас</span></div>
-              <div className="login-preview-lesson"><time>10:45</time><span className="login-preview-mark" /><div className="login-preview-lesson-copy"><strong>Программирование</strong><small>Ауд. 412 · аудитория изменилась</small></div></div>
-            </div>
-          </div>
-          <p className="login-hero-footnote">НаПаре · учебный день без лишних сервисов</p>
-        </div>
-      </section>
+    <>
+      <main className="login-layout login-focused">
+        <PortalHeader />
+        <Link href="/" className="login-home-return"><span aria-hidden="true">←</span> На главную</Link>
       <section className="login-panel">
         <div className="login-card">
           <MaxLaunchAuth captureOnly />
           <Link href="/" className="brand login-brand"><img src="/brand/np-mark.png" alt="" width={34} height={34} />НаПаре</Link>
           <h1>Вход в НаПаре</h1>
+          <p className="login-subtitle">Продолжайте учёбу, практику и карьерное развитие в одном пространстве.</p>
 
           {studentRegistrationInfo && (
             <p className="login-session-status" role="status" aria-live="polite">
@@ -268,13 +227,13 @@ export default function LoginPage() {
           <form method="post" onSubmit={submit} className="login-form" noValidate aria-busy={!formReady || loading}>
             {error && <p className="error" role="alert" key={error}>{error}</p>}
             <label htmlFor="login-email">Email
-              <input id="login-email" name="email" type="email" autoComplete="username" inputMode="email" autoCapitalize="none" spellCheck={false} value={email} readOnly={!formReady} onChange={(event) => { setEmail(event.target.value); setFieldErrors(previous => ({ ...previous, email: undefined })); }} aria-invalid={!!fieldErrors.email} aria-describedby={fieldErrors.email ? 'login-email-error' : undefined} required />
+              <input id="login-email" name="email" type="email" placeholder="Введите email" autoComplete="username" inputMode="email" autoCapitalize="none" spellCheck={false} value={email} readOnly={!formReady} onChange={(event) => { setEmail(event.target.value); setFieldErrors(previous => ({ ...previous, email: undefined })); }} aria-invalid={!!fieldErrors.email} aria-describedby={fieldErrors.email ? 'login-email-error' : undefined} required />
               {fieldErrors.email && <span id="login-email-error" className="login-field-error" role="alert">{fieldErrors.email}</span>}
             </label>
             <div>
               <label htmlFor="login-password">Пароль</label>
               <div className="login-password-field">
-                <input id="login-password" name="password" type={passwordVisible ? 'text' : 'password'} autoComplete="current-password" value={password} readOnly={!formReady} onChange={(event) => { setPassword(event.target.value); setFieldErrors(previous => ({ ...previous, password: undefined })); }} aria-invalid={!!fieldErrors.password} aria-describedby={fieldErrors.password ? 'login-password-error' : undefined} required />
+                <input id="login-password" name="password" type={passwordVisible ? 'text' : 'password'} placeholder="Введите пароль" autoComplete="current-password" value={password} readOnly={!formReady} onChange={(event) => { setPassword(event.target.value); setFieldErrors(previous => ({ ...previous, password: undefined })); }} aria-invalid={!!fieldErrors.password} aria-describedby={fieldErrors.password ? 'login-password-error' : undefined} required />
                 <button className="login-password-toggle" type="button" disabled={!formReady} aria-label={passwordVisible ? 'Скрыть пароль' : 'Показать пароль'} aria-pressed={passwordVisible} onClick={() => setPasswordVisible(!passwordVisible)}>{passwordVisible ? 'Скрыть' : 'Показать'}</button>
               </div>
               {fieldErrors.password && <span id="login-password-error" className="login-field-error" role="alert">{fieldErrors.password}</span>}
@@ -298,6 +257,8 @@ export default function LoginPage() {
         </div>
         <Link href="/privacy" className="login-privacy-link">Политика конфиденциальности</Link>
       </section>
-    </main>
+      </main>
+      <PortalFooter />
+    </>
   );
 }

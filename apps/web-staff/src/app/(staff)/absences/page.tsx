@@ -1,6 +1,7 @@
 'use client';
 
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { apiFetch, getUser } from '@/lib/api';
 import { Badge, Button, Card, EmptyState, RequestState, Skeleton } from '@/components/ui';
@@ -36,6 +37,7 @@ function AbsencesContent() {
   const [pages, setPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [allowed, setAllowed] = useState<boolean | null>(null);
+  const [role, setRole] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [status, setStatus] = useState('');
@@ -54,6 +56,7 @@ function AbsencesContent() {
     try {
       const user = await getUser();
       if (request.signal.aborted) return;
+      setRole(user.role);
       const curation = user.role === 'teacher'
         ? await apiFetch<{ canCurate: boolean }>('/curation/context', { signal: request.signal })
         : null;
@@ -114,7 +117,14 @@ function AbsencesContent() {
     finally { setBusyId(''); }
   };
 
-  if (allowed === false) return <RequestState kind="forbidden" title="Нет доступа к очереди обращений" description="Очередь доступна сотрудникам, которым разрешено рассматривать обращения." />;
+  if (allowed === false) return <RequestState
+    kind="forbidden"
+    title="Нет доступа к очереди обращений"
+    description={role === 'teacher'
+      ? 'Вы вошли как преподаватель. Обращения рассматривают куратор группы, декан или заведующий кафедрой. Попросите назначенного сотрудника проверить заявление.'
+      : 'Рассматривать обращения могут только назначенные сотрудники вуза. Вернитесь к своему рабочему дню или уточните права у администратора вуза.'}
+    action={<Link href="/today" className="role-link role-link-secondary">Вернуться к рабочему дню</Link>}
+  />;
   return <div className="mx-auto max-w-4xl space-y-5">
     <header className="flex flex-wrap items-center justify-between gap-3"><div><h1 className="ds-page-title">Обращения об отсутствии</h1>{!loading && <p className="mt-2 text-sm text-slate-500">Ожидают решения: {total}</p>}</div><Button variant="secondary" disabled={Boolean(busyId)} onClick={() => void load()}>Обновить</Button></header>
     {status && <p role="status" className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800">{status}</p>}

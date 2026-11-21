@@ -114,6 +114,12 @@ export default function DashboardPage() {
   const openProblems = problems.reduce((sum, item) => sum + (item.value || 0), 0);
   const incompleteProblems = problems.some((problem) => problem.value === null);
   const syncLabel = sync?.status === 'error' ? 'Ошибка' : sync?.status === 'active' ? 'Источник активен' : sync?.status === 'synced' ? 'Синхронизировано' : 'Нет данных';
+  const facultiesNeedSetup = hasLoaded('факультеты') && !partial.includes('факультеты') && facultiesTotal === 0;
+  const groupsNeedSetup = hasLoaded('группы') && !partial.includes('группы') && groupsTotal === 0;
+  const structureNeedsSetup = facultiesNeedSetup || groupsNeedSetup;
+  const usersAvailable = hasLoaded('пользователи') && !partial.includes('пользователи') && users.length > 0;
+  const scheduleNeedsSetup = hasLoaded('статистика ВУЗа') && !partial.includes('статистика ВУЗа') && stats?.totalLessons === 0;
+  const scheduleStepNumber = 1 + Number(structureNeedsSetup) + Number(structureNeedsSetup && usersAvailable);
 
   if (loading) return <div className="mx-auto max-w-[var(--layout-content-max)] space-y-6" aria-busy="true" aria-label="Загрузка dashboard"><Skeleton className="h-28" /><div className="grid gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(18rem,.7fr)]"><Skeleton className="h-72" /><Skeleton className="h-72" /></div><Skeleton className="h-48" /></div>;
   if (error && !loadedSections.length) return <div className="mx-auto max-w-[var(--layout-content-max)]"><RequestState title="Не удалось загрузить сводку ВУЗа" description={error} onRetry={load} /></div>;
@@ -121,6 +127,48 @@ export default function DashboardPage() {
   return <div className="mx-auto max-w-[var(--layout-content-max)] space-y-6">
     <PageHeader title="Обзор ВУЗа" description={currentDate} actions={<><Badge variant={backend === 'online' ? 'green' : backend === 'offline' ? 'red' : 'slate'} dot>{backend === 'online' ? 'Система работает' : backend === 'offline' ? 'Нет связи с системой' : 'Проверяем систему'}</Badge><Button variant="secondary" loading={refreshing} onClick={() => load(false)}>Обновить данные</Button></>} />
     {lastUpdated && <p className="-mt-4 text-xs text-[var(--color-text-secondary)]">Последняя проверка данных: {formatDateTime(lastUpdated.toISOString())}</p>}
+
+    {(structureNeedsSetup || scheduleNeedsSetup) && <Card padding="lg" className="border-[var(--color-brand)]/20 bg-[var(--color-brand-soft)]">
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <Badge variant="indigo">Первые шаги</Badge>
+          <h2 className="mt-2 ds-section-title">Подготовьте пространство ВУЗа</h2>
+          <p className="mt-1 text-sm text-[var(--color-text-secondary)]">Порядок настройки зависит от данных, которые уже есть в системе.</p>
+        </div>
+      </div>
+      <ol className="mt-5 grid gap-3 md:grid-cols-2">
+        {structureNeedsSetup && <li className="flex gap-3 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-white p-4">
+          <span aria-hidden="true" className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-brand)] text-sm font-bold text-white">1</span>
+          <div className="min-w-0">
+            <h3 className="font-semibold text-[var(--color-text)]">Создайте структуру ВУЗа</h3>
+            <p className="mt-1 text-sm text-[var(--color-text-secondary)]">{[
+              facultiesNeedSetup ? 'Факультетов пока нет' : '',
+              groupsNeedSetup ? 'учебных групп пока нет' : '',
+            ].filter(Boolean).join(', ')}. Добавьте недостающие разделы, чтобы пользователи и расписание были привязаны к структуре.</p>
+            <Link href="/structure" className="mt-3 inline-flex min-h-11 items-center font-semibold text-[var(--color-brand)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus-ring)]">Настроить структуру →</Link>
+          </div>
+        </li>}
+        {structureNeedsSetup && usersAvailable && <li className="flex gap-3 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-white p-4">
+          <span aria-hidden="true" className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-brand)] text-sm font-bold text-white">2</span>
+          <div className="min-w-0">
+            <h3 className="font-semibold text-[var(--color-text)]">Привяжите пользователей</h3>
+            <p className="mt-1 text-sm text-[var(--color-text-secondary)]">После создания групп проверьте роли и привязки аккаунтов в разделе пользователей.</p>
+            <Link href="/users" className="mt-3 inline-flex min-h-11 items-center font-semibold text-[var(--color-brand)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus-ring)]">Открыть пользователей →</Link>
+          </div>
+        </li>}
+        {scheduleNeedsSetup && <li className="flex gap-3 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-white p-4">
+          <span aria-hidden="true" className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-brand)] text-sm font-bold text-white">{scheduleStepNumber}</span>
+          <div className="min-w-0">
+            <h3 className="font-semibold text-[var(--color-text)]">Добавьте расписание</h3>
+            <p className="mt-1 text-sm text-[var(--color-text-secondary)]">В базе пока нет занятий. Загрузите расписание или настройте подключение к источнику.</p>
+            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
+              <Link href="/schedule-import" className="inline-flex min-h-11 items-center font-semibold text-[var(--color-brand)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus-ring)]">Импортировать расписание →</Link>
+              <Link href="/connectors" className="inline-flex min-h-11 items-center font-semibold text-[var(--color-brand)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus-ring)]">Настроить источник →</Link>
+            </div>
+          </div>
+        </li>}
+      </ol>
+    </Card>}
 
     <section aria-label="Ключевые показатели ВУЗа" className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-5">
       {[

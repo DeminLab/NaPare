@@ -16,7 +16,11 @@
 | Android | WebView и ручной локальный план | [Мобильный клиент](../clients/mobile.md) |
 | Deployment | Docker Compose, shared-origin Nginx, GitHub Actions staging | [Deployment guide](../deployment/production.md), [CI/CD](../ops/cicd.md) |
 
-PostgreSQL RLS policies не настроены. В production Compose есть Redis, но backend Redis client/queues не подключены. S3 storage adapter, FCM/APNs delivery, PostHog и Kubernetes deployment не являются реализованными компонентами.
+Tenant RLS реализован миграцией [`1700000000029-TenantRowSecurity`](../../apps/backend/src/migrations/1700000000029-TenantRowSecurity.ts), а backend при старте проверяет RLS-политики и права роли PostgreSQL в [`app.module.ts`](../../apps/backend/src/app.module.ts) и [`tenant-database.ts`](../../apps/backend/src/common/tenant/tenant-database.ts). Это описание реализации в репозитории; оно не подтверждает, что миграции применены и база доступна в конкретном окружении.
+
+Для доставки уведомлений в backend есть Redis-клиент, BullMQ queue и worker в [`NotificationDeliveryService`](../../apps/backend/src/notifications/delivery/notification-delivery.service.ts). Очередь создаётся только при `NOTIFICATIONS_QUEUE_ENABLED=true`; отправка по каналам дополнительно зависит от `NOTIFICATIONS_DELIVERY_ENABLED`, выбранного провайдера и его конфигурации. Наличие кода не подтверждает подключение Redis или успешную доставку в конкретном окружении.
+
+S3 storage adapter, FCM/APNs delivery, PostHog и Kubernetes deployment не являются реализованными компонентами.
 
 ## Документы
 

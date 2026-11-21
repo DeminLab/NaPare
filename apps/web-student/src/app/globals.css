@@ -290,6 +290,7 @@ html[data-student-palette="dark"] .student-content .student-panel { background: 
 .today-open-lesson:hover { transform: translateY(-1px); background: var(--color-brand-strong); }
 .today-next-empty { padding: 22px 0; }
 .today-next-empty h2 { margin: 0 0 12px; font-size: 23px; }
+.today-next-empty-description { max-width: 38rem; margin: -4px 0 12px; color: var(--color-text-secondary); font-size: 14px; line-height: 1.5; }
 .today-next-empty a { display: inline-flex; min-height: 44px; align-items: center; gap: 8px; color: var(--color-brand); font-size: 14px; font-weight: 650; }
 .today-hero-art { position: absolute; top: 0; right: 0; bottom: 0; width: 37%; overflow: hidden; pointer-events: none; }
 .today-hero-art::before { position: absolute; top: 49px; right: 27px; width: 200px; height: 100px; border: 1px solid #d1ceff; border-radius: 18px; background: linear-gradient(145deg, #e4e2ff, #fafaff); box-shadow: 0 16px 30px #5e54d31c; content: ''; transform: skewY(-20deg) rotate(-10deg); }
@@ -672,3 +673,45 @@ html[data-student-palette="dark"] .student-content .curation-workspace .curation
   box-shadow: 0 8px 16px rgb(16 24 40 / 10%);
 }
 .schedule-more-views > div > * { display: flex; width: 100%; min-height: 44px; align-items: center; }
+
+/* Final student-only palette overrides follow legacy page rules on purpose. */
+:root { --color-background: #f4f8ff; --color-surface-secondary: #eff5ff; --color-text: #102348; --color-text-secondary: #5d7398; --color-border: #d9e5f8; --color-brand: #1559ef; --color-brand-strong: #1048c7; --color-brand-soft: #e8f1ff; --primary: #1559ef; --primary-dark: #1048c7; --accent: #1fc9ed; --color-ink: #102348; --color-rail: #eff5ff; }
+html[data-student-accent="indigo"] { --student-accent-50: #edf5ff; --student-accent-100: #dceaff; --student-accent-200: #c6dcff; --student-accent-400: #5c91ff; --student-accent-500: #2672f5; --student-accent-600: #1559ef; --student-accent-700: #1048c7; --color-brand: #1559ef; --color-brand-strong: #1048c7; --color-brand-soft: #e8f1ff; }
+.student-workspace-shell { --color-background: #f4f8ff; --color-text: #102348; }
+.student-workspace-shell > aside { --color-surface: #081d42; --color-surface-secondary: #12315f; --color-text: #f7faff; --color-text-secondary: #c9d7ef; --color-text-muted: #94a9cb; --color-border: rgb(197 217 255 / 16%); --color-brand: #c9eaff; --color-brand-soft: #14539b; --color-focus-ring: #8fdfff; border-color: transparent; background: linear-gradient(180deg, #071a39 0%, #0b2856 68%, #104b88 100%); color: #f7faff; }
+.student-workspace-shell > aside > div:first-child { border-color: rgb(197 217 255 / 16%); }
+.student-workspace-shell > aside > div:first-child a > span:first-child { background: linear-gradient(145deg, #1fc9ed, #1559ef 70%, #615cf5); box-shadow: 0 7px 18px rgb(31 201 237 / 22%); }
+.student-workspace-shell > aside nav a { color: #c9d7ef; }
+.student-workspace-shell > aside nav a[aria-current="page"] { background: linear-gradient(110deg, #12bfea, #1762f3 82%); color: #fff; box-shadow: 0 8px 18px rgb(13 115 241 / 24%); }
+.student-workspace-shell > aside nav a:not([aria-current="page"]):hover { background: rgb(255 255 255 / 8%); color: #fff; }
+.student-workspace-shell > aside > div:last-child { border-color: rgb(197 217 255 / 16%); }
+.student-workspace-shell > aside > div:last-child p:first-child { color: #fff; }
+.student-workspace-shell > aside > div:last-child p:last-of-type { color: #bfd0e9; }
+.student-workspace-shell > aside > div:last-child button { color: #f7faff; }
+.student-workspace-shell > div:nth-child(2) { background: radial-gradient(ellipse at 98% 4%, rgb(31 201 237 / 10%), transparent 28%), var(--color-background); }
+.student-workspace-shell > header { background: rgb(255 255 255 / 96%); }
+.student-workspace-shell > header > button[aria-label="Поиск по кабинету"] { border-color: #d7e4f8; background: #f8fbff; }
+.student-workspace-shell > nav[aria-label="Основные разделы"] { background: rgb(255 255 255 / 97%); }
+.student-content { --color-background: #f4f8ff; --color-text: #102348; --color-text-secondary: #5d7398; --color-border: #d9e5f8; --color-border-strong: #c1d2ee; --color-control-border: #cbdcf4; }
+.student-content :is(.ds-card, .student-panel, .absence-compose, .absence-filters) { border-color: #d9e5f8; box-shadow: 0 10px 28px rgb(21 53 103 / 6%); }
+.student-content :is(input:not([type="checkbox"]), select, textarea) { background-color: #f9fbff; }
+.student-content :is(input:not([type="checkbox"]), select, textarea):focus { border-color: #1559ef; }
+.student-content :is(button, a, summary, select, input):focus-visible { outline-color: #1559ef; }
+.student-content .today-next-card { border: 0; background: linear-gradient(108deg, #103875 0%, #1559ef 60%, #12bfe7 100%); color: #fff; box-shadow: 0 16px 32px rgb(21 89 239 / 16%); }
+.student-content .today-next-card :is(.today-next-label, .today-next-title h2, .today-next-copy, .today-next-details, .today-next-time, .today-time-remaining, .today-next-empty h2, .today-next-empty p) { color: #fff; }
+.student-content .today-next-label { display: inline-flex; border-radius: 8px; background: rgb(255 255 255 / 15%); padding: 5px 9px; letter-spacing: .04em; }
+.student-content .today-next-card .today-open-lesson { background: #dfff78; color: #102348; box-shadow: 0 7px 16px rgb(0 0 0 / 12%); }
+.student-content .today-next-card .today-open-lesson:hover { background: #ecff9e; }
+.student-content .today-panel, .student-content .today-lesson-list { border-color: #d9e5f8; box-shadow: 0 10px 28px rgb(21 53 103 / 6%); }
+.student-content .today-action-tile { border-color: #d9e5f8; background: #f9fbff; }
+.student-content .today-stat { border-color: #d9e5f8; }
+.student-content .schedule-views { background: #eaf1fc; }
+.student-content .schedule-views [aria-pressed="true"] { color: #1559ef; }
+.student-content .student-preparation-page .ds-empty { background: linear-gradient(110deg, #fff, #f3f9ff); }
+.student-content .student-preparation-page .ds-empty__icon { background: #e8f1ff; color: #1559ef; }
+.student-content .student-preparation-page .ds-empty__action a { background: #1559ef; }
+.student-content .preparation-empty { background: linear-gradient(115deg, #fff, #f3f9ff); }
+.student-content .curation-workspace .curation-modes { background: #eaf1fc; }
+.student-content .curation-workspace .curation-button:hover:not(:disabled) { border-color: #b8d3ff; background: #edf5ff; }
+.student-content [role="group"][aria-label="Разделы профиля"] button[aria-pressed="true"] { border-bottom-color: #1559ef; color: #1559ef; }
+@media (max-width: 760px) { .student-workspace-shell > main { padding: 16px 14px calc(76px + env(safe-area-inset-bottom)); } .student-workspace-shell > nav[aria-label="Основные разделы"] { border-color: #d9e5f8; box-shadow: 0 -8px 24px rgb(16 35 72 / 8%); } }

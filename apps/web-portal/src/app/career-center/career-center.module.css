@@ -1,0 +1,198 @@
+.careerCenterScope {
+  position: relative;
+}
+
+.heroActions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin: -132px auto 110px;
+  max-width: 1160px;
+  position: relative;
+  z-index: 2;
+}
+
+.heroPrimary,
+.heroSecondary {
+  align-items: center;
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 14px;
+  font-weight: 750;
+  gap: 10px;
+  justify-content: center;
+  min-height: 46px;
+  padding: 11px 20px;
+  transition: transform 180ms ease, background-color 180ms ease;
+}
+
+.heroPrimary {
+  background: #d8ef72;
+  color: #14233a;
+}
+
+.heroPrimary:hover,
+.heroSecondary:hover {
+  transform: translateY(-2px);
+}
+
+.heroSecondary {
+  border: 1px solid rgb(255 255 255 / 0.65);
+  color: #fff;
+}
+
+.careerCenterRoot :global(.public-page-hero) {
+  background-color: #101d48;
+  background-image: linear-gradient(90deg, #101d48 0%, rgb(16 29 72 / 0.97) 34%, rgb(16 29 72 / 0.38) 70%, rgb(16 29 72 / 0.14) 100%), url("/brand/campus-learning.png");
+  background-position: center, 72% 44%;
+  background-size: cover, cover;
+  min-height: 452px;
+  padding-bottom: 70px;
+}
+
+.careerCenterRoot :global(.public-page-hero::after) {
+  background: linear-gradient(90deg, #9ab4ff, #7459ff);
+  border-radius: 50% 50% 0 0;
+  height: 4px;
+  width: 100%;
+}
+
+.careerCenterRoot :global(.public-page-hero-inner) {
+  max-width: 1160px;
+  position: relative;
+  z-index: 1;
+}
+
+.careerCenterRoot :global(.public-page-hero h1) {
+  max-width: 610px;
+}
+
+.careerCenterRoot :global(.public-page-hero-inner > p:last-child) {
+  max-width: 520px;
+}
+
+.careerCenterRoot :global(.career-stage) .stageIcon {
+  align-items: center;
+  background: rgb(255 255 255 / 0.74);
+  border: 1px solid rgb(255 255 255 / 0.86);
+  border-radius: 15px;
+  box-shadow: 0 8px 18px rgb(38 69 133 / 0.12);
+  color: #3158c9;
+  display: inline-flex;
+  height: 50px;
+  justify-content: center;
+  width: 50px;
+}
+
+.careerCenterRoot :global(.career-stage) .stageArrow {
+  align-items: center;
+  background: rgb(255 255 255 / 0.65);
+  border: 1px solid rgb(255 255 255 / 0.9);
+  border-radius: 50%;
+  bottom: 18px;
+  color: #14284c;
+  display: inline-flex;
+  height: 42px;
+  justify-content: center;
+  position: absolute;
+  right: 18px;
+  width: 42px;
+}
+
+.careerCenterRoot :global(.career-stage) {
+  border: 1px solid rgb(255 255 255 / 0.82);
+  border-radius: 24px;
+  min-height: 228px;
+  overflow: hidden;
+  padding: 22px 25px;
+  position: relative;
+}
+
+.careerCenterRoot :global(.career-stage::after) {
+  background: rgb(255 255 255 / 0.24);
+  border-radius: 50%;
+  bottom: -82px;
+  content: "";
+  height: 150px;
+  left: -28px;
+  position: absolute;
+  transform: rotate(-12deg);
+  width: 75%;
+}
+
+.careerCenterRoot :global(.career-stage h3) {
+  font-size: clamp(22px, 2.5vw, 27px);
+  margin-top: 27px;
+  position: relative;
+  z-index: 1;
+}
+
+.careerCenterRoot :global(.career-stage p) {
+  max-width: 290px;
+  position: relative;
+  z-index: 1;
+}
+
+.careerCenterRoot :global(.career-stage-2) .stageIcon {
+  color: #d65c37;
+}
+
+.careerCenterRoot :global(.career-stage-3) .stageIcon {
+  color: #4b8e20;
+}
+
+.careerCenterRoot :global(.info-two-column) {
+  gap: clamp(30px, 5vw, 64px);
+}
+
+.careerCenterRoot :global(.public-contact-band) {
+  background: radial-gradient(ellipse at 92% 10%, rgb(129 151 255 / 0.18), transparent 42%), linear-gradient(110deg, #e6ecff, #f2f3ff);
+  border: 1px solid #dce4ff;
+  border-radius: 30px;
+}
+
+@media (max-width: 720px) {
+  .careerCenterRoot :global(.public-page-hero) {
+    background-image: linear-gradient(180deg, rgb(16 29 72 / 0.18) 0%, rgb(16 29 72 / 0.68) 38%, #101d48 84%), url("/brand/campus-learning.png");
+    background-position: center, 64% 30%;
+    min-height: 760px;
+    padding-top: 315px;
+  }
+
+  .careerCenterRoot :global(.public-page-hero h1) {
+    font-size: clamp(36px, 10vw, 50px);
+  }
+
+  .heroActions {
+    align-items: stretch;
+    flex-direction: column;
+    margin: -170px auto 96px;
+  }
+
+  .heroPrimary,
+  .heroSecondary {
+    width: 100%;
+  }
+
+  .heroSecondary {
+    background: #fff;
+    border-color: #d6def8;
+    color: #14233a;
+  }
+
+  .careerCenterRoot :global(.career-stage) {
+    min-height: 205px;
+  }
+
+  .careerCenterRoot :global(.public-contact-band) {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stageArrow {
+    transition: none;
+  }
+}

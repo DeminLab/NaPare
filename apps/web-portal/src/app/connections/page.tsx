@@ -155,25 +155,55 @@ export default function ConnectionsPage() {
     <div className="connections-shell">
       <header className="connections-topbar"><Link href="/" className="connections-brand"><span aria-hidden="true">Н</span>НаПаре</Link><button type="button" onClick={() => window.history.length > 1 ? window.history.back() : window.location.assign('/')} className="connections-return">← Вернуться в кабинет</button></header>
       <main className="connections-page">
-        <section className="connections-story">
-          <p className="connections-kicker"><span aria-hidden="true">✧</span> Одна платформа — вся учёба</p>
-          <h1>НаПаре —<br /><span>в вашем MAX</span></h1>
-          <p className="connections-lead">Подключите аккаунт к MAX, чтобы пользоваться учебными сервисами там, где вам удобно.</p>
-          <div className="connections-benefits"><span>✦ Единый аккаунт</span><span>◇ Учебные сервисы</span><span>✓ Защищённая привязка</span></div>
-        </section>
-        <section className="connections-card" aria-labelledby="connections-title">
-          <div className="connections-card-heading"><span className="connections-max-mark" aria-hidden="true" /><span className={`connections-status ${maxLinked ? 'is-linked' : ''}`}>{checking ? 'Проверяем…' : !signedIn ? 'Нужен вход' : !maxKnown ? 'Статус неизвестен' : maxLinked ? 'Подключён' : 'Не подключён'}</span></div>
-          <h2 id="connections-title">Подключить MAX</h2>
-          <p>{maxLinked ? 'Аккаунт НаПаре подключён. Теперь вы можете входить через MAX.' : insideMax ? 'Свяжите MAX с аккаунтом НаПаре. Подтверждение произойдёт здесь, внутри приложения.' : 'Свяжите MAX с аккаунтом НаПаре. Для безопасности подключение подтверждается внутри приложения.'}</p>
-          {!maxLinked && <ol className="connections-steps"><li><span>1</span><span>Откройте приложение <strong>MAX</strong> на телефоне или компьютере.</span></li><li><span>2</span><span>Запустите <strong>НаПаре</strong> внутри MAX и подтвердите подключение.</span></li><li><span>3</span><span>Вернитесь сюда и проверьте статус соединения.</span></li></ol>}
-          {checking && <p role="status" className="connections-note">Проверяем подключение аккаунта…</p>}
-          {!checking && !signedIn && <div className="connections-note"><p>Чтобы управлять подключениями, войдите в аккаунт, выданный университетом.</p><Link href="/login" className="connections-button">Войти в НаПаре</Link></div>}
-          {maxLinked ? <span className="connections-success" role="status">Аккаунт подключён</span> : <button type="button" onClick={() => void linkMaxAccount()} disabled={maxBusy || checking || !signedIn || !insideMax} className="connections-button">{maxBusy ? 'Связываем…' : 'Связать MAX　→'}</button>}
-          {maxError && <p className="connections-error" role="alert">{maxError}</p>}
-          <button type="button" className="connections-refresh" onClick={() => window.location.reload()}>◌　Обновить статус</button>
-          <p><Link href="/notifications/setup">Настроить уведомления этого браузера</Link></p>
-          <p className="connections-secure">♢　Подключение выполняется в безопасном режиме</p>
-        </section>
+        <div className="connections-heading">
+          <div>
+            <p className="connections-kicker">Личный кабинет студента</p>
+            <h1>Подключения аккаунта</h1>
+            <p>Приложения и сервисы, связанные с вашим учебным профилем.</p>
+          </div>
+          <span className="connections-demo-label">Личный аккаунт</span>
+        </div>
+
+        <div className="connections-layout">
+          <section className="connections-card connections-max-card" aria-labelledby="connections-title">
+            <div className="connections-card-heading">
+              <span className="connections-max-mark" aria-hidden="true">M</span>
+              <span className={`connections-status ${maxLinked ? 'is-linked' : ''}`}>{checking ? 'Проверяем…' : !signedIn ? 'Нужен вход' : !maxKnown ? 'Статус неизвестен' : maxLinked ? 'Подключён' : 'Не подключён'}</span>
+            </div>
+            <h2 id="connections-title">НаПаре в MAX</h2>
+            <p className="connections-card-description">Расписание и учебный кабинет NaPare доступны в привычном мессенджере. Связь подтверждается для вашего текущего аккаунта.</p>
+            {checking && <p role="status" className="connections-note">Проверяем подключение аккаунта…</p>}
+            {!checking && !signedIn && <div className="connections-note"><p>Чтобы управлять подключениями, войдите в аккаунт, выданный университетом.</p><Link href="/login" className="connections-button">Войти в НаПаре</Link></div>}
+            {maxLinked ? <span className="connections-success" role="status">Аккаунт подключён</span> : <button type="button" onClick={() => void linkMaxAccount()} disabled={maxBusy || checking || !signedIn || !insideMax} className="connections-button">{maxBusy ? 'Связываем…' : 'Связать MAX　→'}</button>}
+            {maxError && <p className="connections-error" role="alert">{maxError}</p>}
+            <button type="button" className="connections-refresh" onClick={() => window.location.reload()}>◌　Обновить статус</button>
+          </section>
+
+          <section className="connections-card connections-howto" aria-labelledby="connections-howto-title">
+            <h2 id="connections-howto-title">Как подключить</h2>
+            <ol className="connections-steps">
+              <li><span>1</span><span>Откройте приложение <strong>MAX</strong> на телефоне или компьютере.</span></li>
+              <li><span>2</span><span>Запустите <strong>НаПаре</strong> внутри MAX.</span></li>
+              <li><span>3</span><span>Вернитесь сюда и нажмите «Связать MAX».</span></li>
+            </ol>
+            <p className="connections-howto-note">Нужен вход в NaPare. Если вы уже внутри MAX, привязка отправит данные запуска на сервер для проверки.</p>
+          </section>
+
+          <section className="connections-card connections-integration-card" aria-labelledby="connections-browser-title">
+            <h2 id="connections-browser-title">Уведомления браузера</h2>
+            <p className="connections-card-description">Настройте получение уведомлений на этом устройстве и проверьте разрешение браузера.</p>
+            <Link href="/notifications/setup" className="connections-secondary-link">Настроить уведомления <span aria-hidden="true">→</span></Link>
+          </section>
+
+          <section className="connections-card connections-integration-card" aria-labelledby="connections-security-title">
+            <h2 id="connections-security-title">Безопасность подключений</h2>
+            <ul className="connections-security-list">
+              <li>Для привязки MAX требуется вход в ваш аккаунт NaPare.</li>
+              <li>Сервер проверяет данные запуска MAX перед созданием связи.</li>
+              <li>Статус подключения относится только к текущему аккаунту.</li>
+            </ul>
+          </section>
+        </div>
       </main>
       <footer className="connections-footer">© 2026 НаПаре · Образовательная система</footer>
     </div>

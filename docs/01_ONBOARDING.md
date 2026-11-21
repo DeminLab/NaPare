@@ -20,11 +20,15 @@ Set-Location NaPare
 pnpm install
 Copy-Item apps/backend/.env.example apps/backend/.env
 # При необходимости замените локальные секреты-заглушки.
-docker compose -f docker-compose.dev.yml up -d
+$composeProject = "napare-local"
+docker compose --project-name $composeProject -f docker-compose.dev.yml up -d
+./scripts/provision-local-backend-role.ps1 -ComposeProject $composeProject
 pnpm dev
 ```
 
-Compose development поднимает только PostgreSQL, Redis и MinIO. Root `pnpm dev` запускает backend и активные web-приложения. Порты и отдельные команды перечислены в [README](../README.md#локальная-разработка). Не публикуйте development-данные и не используйте эти значения в production. Корневой `.env.example` предназначен для production Compose, а не для локального backend.
+Compose development поднимает только PostgreSQL, Redis и MinIO. Скрипт создаёт или обновляет локальную роль из `DB_USERNAME`/`DB_PASSWORD` с `NOSUPERUSER NOBYPASSRLS`, выдаёт ей доступ к базе и схеме `public`, а также передаёт ей владение уже существующими таблицами, последовательностями и enum-типами в `public`. Это позволяет локальной синхронизации TypeORM работать и с данными, созданными прежней локальной ролью. Скрипт запускается только при `NODE_ENV=development` и локальном `DB_HOST`; для другой конфигурации он откажется выполнять запрос. Он не сбрасывает базу и не удаляет тома. Передавайте один и тот же `-ComposeProject` при запуске Compose и скрипта. Для нестандартных путей можно указать `-ComposeFile` и `-EnvFile`.
+
+Root `pnpm dev` запускает backend и активные web-приложения. Порты и отдельные команды перечислены в [README](../README.md#локальная-разработка). Не публикуйте development-данные и не используйте эти значения в production. Корневой `.env.example` предназначен для production Compose, а не для локального backend.
 
 Для отдельного приложения используйте `pnpm dev:portal`, `pnpm dev:student`, `pnpm dev:staff`, `pnpm dev:admin` или `pnpm dev:developer`. Backend можно запустить отдельно командой `pnpm --filter @napare/backend dev`.
 

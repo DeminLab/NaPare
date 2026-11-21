@@ -50,7 +50,8 @@ const groups: WorkspaceNavGroup[] = [
   {
     label: "Коммуникация",
     items: [
-      { href: "/inbox", activePaths: ["/notifications"], mobileLabel: "Важное", label: "Центр внимания", icon: "bell", keywords: ["входящие", "уведомления", "заявки"] },
+      { href: "/inbox", mobileLabel: "Важное", label: "Центр внимания", icon: "bell", keywords: ["входящие", "заявки"] },
+      { href: "/notifications", label: "Уведомления", icon: "bell", keywords: ["изменения расписания", "новые материалы"] },
     ],
   },
   {
@@ -220,16 +221,22 @@ export default function StaffLayout({ children }: { children: ReactNode }) {
   ];
   // No blocking gate: the shell (menu, header) renders immediately, even before the first API answer.
   const fullName = user ? user.firstName + " " + user.lastName : "";
-  const roleLabel = (user && roleLabels[user.role]) || "Сотрудник университета";
+  const baseRoleLabel = (user && roleLabels[user.role]) || "Сотрудник университета";
+  // A curator assignment augments the teacher account; it never creates a second
+  // login or changes the user's primary role returned by /users/me.
+  const roleLabel = user?.role === "teacher" && curation?.canCurate
+    ? `${baseRoleLabel} · Куратор`
+    : baseRoleLabel;
   const curationItems: WorkspaceNavGroup['items'] = curation?.canCurate || curation?.canManage ? [{ href: '/curation', label: 'Кураторство', mobileLabel: 'Куратор', icon: 'users', keywords: ['куратор', 'назначения'] }] : [];
   const resolvedGroups = groups.map((group) => ({
     ...group,
     items: [...group.items, ...(group.label === 'Работа' ? curationItems : [])].filter(item => item.href !== "/absences" || ["curator", "faculty_dean", "department_head", "university_admin", "superadmin"].includes(user?.role ?? "") || (user?.role === "teacher" && curation?.canCurate)).map((item) =>
-      item.href === "/inbox" ? { ...item, badge: unread } : item,
+      item.href === "/inbox" || item.href === "/notifications" ? { ...item, badge: unread } : item,
     ),
   }));
   return (
     <WorkspaceShell
+      className="staff-workspace"
       LinkComponent={AppLink}
       pathname={pathname}
       groups={resolvedGroups}

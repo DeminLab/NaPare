@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useWorkspaceQuery } from "@napare/ui/workspace-shell";
 import { LessonTypeBadge } from "@napare/ui";
-import { apiFetchList } from "@/lib/api";
+import { apiFetchList, getUser } from "@/lib/api";
 import {
   Badge,
   Card,
@@ -45,6 +45,8 @@ type DetailTab =
   | "assignments"
   | "announcements";
 
+const personalGroupRoles = new Set(["teacher", "curator"]);
+
 function groupFaculty(group: Group) {
   return group.facultyName || group.faculty?.name || "Факультет не указан";
 }
@@ -65,6 +67,7 @@ export default function GroupsPage() {
   const [search, setSearch] = useState("");
   const [faculty, setFaculty] = useState("all");
   const [scheduleError,setScheduleError]=useState("");
+  const [role, setRole] = useState<string | null>(null);
   useWorkspaceQuery({q:search,faculty},params=>{setSearch((params.get("q")||"").slice(0,100));setFaculty(params.get("faculty")||"all");});
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -72,6 +75,7 @@ export default function GroupsPage() {
   const [detailError, setDetailError] = useState("");
 
   useEffect(() => {
+    void getUser().then((user) => setRole(user.role)).catch(() => undefined);
     const start = getWeekStart();
     const end = new Date(start);
     end.setDate(end.getDate() + 6);
@@ -187,12 +191,33 @@ export default function GroupsPage() {
         />
       ) : filtered.length === 0 ? (
         <EmptyState
-          title="Группы не найдены"
+          title={search || faculty !== "all"
+            ? "Группы не найдены"
+            : role === null
+              ? "Группы не найдены"
+              : personalGroupRoles.has(role)
+                ? "Вам не назначены группы"
+                : "В структуре вуза пока нет групп"}
           description={
             search || faculty !== "all"
               ? "Измените параметры поиска или фильтра."
-              : "Группы пока не назначены."
+              : role === "teacher"
+                ? "Группы и доступ к ним назначает администрация вуза. Если вы должны вести группы, попросите администратора назначить вам доступ."
+                : role === "curator"
+                  ? "Здесь отображаются группы, назначенные вам для кураторства. Попросите руководителя вуза проверить назначения."
+                : role === "university_admin" || role === "superadmin"
+                  ? "Добавьте группы или проверьте структуру университета в кабинете администратора вуза."
+                  : role === "faculty_dean"
+                    ? "Группы создаёт и поддерживает администрация вуза. Обратитесь к администратору, чтобы проверить структуру и доступность групп."
+                  : role === "department_head"
+                    ? "Этот экран показывает группы из структуры вуза. Если структура должна быть заполнена, обратитесь к администратору вуза."
+                  : role
+                    ? "Здесь показываются только группы, доступ к которым назначен вашему аккаунту. Если список должен быть доступен, уточните назначение у администратора вуза."
+                    : "Здесь показываются группы, назначенные вашему аккаунту. Проверьте рабочий день или расписание."
           }
+          action={!search && faculty === "all" ? role === "university_admin" || role === "superadmin"
+            ? <a href="/deanery/structure" className="role-link role-link-secondary">Открыть структуру вуза</a>
+            : <Link href="/today" className="role-link role-link-secondary">Вернуться к рабочему дню</Link> : undefined}
         />
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
