@@ -17,7 +17,7 @@ import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { SuperadminService } from './superadmin.service';
 import { CreateUniversityDto } from './dto/create-university.dto';
-import { UpdateUniversityDto } from './dto/update-university.dto';
+import { UpdateUniversityLifecycleDto } from './dto/update-university-lifecycle.dto';
 import { UpdateConnectorDto } from './dto/update-connector.dto';
 import { UserRole } from '../auth/interfaces/user-role';
 import { PaginatedResponseDto, PaginationQueryDto } from '../common/dto/pagination-query.dto';
@@ -54,7 +54,7 @@ export class SuperadminController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async updateUniversity(
     @Param('id') id: string,
-    @Body() updateUniversityDto: UpdateUniversityDto,
+    @Body() updateUniversityDto: UpdateUniversityLifecycleDto,
   ) {
     return this.superadminService.updateUniversity(id, updateUniversityDto);
   }

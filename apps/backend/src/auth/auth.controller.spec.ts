@@ -24,6 +24,18 @@ describe("AuthController", () => {
     expect(() => controller.register()).toThrow(ForbiddenException);
   });
 
+  it("lists all active universities for public sign-in", async () => {
+    const universitiesRepository = { find: jest.fn().mockResolvedValue([{ id: "uni-1", name: "Вуз 1", city: "Омск" }]) };
+    const controller = new AuthController({} as never, universitiesRepository as never, {} as never);
+
+    await expect(controller.getUniversities()).resolves.toEqual([{ id: "uni-1", name: "Вуз 1", city: "Омск" }]);
+    expect(universitiesRepository.find).toHaveBeenCalledWith({
+      where: { status: "active" },
+      order: { name: "ASC", city: "ASC" },
+      select: ["id", "name", "city"],
+    });
+  });
+
   it("revokes the authenticated session on logout with request context", async () => {
     const authService = { logout: jest.fn() };
     const controller = new AuthController(

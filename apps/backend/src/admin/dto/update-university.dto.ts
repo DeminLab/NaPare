@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsObject, IsEnum, IsInt, Min, Max } from 'class-validator';
+import { IsString, IsOptional, IsObject, IsInt, Min, Max, IsBoolean } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class UpdateUniversityDto {
@@ -31,8 +31,11 @@ export class UpdateUniversityDto {
   @Max(100)
   importMassChangeThreshold?: number;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({
+    description: 'Публиковать импортированное расписание в открытом каталоге. По умолчанию выключено.',
+  })
   @IsOptional()
-  @IsEnum(['active', 'inactive', 'pending'])
-  status?: string;
+  @IsBoolean()
+  publicScheduleEnabled?: boolean;
+
 }

@@ -17,7 +17,7 @@
 | Lesson       | Пара в расписании        | id, university_id, group_id, teacher_id, subject, room, day_of_week, start_time, end_time, week_type, start_date, end_date, source, external_id, last_synced_at |
 | Group        | Учебная группа           | id, university_id, faculty_id, name, external_id — стабильный ID во внешнем расписании                                                                          |
 | LessonChange | Изменение пары           | id, lesson_id, change_type, old_values, new_values                                                                                                              |
-| University   | Вуз (с connector_config) | id, name, connector_config                                                                                                                                      |
+| University   | Вуз с настройкой публикации расписания | id, name, connector_config, publicScheduleEnabled (default false) |
 
 Подробнее: [architecture/data-model.md](../architecture/data-model.md).
 
@@ -30,6 +30,9 @@
 | `/api/v1/schedule/my`                   | GET   | Персональное расписание   |
 | `/api/v1/schedule/lessons/{id}`         | GET   | Детали пары               |
 | `/api/v1/schedule/lessons/{id}/changes` | GET   | История изменений пары    |
+| `/api/v1/public/schedule/universities` | GET | Активные вузы с включённой публикацией |
+| `/api/v1/public/schedule/universities/{organizationId}/groups` | GET | Группы из кабинета опубликованного вуза |
+| `/api/v1/public/schedule/lessons?organizationId=&groupId=&from=&to=` | GET | Импортированные занятия группы за период до 31 дня |
 | `/api/v1/users/me/favorites`            | GET   | Избранные группы и преподаватели текущего студента |
 | `/api/v1/users/me/favorites`            | POST  | Добавить или обновить избранное                    |
 | `/api/v1/users/me/favorites`            | DELETE| Удалить избранное                                  |
@@ -49,6 +52,7 @@
 | Просмотр расписания группы | curator, faculty_dean, department_head | Своя группа / факультет / кафедра |
 | Просмотр всего расписания  | university_admin                       | Весь вуз                          |
 | Загрузка расписания        | university_admin, department_head      | —                                 |
+| Публичная публикация      | university_admin                       | Только свой вуз, после явного включения |
 | Управление коннекторами    | superadmin                             | —                                 |
 
 Матрица прав: [architecture/roles-and-permissions.md](../architecture/roles-and-permissions.md).
@@ -58,6 +62,7 @@
 ## 5. UX / экраны
 
 - Экран расписания (student) — [ui/screens-student.md](../ui/screens-student.md)
+- Открытая страница `/schedule` показывает только расписания, импортированные в кабинеты вузов, которые явно включили публикацию. Посетитель выбирает опубликованный вуз и его локальную группу. Страница не обращается к внешнему RASP напрямую; RASP остаётся источником, который вуз может подключить из кабинета для импорта.
 - Страница `/groups` использует существующий публичный каталог и расписание СИБИТ из `rasp.sano.ru`: студент может выбрать группу и учебный год, синхронизировать избранные группы с аккаунтом, просматривать неделю и искать по предмету, преподавателю или аудитории. Ранее сохранённые локальные группы объединяются с серверным списком при первом онлайн-входе; офлайн-изменения избранного ставятся в локальную очередь и отправляются после восстановления соединения. Выбранное публичное расписание сохраняется локально и сразу показывается при повторном открытии, пока идёт фоновое обновление; при сетевой ошибке остаётся доступна копия с отметкой времени. Внешние занятия остаются только для просмотра и не открывают локальный Pair Space.
 - Месячный календарь студента — `/month`; получает весь role-scoped диапазон через `/schedule/range`, сохраняет его локально по аккаунту и показывает месячную сетку на больших экранах и список дней на мобильных. Текущий месяц можно скачать в `.ics` вместе с предметом, временем, преподавателем, корпусом/аудиторией и описанием изменения.
 - Экран расписания (teacher) — [ui/screens-teacher.md](../ui/screens-teacher.md)

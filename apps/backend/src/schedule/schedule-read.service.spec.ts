@@ -96,14 +96,33 @@ describe('Schedule read model', () => {
       groupName: 'ИС-21',
       teacherName: 'Иван Иванов',
       state: 'changed',
+      isReplacement: false,
       change: { type: 'changed', reason: 'Перенос в другой корпус' },
     });
   });
 
+  it('marks imported replacement lessons without treating generic changes as replacements', async () => {
+    const { service } = build({
+      lessons: [lesson({
+        isChanged: true,
+        notes: 'Замена',
+        changeDescription: 'Занятие изменено в источнике расписания',
+      })],
+    });
+    const result = await service.readRange(actor(), { from: '2026-11-16', to: '2026-11-16' });
+    expect(result.days[0].lessons[0].isReplacement).toBe(true);
+  });
+
   it('merges a series occurrence with its legacy lesson without duplicating the slot', async () => {
     const { service } = build({
-      lessons: [lesson({ occurrenceId: 'occurrence-a', seriesId: 'series-a' })],
-      occurrences: [occurrence({ legacyLessonId: 'lesson-a', status: 'rescheduled', changeReason: 'Аудитория занята' })],
+      lessons: [lesson({
+        occurrenceId: 'occurrence-a',
+        seriesId: 'series-a',
+        isChanged: true,
+        notes: 'Замена',
+        changeDescription: 'Замена по источнику rasp.sano.ru',
+      })],
+      occurrences: [occurrence({ legacyLessonId: 'lesson-a', status: 'rescheduled', changeReason: 'Замена по источнику rasp.sano.ru' })],
       series: [{ id: 'series-a', title: 'Математика', subjectType: 'lecture', pairNumber: 2 }],
     });
     const result = await service.readRange(actor(), { from: '2026-11-16', to: '2026-11-16' });
@@ -113,6 +132,7 @@ describe('Schedule read model', () => {
       source: 'series',
       subject: 'Математика',
       state: 'changed',
+      isReplacement: true,
       lessonId: 'lesson-a',
       occurrenceId: 'occurrence-a',
     });

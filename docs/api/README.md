@@ -104,6 +104,7 @@ npx @openapitools/openapi-generator-cli generate \
 | Auth & Users     | `/api/v1/auth`, `/api/v1/users`            | [modules/auth.md](../modules/auth.md)                                                                           |
 | Favorites        | `/api/v1/users/me/favorites`                | Student-only groups/teachers saved in the current tenant and account; see [contracts](contracts.md) |
 | Schedule         | `/api/v1/schedule`                         | [modules/schedule.md](../modules/schedule.md)                                                                   |
+| Public schedule  | `/api/v1/public/schedule`                   | Анонимная лента только активных вузов с явной публикацией; читает группы и занятия из кабинетов                  |
 | My Day           | `/api/v1/my-day`                           | `GET /my-day` — агрегат «Главный экран» (lessons, pairSpaces, absences, notifications, summary)                 |
 | Pair Space       | `/api/v1/pair-spaces`                      | [modules/pair-space.md](../modules/pair-space.md)                                                               |
 | Career           | `/api/v1/career`                         | Student/employer workflows, university-scoped career-center queues, paginated task/workflow/partnership/test/notice/lookup/admission/portfolio lists, exact unread notice count and career aggregates; public portfolio cases are consent-filtered before pagination; legacy tests array and overview responses remain compatible |

@@ -392,6 +392,17 @@ describe("AdminService", () => {
       const result = await service.getUniversity("uni-1");
       expect(result.id).toBe("uni-1");
     });
+
+    it("does not allow tenant updates to change university lifecycle status", async () => {
+      mockUniversityRepository.findOne.mockResolvedValue({ id: "uni-1", name: "Test Uni", status: "pending" });
+
+      await service.updateUniversity("uni-1", { name: "Updated" , status: "active" } as any);
+
+      expect(mockUniversityRepository.save).toHaveBeenCalledWith(expect.objectContaining({
+        name: "Updated",
+        status: "pending",
+      }));
+    });
   });
 
   describe("getUniversityStats", () => {

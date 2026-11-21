@@ -31,7 +31,7 @@ import { RefreshTokenDto } from "./dto/refresh-token.dto";
 import { RevokeOwnSessionDto } from "./dto/revoke-session.dto";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
 import { University } from "../users/entities/university.entity";
-import { RaspScraperService, SIBIT_UNIVERSITY } from "./rasp-scraper.service";
+import { RaspScraperService } from "./rasp-scraper.service";
 import { clientFromHeader } from "../telemetry/user-agent";
 
 type AuthRequest = { user: { id: string; sessionId?: string }; ip?: string; get?(name: string): string | undefined };
@@ -159,9 +159,8 @@ export class AuthController {
     return this.universitiesRepository.find({
       where: {
         status: "active",
-        name: SIBIT_UNIVERSITY.name,
-        city: SIBIT_UNIVERSITY.city,
       },
+      order: { name: "ASC", city: "ASC" },
       select: ["id", "name", "city"],
     });
   }

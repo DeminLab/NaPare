@@ -31,6 +31,10 @@ export class University {
   @Column({ type: 'int', default: 30 })
   importMassChangeThreshold: number;
 
+  /** Cabinet opt-in for exposing this university's imported timetable publicly. */
+  @Column({ type: 'boolean', default: false })
+  publicScheduleEnabled: boolean;
+
   @Column({
     type: 'enum',
     enum: ['active', 'inactive', 'pending'],

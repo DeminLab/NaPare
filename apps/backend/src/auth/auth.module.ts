@@ -7,7 +7,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
-import { SibitUniversityBootstrapService } from './sibit-university-bootstrap.service';
 import { UsersModule } from '../users/users.module';
 import { University } from '../users/entities/university.entity';
 import { AppConfig } from '../config/configuration';
@@ -32,7 +31,7 @@ import { TelemetryModule } from '../telemetry/telemetry.module';
       }),
     }),
   ],
-  providers: [AuthService, JwtStrategy, SibitUniversityBootstrapService],
+  providers: [AuthService, JwtStrategy],
   controllers: [AuthController],
   exports: [AuthService],
 })

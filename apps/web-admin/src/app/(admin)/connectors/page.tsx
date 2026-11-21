@@ -271,6 +271,7 @@ export default function ConnectorsPage() {
             Источники данных
           </h1>
           <p className="mt-2 max-w-2xl text-sm text-[var(--color-text-secondary)]">Состояние интеграций, синхронизация расписания и подключение учебных систем.</p>
+          <Link href="/onboarding?step=3" className="mt-3 inline-flex min-h-11 items-center text-sm font-semibold text-[var(--color-brand)] underline underline-offset-4">Вернуться к шагу импорта расписания →</Link>
         </div>
       </div>
       {connectors.length > 0 && <div className="metric-strip">

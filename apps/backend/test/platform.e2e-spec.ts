@@ -4,6 +4,7 @@ import { DataSource } from 'typeorm';
 import { createPlatformFixture } from './platform.fixture';
 import { bindPlatformOwner } from '../src/platform/bootstrap-owner';
 import { User } from '../src/users/entities/user.entity';
+import { University } from '../src/users/entities/university.entity';
 import { PlatformGrant } from '../src/platform/platform.entity';
 import { AuditLog } from '../src/common/entities/audit-log.entity';
 import { Test } from '@nestjs/testing';
@@ -58,8 +59,17 @@ suite('Platform owner and explicitly delegated rights: real PostgreSQL/JWT/HTTP'
   it('creates and edits a university and creates a usable account without exposing credentials',async()=>{
     // This scenario requires an undelegated developer; the preceding test grants accounts.write.
     await grant([]).expect(200);
+    await grant(['universities.write']).expect(200);
+    await http().post('/api/v1/platform/universities').auth(tokens.developer,{type:'bearer'}).send({name:'Не владелец',city:'Омск',status:'pending'}).expect(403);
+    await grant([]).expect(200);
     const uni=await http().post('/api/v1/platform/universities').auth(tokens.owner,{type:'bearer'}).send({name:'Тестовый вуз',city:'Омск',status:'pending'}).expect(201);
     await http().put('/api/v1/platform/universities/'+uni.body.id).auth(tokens.owner,{type:'bearer'}).send({name:'Тестовый вуз',city:'Омск',status:'active'}).expect(200);
+    const adminAccount={email:'university-admin@platform.example.test',firstName:'Администратор',lastName:'Вуза',role:'university_admin',organizationId:uni.body.id,password:'test-created-account-123'};
+    await http().post('/api/v1/platform/accounts').auth(tokens.owner,{type:'bearer'}).send(adminAccount).expect(201);
+    const universityAdminLogin=await http().post('/api/v1/auth/login').send({email:adminAccount.email,password:adminAccount.password}).expect(200);
+    await http().patch('/api/v1/admin/university').auth(universityAdminLogin.body.accessToken,{type:'bearer'}).send({status:'active'}).expect(400);
+    await http().patch('/api/v1/admin/university').auth(universityAdminLogin.body.accessToken,{type:'bearer'}).send({connectorType:'csv',publicScheduleEnabled:true}).expect(200);
+    expect((await f.db.getRepository(University).findOneByOrFail({id:uni.body.id})).status).toBe('active');
     const account={email:'new-user@platform.example.test',firstName:'Новый',lastName:'Студент',role:'student',organizationId:uni.body.id,password:'test-created-account-123'};
     await http().post('/api/v1/platform/accounts').send(account).expect(401);
     await http().post('/api/v1/platform/accounts').auth(tokens.developer,{type:'bearer'}).send(account).expect(403);

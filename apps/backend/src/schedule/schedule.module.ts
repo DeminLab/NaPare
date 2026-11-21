@@ -20,8 +20,12 @@ import { LessonSeries } from "../academic/entities/lesson-series.entity";
 import { ScheduleChange } from "../academic/entities/schedule-change.entity";
 import { Group } from "../users/entities/group.entity";
 import { User } from "../users/entities/user.entity";
+import { Faculty } from "../users/entities/faculty.entity";
+import { University } from "../users/entities/university.entity";
 import { CurationModule } from "../curation/curation.module";
 import { LessonIdentifierService } from "../common/identifiers/lesson-identifier.service";
+import { PublicScheduleController } from "./public-schedule.controller";
+import { PublicScheduleService } from "./public-schedule.service";
 
 @Module({
   imports: [
@@ -35,6 +39,8 @@ import { LessonIdentifierService } from "../common/identifiers/lesson-identifier
       ScheduleChange,
       Group,
       User,
+      Faculty,
+      University,
     ]),
     HttpModule,
     RaspModule,
@@ -49,8 +55,9 @@ import { LessonIdentifierService } from "../common/identifiers/lesson-identifier
     LessonIdentifierService,
     ScheduleSeriesService,
     ScheduleReadService,
+    PublicScheduleService,
   ],
-  controllers: [ScheduleController],
+  controllers: [ScheduleController, PublicScheduleController],
   exports: [ScheduleService, SibitConnectorService, LessonIdentifierService],
 })
 export class ScheduleModule {}

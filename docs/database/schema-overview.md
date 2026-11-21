@@ -6,7 +6,7 @@
 
 | Область | Основные таблицы | Источник |
 |---|---|---|
-| Учётные записи и организация | `universities`, `faculties`, `groups`, `teachers`, `users` | `apps/backend/src/users/entities/`, начальная миграция |
+| Учётные записи и организация | `universities`, `faculties`, `groups`, `teachers`, `users` | `apps/backend/src/users/entities/`, начальная миграция; миграция `1700000000054-PublicUniversitySchedule` добавляет `publicScheduleEnabled` (по умолчанию `false`) |
 | Расписание | `lessons`, `lesson_changes` | `apps/backend/src/schedule/entities/` |
 | Пространство пары | `pair_spaces`, `announcements`, `homeworks`, `homework_submissions`, `file_attachments`, `discussion_messages` | `apps/backend/src/pair-space/entities/` |
 | Учёт отсутствий | `absences`, `absence_confirmations`, `attendance_records` | `apps/backend/src/absences/`; таблица `attendance_qr_sessions` удалена миграцией `1700000000045-RemoveAttendanceQrSessions` |

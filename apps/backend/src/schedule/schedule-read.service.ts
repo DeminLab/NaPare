@@ -32,7 +32,9 @@ export interface ScheduleEntry {
   building: string | null;
   subgroup: string | null;
   pairNumber: number | null;
+  weekType?: 'odd' | 'even' | 'both';
   state: ScheduleEntryState;
+  isReplacement?: boolean;
   change: { type: ScheduleEntryState; reason: string | null } | null;
   lessonId: string | null;
   seriesId: string | null;
@@ -155,7 +157,11 @@ export class ScheduleReadService {
         building: lesson.building || null,
         subgroup: lesson.subgroup || null,
         pairNumber: lesson.pairNumber ?? null,
+        weekType: lesson.weekType === 'odd' || lesson.weekType === 'even' ? lesson.weekType : 'both',
         state: lesson.isChanged ? 'changed' : 'scheduled',
+        isReplacement: lesson.notes?.trim().toLocaleLowerCase('ru-RU') === 'замена'
+          || lesson.changeDescription?.trim().toLocaleLowerCase('ru-RU').startsWith('замена по источнику rasp.sano.ru') === true
+          || lesson.changeDescription?.trim().toLocaleLowerCase('ru-RU') === 'занятие изменено в источнике расписания',
         change: lesson.isChanged ? { type: 'changed', reason: lesson.changeDescription || null } : null,
         lessonId: lesson.id,
         seriesId: lesson.seriesId ?? null,
@@ -164,7 +170,7 @@ export class ScheduleReadService {
       return entry;
     });
 
-    const occurrenceEntries = occurrences.map(occurrence => {
+    const occurrenceEntries: ScheduleEntry[] = occurrences.map(occurrence => {
       const seriesRow = seriesById.get(occurrence.seriesId);
       const date = isoDate(new Date(occurrence.startsAt));
       const state: ScheduleEntryState = occurrence.status === 'cancelled'
@@ -188,6 +194,7 @@ export class ScheduleReadService {
         building: occurrence.building || null,
         subgroup: null,
         pairNumber: seriesRow?.pairNumber ?? null,
+        weekType: seriesRow?.weekType === 'odd' || seriesRow?.weekType === 'even' ? seriesRow.weekType : 'both',
         state,
         change: occurrence.changeReason ? { type: state, reason: occurrence.changeReason } : null,
         lessonId: occurrence.legacyLessonId ?? null,
@@ -209,6 +216,7 @@ export class ScheduleReadService {
             subjectType: entry.subjectType ?? legacy.subjectType,
             teacherName: entry.teacherName ?? legacy.teacherName,
             groupName: entry.groupName ?? legacy.groupName,
+            isReplacement: entry.isReplacement ?? legacy.isReplacement,
             lessonId: entry.lessonId ?? legacy.lessonId,
           }
         : entry);

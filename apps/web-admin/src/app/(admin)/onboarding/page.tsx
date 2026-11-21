@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { apiFetch, apiFetchAllPages, type Me } from '@/lib/api';
+import { useWorkspaceQuery } from '@napare/ui/workspace-shell';
 import { Button, Card, RequestState } from '@/components/ui';
 import StructureStep from './StructureStep';
 import AdministratorStep from './AdministratorStep';
@@ -10,7 +11,7 @@ import ImportStep from './ImportStep';
 import ReadinessStep from './ReadinessStep';
 import { errorMessage, fieldClass, type Account, type Faculty, type Group, type University } from './types';
 
-const steps = ['Вуз', 'Факультеты и группы', 'Администратор', 'Импорт расписания', 'Готовность'];
+const steps = ['Вуз', 'Факультеты и группы', 'Администратор', 'Импорт расписания', 'Готовность', 'Публикация'];
 type Profile = Me & { role: string };
 export default function OnboardingPage() {
   const [profile, setProfile] = useState<Profile | null>(null), [owner, setOwner] = useState(false), [allowed, setAllowed] = useState(false);
@@ -20,6 +21,10 @@ export default function OnboardingPage() {
   const [dataReady, setDataReady] = useState(false);
   const [step, setStep] = useState(0), [form, setForm] = useState({ name: '', city: '' });
   const heading = useRef<HTMLHeadingElement>(null), generation = useRef(0);
+  useWorkspaceQuery({ step: String(step) }, query => {
+    const requested = Number(query.get('step'));
+    if (Number.isInteger(requested) && requested >= 0 && requested < steps.length) setStep(current => owner ? Math.min(requested, 2) : requested);
+  });
   const load = useCallback(async () => {
     setLoading(true); setError('');
     try {
@@ -27,6 +32,7 @@ export default function OnboardingPage() {
       if (['developer', 'superadmin'].includes(actor.role)) {
         const access = await apiFetch<{ owner: boolean }>('/platform/access');
         setOwner(access.owner); setAllowed(access.owner);
+        if (access.owner) setStep(current => Math.min(current, 2));
         if (access.owner) { setUniversities(await apiFetchAllPages<University>('/platform/universities')); setUncertain(false); }
       } else {
         setOwner(false); setAllowed(actor.role === 'university_admin' && !!actor.organizationId);
@@ -73,7 +79,7 @@ export default function OnboardingPage() {
       {!university && <form onSubmit={event => void createUniversity(event)} className="mt-5 grid max-w-xl gap-4"><label className="grid gap-2 text-sm font-semibold">Название вуза<input required maxLength={200} className={fieldClass} value={form.name} onChange={event => setForm(current => ({ ...current, name: event.target.value }))} /></label><label className="grid gap-2 text-sm font-semibold">Город<input required maxLength={100} className={fieldClass} value={form.city} onChange={event => setForm(current => ({ ...current, city: event.target.value }))} /></label><p className="text-sm text-slate-600">Статус новой записи — «Ожидает активации». Сначала завершите учебную и эксплуатационную проверку.</p><Button type="submit" loading={busy} disabled={busy || uncertain || !form.name.trim() || !form.city.trim()}>Создать вуз</Button></form>}
     </> : <p className="mt-4">{university?.name} · {university?.city}. Для исправления откройте <Link href="/university" className="font-semibold text-indigo-700 underline">настройки</Link>. Новый вуз создаёт владелец платформы.</p>}</Card>}
     {university && step > 0 && !dataReady && <Card><p role="status">Структура и аккаунты ещё не загружены. При ошибке перечитайте данные, прежде чем создавать записи.</p></Card>}
-    {university && dataReady && <div key={university.id}>{step === 1 && <StructureStep organizationId={university.id} owner={owner} faculties={faculties} groups={groups} reload={reload} />}{step === 2 && <AdministratorStep organizationId={university.id} owner={owner} users={users} reload={reload} />}{step === 3 && !owner && profile && <ImportStep actorId={profile.id} organizationId={university.id} groups={groups} />}{step === 4 && !owner && <ReadinessStep university={university} />}</div>}
-    <div className="flex flex-wrap items-center justify-between gap-3"><Button variant="secondary" disabled={step === 0 || busy} onClick={() => setStep(value => value - 1)}>Предыдущий шаг</Button>{step < (owner ? 2 : 4) && <Button disabled={!university || busy} onClick={() => setStep(value => value + 1)}>Следующий шаг</Button>}</div>
+    {university && dataReady && <div key={university.id}>{step === 1 && <StructureStep organizationId={university.id} owner={owner} faculties={faculties} groups={groups} reload={reload} />}{step === 2 && <AdministratorStep organizationId={university.id} owner={owner} users={users} reload={reload} />}{step === 3 && !owner && profile && <ImportStep actorId={profile.id} organizationId={university.id} groups={groups} />}{step === 4 && !owner && <ReadinessStep university={university} />}{step === 5 && !owner && <Card><h2 className="text-xl font-bold text-slate-950">Опубликовать расписание</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">После импорта и проверки откройте настройки публикации. Публичная страница показывает только данные, которые вуз разрешил публиковать; до включения публикации расписание остаётся доступно в кабинете.</p><div className="mt-5 flex flex-wrap gap-3"><Link href="/university?section=publication" className="inline-flex min-h-11 items-center rounded-xl bg-indigo-700 px-4 font-semibold text-white hover:bg-indigo-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-300">Настроить публикацию</Link><Link href="/schedule" className="inline-flex min-h-11 items-center rounded-xl border border-slate-300 px-4 font-semibold text-slate-800 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-200">Открыть публичное расписание</Link></div></Card>}</div>}
+    <div className="flex flex-wrap items-center justify-between gap-3"><Button variant="secondary" disabled={step === 0 || busy} onClick={() => setStep(value => value - 1)}>Предыдущий шаг</Button>{step < (owner ? 2 : 5) && <Button disabled={!university || busy} onClick={() => setStep(value => value + 1)}>Следующий шаг</Button>}</div>
   </div>;
 }

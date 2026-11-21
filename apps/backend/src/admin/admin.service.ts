@@ -580,7 +580,16 @@ export class AdminService {
     updateData: UpdateUniversityDto,
   ): Promise<University> {
     const university = await this.getUniversity(organizationId);
-    Object.assign(university, updateData);
+    // Tenant administrators can configure the university and its imports, but
+    // lifecycle status is controlled by the platform owner only.
+    Object.assign(university, {
+      name: updateData.name,
+      city: updateData.city,
+      connectorType: updateData.connectorType,
+      connectorConfig: updateData.connectorConfig,
+      importMassChangeThreshold: updateData.importMassChangeThreshold,
+      publicScheduleEnabled: updateData.publicScheduleEnabled,
+    });
     return this.universityRepository.save(university);
   }
 

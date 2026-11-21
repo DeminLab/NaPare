@@ -12,7 +12,7 @@ import {
 } from '../common/dto/pagination-query.dto';
 import { ConnectorResponseDto } from './dto/connector-response.dto';
 import { CreateUniversityDto } from './dto/create-university.dto';
-import { UpdateUniversityDto } from './dto/update-university.dto';
+import { UpdateUniversityLifecycleDto } from './dto/update-university-lifecycle.dto';
 import { UpdateConnectorDto } from './dto/update-connector.dto';
 
 @Injectable()
@@ -42,7 +42,7 @@ export class SuperadminService {
     return this.universityRepository.save(university);
   }
 
-  async updateUniversity(id: string, updateData: UpdateUniversityDto): Promise<University> {
+  async updateUniversity(id: string, updateData: UpdateUniversityLifecycleDto): Promise<University> {
     const university = await this.universityRepository.findOne({ where: { id } });
 
     if (!university) {

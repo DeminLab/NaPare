@@ -4,8 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Icon } from "@napare/ui";
 import styles from "./schedule.module.css";
 
-type AcademicYear = { value: string; label: string };
-type StudyGroup = { groupId: string; name: string; faculty: string; course: number; academicYear: string };
+type University = { id: string; name: string; city: string };
+type StudyGroup = { id: string; name: string; faculty?: string | null };
 type Lesson = {
   lessonId: string;
   date: string;
@@ -21,10 +21,14 @@ type Lesson = {
   isReplacement: boolean;
 };
 
-const API = "/api/v1/auth";
+const API = "/api/v1/public/schedule";
 
 async function readPublic<T>(path: string, signal: AbortSignal): Promise<T> {
-  const response = await fetch(`${API}${path}`, { signal, credentials: "omit", headers: { Accept: "application/json" } });
+  const response = await fetch(`${API}${path}`, {
+    signal,
+    credentials: "omit",
+    headers: { Accept: "application/json" },
+  });
   if (!response.ok) throw new Error("schedule-source-unavailable");
   return response.json() as Promise<T>;
 }
@@ -46,79 +50,57 @@ function dateKey(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
-function displayDate(value: string, options: Intl.DateTimeFormatOptions): string {
-  const parsed = new Date(`${value}T12:00:00`);
-  return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleDateString("ru-RU", options);
-}
-
 function friendlySourceError() {
-  return "Не удалось получить расписание из открытого источника. Попробуйте ещё раз позже.";
+  return "Не удалось получить опубликованное расписание. Попробуйте ещё раз.";
 }
 
 export function PublicSchedule() {
-  const [years, setYears] = useState<AcademicYear[]>([]);
-  const [year, setYear] = useState("");
+  const [universities, setUniversities] = useState<University[]>([]);
+  const [universityId, setUniversityId] = useState("");
   const [groups, setGroups] = useState<StudyGroup[]>([]);
   const [groupId, setGroupId] = useState("");
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [search, setSearch] = useState("");
   const [groupQuery, setGroupQuery] = useState("");
   const [week, setWeek] = useState(() => mondayOf(new Date()));
-  const [yearLoading, setYearLoading] = useState(true);
+  const [universitiesLoading, setUniversitiesLoading] = useState(true);
   const [groupsLoading, setGroupsLoading] = useState(false);
   const [lessonsLoading, setLessonsLoading] = useState(false);
-  const [yearError, setYearError] = useState(false);
+  const [universitiesError, setUniversitiesError] = useState(false);
   const [groupsError, setGroupsError] = useState(false);
   const [lessonsError, setLessonsError] = useState(false);
-  const [yearsRetry, setYearsRetry] = useState(0);
+  const [universitiesRetry, setUniversitiesRetry] = useState(0);
   const [groupsRetry, setGroupsRetry] = useState(0);
   const [lessonsRetry, setLessonsRetry] = useState(0);
 
   useEffect(() => {
     const controller = new AbortController();
-    setYearLoading(true);
-    setYearError(false);
-    void readPublic<AcademicYear[]>("/rasp-years", controller.signal)
+    setUniversitiesLoading(true);
+    setUniversitiesError(false);
+    void readPublic<University[]>("/universities", controller.signal)
       .then((result) => {
-        setYears(result);
-        setYear((current) => result.some((item) => item.value === current) ? current : result.at(-1)?.value || "");
+        setUniversities(result);
+        setUniversityId((current) => result.some((item) => item.id === current) ? current : result[0]?.id || "");
       })
-      .catch(() => { if (!controller.signal.aborted) setYearError(true); })
-      .finally(() => { if (!controller.signal.aborted) setYearLoading(false); });
+      .catch(() => { if (!controller.signal.aborted) setUniversitiesError(true); })
+      .finally(() => { if (!controller.signal.aborted) setUniversitiesLoading(false); });
     return () => controller.abort();
-  }, [yearsRetry]);
+  }, [universitiesRetry]);
 
   useEffect(() => {
-    if (!year) { setGroups([]); setGroupId(""); return; }
+    if (!universityId) { setGroups([]); setGroupId(""); return; }
     const controller = new AbortController();
     setGroupsLoading(true);
     setGroupsError(false);
-    void readPublic<StudyGroup[]>(`/rasp-groups?year=${encodeURIComponent(year)}`, controller.signal)
-      .then((result) => {
-        setGroups(result);
-        setGroupId((current) => result.some((group) => group.groupId === current) ? current : "");
-      })
+    setGroups([]);
+    setGroupId("");
+    setLessons([]);
+    void readPublic<StudyGroup[]>(`/universities/${encodeURIComponent(universityId)}/groups`, controller.signal)
+      .then((result) => setGroups(result))
       .catch(() => { if (!controller.signal.aborted) { setGroups([]); setGroupsError(true); } })
       .finally(() => { if (!controller.signal.aborted) setGroupsLoading(false); });
     return () => controller.abort();
-  }, [year, groupsRetry]);
-
-  useEffect(() => {
-    if (!year || !groupId) { setLessons([]); return; }
-    const controller = new AbortController();
-    setLessonsLoading(true);
-    setLessonsError(false);
-    void readPublic<Lesson[]>(`/rasp-schedule?groupId=${encodeURIComponent(groupId)}&year=${encodeURIComponent(year)}`, controller.signal)
-      .then((result) => setLessons(result))
-      .catch(() => { if (!controller.signal.aborted) { setLessons([]); setLessonsError(true); } })
-      .finally(() => { if (!controller.signal.aborted) setLessonsLoading(false); });
-    return () => controller.abort();
-  }, [year, groupId, lessonsRetry]);
-
-  const filteredGroups = useMemo(() => {
-    const query = groupQuery.trim().toLocaleLowerCase("ru-RU");
-    return groups.filter((group) => !query || `${group.name} ${group.faculty} ${group.course}`.toLocaleLowerCase("ru-RU").includes(query));
-  }, [groups, groupQuery]);
+  }, [universityId, groupsRetry]);
 
   const weekDates = useMemo(() => Array.from({ length: 7 }, (_, index) => {
     const date = new Date(week);
@@ -126,20 +108,43 @@ export function PublicSchedule() {
     return date;
   }), [week]);
 
+  useEffect(() => {
+    if (!universityId || !groupId) { setLessons([]); return; }
+    const controller = new AbortController();
+    const query = new URLSearchParams({
+      organizationId: universityId,
+      groupId,
+      from: dateKey(weekDates[0]),
+      to: dateKey(weekDates[6]),
+    });
+    setLessonsLoading(true);
+    setLessonsError(false);
+    setLessons([]);
+    void readPublic<Lesson[]>(`/lessons?${query.toString()}`, controller.signal)
+      .then((result) => setLessons(result))
+      .catch(() => { if (!controller.signal.aborted) setLessonsError(true); })
+      .finally(() => { if (!controller.signal.aborted) setLessonsLoading(false); });
+    return () => controller.abort();
+  }, [universityId, groupId, weekDates, lessonsRetry]);
+
+  const filteredGroups = useMemo(() => {
+    const query = groupQuery.trim().toLocaleLowerCase("ru-RU");
+    return groups.filter((group) => !query || `${group.name} ${group.faculty || ""}`.toLocaleLowerCase("ru-RU").includes(query));
+  }, [groups, groupQuery]);
+
   const lessonsByDay = useMemo(() => {
-    const from = dateKey(weekDates[0]);
-    const to = dateKey(weekDates[6]);
     const query = search.trim().toLocaleLowerCase("ru-RU");
     return weekDates.map((date) => {
       const key = dateKey(date);
       const dayLessons = lessons
-        .filter((lesson) => lesson.date === key && (!query || `${lesson.subject} ${lesson.teacher || ""} ${lesson.room || ""}`.toLocaleLowerCase("ru-RU").includes(query)))
+        .filter((lesson) => lesson.date.slice(0, 10) === key && (!query || `${lesson.subject} ${lesson.teacher || ""} ${lesson.room || ""}`.toLocaleLowerCase("ru-RU").includes(query)))
         .sort((a, b) => a.startTime.localeCompare(b.startTime));
       return { date: key, label: date.toLocaleDateString("ru-RU", { weekday: "long" }), short: date.toLocaleDateString("ru-RU", { day: "numeric", month: "short" }), lessons: dayLessons };
-    }).filter((day) => day.date >= from && day.date <= to);
+    });
   }, [lessons, search, weekDates]);
 
-  const selectedGroup = groups.find((group) => group.groupId === groupId);
+  const selectedGroup = groups.find((group) => group.id === groupId);
+  const selectedUniversity = universities.find((university) => university.id === universityId);
   const rangeLabel = `${weekDates[0].toLocaleDateString("ru-RU", { day: "numeric", month: "long" })} — ${weekDates[6].toLocaleDateString("ru-RU", { day: "numeric", month: "long" })}`;
 
   return (
@@ -147,40 +152,46 @@ export function PublicSchedule() {
       <aside className="schedule-picker">
         <div className="schedule-picker-heading">
           <span className="schedule-picker-symbol" aria-hidden="true"><Icon name="layers" size={24} /></span>
-          <div><h2>Найдите свою группу</h2><p>Открытый каталог СИБИТа</p></div>
+          <div><h2>Расписание вузов</h2><p>Публикации из кабинетов университетов</p></div>
         </div>
         <label className="schedule-field">
-          <span>Учебный год</span>
-          <select value={year} disabled={yearLoading || yearError || years.length === 0} onChange={(event) => { setGroupId(""); setLessons([]); setYear(event.target.value); }}>
-            {yearLoading && <option value="">Загружаем…</option>}
-            {yearError && <option value="">Источник недоступен</option>}
-            {!yearLoading && !yearError && years.length === 0 && <option value="">Нет учебных лет</option>}
-            {years.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+          <span>Университет</span>
+          <select
+            value={universityId}
+            disabled={universitiesLoading || universitiesError || universities.length === 0}
+            onChange={(event) => { setGroupId(""); setLessons([]); setGroupQuery(""); setUniversityId(event.target.value); }}
+          >
+            {universitiesLoading && <option value="">Загружаем…</option>}
+            {universitiesError && <option value="">Список недоступен</option>}
+            {!universitiesLoading && !universitiesError && universities.length === 0 && <option value="">Пока нет опубликованных вузов</option>}
+            {universities.map((university) => <option key={university.id} value={university.id}>{university.name} · {university.city}</option>)}
           </select>
         </label>
-        <label className="schedule-field">
-          <span>Группа или факультет</span>
-          <input value={groupQuery} onChange={(event) => setGroupQuery(event.target.value)} placeholder="Например, ИВТ" disabled={!groups.length} />
-        </label>
-        {groupsLoading && <p className="schedule-state" role="status">Загружаем список групп…</p>}
-        {yearError && <div className="schedule-error" role="alert"><p>{friendlySourceError()}</p><button type="button" onClick={() => setYearsRetry((value) => value + 1)}>Повторить</button></div>}
-        {groupsError && !yearError && <div className="schedule-error" role="alert"><p>{friendlySourceError()}</p><button type="button" onClick={() => setGroupsRetry((value) => value + 1)}>Повторить</button></div>}
-        {!groupsLoading && !groupsError && groups.length > 0 && <p className="schedule-result-count">Найдено групп: {filteredGroups.length}</p>}
-        {!groupsLoading && !groupsError && groups.length > 0 && <div className="schedule-group-list" aria-label="Группы СИБИТа">
-          {filteredGroups.map((group) => (
-            <button key={group.groupId} type="button" aria-pressed={groupId === group.groupId} className={groupId === group.groupId ? "schedule-group-option is-selected" : "schedule-group-option"} onClick={() => { setLessons([]); setLessonsLoading(true); setLessonsError(false); setGroupId(group.groupId); }}>
-              <strong>{group.name}</strong><span>{group.faculty} · {group.course} курс</span>
-            </button>
-          ))}
-          {filteredGroups.length === 0 && <p className="schedule-list-empty">По этому запросу групп не найдено.</p>}
-        </div>}
-        {!yearLoading && !yearError && !groupsLoading && groups.length === 0 && !groupsError && <p className="schedule-state">В выбранном учебном году пока нет опубликованных групп.</p>}
-        <a className="schedule-source-link" href="https://rasp.sano.ru/WebApp/#/Rasp/List" target="_blank" rel="noreferrer">Открыть источник СИБИТа <Icon name="arrow-right" size={15} /></a>
+        {universitiesError && <div className="schedule-error" role="alert"><p>{friendlySourceError()}</p><button type="button" onClick={() => setUniversitiesRetry((value) => value + 1)}>Повторить</button></div>}
+        {!universitiesLoading && !universitiesError && universities.length === 0 && <p className="schedule-state">Вузы пока не включили публичную публикацию расписания.</p>}
+        {selectedUniversity && <>
+          <label className="schedule-field">
+            <span>Группа или факультет</span>
+            <input value={groupQuery} onChange={(event) => setGroupQuery(event.target.value)} placeholder="Например, ИН-25" disabled={!groups.length} />
+          </label>
+          {groupsLoading && <p className="schedule-state" role="status">Загружаем группы из кабинета…</p>}
+          {groupsError && <div className="schedule-error" role="alert"><p>{friendlySourceError()}</p><button type="button" onClick={() => setGroupsRetry((value) => value + 1)}>Повторить</button></div>}
+          {!groupsLoading && !groupsError && groups.length > 0 && <p className="schedule-result-count">Найдено групп: {filteredGroups.length}</p>}
+          {!groupsLoading && !groupsError && groups.length > 0 && <div className="schedule-group-list" aria-label={`Группы вуза ${selectedUniversity.name}`}>
+            {filteredGroups.map((group) => (
+              <button key={group.id} type="button" aria-pressed={groupId === group.id} className={groupId === group.id ? "schedule-group-option is-selected" : "schedule-group-option"} onClick={() => { setLessons([]); setLessonsLoading(true); setLessonsError(false); setGroupId(group.id); }}>
+                <strong>{group.name}</strong><span>{group.faculty || selectedUniversity.city}</span>
+              </button>
+            ))}
+            {filteredGroups.length === 0 && <p className="schedule-list-empty">По этому запросу групп не найдено.</p>}
+          </div>}
+          {!groupsLoading && !groupsError && groups.length === 0 && <p className="schedule-state">У этого вуза пока нет опубликованных групп.</p>}
+        </>}
       </aside>
 
       <section className="schedule-results" aria-labelledby="public-schedule-title">
         <header className="schedule-results-heading">
-          <div><p className="eyebrow">Расписание группы</p><h2 id="public-schedule-title" tabIndex={-1}>{selectedGroup?.name || "Выберите группу"}</h2><p>{selectedGroup ? `${selectedGroup.faculty} · ${year}` : "Занятия выбранной группы появятся здесь"}</p></div>
+          <div><p className="eyebrow">{selectedUniversity?.name || "Открытая публикация"}</p><h2 id="public-schedule-title" tabIndex={-1}>{selectedGroup?.name || "Выберите группу"}</h2><p>{selectedGroup ? `${selectedGroup.faculty ? `${selectedGroup.faculty} · ` : ""}${selectedUniversity?.city || ""}` : "Показываем расписание, опубликованное вузами в кабинетах"}</p></div>
           <div className="schedule-week-controls" aria-label="Выбор недели">
             <button type="button" aria-label="Предыдущая неделя" onClick={() => setWeek((current) => moveWeek(current, -1))}><Icon name="chevron-left" size={17} /></button>
             <span><Icon name="calendar" size={15} />{rangeLabel}</span>
@@ -189,8 +200,8 @@ export function PublicSchedule() {
           </div>
         </header>
         <label className={`schedule-search ${styles.searchField}`}><span className="sr-only">Поиск по занятиям</span><span className={styles.searchIcon} aria-hidden="true"><Icon name="search" size={21} /></span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Предмет, преподаватель или аудитория" disabled={!selectedGroup} /></label>
-        {!selectedGroup && <div className="schedule-empty-prompt"><span aria-hidden="true"><Icon name="calendar" size={25} /></span><strong>Начните с выбора группы</strong><p>Найдите её в каталоге слева — покажем занятия на выбранную неделю.</p></div>}
-        {lessonsLoading && selectedGroup && <p className="schedule-state schedule-loading" role="status" aria-busy="true">Получаем расписание выбранной группы…</p>}
+        {!selectedGroup && <div className="schedule-empty-prompt"><span aria-hidden="true"><Icon name="calendar" size={25} /></span><strong>{universities.length ? "Выберите вуз и группу" : "Публичных расписаний пока нет"}</strong><p>{universities.length ? "Выберите университет, затем найдите группу из опубликованной структуры." : "Университеты появятся здесь после включения публикации в их кабинетах."}</p></div>}
+        {lessonsLoading && selectedGroup && <p className="schedule-state schedule-loading" role="status" aria-busy="true">Загружаем опубликованное расписание…</p>}
         {lessonsError && selectedGroup && <div className="schedule-error schedule-error-main" role="alert"><p>{friendlySourceError()}</p><button type="button" onClick={() => setLessonsRetry((value) => value + 1)}>Загрузить ещё раз</button></div>}
         {selectedGroup && !lessonsLoading && !lessonsError && <>
           <div className="schedule-day-list">
@@ -209,9 +220,9 @@ export function PublicSchedule() {
               </section>
             ))}
           </div>
-          {!lessons.length && <p className="schedule-state schedule-no-data">Источник пока не опубликовал занятия для этой группы.</p>}
+          {!lessons.length && <p className="schedule-state schedule-no-data">В выбранной неделе нет опубликованных занятий.</p>}
         </>}
-        <p className="schedule-privacy-note">Публичная версия содержит только сведения об учебных занятиях из открытого источника. Персональные данные и материалы кабинета здесь не показываются.</p>
+        <p className="schedule-privacy-note">Публично показываются только расписания, которые вузы включили для публикации. Персональные данные и материалы кабинетов не выводятся.</p>
       </section>
     </div>
   );
