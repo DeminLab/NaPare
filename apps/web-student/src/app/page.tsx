@@ -15,6 +15,7 @@ const faqs = [
 
 function ProductPreview({ large = false }: { large?: boolean }) {
   return <div className={`overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_24px_70px_rgba(30,64,175,0.15)] ${large ? 'w-full' : 'w-full max-w-[640px]'}`}>
+    <p className="border-b border-indigo-100 bg-indigo-50 px-4 py-2 text-xs font-medium text-indigo-800">Пример интерфейса · данные демонстрационные</p>
     <div className="flex h-9 items-center gap-2 border-b border-slate-100 bg-white px-3"><span className="h-2 w-2 rounded-full bg-red-300"/><span className="h-2 w-2 rounded-full bg-amber-300"/><span className="h-2 w-2 rounded-full bg-emerald-300"/><div className="ml-4 h-5 flex-1 rounded-md bg-slate-50"/></div>
     <div className="grid min-h-[320px] grid-cols-[112px_1fr] sm:grid-cols-[148px_1fr]">
       <aside className="bg-slate-950 p-3 text-white"><div className="mb-7 flex items-center gap-2 text-xs font-bold"><span className="flex h-6 w-6 items-center justify-center rounded-md bg-indigo-500">Н</span>НаПаре</div><div className="space-y-1 text-[10px] text-white/55">{navItems.map((item, index) => <div key={item} className={`rounded-md px-2 py-2 ${index === 0 ? 'bg-indigo-500 text-white' : ''}`}>{['⌂', '▦', '✓', '◉', '◌'][index]} <span className="ml-1">{item}</span></div>)}</div></aside>

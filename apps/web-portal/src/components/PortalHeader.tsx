@@ -1,17 +1,19 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 const links = [
-  ["/#problem", "Зачем"],
-  ["/#features", "Возможности"],
-  ["/#roles", "Роли"],
-  ["/#career", "Практика"],
-  ["/#launch", "Университету"],
-  ["/#how", "Как начать"],
-  ["/#faq", "Вопросы"],
+  ["/schedule", "Расписание"],
+  ["/career-center", "Карьерный центр"],
+  ["/universities", "Университетам"],
+  ["/employers", "Работодателям"],
+  ["/pricing", "Стоимость"],
 ] as const;
 
 export function PortalHeader() {
+  const pathname = usePathname();
   return (
     <header className="portal-header">
       <Link href="/" className="brand">
@@ -27,9 +29,9 @@ export function PortalHeader() {
       </Link>
       <nav className="portal-nav" aria-label="Разделы сайта">
         {links.map(([href, label]) => (
-          <a key={href} href={href}>
+        <Link key={href} href={href} aria-current={pathname === href ? "page" : undefined}>
             {label}
-          </a>
+          </Link>
         ))}
       </nav>
       <details className="portal-menu">
@@ -41,13 +43,13 @@ export function PortalHeader() {
         </summary>
         <nav id="mobile-page-nav" className="portal-menu-panel" aria-label="Разделы сайта">
           {links.map(([href, label]) => (
-            <a key={href} href={href}>
+            <Link key={href} href={href} aria-current={pathname === href ? "page" : undefined}>
               {label}
-            </a>
+            </Link>
           ))}
         </nav>
       </details>
-      <Link href="/login" className="text-link">
+      <Link href="/login" className="text-link" aria-current={pathname === "/login" ? "page" : undefined}>
         Войти
       </Link>
     </header>

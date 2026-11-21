@@ -1,0 +1,23 @@
+.capIcon,
+.workIcon {
+  align-items: center;
+  backdrop-filter: blur(14px);
+  background: rgb(97 127 233 / .48);
+  border: 1px solid rgb(255 255 255 / .24);
+  border-radius: 16px;
+  box-shadow: 0 12px 24px rgb(0 0 0 / .2), inset 0 1px rgb(255 255 255 / .3);
+  color: #f4f7ff;
+  display: flex;
+  height: 64px;
+  justify-content: center;
+  position: absolute;
+  width: 64px;
+}
+
+.capIcon { left: 9px; top: -26px; transform: rotate(-13deg); }
+.workIcon { bottom: 17px; right: -16px; transform: rotate(12deg); }
+
+@media (max-width: 720px) {
+  .capIcon { left: 3px; top: -17px; }
+  .workIcon { bottom: 7px; right: -6px; }
+}

@@ -9,7 +9,7 @@ import { useCurationContext } from '@napare/ui/curation';
 
 const groups: WorkspaceNavGroup[] = [
   { label: 'Главное', items: [{ href: '/today', label: 'Сегодня', icon: 'home', keywords: ['мой день', 'сейчас', 'дальше'] }, { href: '/week', activePaths: ['/month'], label: 'Расписание', icon: 'calendar', keywords: ['день', 'неделя', 'месяц'] }, { href: '/pair-space', label: 'Подготовка', mobileLabel: 'К паре', icon: 'book', keywords: ['материалы', 'задания', 'пространства пар'] }, { href: '/notifications', label: 'Уведомления', mobileLabel: 'Увед.', icon: 'bell' }] },
-  { label: 'Другие действия', items: [{ href: '/absences', label: 'Сообщить об отсутствии', icon: 'clipboard' }, { href: '/groups', label: 'Избранное расписание', icon: 'users' }] },
+  { label: 'Учебный процесс', items: [{ href: '/semester', label: 'Мой семестр', icon: 'book' }, { href: '/attendance', label: 'Посещаемость', icon: 'chart' }, { href: '/absences', label: 'Отсутствия', icon: 'clipboard' }, { href: '/groups', label: 'Избранное расписание', icon: 'users' }] },
   { label: 'Аккаунт', items: [{ href: '/profile', label: 'Профиль', icon: 'user' }, { href: '/settings', label: 'Настройки', icon: 'settings' }, { href: '/connections', label: 'Подключения аккаунта', icon: 'plug' }] },
 ];
 
@@ -43,6 +43,6 @@ export default function StudentShell({ children }: { children: ReactNode }) {
   // No blocking gate: the shell (menu, header) renders immediately, even before the first API answer.
   const name = user ? user.firstName + ' ' + user.lastName : '';
   const curationItems: WorkspaceNavGroup['items'] = curation?.canCurate || curation?.canManage ? [{ href: '/curation', label: 'Кураторство', icon: 'users', keywords: ['куратор', 'назначения'] }] : [];
-  const resolvedGroups = groups.map(group => ({ ...group, items: [...group.items, ...(group.label === 'Другие действия' ? curationItems : [])].map(item => item.href === '/notifications' ? { ...item, badge: unread } : item) }));
+  const resolvedGroups = groups.map(group => ({ ...group, items: [...group.items, ...(group.label === 'Учебный процесс' ? curationItems : [])].map(item => item.href === '/notifications' ? { ...item, badge: unread } : item) }));
   return <WorkspaceShell className="student-workspace-shell" LinkComponent={AppLink} pathname={pathname} groups={resolvedGroups} roleLabel="Студент" homeHref="/today" user={user ? { name, role: user.groupName || 'Студент', id: user.id } : undefined} unreadCount={unread} commands={commands} onSearch={searchWorkspace} searchPlaceholder="Предмет, преподаватель, материал или раздел…" mobileHrefs={['/today', '/week', '/pair-space', '/notifications']} onLogout={logout}>{children}</WorkspaceShell>;
 }

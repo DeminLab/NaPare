@@ -1,6 +1,6 @@
 # System overview
 
-**Current implementation reference, reviewed 2026-09-29.** The diagram shows services in the production Compose topology. It does not imply that optional providers or every route have production runtime verification.
+**Static implementation reference; tenant/RLS and notification-queue statements reviewed 2026-11-20.** The diagram shows services in the production Compose topology. It does not imply that optional providers or every route have production runtime verification.
 
 ```mermaid
 flowchart LR
@@ -30,14 +30,14 @@ Added 2026-10-16: [curatorship](../product/account-curatorship.md) uses group as
 
 ## Tenant and role checks
 
-The backend uses university context, role guards and resource checks in services/controllers. PostgreSQL RLS policies are not present in migrations. See [role boundaries](roles-and-permissions.md) and [schema overview](../database/schema-overview.md).
+The backend uses university context, role guards and resource checks in services/controllers. Migration [`1700000000029-TenantRowSecurity`](../../apps/backend/src/migrations/1700000000029-TenantRowSecurity.ts) installs restrictive tenant policies and enables `FORCE ROW LEVEL SECURITY`; startup checks the configured database role and policy coverage in [`tenant-database.ts`](../../apps/backend/src/common/tenant/tenant-database.ts). This is source-level behavior, not proof that migrations ran successfully or that a particular database has the required policies. See [role boundaries](roles-and-permissions.md) and [schema overview](../database/schema-overview.md).
 
 ## Integration status
 
 | Component | Repository state |
 |---|---|
-| PostgreSQL | Production and development Compose service; TypeORM entities/migrations |
-| Redis | Compose service exists; backend client and queue integration are not connected |
+| PostgreSQL | Production and development Compose service; TypeORM entities/migrations, including tenant RLS; application startup checks role and policy coverage |
+| Redis | Compose service exists; the notification outbox uses a BullMQ queue and worker through ioredis when `NOTIFICATIONS_QUEUE_ENABLED=true`; sending additionally requires `NOTIFICATIONS_DELIVERY_ENABLED=true` and an enabled, configured provider |
 | SIBIT schedule source | Backend connector and bounded student group schedule reads |
 | Excel schedule | Admin flow exists; see current limitations in [schedule module](../modules/schedule.md) |
 | Moodle | Site-info test and encrypted connector credentials; no LMS content sync |
