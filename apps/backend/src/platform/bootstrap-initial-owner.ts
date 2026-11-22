@@ -53,8 +53,12 @@ export async function createInitialPlatformOwner(
     const existingOwner = await manager.query('SELECT id FROM platform_control LIMIT 1');
     if (existingOwner.length) throw new Error('A platform owner is already configured; refusing to replace it.');
 
-    const [{ count }] = await manager.query('SELECT COUNT(*)::int AS count FROM users');
-    if (Number(count) !== 0) throw new Error('Initial owner bootstrap is allowed only when the users table is empty.');
+    const existingPlatformAccounts = await manager.query(
+      `SELECT id FROM users WHERE role IN ('developer', 'superadmin') LIMIT 1`,
+    );
+    if (existingPlatformAccounts.length) {
+      throw new Error('A developer/superadmin account already exists; bind that existing account with bootstrap-owner instead.');
+    }
 
     const [user] = await manager.query(
       `INSERT INTO users (email, "passwordHash", "firstName", "lastName", role, "organizationId", "isActive")
