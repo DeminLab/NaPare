@@ -28,6 +28,6 @@ export const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export const isValidPhone = (phone: string): boolean => phoneRegex.test(phone);
 export const isValidEmail = (email: string): boolean => emailRegex.test(email);
-export const isValidPassword = (password: string): boolean => password.length >= 8;
+export const isValidPassword = (password: string): boolean => password.length >= 6;
 export const isValidUUID = (id: string): boolean =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);

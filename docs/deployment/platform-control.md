@@ -19,7 +19,7 @@ node dist/platform/bootstrap-owner.js --email existing-owner@example.org
 Пример для Linux shell на сервере; пароль вводится скрыто и не попадает в shell history:
 
 ```sh
-read -r -s -p 'Новый пароль владельца (минимум 12 символов): ' INITIAL_OWNER_PASSWORD
+read -r -s -p 'Новый пароль владельца (минимум 6 символов): ' INITIAL_OWNER_PASSWORD
 printf '\n'
 printf '%s\n' "$INITIAL_OWNER_PASSWORD" | docker compose --env-file .env -f docker-compose.prod.yml exec -T backend \
   node dist/platform/bootstrap-initial-owner.js \

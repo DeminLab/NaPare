@@ -8,9 +8,9 @@ export class CreateUniversityUserDto {
   @IsEmail()
   email: string;
 
-  @ApiProperty({ example: 'temporary-password-2026' })
+  @ApiProperty({ example: 'temporary-password-2026', minLength: 6 })
   @IsString()
-  @MinLength(10)
+  @MinLength(6)
   password: string;
 
   @ApiProperty({ example: 'Анна' })

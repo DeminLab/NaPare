@@ -31,7 +31,7 @@ async function readPassword(): Promise<string> {
   let password = Buffer.concat(chunks).toString('utf8');
   if (password.endsWith('\n')) password = password.slice(0, -1);
   if (password.endsWith('\r')) password = password.slice(0, -1);
-  if (password.length < 12) throw new Error('Password must contain at least 12 characters.');
+  if (password.length < 6) throw new Error('Password must contain at least 6 characters.');
   if (Buffer.byteLength(password, 'utf8') > 72) throw new Error('Password must occupy no more than 72 UTF-8 bytes.');
   return password;
 }
@@ -45,7 +45,7 @@ export async function createInitialPlatformOwner(
   const lastName = input.lastName.trim();
   if (!/^\S+@\S+\.\S+$/.test(email) || email.length > 254) throw new Error('Pass a valid owner email.');
   if (!firstName || firstName.length > 100 || !lastName || lastName.length > 100) throw new Error('Owner name and surname are required (maximum 100 characters each).');
-  if (input.password.length < 12 || Buffer.byteLength(input.password, 'utf8') > 72) throw new Error('Password must contain at least 12 characters and no more than 72 UTF-8 bytes.');
+  if (input.password.length < 6 || Buffer.byteLength(input.password, 'utf8') > 72) throw new Error('Password must contain at least 6 characters and no more than 72 UTF-8 bytes.');
 
   const passwordHash = await bcrypt.hash(input.password, 12);
   return db.transaction(async manager => {

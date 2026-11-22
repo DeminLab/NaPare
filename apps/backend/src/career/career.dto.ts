@@ -4,7 +4,7 @@ import { ApiProperty } from '@nestjs/swagger';
 
 export class EmployerRegistrationDto {
   @ApiProperty() @IsEmail() @MaxLength(254) email: string;
-  @ApiProperty() @IsString() @MinLength(10) @MaxLength(128) password: string;
+  @ApiProperty({ minLength: 6, maxLength: 128 }) @IsString() @MinLength(6) @MaxLength(128) password: string;
   @ApiProperty() @IsString() @MinLength(1) @MaxLength(80) firstName: string;
   @ApiProperty() @IsString() @MinLength(1) @MaxLength(80) lastName: string;
 }

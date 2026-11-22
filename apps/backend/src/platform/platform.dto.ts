@@ -35,12 +35,12 @@ export class PlatformAccountDto {
 }
 export class PlatformCreateAccountDto extends PlatformAccountDto {
   @ApiProperty() @IsEmail() email: string;
-  @ApiProperty() @IsString() @MinLength(12) @MaxLength(72) password: string;
+  @ApiProperty({ minLength: 6, maxLength: 72 }) @IsString() @MinLength(6) @MaxLength(72) password: string;
   @ApiPropertyOptional() @IsOptional() @IsUUID() organizationId?: string;
   @ApiPropertyOptional({ description: 'Внешний числовой ID группы SIBIT из расписания rasp.sano.ru' }) @IsOptional() @IsString() @MaxLength(32) groupId?: string;
 }
 export class PlatformPasswordDto {
-  @ApiProperty() @IsString() @MinLength(12) @MaxLength(72) password: string;
+  @ApiProperty({ minLength: 6, maxLength: 72 }) @IsString() @MinLength(6) @MaxLength(72) password: string;
 }
 export class PlatformIdentityLinkDto {
   @ApiProperty({ description: 'Причина отзыва внешней привязки' }) @IsString() @MinLength(3) @MaxLength(500) reason: string;

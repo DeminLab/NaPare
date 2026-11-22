@@ -8,7 +8,7 @@ const fields = [
   { name: 'firstName', label: 'Имя', type: 'text', autoComplete: 'given-name' },
   { name: 'lastName', label: 'Фамилия', type: 'text', autoComplete: 'family-name' },
   { name: 'email', label: 'Email', type: 'email', autoComplete: 'email' },
-  { name: 'password', label: 'Пароль, не менее 10 символов', type: 'password', autoComplete: 'new-password' },
+  { name: 'password', label: 'Пароль, не менее 6 символов', type: 'password', autoComplete: 'new-password' },
 ];
 
 export default function EmployerRegistration() {
@@ -70,7 +70,7 @@ export default function EmployerRegistration() {
                       disabled={busy}
                       name={field.name}
                       type={passwordVisible ? 'text' : 'password'}
-                      minLength={10}
+                      minLength={6}
                       maxLength={128}
                       autoComplete={field.autoComplete}
                     />

@@ -926,7 +926,7 @@ export default function UsersPage() {
           <Input
             label="Временный пароль"
             type="password"
-            minLength={10}
+            minLength={6}
             value={newUser.password}
             onChange={(event) =>
               setNewUser((item) => ({ ...item, password: event.target.value }))
@@ -1029,7 +1029,7 @@ export default function UsersPage() {
           <Input
             label="Новый временный пароль"
             type="password"
-            minLength={10}
+            minLength={6}
             autoComplete="new-password"
             value={replacementPassword}
             onChange={(event) => setReplacementPassword(event.target.value)}
