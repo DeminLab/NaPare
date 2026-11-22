@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState, type ButtonHTMLAttributes, type React
 import { apiFetch } from '@/lib/api';
 export const inputClass = 'mt-1.5 min-h-11 w-full min-w-0 rounded-lg border border-[var(--color-border-strong)] bg-white px-3 py-2 text-sm text-[var(--color-text)] outline-none focus:border-[var(--color-brand)] focus:ring-2 focus:ring-[var(--color-brand-soft)]';
 export const panelClass = 'rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm sm:p-5';
-export interface Access { owner: boolean; ownerConfigured: boolean; permissions: string[]; serviceIds: string[]; organizationIds: string[] | null; agentConfigured: boolean; actorId: string }
+export interface Access { owner: boolean; ownerConfigured: boolean; actorRole: string; permissions: string[]; serviceIds: string[]; organizationIds: string[] | null; agentConfigured: boolean; actorId: string }
 export interface Page<T> { data: T[]; meta: { total: number; page: number; totalPages: number } }
 interface ResourceState<T> { path: string | null; data: T | null; error: string; loading: boolean }
 export function useTargetUserId(): string { const [userId, setUserId] = useState(''); useEffect(() => { setUserId(new URLSearchParams(window.location.search).get('userId') || ''); }, []); return userId; }

@@ -62,6 +62,7 @@ import { Invites1700000000049 } from './migrations/1700000000049-Invites';
 import { ImportRuns1700000000050 } from './migrations/1700000000050-ImportRuns';
 import { CareerVacancies1700000000052 } from './migrations/1700000000052-CareerVacancies';
 import { PublicPortfolioRead1700000000053 } from './migrations/1700000000053-PublicPortfolioRead';
+import { Usernames1700000000055 } from './migrations/1700000000055-Usernames';
 import { TelemetryModule } from './telemetry/telemetry.module';
 import { EventsModule } from './events/events.module';
 import { AcademicModule } from './academic/academic.module';
@@ -143,6 +144,7 @@ import { SearchModule } from './search/search.module';
               // on exactly the published student and the tasks behind the
               // published cases.
               await new PublicPortfolioRead1700000000053().up(runner);
+              await new Usernames1700000000055().up(runner);
             }
             finally { await runner.release(); }
           }

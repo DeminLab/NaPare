@@ -6,7 +6,7 @@
 
 | Область | Основные таблицы | Источник |
 |---|---|---|
-| Учётные записи и организация | `universities`, `faculties`, `groups`, `teachers`, `users` | `apps/backend/src/users/entities/`, начальная миграция; миграция `1700000000054-PublicUniversitySchedule` добавляет `publicScheduleEnabled` (по умолчанию `false`) |
+| Учётные записи и организация | `universities`, `faculties`, `groups`, `teachers`, `users` | `apps/backend/src/users/entities/`, начальная миграция; миграция `1700000000054-PublicUniversitySchedule` добавляет `publicScheduleEnabled`; миграция `1700000000055-Usernames` добавляет уникальный username (существующим аккаунтам его назначает администратор) |
 | Расписание | `lessons`, `lesson_changes` | `apps/backend/src/schedule/entities/` |
 | Пространство пары | `pair_spaces`, `announcements`, `homeworks`, `homework_submissions`, `file_attachments`, `discussion_messages` | `apps/backend/src/pair-space/entities/` |
 | Учёт отсутствий | `absences`, `absence_confirmations`, `attendance_records` | `apps/backend/src/absences/`; таблица `attendance_qr_sessions` удалена миграцией `1700000000045-RemoveAttendanceQrSessions` |
@@ -16,6 +16,8 @@
 | Учебный контекст | `academic_courses`, `lesson_series`, `lesson_occurrences`, `course_spaces`, `lesson_spaces`, `academic_events`, `academic_schedule_changes` | `apps/backend/src/academic/` и миграция `1700000000004-AcademicContext.ts` |
 | Дополнительные функции | `personal_lesson_notes`, `homework_progress`, `favorites`, Telegram link tables | профильные entities и миграции `1700000000010`–`1700000000016` |
 | Телеметрия и сессии | `user_sessions`, `auth_events`, `platform_events` | `apps/backend/src/telemetry/`, миграция `1700000000044-PlatformTelemetry` |
+
+`audit_logs.entityId` хранит текстовый идентификатор сущности: обычно UUID записи, а для аудита списка — ключ вроде `search` или `accounts`. Миграция `1700000000056-AuditEntityIdText` переводит столбец с UUID на `text`, сохраняя прежние значения.
 
 Точные столбцы, ограничения и индексы находятся в сущностях и миграциях. Этот обзор не заменяет их. Полный список миграций: `apps/backend/src/migrations/`.
 

@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEmail, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import { IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 
 export class MaxAuthDto {
   @ApiProperty({
@@ -11,10 +11,13 @@ export class MaxAuthDto {
   @MaxLength(8192)
   initData: string;
 
-  @ApiPropertyOptional({ description: 'Email NaPare для первой привязки аккаунта' })
+  @ApiPropertyOptional({ description: 'Логин NaPare для первой привязки аккаунта' })
   @IsOptional()
-  @IsEmail()
-  email?: string;
+  @IsString()
+  @MinLength(3)
+  @MaxLength(32)
+  @Matches(/^[a-zA-Z0-9._-]+$/)
+  username?: string;
 
   @ApiPropertyOptional({ description: 'Пароль NaPare для первой привязки аккаунта' })
   @IsOptional()

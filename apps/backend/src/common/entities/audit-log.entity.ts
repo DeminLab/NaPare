@@ -20,8 +20,8 @@ export class AuditLog {
   @Column()
   entity: string;
 
-  @Column()
-  entityId: string;
+  @Column({ type: 'text', nullable: true })
+  entityId: string | null;
 
   @Column({ type: 'jsonb', nullable: true })
   oldValues: JsonObject;

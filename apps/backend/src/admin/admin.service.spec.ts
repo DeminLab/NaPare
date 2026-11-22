@@ -270,6 +270,7 @@ describe("AdminService", () => {
       const result = await service.createUniversityUser(
         "uni-1",
         {
+          username: "student.one",
           email: "student@university.ru",
           password: "temporary-password-2026",
           firstName: "Анна",
@@ -301,6 +302,7 @@ describe("AdminService", () => {
       const result = await service.createUniversityUser(
         "uni-1",
         {
+          username: "student.two",
           email: "student@university.ru",
           password: "temporary-password-2026",
           firstName: "Анна",

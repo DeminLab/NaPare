@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { ArrayUnique, IsArray, IsBoolean, IsEmail, IsEnum, IsIn, IsInt, IsOptional, IsString, IsUUID, IsUrl, Max, MaxLength, Min, MinLength } from 'class-validator';
+import { ArrayUnique, IsArray, IsBoolean, IsEmail, IsEnum, IsIn, IsInt, IsOptional, IsString, IsUUID, IsUrl, Matches, Max, MaxLength, Min, MinLength } from 'class-validator';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import { UserRole } from '../auth/interfaces/user-role';
 
@@ -22,6 +22,7 @@ export class PlatformJobDto {
   @ApiProperty() @IsUUID() idempotencyKey: string;
 }
 export class PlatformAccountDto {
+  @ApiPropertyOptional({ minLength: 3, maxLength: 32 }) @IsOptional() @IsString() @Matches(/^[a-zA-Z0-9._-]+$/) @MinLength(3) @MaxLength(32) username?: string;
   @ApiPropertyOptional() @IsOptional() @IsEmail() @MaxLength(254) email?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() @MinLength(1) @MaxLength(100) firstName?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() @MinLength(1) @MaxLength(100) lastName?: string;
@@ -34,6 +35,7 @@ export class PlatformAccountDto {
   @ApiPropertyOptional({ description: 'Причина изменения; обязательна в интерфейсе и сохраняется в аудите' }) @IsOptional() @IsString() @MinLength(3) @MaxLength(500) reason?: string;
 }
 export class PlatformCreateAccountDto extends PlatformAccountDto {
+  @ApiProperty({ minLength: 3, maxLength: 32 }) @IsString() @Matches(/^[a-zA-Z0-9._-]+$/) @MinLength(3) @MaxLength(32) username: string;
   @ApiProperty() @IsEmail() email: string;
   @ApiProperty({ minLength: 6, maxLength: 72 }) @IsString() @MinLength(6) @MaxLength(72) password: string;
   @ApiPropertyOptional() @IsOptional() @IsUUID() organizationId?: string;

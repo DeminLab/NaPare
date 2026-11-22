@@ -265,7 +265,7 @@ async function request<T>(
 
 export async function loginWithMax(
   initData: string,
-  credentials?: { email: string; password: string },
+  credentials?: { username: string; password: string },
 ): Promise<AuthResponse> {
   const payload = await request<AuthResponse>(
     "/auth/max",
@@ -277,12 +277,12 @@ export async function loginWithMax(
 }
 
 export async function loginWithPassword(
-  email: string,
+  username: string,
   password: string,
 ): Promise<AuthResponse> {
   const payload = await request<AuthResponse>(
     "/auth/login",
-    { method: "POST", body: JSON.stringify({ email, password }) },
+    { method: "POST", body: JSON.stringify({ username, password }) },
     false,
   );
   saveTokens(payload);

@@ -1,9 +1,16 @@
-import { IsEmail, IsEnum, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import { IsEmail, IsEnum, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 import { UserRole } from '../../auth/interfaces/user-role';
 
 export class CreateUniversityUserDto {
+  @ApiProperty({ example: 'student.in25', minLength: 3, maxLength: 32 })
+  @IsString()
+  @MinLength(3)
+  @MaxLength(32)
+  @Matches(/^[a-zA-Z0-9._-]+$/)
+  username: string;
+
   @ApiProperty({ example: 'student@university.ru' })
   @IsEmail()
   email: string;

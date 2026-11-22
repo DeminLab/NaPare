@@ -22,6 +22,7 @@ import {
 
 interface AdminUser {
   id: string;
+  username?: string | null;
   email: string;
   firstName: string;
   lastName: string;
@@ -64,6 +65,7 @@ interface UniversityContext {
 }
 type Filter = "all" | "student" | "teacher" | "admin";
 type NewUserForm = {
+  username: string;
   firstName: string;
   lastName: string;
   email: string;
@@ -74,6 +76,7 @@ type NewUserForm = {
 };
 
 const emptyNewUser: NewUserForm = {
+  username: "",
   firstName: "",
   lastName: "",
   email: "",
@@ -162,6 +165,7 @@ export default function UsersPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [pendingRole,setPendingRole]=useState<{id:string;role:string}|null>(null);
   const [detail, setDetail] = useState<AdminUser | null>(null);
+  const [usernameDraft, setUsernameDraft] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const [newUser, setNewUser] = useState<NewUserForm>(emptyNewUser);
   const [resetTarget, setResetTarget] = useState<AdminUser | null>(null);
@@ -172,6 +176,10 @@ export default function UsersPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    setUsernameDraft(detail?.username || "");
+  }, [detail?.id, detail?.username]);
 
   const load = () => {
     setLoading(true);
@@ -228,7 +236,7 @@ export default function UsersPage() {
           (status === "all" ||
             (status === "active" ? user.isActive : !user.isActive)) &&
           (!query ||
-            `${user.firstName} ${user.lastName} ${user.email}`
+            `${user.firstName} ${user.lastName} ${user.username || ""} ${user.email}`
               .toLowerCase()
               .includes(query))
         );
@@ -309,6 +317,7 @@ export default function UsersPage() {
         method: "POST",
         body: JSON.stringify({
           ...newUser,
+          username: newUser.username.trim(),
           firstName: newUser.firstName.trim(),
           lastName: newUser.lastName.trim(),
           email: newUser.email.trim(),
@@ -329,6 +338,32 @@ export default function UsersPage() {
       setError(
         err instanceof Error ? err.message : "Не удалось создать пользователя.",
       );
+    } finally {
+      setSaving(false);
+    }
+  };
+  const saveUsername = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!detail) return;
+    const username = usernameDraft.trim();
+    if (!username) {
+      setError("Укажите логин пользователя.");
+      return;
+    }
+    setSaving(true);
+    setError("");
+    setMessage("");
+    try {
+      const updated = await apiFetch<AdminUser>(`/admin/users/${detail.id}/username`, {
+        method: "PATCH",
+        body: JSON.stringify({ username }),
+      });
+      setUsers(items => items.map(item => item.id === updated.id ? updated : item));
+      setDetail(updated);
+      setUsernameDraft(updated.username || username);
+      setMessage("Логин пользователя сохранён.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Не удалось сохранить логин.");
     } finally {
       setSaving(false);
     }
@@ -615,7 +650,7 @@ export default function UsersPage() {
               aria-label="Выбрать всех"
             />
             <span>Имя</span>
-            <span>Почта</span>
+            <span>Логин и email</span>
             <span>Роль</span>
             <span>Факультет</span>
             <span>Группа</span>
@@ -633,7 +668,7 @@ export default function UsersPage() {
                 raspGroupItem?.faculty || "—";
               return (
                 <div key={user.id}>
-                  <article className="space-y-3 p-4 xl:hidden"><div className="flex items-start justify-between gap-3"><div className="flex min-w-0 items-start gap-3"><input type="checkbox" checked={selectedIds.includes(user.id)} onChange={() => toggle(user.id)} aria-label={`Выбрать ${user.firstName} ${user.lastName}`} className="mt-1 h-5 w-5 shrink-0" /><div className="min-w-0"><button type="button" onClick={() => setDetail(user)} className="min-h-11 break-words text-left text-base font-semibold text-[var(--color-text)]">{user.firstName} {user.lastName}</button><p className="text-sm text-[var(--color-text-secondary)]">{roleLabels[currentRole] || currentRole} · {groupName || 'Группа не назначена'}</p></div></div><Badge variant={user.isActive ? 'green' : 'red'}>{user.isActive ? 'Активен' : 'Заблокирован'}</Badge></div><div className="flex flex-wrap items-center justify-between gap-2"><span className="min-w-0 break-all text-sm text-[var(--color-text-secondary)]">{user.email}</span><Button variant="secondary" onClick={() => setDetail(user)}>Данные и действия →</Button></div></article>
+                  <article className="space-y-3 p-4 xl:hidden"><div className="flex items-start justify-between gap-3"><div className="flex min-w-0 items-start gap-3"><input type="checkbox" checked={selectedIds.includes(user.id)} onChange={() => toggle(user.id)} aria-label={`Выбрать ${user.firstName} ${user.lastName}`} className="mt-1 h-5 w-5 shrink-0" /><div className="min-w-0"><button type="button" onClick={() => setDetail(user)} className="min-h-11 break-words text-left text-base font-semibold text-[var(--color-text)]">{user.firstName} {user.lastName}</button><p className="text-sm text-[var(--color-text-secondary)]">{roleLabels[currentRole] || currentRole} · {groupName || 'Группа не назначена'}</p></div></div><Badge variant={user.isActive ? 'green' : 'red'}>{user.isActive ? 'Активен' : 'Заблокирован'}</Badge></div><div className="flex flex-wrap items-center justify-between gap-2"><span className="min-w-0 break-all text-sm text-[var(--color-text-secondary)]"><span className="font-semibold text-[var(--color-text)]">Логин: {user.username || 'не назначен'}</span><br />Email: {user.email}</span><Button variant="secondary" onClick={() => setDetail(user)}>Данные и действия →</Button></div></article>
                 <div
                   className="grid gap-3 px-4 py-4 hidden xl:grid-cols-[36px_minmax(190px,1.4fr)_minmax(180px,1.2fr)_140px_140px_130px_110px_110px] xl:grid xl:items-center xl:px-4"
                 >
@@ -657,12 +692,8 @@ export default function UsersPage() {
                     </button>
                   </div>
                   <div>
-                    <span className="md:hidden text-xs text-slate-400">
-                      Почта ·{" "}
-                    </span>
-                    <span className="break-all text-sm text-[var(--color-text-secondary)]">
-                      {user.email}
-                    </span>
+                    <span className="block break-all text-sm font-semibold text-[var(--color-text)]">Логин · {user.username || "не назначен"}</span>
+                    <span className="block break-all text-xs text-[var(--color-text-secondary)]">Email · {user.email}</span>
                   </div>
                   <div>
                     <span className="md:hidden text-xs text-slate-400">
@@ -785,7 +816,7 @@ export default function UsersPage() {
             </div>
             <dl className="mt-6 divide-y divide-[var(--color-border)]">
               <div className="flex justify-between gap-4 py-3">
-                <dt className="text-sm text-[var(--color-text-secondary)]">Почта</dt>
+                <dt className="text-sm text-[var(--color-text-secondary)]">Email</dt>
                 <dd className="break-all text-right text-sm font-medium text-slate-800">
                   {detail.email}
                 </dd>
@@ -837,6 +868,23 @@ export default function UsersPage() {
                 </dd>
               </div>
             </dl>
+            <form className="mt-5 space-y-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] p-4" onSubmit={event => void saveUsername(event)}>
+              <Input
+                label="Логин для входа"
+                value={usernameDraft}
+                onChange={event => setUsernameDraft(event.target.value)}
+                autoComplete="off"
+                minLength={3}
+                maxLength={32}
+                pattern="[A-Za-z0-9._-]+"
+                required
+              />
+              <p className="text-xs leading-5 text-[var(--color-text-secondary)]">После сохранения пользователь будет входить по этому логину и паролю. Email остаётся контактным адресом.</p>
+              <Button type="submit" loading={saving} disabled={saving || !usernameDraft.trim() || usernameDraft.trim() === (detail.username || "")}>
+                {detail.username ? "Сохранить логин" : "Назначить логин"}
+              </Button>
+            </form>
+            {message && <p role="status" className="mt-3 text-sm text-emerald-700">{message}</p>}
             <div className="mt-6 border-t border-slate-100 pt-5">
               <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">
                 Роль
@@ -914,6 +962,20 @@ export default function UsersPage() {
               required
             />
           </div>
+          <Input
+            label="Логин"
+            value={newUser.username}
+            onChange={(event) =>
+              setNewUser((item) => ({ ...item, username: event.target.value }))
+            }
+            autoComplete="off"
+            autoCapitalize="none"
+            spellCheck={false}
+            minLength={3}
+            maxLength={32}
+            pattern="[A-Za-z0-9._-]+"
+            required
+          />
           <Input
             label="Корпоративная почта"
             type="email"
@@ -997,7 +1059,7 @@ export default function UsersPage() {
                   <option key={teacher.id} value={teacher.id}>{teacher.name} · {teacher.lessonCount} пар · {teacher.groups.map((item) => item.name).join(", ")}</option>
                 ))}
               </select>
-              <span className="mt-1 block text-xs font-normal leading-5 text-[var(--color-text-secondary)]">После создания аккаунта расписание привяжется по точному ID преподавателя. Укажите действующую корпоративную почту и временный пароль.</span>
+              <span className="mt-1 block text-xs font-normal leading-5 text-[var(--color-text-secondary)]">После создания аккаунта расписание привяжется по точному ID преподавателя. Укажите логин, действующую корпоративную почту и временный пароль.</span>
             </label>
           )}
           <div className="flex justify-end gap-2 pt-2">

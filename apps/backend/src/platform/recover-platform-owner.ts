@@ -4,6 +4,7 @@ import * as bcrypt from 'bcrypt';
 import { TenantContext } from '../common/tenant/tenant-context';
 import { TenantDatabaseGrant } from '../common/tenant/tenant-database-access';
 import { installTenantDatabase } from '../common/tenant/tenant-database';
+import { normalizeUsername } from '../auth/username';
 
 const OWNER_BOOTSTRAP_LOCK = 707247125;
 const GLOBAL_USER_ACCESS: TenantDatabaseGrant = {
@@ -46,10 +47,11 @@ async function readPassword(): Promise<string> {
 
 export async function recoverPlatformOwnerCredentials(
   db: DataSource,
-  input: { currentEmail: string; email: string; firstName: string; lastName: string; password: string },
+  input: { currentEmail: string; username: string; email?: string; firstName: string; lastName: string; password: string },
 ): Promise<string> {
   const currentEmail = normalizeEmail(input.currentEmail);
-  const email = normalizeEmail(input.email);
+  const email = input.email ? normalizeEmail(input.email) : undefined;
+  const username = normalizeUsername(input.username);
   const firstName = input.firstName.trim();
   const lastName = input.lastName.trim();
   if (!firstName || firstName.length > 100 || !lastName || lastName.length > 100) {
@@ -67,7 +69,7 @@ export async function recoverPlatformOwnerCredentials(
 
     const ownerId = controls[0].ownerId as string;
     const owners = await manager.query(
-      `SELECT id, email, role, "isActive", "firstName", "lastName"
+      `SELECT id, username, email, role, "isActive", "firstName", "lastName"
        FROM users WHERE id = $1 FOR UPDATE`,
       [ownerId],
     );
@@ -78,19 +80,26 @@ export async function recoverPlatformOwnerCredentials(
       throw new Error('Configured owner must be an active developer/superadmin account.');
     }
 
-    const duplicate = await manager.query(
-      'SELECT id FROM users WHERE LOWER(email) = LOWER($1) AND id <> $2 LIMIT 1',
-      [email, ownerId],
+    if (email) {
+      const duplicateEmail = await manager.query(
+        'SELECT id FROM users WHERE LOWER(email) = LOWER($1) AND id <> $2 LIMIT 1',
+        [email, ownerId],
+      );
+      if (duplicateEmail.length) throw new Error('New email is already used by another account.');
+    }
+    const duplicateUsername = await manager.query(
+      'SELECT id FROM users WHERE LOWER(username) = LOWER($1) AND id <> $2 LIMIT 1',
+      [username, ownerId],
     );
-    if (duplicate.length) throw new Error('New email is already used by another account.');
+    if (duplicateUsername.length) throw new Error('Username is already used by another account.');
 
     await manager.query(
       `UPDATE users
-       SET email = $1, "firstName" = $2, "lastName" = $3,
-           "passwordHash" = $4, "sessionVersion" = "sessionVersion" + 1,
+       SET username = $1, email = COALESCE($2, email), "firstName" = $3, "lastName" = $4,
+           "passwordHash" = $5, "sessionVersion" = "sessionVersion" + 1,
            "updatedAt" = CURRENT_TIMESTAMP
-       WHERE id = $5`,
-      [email, firstName, lastName, passwordHash, ownerId],
+       WHERE id = $6`,
+      [username, email ?? null, firstName, lastName, passwordHash, ownerId],
     );
     await manager.query(
       `INSERT INTO audit_logs ("userId", action, entity, "entityId", "oldValues", "newValues")
@@ -100,8 +109,8 @@ export async function recoverPlatformOwnerCredentials(
         'platform.owner.credentials_recovered',
         'platform',
         ownerId,
-        JSON.stringify({ email: owner.email, firstName: owner.firstName, lastName: owner.lastName }),
-        JSON.stringify({ email, firstName, lastName, sessionsRevoked: true, source: 'offline-owner-credential-recovery' }),
+        JSON.stringify({ username: owner.username, email: owner.email, firstName: owner.firstName, lastName: owner.lastName }),
+        JSON.stringify({ username, ...(email ? { email } : {}), firstName, lastName, sessionsRevoked: true, source: 'offline-owner-credential-recovery' }),
       ],
     );
     return ownerId;
@@ -110,7 +119,9 @@ export async function recoverPlatformOwnerCredentials(
 
 if (require.main === module) {
   const currentEmail = option('--current-email');
-  const email = option('--email');
+  const username = option('--username');
+  const emailArg = process.argv.indexOf('--email');
+  const email = emailArg >= 0 ? process.argv[emailArg + 1]?.trim() : undefined;
   const firstName = option('--first-name');
   const lastName = option('--last-name');
   const db = new DataSource({
@@ -131,7 +142,7 @@ if (require.main === module) {
   readPassword()
     .then(password => db.initialize().then(() => tenant.runWithDatabaseAccess(
       GLOBAL_USER_ACCESS,
-      () => recoverPlatformOwnerCredentials(db, { currentEmail, email, firstName, lastName, password }),
+      () => recoverPlatformOwnerCredentials(db, { currentEmail, username, email, firstName, lastName, password }),
     )))
     .then(id => console.log(`Platform owner credentials updated. Account ID: ${id}`))
     .catch(error => { console.error(error instanceof Error ? error.message : 'Owner credential recovery failed.'); process.exitCode = 1; })

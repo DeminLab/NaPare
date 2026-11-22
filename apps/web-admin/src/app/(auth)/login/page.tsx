@@ -6,7 +6,7 @@ import { login } from '@/lib/api';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -16,7 +16,7 @@ export default function LoginPage() {
     setLoading(true);
     setError('');
     try {
-      await login(email, password);
+      await login(username, password);
       router.push('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка входа');
@@ -52,18 +52,20 @@ export default function LoginPage() {
             )}
 
             <div>
-              <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">
-                Электронная почта
+              <label htmlFor="username" className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">
+                Логин
               </label>
               <input
-                id="email"
-                name="email"
-                type="email"
+                id="username"
+                name="username"
+                type="text"
                 required
-                autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@university.ru"
+                autoComplete="username"
+                autoCapitalize="none"
+                spellCheck={false}
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Введите логин"
                 className="ds-input block w-full px-4 py-3 text-sm"
               />
             </div>

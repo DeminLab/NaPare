@@ -44,6 +44,8 @@ import { UpdateConnectorDto } from "./dto/update-connector.dto";
 import { CreateUniversityUserDto } from "./dto/create-university-user.dto";
 import { UpdateUniversityUserStatusDto } from "./dto/update-university-user-status.dto";
 import { ResetUniversityUserPasswordDto } from "./dto/reset-university-user-password.dto";
+import { UpdateUniversityUserUsernameDto } from "./dto/update-university-user-username.dto";
+import { normalizeUsername } from "../auth/username";
 import {
   PaginatedResponse,
   PaginationQueryDto,
@@ -183,6 +185,36 @@ export class AdminService {
     return updatedUser;
   }
 
+  async updateUniversityUserUsername(
+    organizationId: string,
+    userId: string,
+    dto: UpdateUniversityUserUsernameDto,
+    requesterRole: UserRole,
+  ): Promise<User> {
+    this.tenantContext.assertAccess(organizationId);
+    const user = await this.usersService.findById(userId);
+    if (!user || user.organizationId !== organizationId) {
+      throw new ForbiddenException("User not found in this university");
+    }
+    if (!this.canManageRole(requesterRole, user.role)) {
+      throw new ForbiddenException("Insufficient permissions to update this account");
+    }
+    const username = normalizeUsername(dto.username);
+    const duplicate = await this.usersService.findByUsername(username);
+    if (duplicate && duplicate.id !== user.id) {
+      throw new ConflictException("Этот логин уже используется.");
+    }
+    try {
+      const updated = await this.usersService.update(user.id, { username });
+      await this.usersService.invalidateSessions(user.id);
+      return updated;
+    } catch (error) {
+      const code = (error as { driverError?: { code?: string }; code?: string }).driverError?.code ?? (error as { code?: string }).code;
+      if (code === "23505") throw new ConflictException("Этот логин уже используется.");
+      throw error;
+    }
+  }
+
   async createUniversityUser(
     organizationId: string,
     data: CreateUniversityUserDto,
@@ -196,6 +228,10 @@ export class AdminService {
       );
     if (await this.usersService.findByEmail(data.email.trim()))
       throw new ConflictException("Пользователь с такой почтой уже существует");
+    const username = normalizeUsername(data.username);
+    if (await this.usersService.findByUsername(username)) {
+      throw new ConflictException("Этот логин уже используется.");
+    }
     if (data.groupId) {
       if (/^\d+$/.test(data.groupId)) {
         if (data.role !== UserRole.STUDENT) {
@@ -225,6 +261,7 @@ export class AdminService {
       if (existingLink) throw new ConflictException("Этот преподаватель СИБИТа уже связан с учётной записью.");
     }
     const created = await this.usersService.create({
+      username,
       email: data.email.trim(),
       passwordHash: await bcrypt.hash(data.password, 12),
       firstName: data.firstName.trim(),

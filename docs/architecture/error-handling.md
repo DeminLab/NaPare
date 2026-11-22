@@ -85,7 +85,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
   "statusCode": 400,
   "code": "VALIDATION_ERROR",
   "message": "Validation failed",
-  "details": ["email must be an email"],
+  "details": ["username should not be empty"],
   "timestamp": "2026-09-14T12:00:00.000Z",
   "path": "/api/v1/auth/login"
 }

@@ -7,6 +7,7 @@ import s from '../career.module.css';
 const fields = [
   { name: 'firstName', label: 'Имя', type: 'text', autoComplete: 'given-name' },
   { name: 'lastName', label: 'Фамилия', type: 'text', autoComplete: 'family-name' },
+  { name: 'username', label: 'Логин', type: 'text', autoComplete: 'username' },
   { name: 'email', label: 'Email', type: 'email', autoComplete: 'email' },
   { name: 'password', label: 'Пароль, не менее 6 символов', type: 'password', autoComplete: 'new-password' },
 ];
@@ -22,12 +23,19 @@ export default function EmployerRegistration() {
     setBusy(true);
     setError('');
     const form = new FormData(event.currentTarget);
+    const values = Object.fromEntries(form);
+    const username = String(values.username ?? '').trim().toLowerCase();
+    if (!/^[a-z0-9._-]{3,32}$/.test(username)) {
+      setError('Логин должен содержать от 3 до 32 латинских букв, цифр, точек, дефисов или подчёркиваний.');
+      setBusy(false);
+      return;
+    }
 
     try {
       const response = await fetch('/api/v1/career/accounts/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(Object.fromEntries(form)),
+        body: JSON.stringify({ ...values, username }),
       });
       const result = await response.json();
       if (!response.ok) {
@@ -92,8 +100,11 @@ export default function EmployerRegistration() {
                     disabled={busy}
                     name={field.name}
                     type={field.type}
-                    minLength={1}
-                    maxLength={254}
+                    minLength={field.name === 'username' ? 3 : 1}
+                    maxLength={field.name === 'username' ? 32 : 254}
+                    pattern={field.name === 'username' ? '[A-Za-z0-9._-]{3,32}' : undefined}
+                    autoCapitalize={field.name === 'username' ? 'none' : undefined}
+                    spellCheck={field.name === 'username' ? false : undefined}
                     autoComplete={field.autoComplete}
                   />
                 )}

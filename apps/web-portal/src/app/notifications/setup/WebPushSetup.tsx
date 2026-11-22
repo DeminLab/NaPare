@@ -46,10 +46,10 @@ export default function WebPushSetup() {
     };
     window.addEventListener('storage', clear); return () => window.removeEventListener('storage', clear);
   }, []);
-  async function login(email: string, password: string) {
+  async function login(username: string, password: string) {
     if (acting.current) return; acting.current = true; setBusy(true); setError('');
     const controller = new AbortController(); pending.current = controller;
-    try { await signIn(email, password, controller.signal); await load(); }
+    try { await signIn(username, password, controller.signal); await load(); }
     catch (cause) { if (!controller.signal.aborted) { setError(errorText(cause, 'Не удалось войти.')); setBusy(false); } }
     finally { acting.current = false; }
   }

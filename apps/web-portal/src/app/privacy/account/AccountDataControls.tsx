@@ -56,11 +56,11 @@ export default function AccountDataControls() {
     return () => { controller.current?.abort(); window.removeEventListener('storage', onStorage); };
   }, [load]);
 
-  async function login(email: string, password: string) {
+  async function login(username: string, password: string) {
     if (pending.current) return;
     pending.current = true; setBusy(true); setError('');
     const next = new AbortController(); controller.current = next;
-    try { await signIn(email, password, next.signal); await load(); }
+    try { await signIn(username, password, next.signal); await load(); }
     catch (failure) { if (!next.signal.aborted) setError(failure instanceof Error ? failure.message : 'Не удалось войти.'); }
     finally { pending.current = false; if (!next.signal.aborted) setBusy(false); }
   }

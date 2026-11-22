@@ -51,6 +51,13 @@ export class UsersService {
       .getOne();
   }
 
+  async findByUsername(username: string): Promise<User | null> {
+    return this.usersRepository
+      .createQueryBuilder("user")
+      .where("LOWER(user.username) = LOWER(:username)", { username: username.trim() })
+      .getOne();
+  }
+
   async findByMaxUserId(maxUserId: string): Promise<User | null> {
     if (!maxUserId) return null;
     return this.usersRepository.findOne({ where: { maxUserId } });
@@ -186,8 +193,7 @@ export class UsersService {
   }
 
   async update(id: string, updateData: Partial<User>): Promise<User> {
-    if (updateData.role && [UserRole.DEVELOPER, UserRole.SUPERADMIN].includes(updateData.role)) await this.platform?.requireOwner();
-    if (['role', 'isActive', 'passwordHash', 'email', 'organizationId'].some(key => key in updateData)) await this.platform?.protectLegacyMutation(id);
+    if (['role', 'isActive', 'passwordHash', 'email', 'username', 'organizationId'].some(key => key in updateData)) await this.platform?.protectLegacyMutation(id, updateData.role);
     if (updateData.role !== undefined) await this.platform?.clearLegacyGrant(id);
     const user = await this.findById(id);
 

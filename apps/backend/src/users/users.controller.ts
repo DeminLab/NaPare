@@ -96,6 +96,7 @@ export class UsersController {
     if (!user) throw new NotFoundException('Профиль не найден.');
     return {
       id: user.id,
+      username: user.username,
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,

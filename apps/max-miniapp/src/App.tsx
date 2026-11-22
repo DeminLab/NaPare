@@ -371,7 +371,7 @@ export function App() {
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    const email = String(form.get("email") ?? "").trim();
+    const username = String(form.get("username") ?? "").trim();
     const password = String(form.get("password") ?? "");
 
     setLoginBusy(true);
@@ -379,8 +379,8 @@ export function App() {
     try {
       const initData = getInitData();
       const auth = initData
-        ? await loginWithMax(initData, { email, password })
-        : await loginWithPassword(email, password);
+        ? await loginWithMax(initData, { username, password })
+        : await loginWithPassword(username, password);
       setUser(auth.user);
       setBootError(null);
       setPhase("ready");
@@ -505,13 +505,15 @@ export function App() {
           )}
           <form className="login-form" onSubmit={handleLogin}>
             <label>
-              Электронная почта
+              Логин
               <input
-                name="email"
-                type="email"
+                name="username"
+                type="text"
                 required
                 autoComplete="username"
-                placeholder="student@sibit.ru"
+                autoCapitalize="none"
+                spellCheck={false}
+                placeholder="Введите логин"
               />
             </label>
             <label>

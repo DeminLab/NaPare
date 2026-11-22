@@ -13,6 +13,7 @@ import { CareerTestDto, CareerAttemptDto, EmployerRegistrationDto, CareerCompany
 import { randomUUID } from 'node:crypto';
 import { TenantContext } from '../common/tenant/tenant-context';
 import { CompanyRegistryService } from './company-registry.service';
+import { normalizeUsername } from '../auth/username';
 
 import { CareerVacancy, CareerVacancyApplication } from './vacancies.entity';
 
@@ -73,11 +74,13 @@ export class CareerService {
   async register(dto: EmployerRegistrationDto) {
     if(Buffer.byteLength(dto.password,'utf8')>72)throw new BadRequestException('Пароль слишком длинный. Используйте более короткую парольную фразу.');
     const email = dto.email.trim().toLowerCase();
+    const username = normalizeUsername(dto.username);
     if (await this.tenant.runWithDatabaseAccess({ authentication: { email } }, () => this.repo(User).createQueryBuilder('u').where('LOWER(u.email) = :email',{email}).getExists())) throw new ConflictException('Аккаунт с такой почтой уже существует. Войдите в него.');
+    if (await this.tenant.runWithDatabaseAccess({ authentication: { username } }, () => this.repo(User).createQueryBuilder('u').where('LOWER(u.username) = :username',{username}).getExists())) throw new ConflictException('Логин уже используется.');
     const id = randomUUID();
-    try { await this.tenant.runWithDatabaseAccess({ authentication: { id, write: true } }, async () => this.repo(User).save(this.repo(User).create({id,email,passwordHash:await bcrypt.hash(dto.password,12),firstName:dto.firstName.trim(),lastName:dto.lastName.trim(),role:UserRole.EMPLOYER,organizationId:null}))); }
+    try { await this.tenant.runWithDatabaseAccess({ authentication: { id, write: true } }, async () => this.repo(User).save(this.repo(User).create({id,username,email,passwordHash:await bcrypt.hash(dto.password,12),firstName:dto.firstName.trim(),lastName:dto.lastName.trim(),role:UserRole.EMPLOYER,organizationId:null}))); }
     catch (error) { if ((error as {driverError?:{code?:string}}).driverError?.code === '23505') throw new ConflictException('Аккаунт уже существует'); throw error; }
-    return this.auth.portalLogin({email,password:dto.password});
+    return this.auth.portalLogin({username,password:dto.password});
   }
   async overview(actor: Actor, requestedMode?: string) {
     const memberships = await this.repo(CareerMembership).find({where:{userId:actor.id,revokedAt:IsNull()}});

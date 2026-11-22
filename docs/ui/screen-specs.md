@@ -44,7 +44,7 @@
 | `TitleText` | Text | "НаПаре" |
 | `SubtitleText` | Text | "Твой учебный день под контролем" |
 | `PhoneButton` | ElevatedButton | "Войти по номеру телефона" |
-| `EmailButton` | TextButton | "Войти по email" |
+| `UsernameButton` | TextButton | "Войти по логину" |
 | `MAXButton` | OutlinedButton | "Войти через MAX" (опционально) |
 | `PrivacyText` | RichText | "Вход означает согласие с [правилами]" |
 

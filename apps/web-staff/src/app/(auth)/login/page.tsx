@@ -6,7 +6,7 @@ import { login } from '@/lib/api';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -16,7 +16,7 @@ export default function LoginPage() {
     setLoading(true);
     setError('');
     try {
-      await login(email, password);
+      await login(username, password);
       router.push('/today');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка входа');
@@ -42,11 +42,11 @@ export default function LoginPage() {
               </p>
             )}
             <div>
-              <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">Электронная почта</label>
+              <label htmlFor="username" className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">Логин</label>
               <input
-                id="email" name="email" type="email" autoComplete="username" required value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="teacher@university.ru"
+                id="username" name="username" type="text" autoComplete="username" autoCapitalize="none" spellCheck={false} required value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Введите логин"
                 className="ds-input block min-h-11 w-full px-3 py-2.5 text-base placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-role)] focus:outline-none"
               />
             </div>

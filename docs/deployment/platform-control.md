@@ -14,7 +14,7 @@ node dist/platform/bootstrap-owner.js --email existing-owner@example.org
 
 ### Восстановление доступа к уже назначенному владельцу
 
-Если владелец уже привязан, но доступ к его учётным данным утрачен, используйте `recover-platform-owner.js`. Команда требует явно указать текущий email владельца, проверяет его по `platform_control.ownerId`, не меняет `ownerId` или роль, проверяет уникальность нового email, обновляет email/имя/пароль в одной транзакции и увеличивает `sessionVersion`, завершая старые сессии. Пароль поступает только через stdin, хешируется bcrypt и не попадает в аргументы процесса или аудит.
+Если владелец уже привязан, но доступ к его учётным данным утрачен, используйте `recover-platform-owner.js`. Команда требует указать текущий контактный email владельца и новый логин, проверяет владельца через `platform_control.ownerId`, не меняет `ownerId` или роль, проверяет уникальность логина (и email, если он меняется), обновляет логин/имя/пароль в одной транзакции и увеличивает `sessionVersion`, завершая старые сессии. Email остаётся контактным и может быть заменён через необязательный `--email`. Пароль поступает только через stdin, хешируется bcrypt и не попадает в аргументы процесса или аудит.
 
 ```sh
 read -r -s -p 'Новый пароль владельца (минимум 6 символов): ' OWNER_RECOVERY_PASSWORD
@@ -22,11 +22,11 @@ printf '\n'
 printf '%s\n' "$OWNER_RECOVERY_PASSWORD" | docker compose --env-file .env -f docker-compose.prod.yml exec -T backend \
   node dist/platform/recover-platform-owner.js \
   --current-email existing-owner@example.org \
-  --email new-owner@example.org --first-name Имя --last-name Фамилия
+  --username danila.demin --first-name Имя --last-name Фамилия
 unset OWNER_RECOVERY_PASSWORD
 ```
 
-Сначала сделайте резервную копию. Команда откажет, если текущий email не совпадает с владельцем платформы, новый email занят или владелец неактивен. Она не запускает миграции и не назначает другого владельца.
+Сначала сделайте резервную копию. Команда откажет, если текущий email не совпадает с владельцем платформы, логин занят или владелец неактивен. Она не запускает миграции и не назначает другого владельца. При переходе на логины этот шаг нужен для уже привязанного владельца, которому отдельный логин ещё не назначен.
 
 ### Первая установка без владельца платформы
 
@@ -39,7 +39,7 @@ read -r -s -p 'Новый пароль владельца (минимум 6 си
 printf '\n'
 printf '%s\n' "$INITIAL_OWNER_PASSWORD" | docker compose --env-file .env -f docker-compose.prod.yml exec -T backend \
   node dist/platform/bootstrap-initial-owner.js \
-  --email owner@example.org --first-name Имя --last-name Фамилия
+  --username owner.demin --email owner@example.org --first-name Имя --last-name Фамилия
 unset INITIAL_OWNER_PASSWORD
 ```
 

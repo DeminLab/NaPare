@@ -193,7 +193,7 @@ export async function apiFetchAllPages<T>(
 }
 
 export async function login(
-  email: string,
+  username: string,
   password: string,
 ): Promise<{ accessToken: string; refreshToken: string }> {
   let res: Response;
@@ -201,15 +201,15 @@ export async function login(
     res = await fetch(`${API_BASE}/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ username, password }),
     });
   } catch {
     throw new Error("Не удалось связаться со службой входа. Проверьте подключение и повторите попытку.");
   }
 
   if (!res.ok) {
-    if (res.status === 400) throw new Error("Проверьте формат электронной почты и заполнение обязательных полей.");
-    if (res.status === 401) throw new Error("Неверная электронная почта или пароль.");
+    if (res.status === 400) throw new Error("Проверьте логин и заполнение обязательных полей.");
+    if (res.status === 401) throw new Error("Неверный логин или пароль.");
     if (res.status === 403) throw new Error("Эта учётная запись не имеет доступа к кабинету университета.");
     if (res.status === 429) throw new Error("Слишком много попыток входа. Подождите и попробуйте ещё раз.");
     if (res.status === 404) throw new Error("Служба входа недоступна по этому адресу. Повторите попытку позже.");

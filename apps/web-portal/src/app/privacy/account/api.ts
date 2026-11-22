@@ -25,10 +25,10 @@ async function read(response: Response): Promise<unknown> {
   return data;
 }
 
-export async function signIn(email: string, password: string, signal: AbortSignal): Promise<void> {
+export async function signIn(username: string, password: string, signal: AbortSignal): Promise<void> {
   const before = localStorage.getItem('accessToken');
   const data = await read(await fetch('/api/v1/auth/login', { method: 'POST', cache: 'no-store', signal,
-    headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) })) as Session;
+    headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) })) as Session;
   if (!data.accessToken || !data.refreshToken) throw new Error('Сервер не подтвердил вход.');
   signal.throwIfAborted();
   if (localStorage.getItem('accessToken') !== before) throw new Error('Аккаунт изменился в другой вкладке. Обновите страницу.');

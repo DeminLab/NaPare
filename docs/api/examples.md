@@ -8,14 +8,14 @@
 
 Самостоятельная регистрация отключена: `POST /api/v1/auth/register` всегда отвечает `403` — аккаунты создаёт университет.
 
-### Шаг 1: Вход по email и паролю
+### Шаг 1: Вход по логину и паролю
 
 ```http
 POST /api/v1/auth/login
 Content-Type: application/json
 
 {
-  "email": "student@university.ru",
+  "username": "student.ivanov",
   "password": "password123"
 }
 ```
@@ -27,6 +27,7 @@ Content-Type: application/json
   "refreshToken": "eyJ...",
   "user": {
     "id": "550e8400-...",
+    "username": "student.ivanov",
     "email": "student@university.ru",
     "firstName": "Иван",
     "lastName": "Иванов",
@@ -35,7 +36,7 @@ Content-Type: application/json
 }
 ```
 
-Для единых кабинетов используйте `POST /api/v1/auth/portal-login` — то же тело, но в ответ добавляется `workspace` (`student` | `staff` | `admin` | `developer`). На странице входа пользователь выбирает email/пароль или отдельный вход через MAX. Все роли, включая разработчика, входят через общий портал; developer workspace открывается по `/developer/` того же домена.
+Для единых кабинетов используйте `POST /api/v1/auth/portal-login` — тело `{ username, password }`, в ответ добавляется `workspace` (`student` | `staff` | `admin` | `developer`). На странице входа пользователь выбирает логин/пароль или отдельный вход через MAX. Email остаётся контактным адресом и не подходит для входа. Все роли, включая разработчика, входят через общий портал; developer workspace открывается по `/developer/` того же домена.
 
 ### Шаг 2: Привязка к группе
 

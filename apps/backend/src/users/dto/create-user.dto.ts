@@ -1,7 +1,13 @@
-import { IsEmail, IsString, IsOptional, IsUUID, IsEnum } from 'class-validator';
+import { IsEmail, IsString, IsOptional, IsUUID, IsEnum, Matches, MaxLength, MinLength } from 'class-validator';
 import { UserRole } from '../../auth/interfaces/user-role';
 
 export class CreateUserDto {
+  @IsString()
+  @MinLength(3)
+  @MaxLength(32)
+  @Matches(/^[a-zA-Z0-9._-]+$/)
+  username: string;
+
   @IsEmail()
   email: string;
 

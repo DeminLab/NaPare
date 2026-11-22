@@ -21,12 +21,12 @@ const destinations: Record<Workspace, string> = {
 };
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [passwordVisible, setPasswordVisible] = useState(false);
-  const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
+  const [fieldErrors, setFieldErrors] = useState<{ username?: string; password?: string }>({});
   const [maxAvailable, setMaxAvailable] = useState(false);
   const [succeeded, setSucceeded] = useState(false);
   const [formReady, setFormReady] = useState(false);
@@ -145,16 +145,16 @@ export default function LoginPage() {
     event.preventDefault();
     stopSessionRestoreForManualLogin();
     setError('');
-    const normalizedEmail = email.trim().toLowerCase();
-    const emailInput = event.currentTarget.elements.namedItem('email') as HTMLInputElement;
+    const normalizedUsername = username.trim();
+    const usernameInput = event.currentTarget.elements.namedItem('username') as HTMLInputElement;
     const passwordInput = event.currentTarget.elements.namedItem('password') as HTMLInputElement;
     const fields = {
-      email: !normalizedEmail ? 'Введите email своего аккаунта.' : emailInput.validity.typeMismatch ? 'Проверьте адрес: например, name@university.ru.' : undefined,
+      username: !normalizedUsername ? 'Введите логин своего аккаунта.' : undefined,
       password: !password ? 'Введите пароль от аккаунта НаПаре.' : undefined,
     };
     setFieldErrors(fields);
-    if (fields.email || fields.password) {
-      (fields.email ? emailInput : passwordInput).focus();
+    if (fields.username || fields.password) {
+      (fields.username ? usernameInput : passwordInput).focus();
       return;
     }
 
@@ -163,11 +163,11 @@ export default function LoginPage() {
       const response = await fetch('/api/v1/auth/portal-login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: normalizedEmail, password }),
+        body: JSON.stringify({ username: normalizedUsername, password }),
       });
       const payload = await response.json().catch(() => null);
       if (!response.ok) {
-        if (response.status === 401) throw new Error('Неверный email или пароль. Проверьте учётные данные.');
+        if (response.status === 401) throw new Error('Неверный логин или пароль. Проверьте учётные данные.');
         if (response.status === 403) throw new Error('Доступ к кабинету не настроен. Обратитесь к администратору университета.');
         if (response.status === 429) throw new Error('Слишком много попыток входа. Подождите немного и попробуйте снова.');
         throw new Error('Сервис входа временно недоступен. Попробуйте ещё раз через несколько минут.');
@@ -214,8 +214,8 @@ export default function LoginPage() {
           {sessionRestoreState !== 'idle' && sessionRestoreState !== 'manual' && (
             <p className="login-session-status" role="status" aria-live="polite">
               {sessionRestoreState === 'checking' && 'Проверяем сохранённый вход…'}
-              {sessionRestoreState === 'expired' && 'Сохранённый вход завершился. Войдите снова по email и паролю.'}
-              {sessionRestoreState === 'incomplete' && 'Не удалось восстановить сохранённый вход. Войдите снова по email и паролю.'}
+      {sessionRestoreState === 'expired' && 'Сохранённый вход завершился. Войдите снова по логину и паролю.'}
+              {sessionRestoreState === 'incomplete' && 'Не удалось восстановить сохранённый вход. Войдите снова по логину и паролю.'}
               {sessionRestoreState === 'unavailable' && 'Не удалось проверить сохранённый вход из-за временной ошибки. Он сохранён; вы можете войти вручную.'}
               {sessionRestoreState === 'unsupported' && 'Для этой роли пока не настроен кабинет. Обратитесь к администратору.'}
             </p>
@@ -226,9 +226,9 @@ export default function LoginPage() {
           )}
           <form method="post" onSubmit={submit} className="login-form" noValidate aria-busy={!formReady || loading}>
             {error && <p className="error" role="alert" key={error}>{error}</p>}
-            <label htmlFor="login-email">Email
-              <input id="login-email" name="email" type="email" placeholder="Введите email" autoComplete="username" inputMode="email" autoCapitalize="none" spellCheck={false} value={email} readOnly={!formReady} onChange={(event) => { setEmail(event.target.value); setFieldErrors(previous => ({ ...previous, email: undefined })); }} aria-invalid={!!fieldErrors.email} aria-describedby={fieldErrors.email ? 'login-email-error' : undefined} required />
-              {fieldErrors.email && <span id="login-email-error" className="login-field-error" role="alert">{fieldErrors.email}</span>}
+            <label htmlFor="login-username">Логин
+              <input id="login-username" name="username" type="text" placeholder="Введите логин" autoComplete="username" inputMode="text" autoCapitalize="none" spellCheck={false} value={username} readOnly={!formReady} onChange={(event) => { setUsername(event.target.value); setFieldErrors(previous => ({ ...previous, username: undefined })); }} aria-invalid={!!fieldErrors.username} aria-describedby={fieldErrors.username ? 'login-username-error' : undefined} required />
+              {fieldErrors.username && <span id="login-username-error" className="login-field-error" role="alert">{fieldErrors.username}</span>}
             </label>
             <div>
               <label htmlFor="login-password">Пароль</label>
@@ -246,12 +246,12 @@ export default function LoginPage() {
             if (event.target instanceof Element && event.target.closest('button')) stopSessionRestoreForManualLogin();
           }}>
             <summary>Войти через MAX</summary>
-            <p className="support">Доступно внутри MAX после подключения аккаунта НаПаре. Первый вход — по email и паролю.</p>
+            <p className="support">Доступно внутри MAX после подключения аккаунта НаПаре. Первый вход — по логину и паролю.</p>
             <MaxLaunchAuth />
           </details>
           <details className="login-support-details">
             <summary>Не получается войти?</summary>
-            <p className="support">Проверьте email и раскладку клавиатуры. Если вам не выдали пароль или вы его забыли, обратитесь в учебную часть или к администратору университета.</p>
+            <p className="support">Проверьте логин и раскладку клавиатуры. Если вам не выдали пароль или вы его забыли, обратитесь в учебную часть или к администратору университета.</p>
           </details>
           <a href="/career/register" className="login-career-link">Регистрация работодателя</a>
         </div>

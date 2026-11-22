@@ -21,6 +21,10 @@ export class User {
   @Column({ unique: true })
   email: string;
 
+  /** Administrator-assigned sign-in identifier; legacy accounts need assignment before login. */
+  @Column({ type: "varchar", length: 32, nullable: true })
+  username: string | null;
+
   @Column()
   @Exclude()
   passwordHash: string;

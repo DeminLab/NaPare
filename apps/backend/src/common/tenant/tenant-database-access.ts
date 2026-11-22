@@ -9,7 +9,7 @@ export interface TenantDatabaseGrant {
 
 /** Only trusted authentication code may establish these identity capabilities. */
 export interface TenantAuthenticationAccess {
-  authentication: { id?: string; email?: string; maxUserId?: string; write?: boolean };
+  authentication: { id?: string; email?: string; username?: string; maxUserId?: string; write?: boolean };
 }
 
 export interface TenantDatabaseRelationAccess {

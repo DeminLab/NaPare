@@ -112,11 +112,11 @@ export interface LoginResponse {
   refreshToken: string;
 }
 
-export async function login(email: string, password: string): Promise<void> {
+export async function login(username: string, password: string): Promise<void> {
   const res = await fetch(`${API_BASE}/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ username, password }),
   });
 
   if (!res.ok) throw new Error("Неверные учётные данные");

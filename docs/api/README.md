@@ -24,6 +24,10 @@ Hostname staging не зафиксирован в репозитории и за
 
 Все endpoints начинаются с `/api/v1/`.
 
+## Вход по логину
+
+`POST /api/v1/auth/login` и `POST /api/v1/auth/portal-login` принимают `{ "username": "danila.demin", "password": "…" }`. Email хранится как контактный адрес, но для входа не принимается. Логин задаёт администратор при создании аккаунта или назначает существующему через `PATCH /api/v1/admin/users/:id/username` с телом `{ "username": "danila.demin" }`. Учётные записи без назначенного логина не могут войти.
+
 ---
 
 ## Формат ошибок
@@ -35,7 +39,7 @@ Hostname staging не зафиксирован в репозитории и за
   "statusCode": 400,
   "code": "VALIDATION_ERROR",
   "message": "Validation failed",
-  "details": ["email must be an email"],
+  "details": ["username should not be empty"],
   "timestamp": "2026-09-26T10:00:00.000Z",
   "path": "/api/v1/auth/login"
 }
@@ -50,7 +54,7 @@ Hostname staging не зафиксирован в репозитории и за
 | `UNAUTHORIZED`          | 401         | Не авторизован                                        |
 | `FORBIDDEN`             | 403         | Нет доступа                                           |
 | `NOT_FOUND`             | 404         | Не найдено                                            |
-| `CONFLICT`              | 409         | Конфликт (например, дубль email)                      |
+| `CONFLICT`              | 409         | Конфликт (например, дублирующийся логин или email)     |
 | `RATE_LIMITED`          | 429         | Слишком много запросов                                |
 | `HTTP_ERROR`            | прочие      | Прочие HTTP-ошибки                                    |
 | `INTERNAL_SERVER_ERROR` | 500         | Внутренняя ошибка                                     |

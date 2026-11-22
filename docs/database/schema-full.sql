@@ -414,7 +414,7 @@ CREATE TABLE audit_logs (
     user_id UUID REFERENCES users(id) ON DELETE SET NULL,
     action VARCHAR(100) NOT NULL,
     entity VARCHAR(100) NOT NULL,
-    entity_id UUID,
+    entity_id TEXT,
     old_values JSONB,
     new_values JSONB,
     ip_address INET,

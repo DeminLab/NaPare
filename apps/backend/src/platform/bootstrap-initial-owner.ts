@@ -4,6 +4,7 @@ import * as bcrypt from 'bcrypt';
 import { TenantContext } from '../common/tenant/tenant-context';
 import { TenantDatabaseGrant } from '../common/tenant/tenant-database-access';
 import { installTenantDatabase } from '../common/tenant/tenant-database';
+import { normalizeUsername } from '../auth/username';
 
 const BOOTSTRAP_LOCK = 707247125;
 const GLOBAL_USER_ACCESS: TenantDatabaseGrant = {
@@ -38,8 +39,9 @@ async function readPassword(): Promise<string> {
 
 export async function createInitialPlatformOwner(
   db: DataSource,
-  input: { email: string; firstName: string; lastName: string; password: string },
+  input: { username: string; email: string; firstName: string; lastName: string; password: string },
 ): Promise<string> {
+  const username = normalizeUsername(input.username);
   const email = input.email.trim().toLowerCase();
   const firstName = input.firstName.trim();
   const lastName = input.lastName.trim();
@@ -61,10 +63,10 @@ export async function createInitialPlatformOwner(
     }
 
     const [user] = await manager.query(
-      `INSERT INTO users (email, "passwordHash", "firstName", "lastName", role, "organizationId", "isActive")
-       VALUES ($1, $2, $3, $4, 'developer', NULL, true)
+      `INSERT INTO users (username, email, "passwordHash", "firstName", "lastName", role, "organizationId", "isActive")
+       VALUES ($1, $2, $3, $4, $5, 'developer', NULL, true)
        RETURNING id`,
-      [email, passwordHash, firstName, lastName],
+      [username, email, passwordHash, firstName, lastName],
     );
     await manager.query('INSERT INTO platform_control (id, "ownerId") VALUES ($1, $2)', ['platform', user.id]);
     await manager.query(
@@ -77,6 +79,7 @@ export async function createInitialPlatformOwner(
 }
 
 if (require.main === module) {
+  const username = option('--username');
   const email = option('--email');
   const firstName = option('--first-name');
   const lastName = option('--last-name');
@@ -96,7 +99,7 @@ if (require.main === module) {
   const tenant = new TenantContext();
   installTenantDatabase(db, tenant);
   readPassword()
-    .then(password => db.initialize().then(() => tenant.runWithDatabaseAccess(GLOBAL_USER_ACCESS, () => createInitialPlatformOwner(db, { email, firstName, lastName, password }))))
+    .then(password => db.initialize().then(() => tenant.runWithDatabaseAccess(GLOBAL_USER_ACCESS, () => createInitialPlatformOwner(db, { username, email, firstName, lastName, password }))))
     .then(id => console.log(`Initial platform owner created. Account ID: ${id}`))
     .catch(error => { console.error(error instanceof Error ? error.message : 'Initial owner bootstrap failed.'); process.exitCode = 1; })
     .finally(() => db.isInitialized && db.destroy());

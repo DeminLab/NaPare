@@ -3,6 +3,7 @@ import { IsBoolean, IsEmail, IsIn, IsInt, IsOptional, IsString, IsUUID, Max, Max
 import { ApiProperty } from '@nestjs/swagger';
 
 export class EmployerRegistrationDto {
+  @ApiProperty() @IsString() @MinLength(3) @MaxLength(32) @Matches(/^[a-zA-Z0-9._-]+$/) username: string;
   @ApiProperty() @IsEmail() @MaxLength(254) email: string;
   @ApiProperty({ minLength: 6, maxLength: 128 }) @IsString() @MinLength(6) @MaxLength(128) password: string;
   @ApiProperty() @IsString() @MinLength(1) @MaxLength(80) firstName: string;

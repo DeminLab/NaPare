@@ -183,14 +183,14 @@ async function refreshTokens(): Promise<boolean> {
   }
 }
 
-export async function login(email: string, password: string): Promise<void> {
+export async function login(username: string, password: string): Promise<void> {
   const response = await fetch(`${API_BASE}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ username, password }),
   });
   if (!response.ok) {
-    if (response.status === 401) throw new Error('Неверный email или пароль');
+    if (response.status === 401) throw new Error('Неверный логин или пароль');
     const data = await response.json().catch(() => null);
     throw new Error(data?.message || 'Не удалось выполнить вход');
   }

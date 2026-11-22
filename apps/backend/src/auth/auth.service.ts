@@ -24,6 +24,7 @@ import { validateMaxInitData } from "./max-init-data";
 import { TenantContext } from '../common/tenant/tenant-context';
 import { deliveryEnabled } from '../notifications/delivery/delivery-config';
 import { TelemetryRequestContext, TelemetryService } from '../telemetry/telemetry.service';
+import { normalizeUsername } from './username';
 
 export type PortalWorkspace = "student" | "staff" | "admin" | "developer" | "career";
 
@@ -41,14 +42,14 @@ export class AuthService {
   ) {}
 
   async login(loginDto: LoginDto, context: TelemetryRequestContext = {}): Promise<AuthResponse> {
-    const email = loginDto.email.trim();
+    const username = normalizeUsername(loginDto.username);
     const user = await this.tenant.runWithDatabaseAccess(
-      { authentication: { email } },
-      () => this.usersService.findByEmail(email),
+      { authentication: { username } },
+      () => this.usersService.findByUsername(username),
     );
 
     if (!user || !user.isActive) {
-      await this.recordFailedLogin(email, context, user?.id ? "inactive" : "unknown_account");
+      await this.recordFailedLogin(username, context, user?.id ? "inactive" : "unknown_account");
       throw new UnauthorizedException("Invalid credentials");
     }
 
@@ -58,7 +59,7 @@ export class AuthService {
     );
 
     if (!isPasswordValid) {
-      await this.recordFailedLogin(email, context, "invalid_password");
+      await this.recordFailedLogin(username, context, "invalid_password");
       throw new UnauthorizedException("Invalid credentials");
     }
 
@@ -102,9 +103,9 @@ export class AuthService {
       });
     }
 
-    if (Boolean(maxAuthDto.email) !== Boolean(maxAuthDto.password)) {
+    if (Boolean(maxAuthDto.username) !== Boolean(maxAuthDto.password)) {
       throw new BadRequestException(
-        "Email и password должны указываться вместе",
+        "Username и password должны указываться вместе",
       );
     }
 
@@ -128,25 +129,25 @@ export class AuthService {
     );
 
     if (!user) {
-      if (!maxAuthDto.email || !maxAuthDto.password) {
+      if (!maxAuthDto.username || !maxAuthDto.password) {
         await this.telemetry?.recordAuth({ type: "login_failed", ...context, metadata: { method: "max", reason: "account_not_linked" } });
         throw new UnauthorizedException({
           code: "MAX_ACCOUNT_NOT_LINKED",
           message:
-            "Аккаунт MAX не привязан. Войдите по email и паролю, чтобы привязать его.",
+            "Аккаунт MAX не привязан. Войдите по логину и паролю, чтобы привязать его.",
         });
       }
 
       user = await this.linkMaxAccount(
         payload.maxUserId,
-        maxAuthDto.email.trim(),
+        normalizeUsername(maxAuthDto.username),
         maxAuthDto.password,
       );
       if (!user) {
-        await this.recordFailedLogin(maxAuthDto.email, context, "invalid_password", { method: "max" });
+        await this.recordFailedLogin(maxAuthDto.username, context, "invalid_password", { method: "max" });
         throw new UnauthorizedException({
           code: "MAX_INVALID_CREDENTIALS",
-          message: "Неверный email или пароль",
+          message: "Неверный логин или пароль",
         });
       }
     }
@@ -341,12 +342,12 @@ export class AuthService {
 
   private async linkMaxAccount(
     maxUserId: string,
-    email: string,
+    username: string,
     password: string,
   ): Promise<User | null> {
     const user = await this.tenant.runWithDatabaseAccess(
-      { authentication: { email } },
-      () => this.usersService.findByEmail(email),
+      { authentication: { username } },
+      () => this.usersService.findByUsername(username),
     );
 
     if (!user || !user.isActive) {
@@ -393,11 +394,11 @@ export class AuthService {
     return this.generateTokens(user, sessionId);
   }
 
-  private async recordFailedLogin(email: string, context: TelemetryRequestContext, reason: string, metadata: Record<string, unknown> = {}): Promise<void> {
+  private async recordFailedLogin(username: string, context: TelemetryRequestContext, reason: string, metadata: Record<string, unknown> = {}): Promise<void> {
     if (!this.telemetry) return;
     await this.telemetry.recordAuth({
       type: "login_failed",
-      emailHash: this.telemetry.fingerprint(email),
+      emailHash: this.telemetry.fingerprint(username),
       ...context,
       metadata: { ...metadata, reason },
     });
@@ -427,6 +428,7 @@ export class AuthService {
       refreshToken,
       user: {
         id: user.id,
+        username: user.username,
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,

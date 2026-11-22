@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -20,11 +20,11 @@ export default function LoginPage() {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ username, password }),
       });
 
       if (!response.ok) {
-        throw new Error('Неверные учетные данные');
+        throw new Error('Неверный логин или пароль');
       }
 
       const data = await response.json();
@@ -55,15 +55,19 @@ export default function LoginPage() {
           )}
 
           <div>
-            <label htmlFor="email" className="block text-sm font-semibold text-slate-700">
-              Электронная почта
+            <label htmlFor="username" className="block text-sm font-semibold text-slate-700">
+              Логин
             </label>
             <input
-              id="email"
-              type="email"
+              id="username"
+              name="username"
+              type="text"
               required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="username"
+              autoCapitalize="none"
+              spellCheck={false}
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
               className="mt-1 block min-h-12 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-base text-slate-900 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
             />
           </div>
