@@ -137,6 +137,41 @@ describe("AbsencesService", () => {
         }),
       );
     });
+
+    it("scopes a global developer's student history to the student's university", async () => {
+      mockTenantContext.getUser.mockReturnValue({
+        id: "developer-1",
+        role: UserRole.DEVELOPER,
+        organizationId: null,
+      });
+      mockUserRepository.findOne.mockResolvedValue({
+        id: "student-1",
+        organizationId: "uni-2",
+        role: UserRole.STUDENT,
+      });
+
+      await service.findByStudent("student-1");
+
+      expect(mockTenantContext.assertAccess).toHaveBeenCalledWith("uni-2");
+      expect(mockRepo.findAndCount).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { studentId: "student-1", organizationId: "uni-2" },
+        }),
+      );
+    });
+
+    it("does not query absences for a missing student through global access", async () => {
+      mockTenantContext.getUser.mockReturnValue({
+        id: "developer-1",
+        role: UserRole.DEVELOPER,
+        organizationId: null,
+      });
+
+      await expect(service.findByStudent("missing-student")).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(mockRepo.findAndCount).not.toHaveBeenCalled();
+    });
   });
 
   describe("confirm", () => {

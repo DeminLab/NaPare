@@ -12,8 +12,9 @@ export class UniversityGuard implements CanActivate {
       throw new ForbiddenException('User not authenticated');
     }
 
-    // Superadmin can access any university
-    if (user.role === UserRole.SUPERADMIN) {
+    // Developer and superadmin can access any university. Resource ownership
+    // is still checked by the endpoint service.
+    if ([UserRole.DEVELOPER, UserRole.SUPERADMIN].includes(user.role)) {
       return true;
     }
 

@@ -35,6 +35,15 @@ describe('TenantContext', () => {
 
     expect(() => context.assertAccess('uni-b')).not.toThrow();
   });
+
+  it('allows developer to access university B with superadmin-equivalent tenant scope', () => {
+    const context = new TenantContext();
+    context.setUser({
+      id: 'developer', email: 'developer@example.com', role: UserRole.DEVELOPER, organizationId: null,
+    });
+
+    expect(() => context.assertAccess('uni-b')).not.toThrow();
+  });
 });
 
 describe('TenantContext request scope', () => {

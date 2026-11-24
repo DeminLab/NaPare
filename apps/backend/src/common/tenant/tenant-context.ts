@@ -41,7 +41,7 @@ export class TenantContext {
 
   assertAccess(organizationId: string | null): void {
     const user = this.getUser();
-    if (user && user.role !== UserRole.SUPERADMIN && (!organizationId || !user.organizationId || user.organizationId !== organizationId)) {
+    if (user && ![UserRole.DEVELOPER, UserRole.SUPERADMIN].includes(user.role) && (!organizationId || !user.organizationId || user.organizationId !== organizationId)) {
       throw new ForbiddenException('Access denied to this university');
     }
   }

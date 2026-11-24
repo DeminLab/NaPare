@@ -43,6 +43,7 @@ const CONTENT_AUTHOR_ROLES: UserRole[] = [
   UserRole.DEPARTMENT_HEAD,
   UserRole.FACULTY_DEAN,
   UserRole.UNIVERSITY_ADMIN,
+  UserRole.DEVELOPER,
   UserRole.SUPERADMIN,
 ];
 

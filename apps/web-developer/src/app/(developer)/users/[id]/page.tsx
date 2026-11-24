@@ -56,7 +56,7 @@ export default function UserDetailPage() {
   const user = data?.user;
   const canWrite = !!access.data && (access.data.owner || access.data.permissions.includes('accounts.write'));
   const roleLevel: Record<string, number> = { employer: 0, student: 1, career_staff: 2, teacher: 2, career_admin: 3, curator: 3, department_head: 4, faculty_dean: 5, university_admin: 6, developer: 7, superadmin: 8 };
-  const canChangeStatus = !!access.data && !!user && user.id !== access.data.actorId && (access.data.owner || (roleLevel[access.data.actorRole] ?? -1) > (roleLevel[user.role] ?? -1));
+  const canChangeStatus = !!access.data && !!user && user.id !== access.data.actorId && (roleLevel[access.data.actorRole] ?? -1) > (roleLevel[user.role] ?? -1);
   const forbidden = activity.error.toLowerCase().includes('доступ') || activity.error.toLowerCase().includes('разреш');
 
   const close = () => { setAction(null); setSessionToRevoke(null); setReason(''); };

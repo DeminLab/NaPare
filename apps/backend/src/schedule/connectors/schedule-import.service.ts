@@ -124,7 +124,7 @@ export class ScheduleImportService implements OnModuleInit, OnModuleDestroy, Sch
   async submit(organizationId: string, dto: ImportScheduleDto) {
     this.tenant.assertAccess(organizationId);
     const actor = this.tenant.getUser();
-    if (!actor || ![UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN].includes(actor.role) || !organizationId) throw new ForbiddenException('Нужны права администратора вуза.');
+    if (!actor || ![UserRole.UNIVERSITY_ADMIN, UserRole.DEVELOPER, UserRole.SUPERADMIN].includes(actor.role) || !organizationId) throw new ForbiddenException('Нужны права администратора вуза.');
     const university = await this.universities.findOneBy({ id: organizationId });
     if (!university) throw new NotFoundException('Вуз не найден.');
     // FR-IMP-04: a server dry-run answers with the plan only and never queues a job.
@@ -200,7 +200,7 @@ export class ScheduleImportService implements OnModuleInit, OnModuleDestroy, Sch
   async rollback(organizationId: string, id: string): Promise<ImportRollbackResult> {
     this.tenant.assertAccess(organizationId);
     const actor = this.tenant.getUser();
-    if (!actor || ![UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN].includes(actor.role)) throw new ForbiddenException('Нужны права администратора вуза.');
+    if (!actor || ![UserRole.UNIVERSITY_ADMIN, UserRole.DEVELOPER, UserRole.SUPERADMIN].includes(actor.role)) throw new ForbiddenException('Нужны права администратора вуза.');
     const run = await this.runs.findOneBy({ id, organizationId });
     if (!run) throw new NotFoundException('Запись импорта не найдена.');
     if (run.mode !== 'apply' || !run.jobId) throw new BadRequestException('Откат доступен только для применённого импорта.');
@@ -511,8 +511,12 @@ export class ScheduleImportService implements OnModuleInit, OnModuleDestroy, Sch
   /** Executes exactly the ops the shared plan produced, atomically (FR-IMP-07). */
   private async apply(manager: EntityManager, job: ScheduleImportJob): Promise<ScheduleImportPlan> {
     const payload = job.payload!;
-    const actor = await manager.getRepository(User).findOneBy({ id: job.actorId, organizationId: job.organizationId, isActive: true });
-    if (!actor || ![UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN].includes(actor.role)) throw new ForbiddenException('Автор задания больше не имеет права импортировать расписание этого вуза.');
+    const actor = await manager.getRepository(User).findOneBy({ id: job.actorId, isActive: true });
+    const canStillImport = actor && (
+      [UserRole.DEVELOPER, UserRole.SUPERADMIN].includes(actor.role) ||
+      (actor.role === UserRole.UNIVERSITY_ADMIN && actor.organizationId === job.organizationId)
+    );
+    if (!canStillImport) throw new ForbiddenException('Автор задания больше не имеет права импортировать расписание этого вуза.');
     await manager.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [`schedule-import:${job.organizationId}:${payload.source}`]);
     const { plan, ops } = await this.plan(manager, job.organizationId, payload);
     const repository = manager.getRepository(Lesson);

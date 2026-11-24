@@ -33,6 +33,13 @@ describe('UniversityGuard', () => {
     ))).toBe(true);
   });
 
+  it('allows developer to access any university', () => {
+    expect(guard.canActivate(contextFor(
+      { role: UserRole.DEVELOPER, organizationId: null },
+      { organizationId: 'uni-2' },
+    ))).toBe(true);
+  });
+
   it('denies requests without an authenticated actor', () => {
     expect(() => guard.canActivate(contextFor(undefined))).toThrow('User not authenticated');
   });

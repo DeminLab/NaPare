@@ -43,7 +43,7 @@ export class PairSpaceController {
   constructor(private readonly pairSpaceService: PairSpaceService) {}
 
   @Get("groups/:groupId")
-  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.DEVELOPER, UserRole.SUPERADMIN)
   @ApiOperation({ summary: "Получить существующие пространства пары группы без создания новых" })
   @ApiOkResponse({ type: PaginatedResponseDto, description: "Пространства группы получены" })
   @ApiResponse({ status: 403, description: "Forbidden" })
@@ -91,6 +91,7 @@ export class PairSpaceController {
     UserRole.DEPARTMENT_HEAD,
     UserRole.FACULTY_DEAN,
     UserRole.UNIVERSITY_ADMIN,
+    UserRole.DEVELOPER,
     UserRole.SUPERADMIN,
   )
   @ApiOperation({ summary: "Создать объявление" })
@@ -119,6 +120,7 @@ export class PairSpaceController {
     UserRole.DEPARTMENT_HEAD,
     UserRole.FACULTY_DEAN,
     UserRole.UNIVERSITY_ADMIN,
+    UserRole.DEVELOPER,
     UserRole.SUPERADMIN,
   )
   @ApiOperation({ summary: "Создать домашнее задание" })
@@ -147,6 +149,7 @@ export class PairSpaceController {
     UserRole.DEPARTMENT_HEAD,
     UserRole.FACULTY_DEAN,
     UserRole.UNIVERSITY_ADMIN,
+    UserRole.DEVELOPER,
     UserRole.SUPERADMIN,
   )
   @ApiOperation({ summary: "Загрузить файл" })

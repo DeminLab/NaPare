@@ -139,7 +139,7 @@ export class ScheduleController {
   }
 
   @Get('series')
-  @Roles(UserRole.TEACHER, UserRole.CURATOR, UserRole.DEPARTMENT_HEAD, UserRole.FACULTY_DEAN, UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @Roles(UserRole.TEACHER, UserRole.CURATOR, UserRole.DEPARTMENT_HEAD, UserRole.FACULTY_DEAN, UserRole.UNIVERSITY_ADMIN, UserRole.DEVELOPER, UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Получить серии занятий своего университета' })
   @ApiResponse({ status: 200, description: 'Серии получены' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -148,7 +148,7 @@ export class ScheduleController {
   }
 
   @Post('series')
-  @Roles(UserRole.CURATOR, UserRole.DEPARTMENT_HEAD, UserRole.FACULTY_DEAN, UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @Roles(UserRole.CURATOR, UserRole.DEPARTMENT_HEAD, UserRole.FACULTY_DEAN, UserRole.UNIVERSITY_ADMIN, UserRole.DEVELOPER, UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Создать серию занятий' })
   @ApiResponse({ status: 201, description: 'Серия создана' })
   @ApiResponse({ status: 400, description: 'Некорректные данные серии' })
@@ -159,7 +159,7 @@ export class ScheduleController {
   }
 
   @Patch('series/:id')
-  @Roles(UserRole.CURATOR, UserRole.DEPARTMENT_HEAD, UserRole.FACULTY_DEAN, UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @Roles(UserRole.CURATOR, UserRole.DEPARTMENT_HEAD, UserRole.FACULTY_DEAN, UserRole.UNIVERSITY_ADMIN, UserRole.DEVELOPER, UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Обновить серию занятий' })
   @ApiResponse({ status: 200, description: 'Серия обновлена' })
   @ApiResponse({ status: 400, description: 'Некорректные данные серии' })
@@ -171,7 +171,7 @@ export class ScheduleController {
   }
 
   @Delete('series/:id')
-  @Roles(UserRole.CURATOR, UserRole.DEPARTMENT_HEAD, UserRole.FACULTY_DEAN, UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @Roles(UserRole.CURATOR, UserRole.DEPARTMENT_HEAD, UserRole.FACULTY_DEAN, UserRole.UNIVERSITY_ADMIN, UserRole.DEVELOPER, UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Удалить серию занятий' })
   @ApiResponse({ status: 200, description: 'Серия удалена' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -181,7 +181,7 @@ export class ScheduleController {
   }
 
   @Post('series/expand')
-  @Roles(UserRole.DEPARTMENT_HEAD, UserRole.FACULTY_DEAN, UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @Roles(UserRole.DEPARTMENT_HEAD, UserRole.FACULTY_DEAN, UserRole.UNIVERSITY_ADMIN, UserRole.DEVELOPER, UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Создать занятия на период по всем сериям своего университета' })
   @ApiResponse({ status: 201, description: 'Генерация выполнена или показан план' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -190,7 +190,7 @@ export class ScheduleController {
   }
 
   @Post('series/:id/expand')
-  @Roles(UserRole.DEPARTMENT_HEAD, UserRole.FACULTY_DEAN, UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @Roles(UserRole.DEPARTMENT_HEAD, UserRole.FACULTY_DEAN, UserRole.UNIVERSITY_ADMIN, UserRole.DEVELOPER, UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Создать занятия на период по одной серии' })
   @ApiResponse({ status: 201, description: 'Генерация выполнена или показан план' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -201,7 +201,7 @@ export class ScheduleController {
 
   @Post('validate')
   @HttpCode(HttpStatus.OK)
-  @Roles(UserRole.TEACHER, UserRole.CURATOR, UserRole.DEPARTMENT_HEAD, UserRole.FACULTY_DEAN, UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @Roles(UserRole.TEACHER, UserRole.CURATOR, UserRole.DEPARTMENT_HEAD, UserRole.FACULTY_DEAN, UserRole.UNIVERSITY_ADMIN, UserRole.DEVELOPER, UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Проверить занятие на конфликты без сохранения' })
   @ApiResponse({ status: 200, description: 'Проверка выполнена' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -215,7 +215,7 @@ export class ScheduleController {
   }
 
   @Post()
-  @Roles(UserRole.TEACHER, UserRole.CURATOR, UserRole.DEPARTMENT_HEAD, UserRole.FACULTY_DEAN, UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @Roles(UserRole.TEACHER, UserRole.CURATOR, UserRole.DEPARTMENT_HEAD, UserRole.FACULTY_DEAN, UserRole.UNIVERSITY_ADMIN, UserRole.DEVELOPER, UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Создать урок' })
   @ApiResponse({ status: 201, description: 'Урок создан' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -227,7 +227,7 @@ export class ScheduleController {
   }
 
   @Patch(':id')
-  @Roles(UserRole.TEACHER, UserRole.CURATOR, UserRole.DEPARTMENT_HEAD, UserRole.FACULTY_DEAN, UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @Roles(UserRole.TEACHER, UserRole.CURATOR, UserRole.DEPARTMENT_HEAD, UserRole.FACULTY_DEAN, UserRole.UNIVERSITY_ADMIN, UserRole.DEVELOPER, UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Обновить урок' })
   @ApiResponse({ status: 200, description: 'Урок обновлён' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -239,7 +239,7 @@ export class ScheduleController {
   }
 
   @Delete(':id')
-  @Roles(UserRole.TEACHER, UserRole.CURATOR, UserRole.DEPARTMENT_HEAD, UserRole.FACULTY_DEAN, UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @Roles(UserRole.TEACHER, UserRole.CURATOR, UserRole.DEPARTMENT_HEAD, UserRole.FACULTY_DEAN, UserRole.UNIVERSITY_ADMIN, UserRole.DEVELOPER, UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Удалить урок' })
   @ApiResponse({ status: 200, description: 'Урок удалён' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })

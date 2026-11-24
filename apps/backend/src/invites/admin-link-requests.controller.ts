@@ -20,14 +20,14 @@ export class AdminLinkRequestsController {
   constructor(private readonly invites: InvitesService) {}
 
   @Get()
-  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.DEVELOPER, UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Очередь заявок на привязку организации' })
   list(@Request() req) {
     return this.invites.listLinkRequests(req.user);
   }
 
   @Patch(':id')
-  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.DEVELOPER, UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Одобрить или отклонить заявку на привязку' })
   decide(@Request() req, @Param('id', ParseUUIDPipe) id: string, @Body() dto: DecideLinkRequestDto) {
     return this.invites.decideLinkRequest(req.user, id, dto);

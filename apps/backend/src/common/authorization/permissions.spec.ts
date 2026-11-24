@@ -2,9 +2,10 @@ import { UserRole } from '../../auth/interfaces/user-role';
 import { hasPermission, PERMISSIONS } from './permissions';
 
 describe('academic permission matrix', () => {
-  it('keeps technical developer scope separate from academic write access', () => {
+  it('gives developers superadmin permission parity while preserving staff scopes', () => {
     expect(hasPermission(UserRole.DEVELOPER, PERMISSIONS.TECHNICAL_RESOURCE_READ)).toBe(true);
-    expect(hasPermission(UserRole.DEVELOPER, PERMISSIONS.ACADEMIC_COURSE_READ)).toBe(false);
+    expect(hasPermission(UserRole.DEVELOPER, PERMISSIONS.ACADEMIC_COURSE_READ)).toBe(true);
+    expect(hasPermission(UserRole.DEVELOPER, PERMISSIONS.ACADEMIC_COURSE_MANAGE)).toBe(true);
     expect(hasPermission(UserRole.TEACHER, PERMISSIONS.ACADEMIC_SERIES_MANAGE)).toBe(true);
     expect(hasPermission(UserRole.TEACHER, PERMISSIONS.ACADEMIC_COURSE_MANAGE)).toBe(false);
   });

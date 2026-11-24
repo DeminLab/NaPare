@@ -352,6 +352,7 @@ export class AdminController {
     UserRole.DEPARTMENT_HEAD,
     UserRole.FACULTY_DEAN,
     UserRole.UNIVERSITY_ADMIN,
+    UserRole.DEVELOPER,
     UserRole.SUPERADMIN,
   )
   @ApiOperation({ summary: "Получить группы, доступные для посещаемости" })
@@ -374,6 +375,7 @@ export class AdminController {
     UserRole.DEPARTMENT_HEAD,
     UserRole.FACULTY_DEAN,
     UserRole.UNIVERSITY_ADMIN,
+    UserRole.DEVELOPER,
     UserRole.SUPERADMIN,
   )
   @ApiOperation({ summary: "Получить студентов группы своего университета" })

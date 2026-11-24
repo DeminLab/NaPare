@@ -82,17 +82,15 @@ export class PlatformService {
     }
   }
   async protectLegacyRoleAssignment(id: string, role: UserRole) {
-    const access = await this.access();
+    await this.access();
     const actor = this.tenant.getUser()!;
-    if (access.owner) return;
     const target = await this.db.getRepository(User).findOneBy({ id });
     if (!target) throw new NotFoundException('Аккаунт не найден.');
     this.assertTargetManageable(actor.role, actor.id, id, target.role);
     this.assertRoleAssignable(actor.role, target.role, role);
   }
   async protectLegacyRoleCreation(role: UserRole) {
-    const access = await this.access();
-    if (access.owner) return;
+    await this.access();
     const actor = this.tenant.getUser()!;
     if (this.roleRank(role) >= this.roleRank(actor.role)) {
       throw new ForbiddenException('Нельзя создавать аккаунт с ролью равного или более высокого уровня.');
@@ -179,7 +177,7 @@ export class PlatformService {
     const target = await manager.findOne(User, { where: { id }, ...(manager.queryRunner?.isTransactionActive ? { lock: { mode: 'pessimistic_write' as const } } : {}) });
     if (!target) throw new NotFoundException('Аккаунт не найден.');
     this.assertUniversityScope(access, target.organizationId);
-    if (!access.owner) this.assertTargetManageable(this.tenant.getUser()!.role, access.actorId, id, target.role);
+    this.assertTargetManageable(this.tenant.getUser()!.role, access.actorId, id, target.role);
     return { access, target };
   }
   async updateAccount(id: string, dto: PlatformAccountDto, auditContext: PlatformAuditContext = {}) {
@@ -187,7 +185,7 @@ export class PlatformService {
     const result = await this.db.transaction(async manager => {
       const { access, target } = await this.manageable(id, manager);
       if (dto.role === UserRole.CURATOR && target.role !== UserRole.CURATOR) throw new BadRequestException('Кураторство назначается дополнительно в разделе кураторства.');
-      if (!access.owner && dto.role && dto.role !== target.role) this.assertRoleAssignable(this.tenant.getUser()!.role, target.role, dto.role);
+      if (dto.role && dto.role !== target.role) this.assertRoleAssignable(this.tenant.getUser()!.role, target.role, dto.role);
       if ((dto.firstName !== undefined && !dto.firstName.trim()) || (dto.lastName !== undefined && !dto.lastName.trim())) throw new BadRequestException('Имя и фамилия не могут быть пустыми.');
       const current = await manager.findOneByOrFail(User, { id });
       const nextRole = dto.role ?? current.role;
@@ -250,7 +248,10 @@ export class PlatformService {
     if (Buffer.byteLength(dto.password) > 72) throw new BadRequestException('Пароль должен занимать не более 72 байт UTF-8.');
     if (!dto.firstName?.trim() || !dto.lastName?.trim() || !dto.role) throw new BadRequestException('Укажите имя, фамилию и основную роль.');
     if (dto.role === UserRole.CURATOR) throw new BadRequestException('Кураторство назначается существующему аккаунту.');
-    if (!access.owner && this.roleRank(dto.role) >= this.roleRank(this.tenant.getUser()!.role)) throw new ForbiddenException('Нельзя назначить роль равного или более высокого уровня.');
+    const actorRole = this.tenant.getUser()!.role;
+    if ([UserRole.DEVELOPER, UserRole.SUPERADMIN].includes(dto.role) && this.roleRank(dto.role) >= this.roleRank(actorRole)) {
+      throw new ForbiddenException('Нельзя назначить роль равного или более высокого уровня.');
+    }
     this.assertUniversityScope(access, dto.organizationId);
     if (dto.organizationId && !await this.db.getRepository(University).existsBy({ id: dto.organizationId })) throw new BadRequestException('Университет не найден.');
     if (![UserRole.DEVELOPER, UserRole.SUPERADMIN, UserRole.EMPLOYER, UserRole.CAREER_STAFF, UserRole.CAREER_ADMIN].includes(dto.role) && !dto.organizationId) throw new BadRequestException('Для учебного аккаунта требуется университет.');

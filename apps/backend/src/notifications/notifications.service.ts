@@ -46,7 +46,7 @@ export class NotificationsService {
   ): Promise<PaginatedResponse<Notification>> {
     const currentUser = this.tenantContext.getUser();
     const [data, total] = await this.notificationRepository.findAndCount({
-      where: currentUser && currentUser.role !== UserRole.SUPERADMIN
+      where: currentUser && ![UserRole.DEVELOPER, UserRole.SUPERADMIN].includes(currentUser.role)
         ? { userId, organizationId: requireOrganizationId(currentUser) }
         : { userId },
       order: { createdAt: 'DESC' },
@@ -59,7 +59,7 @@ export class NotificationsService {
   async getUnreadCount(userId: string): Promise<number> {
     const currentUser = this.tenantContext.getUser();
     return this.notificationRepository.count({
-      where: currentUser && currentUser.role !== UserRole.SUPERADMIN
+      where: currentUser && ![UserRole.DEVELOPER, UserRole.SUPERADMIN].includes(currentUser.role)
         ? { userId, organizationId: requireOrganizationId(currentUser), isRead: false }
         : { userId, isRead: false },
     });
@@ -155,7 +155,7 @@ export class NotificationsService {
       where: {
         userId,
         ...(status ? { status } : {}),
-        ...(currentUser && currentUser.role !== UserRole.SUPERADMIN
+        ...(currentUser && ![UserRole.DEVELOPER, UserRole.SUPERADMIN].includes(currentUser.role)
           ? { organizationId: requireOrganizationId(currentUser) }
           : {}),
       },
@@ -198,7 +198,7 @@ export class NotificationsService {
   async markAllAsRead(userId: string): Promise<void> {
     const currentUser = this.tenantContext.getUser();
     await this.notificationRepository.update(
-      currentUser && currentUser.role !== UserRole.SUPERADMIN
+      currentUser && ![UserRole.DEVELOPER, UserRole.SUPERADMIN].includes(currentUser.role)
         ? { userId, organizationId: requireOrganizationId(currentUser), isRead: false }
         : { userId, isRead: false },
       { isRead: true, readAt: new Date() },

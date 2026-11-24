@@ -14,7 +14,7 @@ import { AbsenceConfirmation } from '../absences/entities/absence-confirmation.e
 import { CuratorAssignment } from './entities/curator-assignment.entity';
 import { CurationQueryDto } from './curation-query.dto';
 
-export const CURATION_MANAGERS = [UserRole.FACULTY_DEAN, UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN];
+export const CURATION_MANAGERS = [UserRole.FACULTY_DEAN, UserRole.UNIVERSITY_ADMIN, UserRole.DEVELOPER, UserRole.SUPERADMIN];
 const CANDIDATE_ROLES = [UserRole.STUDENT, UserRole.TEACHER, UserRole.CURATOR, UserRole.FACULTY_DEAN, UserRole.DEPARTMENT_HEAD, UserRole.UNIVERSITY_ADMIN];
 const REVIEW_MANAGERS = [...CURATION_MANAGERS, UserRole.DEPARTMENT_HEAD];
 

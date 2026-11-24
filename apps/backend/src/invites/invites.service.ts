@@ -325,11 +325,11 @@ export class InvitesService {
           });
           const ids = new Set(
             users
-              .filter(user => user.role === UserRole.UNIVERSITY_ADMIN || user.role === UserRole.SUPERADMIN)
+              .filter(user => [UserRole.UNIVERSITY_ADMIN, UserRole.DEVELOPER, UserRole.SUPERADMIN].includes(user.role))
               .map(user => user.id),
           );
           const memberships = await this.db.getRepository(UserRoleMembership).find({
-            where: { organizationId, role: In([UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN]) },
+            where: { organizationId, role: In([UserRole.UNIVERSITY_ADMIN, UserRole.DEVELOPER, UserRole.SUPERADMIN]) },
             select: { userId: true },
           });
           for (const membership of memberships) ids.add(membership.userId);

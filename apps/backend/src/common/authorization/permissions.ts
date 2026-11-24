@@ -54,7 +54,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     PERMISSIONS.ACADEMIC_EVENT_MANAGE,
   ],
   [UserRole.SUPERADMIN]: Object.values(PERMISSIONS),
-  [UserRole.DEVELOPER]: [PERMISSIONS.TECHNICAL_RESOURCE_READ],
+  [UserRole.DEVELOPER]: Object.values(PERMISSIONS),
 };
 
 export function hasPermission(role: UserRole, permission: Permission): boolean {

@@ -34,6 +34,7 @@ export const ABSENCE_STAFF_ROLES: UserRole[] = [
   UserRole.DEPARTMENT_HEAD,
   UserRole.FACULTY_DEAN,
   UserRole.UNIVERSITY_ADMIN,
+  UserRole.DEVELOPER,
   UserRole.SUPERADMIN,
 ];
 
@@ -65,12 +66,24 @@ export class AbsencesService {
     pagination: PaginationQueryDto = new PaginationQueryDto(),
   ): Promise<PaginatedResponse<Absence>> {
     const user = this.tenantContext.getUser();
-    if (user) await this.assertStudentReadScope(studentId, requireOrganizationId(user));
+    let organizationId: string | null = null;
+    if (user && [UserRole.DEVELOPER, UserRole.SUPERADMIN].includes(user.role)) {
+      const student = await this.userRepository.findOne({
+        where: { id: studentId, role: UserRole.STUDENT },
+      });
+      if (!student?.organizationId) {
+        throw new NotFoundException(`Student with id ${studentId} not found`);
+      }
+      organizationId = student.organizationId;
+    } else if (user) {
+      organizationId = requireOrganizationId(user);
+    }
+    if (user && organizationId) {
+      await this.assertStudentReadScope(studentId, organizationId);
+    }
     const [data, total] = await this.absenceRepository.findAndCount({
       where:
-        user && user.role !== UserRole.SUPERADMIN
-          ? { studentId, organizationId: requireOrganizationId(user) }
-          : { studentId },
+        user ? { studentId, organizationId: organizationId! } : { studentId },
       order: { createdAt: "DESC" },
       skip: (pagination.page - 1) * pagination.limit,
       take: pagination.limit,
@@ -92,7 +105,7 @@ export class AbsencesService {
     await this.assertTeacherOwnsLesson(lesson);
     const [data, total] = await this.absenceRepository.findAndCount({
       where:
-        user && user.role !== UserRole.SUPERADMIN
+        user && ![UserRole.DEVELOPER, UserRole.SUPERADMIN].includes(user.role)
           ? {
               affectedLessonIds: ArrayContains([lessonId]),
               organizationId: requireOrganizationId(user),
