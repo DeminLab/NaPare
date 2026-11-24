@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { Brackets, DataSource, EntityManager, IsNull } from 'typeorm';
+import { Brackets, DataSource, EntityManager, In, IsNull } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { isEmail } from 'class-validator';
 import { TenantContext } from '../common/tenant/tenant-context';
@@ -19,10 +19,11 @@ import { PLATFORM_PERMISSIONS, PlatformAccountDto, PlatformCreateAccountDto, Pla
 import { ControlAgentClient } from './control-agent.client';
 import { platformDatabaseGrants, PLATFORM_TENANT_TABLES } from '../common/tenant/tenant-database-platform';
 import { TelemetryService } from '../telemetry/telemetry.service';
+import { normalizeUsername } from '../auth/username';
 
 type AgentJob = { id: string; service: string; action: string; status: string; actorId: string; createdAt: string; log?: string };
 type PlatformAuditContext = { ip?: string; userAgent?: string };
-const safeAccount = ({ id, email, firstName, lastName, role, organizationId, groupId, isActive, lastLoginAt }: User) => ({ id, email, firstName, lastName, role, organizationId, groupId, isActive, lastLoginAt });
+const safeAccount = ({ id, username, email, firstName, lastName, role, organizationId, groupId, isActive, lastLoginAt }: User) => ({ id, username, email, firstName, lastName, role, organizationId, groupId, isActive, lastLoginAt });
 
 @Injectable()
 export class PlatformService {
@@ -33,7 +34,8 @@ export class PlatformService {
     const control = await this.db.getRepository(PlatformControl).findOneBy({ id: 'platform' });
     const owner = !!control && control.ownerId === actor.id;
     const grant = control && !owner ? await this.db.getRepository(PlatformGrant).findOneBy({ userId: actor.id }) : null;
-    const permissions = new Set(owner ? [...PLATFORM_PERMISSIONS] : grant?.permissions ?? []);
+    const roleDefaults = !owner && !grant;
+    const permissions = new Set(owner || roleDefaults ? [...PLATFORM_PERMISSIONS] : grant?.permissions ?? []);
     if ([
       'accounts.read', 'accounts.write', 'student-data.read', 'personal-data.read',
       'homework-data.read', 'notification-data.read', 'curation-data.read', 'pairspace-content.read',
@@ -41,7 +43,7 @@ export class PlatformService {
       'analytics.read', 'telemetry.read',
     ].some(permission => permissions.has(permission))) permissions.add('universities.read');
     if (permissions.has('identity-links.write')) permissions.add('identity-links.read');
-    return { owner, ownerConfigured: !!control, permissions: [...permissions], serviceIds: owner ? [...SERVICE_IDS] : grant?.serviceIds ?? [], organizationIds: owner ? null : grant?.organizationIds ?? null, agentConfigured: this.agent.configured(), actorId: actor.id };
+    return { owner, ownerConfigured: !!control, actorId: actor.id, actorRole: actor.role, permissions: [...permissions], serviceIds: owner || roleDefaults ? [...SERVICE_IDS] : grant?.serviceIds ?? [], organizationIds: owner || roleDefaults ? null : grant?.organizationIds ?? null, agentConfigured: this.agent.configured() };
   }
   async require(permission: PlatformPermission, service?: string) {
     const access = await this.access();
@@ -63,10 +65,48 @@ export class PlatformService {
     const control = await this.db.getRepository(PlatformControl).findOneBy({ id: 'platform' });
     if (control?.ownerId === id) throw new ForbiddenException('Аккаунт владельца защищён от блокировки, смены роли и сброса доступа.');
   }
+  private roleRank(role: UserRole): number {
+    if (role === UserRole.SUPERADMIN) return 2;
+    if (role === UserRole.DEVELOPER) return 1;
+    return 0;
+  }
+  private assertTargetManageable(actorRole: UserRole, actorId: string, targetId: string, targetRole: UserRole) {
+    if (targetId === actorId || this.roleRank(targetRole) >= this.roleRank(actorRole)) {
+      throw new ForbiddenException('Нельзя изменять собственную учётную запись или аккаунт равного/более высокого уровня.');
+    }
+  }
+  private assertRoleAssignable(actorRole: UserRole, targetRole: UserRole, nextRole: UserRole) {
+    const promotionToSuperadmin = actorRole === UserRole.SUPERADMIN && targetRole === UserRole.DEVELOPER && nextRole === UserRole.SUPERADMIN;
+    if (!promotionToSuperadmin && this.roleRank(nextRole) >= this.roleRank(actorRole)) {
+      throw new ForbiddenException('Нельзя назначить роль равного или более высокого уровня.');
+    }
+  }
+  async protectLegacyRoleAssignment(id: string, role: UserRole) {
+    const access = await this.access();
+    const actor = this.tenant.getUser()!;
+    if (access.owner) return;
+    const target = await this.db.getRepository(User).findOneBy({ id });
+    if (!target) throw new NotFoundException('Аккаунт не найден.');
+    this.assertTargetManageable(actor.role, actor.id, id, target.role);
+    this.assertRoleAssignable(actor.role, target.role, role);
+  }
+  async protectLegacyRoleCreation(role: UserRole) {
+    const access = await this.access();
+    if (access.owner) return;
+    const actor = this.tenant.getUser()!;
+    if (this.roleRank(role) >= this.roleRank(actor.role)) {
+      throw new ForbiddenException('Нельзя создавать аккаунт с ролью равного или более высокого уровня.');
+    }
+  }
   async protectLegacyMutation(id: string) {
     await this.protectOwner(id);
     const target = await this.db.getRepository(User).findOneBy({ id });
-    if (target && [UserRole.DEVELOPER, UserRole.SUPERADMIN].includes(target.role)) await this.require('accounts.write');
+    if (target && [UserRole.DEVELOPER, UserRole.SUPERADMIN].includes(target.role)) {
+      await this.require('accounts.write');
+      const actor = this.tenant.getUser();
+      if (!actor) throw new ForbiddenException('Требуется авторизация.');
+      this.assertTargetManageable(actor.role, actor.id, id, target.role);
+    }
   }
   async clearLegacyGrant(id: string) { await this.db.getRepository(PlatformGrant).delete({ userId: id }); }
   private async audit(action: string, entityId: string, values: Record<string, string | boolean | string[] | null> = {}) {
@@ -75,7 +115,7 @@ export class PlatformService {
   async accounts(query: PlatformQueryDto, auditContext: PlatformAuditContext = {}) {
     const access = await this.require('accounts.read');
     const qb = this.db.getRepository(User).createQueryBuilder('u');
-    if (query.q) qb.andWhere("concat_ws(' ', u.email, u.firstName, u.lastName, u.phone, u.groupId, u.id) ILIKE :q", { q: `%${query.q}%` });
+    if (query.q) qb.andWhere("concat_ws(' ', u.username, u.email, u.firstName, u.lastName, u.phone, u.groupId, u.id) ILIKE :q", { q: `%${query.q}%` });
     if (query.organizationId) { this.assertUniversityScope(access, query.organizationId); qb.andWhere('u.organizationId = :organizationId', { organizationId: query.organizationId }); }
     if (!access.owner && access.organizationIds !== null) {
       if (!access.organizationIds.length) qb.andWhere('1 = 0');
@@ -139,6 +179,7 @@ export class PlatformService {
     const target = await manager.findOne(User, { where: { id }, ...(manager.queryRunner?.isTransactionActive ? { lock: { mode: 'pessimistic_write' as const } } : {}) });
     if (!target) throw new NotFoundException('Аккаунт не найден.');
     this.assertUniversityScope(access, target.organizationId);
+    if (!access.owner) this.assertTargetManageable(this.tenant.getUser()!.role, access.actorId, id, target.role);
     return { access, target };
   }
   async updateAccount(id: string, dto: PlatformAccountDto, auditContext: PlatformAuditContext = {}) {
@@ -146,7 +187,7 @@ export class PlatformService {
     const result = await this.db.transaction(async manager => {
       const { access, target } = await this.manageable(id, manager);
       if (dto.role === UserRole.CURATOR && target.role !== UserRole.CURATOR) throw new BadRequestException('Кураторство назначается дополнительно в разделе кураторства.');
-      if (!access.owner && dto.role && dto.role !== target.role && ([UserRole.DEVELOPER, UserRole.SUPERADMIN].includes(dto.role) || [UserRole.DEVELOPER, UserRole.SUPERADMIN].includes(target.role))) throw new ForbiddenException('Назначение и смена платформенной роли доступны только владельцу.');
+      if (!access.owner && dto.role && dto.role !== target.role) this.assertRoleAssignable(this.tenant.getUser()!.role, target.role, dto.role);
       if ((dto.firstName !== undefined && !dto.firstName.trim()) || (dto.lastName !== undefined && !dto.lastName.trim())) throw new BadRequestException('Имя и фамилия не могут быть пустыми.');
       const current = await manager.findOneByOrFail(User, { id });
       const nextRole = dto.role ?? current.role;
@@ -160,6 +201,7 @@ export class PlatformService {
         if (duplicate) throw new ConflictException('Email уже используется.');
         dto.email = email;
       }
+      if (dto.username !== undefined) dto.username = normalizeUsername(dto.username);
       if (dto.phone !== undefined && dto.phone !== null) dto.phone = dto.phone.trim() || null;
       if (dto.avatarUrl !== undefined && dto.avatarUrl !== null) dto.avatarUrl = dto.avatarUrl.trim() || null;
       if (dto.organizationId !== undefined && dto.organizationId !== current.organizationId && dto.groupId === undefined) {
@@ -188,7 +230,11 @@ export class PlatformService {
         oldValues[key] = (current[key as keyof User] ?? null) as JsonObject[string];
         newValues[key] = value as JsonObject[string];
       }
-      const accessChanged = ['email', 'role', 'isActive', 'organizationId', 'groupId'].some(key => key in changes);
+      if (changes.username) {
+        const duplicate = await manager.getRepository(User).createQueryBuilder('u').where('LOWER(u.username) = :username AND u.id <> :id', { username: changes.username, id }).getExists();
+        if (duplicate) throw new ConflictException('Этот логин уже используется.');
+      }
+      const accessChanged = ['email', 'username', 'role', 'isActive', 'organizationId', 'groupId'].some(key => key in changes);
       if (accessChanged) invalidatedBy = access.actorId;
       // Only changes that affect login or authorization invalidate existing sessions.
       await manager.update(User, id, { ...changes, ...(accessChanged ? { sessionVersion: () => '"sessionVersion" + 1' } : {}) });
@@ -204,7 +250,7 @@ export class PlatformService {
     if (Buffer.byteLength(dto.password) > 72) throw new BadRequestException('Пароль должен занимать не более 72 байт UTF-8.');
     if (!dto.firstName?.trim() || !dto.lastName?.trim() || !dto.role) throw new BadRequestException('Укажите имя, фамилию и основную роль.');
     if (dto.role === UserRole.CURATOR) throw new BadRequestException('Кураторство назначается существующему аккаунту.');
-    if (!access.owner && [UserRole.DEVELOPER, UserRole.SUPERADMIN].includes(dto.role)) throw new ForbiddenException('Платформенные роли назначает только владелец.');
+    if (!access.owner && this.roleRank(dto.role) >= this.roleRank(this.tenant.getUser()!.role)) throw new ForbiddenException('Нельзя назначить роль равного или более высокого уровня.');
     this.assertUniversityScope(access, dto.organizationId);
     if (dto.organizationId && !await this.db.getRepository(University).existsBy({ id: dto.organizationId })) throw new BadRequestException('Университет не найден.');
     if (![UserRole.DEVELOPER, UserRole.SUPERADMIN, UserRole.EMPLOYER, UserRole.CAREER_STAFF, UserRole.CAREER_ADMIN].includes(dto.role) && !dto.organizationId) throw new BadRequestException('Для учебного аккаунта требуется университет.');
@@ -215,12 +261,14 @@ export class PlatformService {
       if (!/^\d+$/.test(dto.groupId) || !await this.raspScraper.isValidGroup(dto.groupId)) throw new BadRequestException('Выберите группу из каталога СИБИТ.');
     }
     const email = dto.email.trim().toLowerCase();
+    const username = normalizeUsername(dto.username);
     if (await this.db.getRepository(User).createQueryBuilder('u').where('LOWER(u.email) = :email', { email }).getExists()) throw new ConflictException('Email уже используется.');
+    if (await this.db.getRepository(User).createQueryBuilder('u').where('LOWER(u.username) = :username', { username }).getExists()) throw new ConflictException('Этот логин уже используется.');
     const passwordHash = await bcrypt.hash(dto.password, 12);
     return this.db.transaction(async manager => {
       let user: User;
-      try { user = await manager.save(User, manager.create(User, { email, firstName: dto.firstName!.trim(), lastName: dto.lastName!.trim(), role: dto.role, organizationId: dto.organizationId ?? null, groupId: dto.groupId ?? undefined, passwordHash, isActive: dto.isActive ?? true })); }
-      catch (error) { if ((error as { code?: string }).code === '23505') throw new ConflictException('Email уже используется.'); throw error; }
+      try { user = await manager.save(User, manager.create(User, { username, email, firstName: dto.firstName!.trim(), lastName: dto.lastName!.trim(), role: dto.role, organizationId: dto.organizationId ?? null, groupId: dto.groupId ?? undefined, passwordHash, isActive: dto.isActive ?? true })); }
+      catch (error) { if ((error as { code?: string }).code === '23505') throw new ConflictException('Email или логин уже используется.'); throw error; }
       await manager.save(AuditLog, { userId: access.actorId, action: 'platform.account.created', entity: 'platform', entityId: user.id, newValues: { role: user.role, result: 'created' }, ...(auditContext.ip ? { ip: auditContext.ip } : {}), ...(auditContext.userAgent ? { userAgent: auditContext.userAgent.slice(0, 512) } : {}) });
       return safeAccount(user);
     });
@@ -364,6 +412,10 @@ export class PlatformService {
     return this.db.transaction(async manager => {
       await manager.query('SELECT pg_advisory_xact_lock(707247126)');
       const revoked = await manager.createQueryBuilder().delete().from(PlatformGrant).where('"userId" != :owner', { owner: access.actorId }).execute();
+      const technicalUsers = await manager.find(User, { where: { role: In([UserRole.DEVELOPER, UserRole.SUPERADMIN]) }, select: ['id'] });
+      for (const user of technicalUsers.filter(item => item.id !== access.actorId)) {
+        await manager.upsert(PlatformGrant, { userId: user.id, permissions: [], serviceIds: [], organizationIds: [], grantedBy: access.actorId }, ['userId']);
+      }
       const sessions = await manager.createQueryBuilder().update(User).set({ sessionVersion: () => '"sessionVersion" + 1' }).where('role IN (:...roles) AND id != :owner', { roles: [UserRole.DEVELOPER, UserRole.SUPERADMIN], owner: access.actorId }).execute();
       const result = { grantsRevoked: revoked.affected ?? 0, accountsSignedOut: sessions.affected ?? 0 };
       await manager.save(AuditLog, { userId: access.actorId, action: 'platform.trust.emergency_revoked', entity: 'platform', entityId: 'platform', newValues: result });

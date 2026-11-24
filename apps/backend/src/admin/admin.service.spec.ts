@@ -27,6 +27,7 @@ describe("AdminService", () => {
     findByGroupId: jest.fn().mockResolvedValue({ data: [], meta: {} }),
     findById: jest.fn().mockResolvedValue(null),
     findByEmail: jest.fn().mockResolvedValue(null),
+    findByUsername: jest.fn().mockResolvedValue(null),
     create: jest
       .fn()
       .mockImplementation((data) =>
@@ -225,6 +226,7 @@ describe("AdminService", () => {
           "uni-1",
           "u1",
           { role: UserRole.DEVELOPER },
+          "admin-1",
           UserRole.UNIVERSITY_ADMIN,
         ),
       ).rejects.toThrow(ForbiddenException);
@@ -240,6 +242,7 @@ describe("AdminService", () => {
           "uni-1",
           "u1",
           { role: UserRole.SUPERADMIN },
+          "student-1",
           UserRole.STUDENT,
         ),
       ).rejects.toThrow(ForbiddenException);
@@ -258,10 +261,28 @@ describe("AdminService", () => {
         "uni-1",
         "u1",
         { role: UserRole.TEACHER },
+        "admin-1",
         UserRole.UNIVERSITY_ADMIN,
       );
       expect(result.role).toBe(UserRole.TEACHER);
-      expect(mockUsersService.invalidateSessions).toHaveBeenCalledWith("u1");
+      expect(mockUsersService.invalidateSessions).toHaveBeenCalledWith("u1", { afterAuthorizedRoleChange: true });
+    });
+
+    it("lets a developer change lower roles but blocks peer and higher accounts", async () => {
+      mockUsersService.findById.mockResolvedValue({ id: "student-1", organizationId: "uni-1", role: UserRole.STUDENT });
+      mockUsersService.update.mockResolvedValue({ id: "student-1", role: UserRole.TEACHER });
+      await expect(service.updateUserRole("uni-1", "student-1", { role: UserRole.TEACHER }, "developer-1", UserRole.DEVELOPER)).resolves.toMatchObject({ role: UserRole.TEACHER });
+
+      mockUsersService.findById.mockResolvedValue({ id: "developer-2", organizationId: "uni-1", role: UserRole.DEVELOPER });
+      await expect(service.updateUserRole("uni-1", "developer-2", { role: UserRole.STUDENT }, "developer-1", UserRole.DEVELOPER)).rejects.toThrow(ForbiddenException);
+      await expect(service.updateUserRole("uni-1", "developer-2", { role: UserRole.SUPERADMIN }, "developer-1", UserRole.DEVELOPER)).rejects.toThrow(ForbiddenException);
+    });
+
+    it("lets a superadmin promote a developer and blocks self role changes", async () => {
+      mockUsersService.findById.mockResolvedValue({ id: "developer-2", organizationId: "uni-1", role: UserRole.DEVELOPER });
+      mockUsersService.update.mockResolvedValue({ id: "developer-2", role: UserRole.SUPERADMIN });
+      await expect(service.updateUserRole("uni-1", "developer-2", { role: UserRole.SUPERADMIN }, "superadmin-1", UserRole.SUPERADMIN)).resolves.toMatchObject({ role: UserRole.SUPERADMIN });
+      await expect(service.updateUserRole("uni-1", "superadmin-1", { role: UserRole.STUDENT }, "superadmin-1", UserRole.SUPERADMIN)).rejects.toThrow(ForbiddenException);
     });
   });
 
@@ -327,6 +348,19 @@ describe("AdminService", () => {
           UserRole.UNIVERSITY_ADMIN,
         ),
       ).rejects.toThrow("собственной учётной записи");
+    });
+
+    it("blocks a developer from changing developer and superadmin statuses", async () => {
+      mockUsersService.findById.mockResolvedValue({ id: "developer-2", organizationId: "uni-1", role: UserRole.DEVELOPER });
+      await expect(service.updateUniversityUserStatus("uni-1", "developer-2", { isActive: false }, "developer-1", UserRole.DEVELOPER)).rejects.toThrow(ForbiddenException);
+      mockUsersService.findById.mockResolvedValue({ id: "superadmin-1", organizationId: "uni-1", role: UserRole.SUPERADMIN });
+      await expect(service.updateUniversityUserStatus("uni-1", "superadmin-1", { isActive: false }, "developer-1", UserRole.DEVELOPER)).rejects.toThrow(ForbiddenException);
+    });
+
+    it("lets a superadmin change a developer status", async () => {
+      mockUsersService.findById.mockResolvedValue({ id: "developer-2", organizationId: "uni-1", role: UserRole.DEVELOPER });
+      mockUsersService.update.mockResolvedValue({ id: "developer-2", isActive: false });
+      await expect(service.updateUniversityUserStatus("uni-1", "developer-2", { isActive: false }, "superadmin-1", UserRole.SUPERADMIN)).resolves.toMatchObject({ isActive: false });
     });
 
     it("replaces a managed user password with a hash", async () => {

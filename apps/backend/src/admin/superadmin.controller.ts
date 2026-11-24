@@ -30,7 +30,7 @@ export class SuperadminController {
   constructor(private readonly superadminService: SuperadminService) {}
 
   @Get('universities')
-  @Roles(UserRole.SUPERADMIN)
+  @Roles(UserRole.DEVELOPER, UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Получить список университетов' })
   @ApiOkResponse({ description: 'Университеты получены', type: PaginatedResponseDto })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -39,7 +39,7 @@ export class SuperadminController {
   }
 
   @Post('universities')
-  @Roles(UserRole.SUPERADMIN)
+  @Roles(UserRole.DEVELOPER, UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Создать университет' })
   @ApiResponse({ status: 201, description: 'Университет создан' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -48,7 +48,7 @@ export class SuperadminController {
   }
 
   @Patch('universities/:id')
-  @Roles(UserRole.SUPERADMIN)
+  @Roles(UserRole.DEVELOPER, UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Обновить университет' })
   @ApiResponse({ status: 200, description: 'Университет обновлён' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -60,7 +60,7 @@ export class SuperadminController {
   }
 
   @Delete('universities/:id')
-  @Roles(UserRole.SUPERADMIN)
+  @Roles(UserRole.DEVELOPER, UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Удалить университет' })
   @ApiResponse({ status: 200, description: 'Университет удалён' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -69,7 +69,7 @@ export class SuperadminController {
   }
 
   @Get('connectors')
-  @Roles(UserRole.SUPERADMIN)
+  @Roles(UserRole.DEVELOPER, UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Получить список коннекторов' })
   @ApiOkResponse({ description: 'Коннекторы получены', type: PaginatedResponseDto })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -78,7 +78,7 @@ export class SuperadminController {
   }
 
   @Patch('connectors/:id')
-  @Roles(UserRole.SUPERADMIN)
+  @Roles(UserRole.DEVELOPER, UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Обновить коннектор' })
   @ApiResponse({ status: 200, description: 'Коннектор обновлён' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })

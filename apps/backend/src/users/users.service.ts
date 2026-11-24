@@ -30,7 +30,7 @@ export class UsersService {
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<User> {
-    if (this.tenantContext.getUser() && [UserRole.DEVELOPER, UserRole.SUPERADMIN].includes(createUserDto.role)) await this.platform?.requireOwner();
+    if (this.tenantContext.getUser() && [UserRole.DEVELOPER, UserRole.SUPERADMIN].includes(createUserDto.role)) await this.platform?.protectLegacyRoleCreation(createUserDto.role);
     this.tenantContext.assertAccess(createUserDto.organizationId);
     const user = this.usersRepository.create(createUserDto);
     const saved = await this.usersRepository.save(user);
@@ -193,7 +193,12 @@ export class UsersService {
   }
 
   async update(id: string, updateData: Partial<User>): Promise<User> {
-    if (['role', 'isActive', 'passwordHash', 'email', 'username', 'organizationId'].some(key => key in updateData)) await this.platform?.protectLegacyMutation(id, updateData.role);
+    const actor = this.tenantContext.getUser();
+    if (updateData.role !== undefined && actor && (
+      [UserRole.DEVELOPER, UserRole.SUPERADMIN].includes(actor.role) ||
+      [UserRole.DEVELOPER, UserRole.SUPERADMIN].includes(updateData.role)
+    )) await this.platform?.protectLegacyRoleAssignment(id, updateData.role);
+    if (['role', 'isActive', 'passwordHash', 'email', 'username', 'organizationId'].some(key => key in updateData)) await this.platform?.protectLegacyMutation(id);
     if (updateData.role !== undefined) await this.platform?.clearLegacyGrant(id);
     const user = await this.findById(id);
 
@@ -256,8 +261,11 @@ export class UsersService {
     await this.usersRepository.update(user.id, { lastLoginAt: new Date() });
   }
 
-  async invalidateSessions(id: string): Promise<void> {
-    if (this.tenantContext.getUser()?.id !== id) await this.platform?.protectLegacyMutation(id);
+  async invalidateSessions(id: string, options: { afterAuthorizedRoleChange?: boolean } = {}): Promise<void> {
+    if (this.tenantContext.getUser()?.id !== id) {
+      if (options.afterAuthorizedRoleChange) await this.platform?.protectOwner(id);
+      else await this.platform?.protectLegacyMutation(id);
+    }
     const user = await this.findById(id);
     if (!user) throw new NotFoundException(`User with id ${id} not found`);
     await this.usersRepository.manager.transaction(async manager => {

@@ -61,7 +61,7 @@ export class AdminController {
   ) {}
 
   @Get("users")
-  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.DEVELOPER, UserRole.SUPERADMIN)
   @ApiOperation({ summary: "Получить пользователей университета" })
   @ApiOkResponse({
     description: "Пользователи получены",
@@ -77,14 +77,14 @@ export class AdminController {
   }
 
   @Get("sibit/teachers")
-  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.DEVELOPER, UserRole.SUPERADMIN)
   @ApiOperation({ summary: "Получить преподавателей и расписание из каталога СИБИТа" })
   async getSibitTeachers(@Request() req) {
     return this.adminService.getSibitTeachers(req.user.organizationId);
   }
 
   @Patch("users/:id/roles")
-  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.DEVELOPER, UserRole.SUPERADMIN)
   @ApiOperation({ summary: "Изменить роль пользователя" })
   @ApiResponse({ status: 200, description: "Роль обновлена" })
   @ApiResponse({ status: 401, description: "Unauthorized" })
@@ -97,12 +97,13 @@ export class AdminController {
       req.user.organizationId,
       id,
       updateUserRoleDto,
+      req.user.id,
       req.user.role,
     );
   }
 
   @Patch("users/:id/username")
-  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.DEVELOPER, UserRole.SUPERADMIN)
   @ApiOperation({ summary: "Назначить или изменить логин пользователя" })
   async updateUserUsername(
     @Request() req,
@@ -118,7 +119,7 @@ export class AdminController {
   }
 
   @Post("users")
-  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.DEVELOPER, UserRole.SUPERADMIN)
   @ApiOperation({ summary: "Создать учётную запись в своём университете" })
   async createUser(
     @Request() req,
@@ -132,7 +133,7 @@ export class AdminController {
   }
 
   @Patch("users/:id/sibit-teacher")
-  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.DEVELOPER, UserRole.SUPERADMIN)
   @ApiOperation({ summary: "Связать учётную запись с преподавателем СИБИТа и синхронизировать его пары" })
   async linkSibitTeacher(
     @Request() req,
@@ -143,7 +144,7 @@ export class AdminController {
   }
 
   @Patch("users/:id/status")
-  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.DEVELOPER, UserRole.SUPERADMIN)
   @ApiOperation({ summary: "Изменить статус учётной записи университета" })
   async updateUserStatus(
     @Request() req,
@@ -160,7 +161,7 @@ export class AdminController {
   }
 
   @Post("users/:id/reset-password")
-  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.DEVELOPER, UserRole.SUPERADMIN)
   @ApiOperation({
     summary: "Выдать новый временный пароль пользователю университета",
   })
@@ -178,7 +179,7 @@ export class AdminController {
   }
 
   @Post("schedule/upload")
-  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.DEVELOPER, UserRole.SUPERADMIN)
   @ApiOperation({ summary: "Загрузить расписание" })
   @ApiResponse({ status: 201, description: "Расписание загружено" })
   @ApiResponse({ status: 401, description: "Unauthorized" })
@@ -193,21 +194,21 @@ export class AdminController {
   }
 
   @Get('schedule/imports/:id')
-  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.DEVELOPER, UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Статус задания импорта расписания своего вуза' })
   getScheduleImport(@Request() req, @Param('id', ParseUUIDPipe) id: string) {
     return this.scheduleImports.getJob(req.user.organizationId, id);
   }
 
   @Get('schedule/imports/:id/changes')
-  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.DEVELOPER, UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Добавления, изменения и отмены в задании импорта' })
   getScheduleImportChanges(@Request() req, @Param('id', ParseUUIDPipe) id: string, @Query() pagination: PaginationQueryDto) {
     return this.scheduleImports.getChanges(req.user.organizationId, id, pagination);
   }
 
   @Get('import-runs/:id')
-  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.DEVELOPER, UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Запись импорта: dry-run или применение, хеш файла, порог и результат по строкам (FR-IMP-04/05)' })
   @ApiResponse({ status: 200, description: 'Запись импорта найдена' })
   @ApiResponse({ status: 404, description: 'Запись импорта не найдена' })
@@ -216,7 +217,7 @@ export class AdminController {
   }
 
   @Get('import-runs/:id/report')
-  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.DEVELOPER, UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'CSV-отчёт записи импорта: строки, предупреждения и ошибки (FR-IMP-04)' })
   @ApiResponse({ status: 200, description: 'Отчёт в формате CSV' })
   async getImportRunReport(@Request() req, @Param('id', ParseUUIDPipe) id: string, @Res() response: Response) {
@@ -230,7 +231,7 @@ export class AdminController {
   }
 
   @Post('import-runs/:id/rollback')
-  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.DEVELOPER, UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Компенсирующий откат применённого импорта в течение 30 дней (FR-IMP-05)' })
   @ApiResponse({ status: 201, description: 'Откат выполнен: восстановлено занятий и конфликты' })
   @ApiResponse({ status: 400, description: 'Импорт не откатывается (срок, статус или повторный откат)' })
@@ -239,7 +240,7 @@ export class AdminController {
   }
 
   @Post("schedule/sync")
-  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.DEVELOPER, UserRole.SUPERADMIN)
   @ApiOperation({ summary: "Синхронизировать расписание" })
   @ApiResponse({ status: 200, description: "Синхронизация запущена" })
   @ApiResponse({ status: 401, description: "Unauthorized" })
@@ -257,7 +258,7 @@ export class AdminController {
   }
 
   @Get("schedule/sync-status")
-  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.DEVELOPER, UserRole.SUPERADMIN)
   @ApiOperation({ summary: "Получить статус синхронизации" })
   @ApiResponse({ status: 200, description: "Статус получен" })
   @ApiResponse({ status: 401, description: "Unauthorized" })
@@ -273,7 +274,7 @@ export class AdminController {
   }
 
   @Get("university")
-  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.DEVELOPER, UserRole.SUPERADMIN)
   @ApiOperation({ summary: "Получить информацию об университете" })
   @ApiResponse({ status: 200, description: "Информация получена" })
   @ApiResponse({ status: 401, description: "Unauthorized" })
@@ -282,7 +283,7 @@ export class AdminController {
   }
 
   @Patch("university")
-  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.DEVELOPER, UserRole.SUPERADMIN)
   @ApiOperation({ summary: "Обновить информацию об университете" })
   @ApiResponse({ status: 200, description: "Информация обновлена" })
   @ApiResponse({ status: 401, description: "Unauthorized" })
@@ -297,7 +298,7 @@ export class AdminController {
   }
 
   @Get("faculties")
-  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.DEVELOPER, UserRole.SUPERADMIN)
   @ApiOperation({ summary: "Получить список факультетов" })
   @ApiOkResponse({
     description: "Факультеты получены",
@@ -309,7 +310,7 @@ export class AdminController {
   }
 
   @Post("faculties")
-  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.DEVELOPER, UserRole.SUPERADMIN)
   @ApiOperation({ summary: "Создать факультет" })
   @ApiResponse({ status: 201, description: "Факультет создан" })
   @ApiResponse({ status: 401, description: "Unauthorized" })
@@ -324,7 +325,7 @@ export class AdminController {
   }
 
   @Patch("faculties/:id")
-  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.DEVELOPER, UserRole.SUPERADMIN)
   @ApiOperation({ summary: "Обновить факультет" })
   @ApiResponse({ status: 200, description: "Факультет обновлён" })
   @ApiResponse({ status: 401, description: "Unauthorized" })
@@ -336,7 +337,7 @@ export class AdminController {
   }
 
   @Get("groups")
-  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.DEVELOPER, UserRole.SUPERADMIN)
   @ApiOperation({ summary: "Получить список групп" })
   @ApiOkResponse({ description: "Группы получены", type: PaginatedResponseDto })
   @ApiResponse({ status: 401, description: "Unauthorized" })
@@ -397,7 +398,7 @@ export class AdminController {
   }
 
   @Post("groups")
-  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.DEVELOPER, UserRole.SUPERADMIN)
   @ApiOperation({ summary: "Создать группу" })
   @ApiResponse({ status: 201, description: "Группа создана" })
   @ApiResponse({ status: 401, description: "Unauthorized" })
@@ -406,7 +407,7 @@ export class AdminController {
   }
 
   @Patch("groups/:id")
-  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.DEVELOPER, UserRole.SUPERADMIN)
   @ApiOperation({ summary: "Обновить группу" })
   @ApiResponse({ status: 200, description: "Группа обновлена" })
   @ApiResponse({ status: 401, description: "Unauthorized" })
@@ -418,7 +419,7 @@ export class AdminController {
   }
 
   @Get("stats")
-  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.DEVELOPER, UserRole.SUPERADMIN)
   @ApiOperation({ summary: "Получить статистику университета" })
   @ApiResponse({ status: 200, description: "Статистика получена" })
   @ApiResponse({ status: 401, description: "Unauthorized" })
@@ -427,7 +428,7 @@ export class AdminController {
   }
 
   @Get("audit-log")
-  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.DEVELOPER, UserRole.SUPERADMIN)
   @ApiOperation({ summary: "Получить журнал критических изменений" })
   @ApiOkResponse({
     description: "Журнал изменений получен",
@@ -439,7 +440,7 @@ export class AdminController {
   }
 
   @Get("connectors")
-  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.DEVELOPER, UserRole.SUPERADMIN)
   @ApiOperation({ summary: "Получить коннекторы университета" })
   @ApiOkResponse({
     description: "Коннекторы получены",
@@ -450,7 +451,7 @@ export class AdminController {
   }
 
   @Post("connectors/moodle/configure")
-  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.DEVELOPER, UserRole.SUPERADMIN)
   @ApiOperation({ summary: "Сохранить защищённые параметры Moodle" })
   async configureMoodleConnector(
     @Request() req,
@@ -463,14 +464,14 @@ export class AdminController {
   }
 
   @Post("connectors/moodle/test")
-  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.DEVELOPER, UserRole.SUPERADMIN)
   @ApiOperation({ summary: "Проверить подключение Moodle Web Services" })
   async testMoodleConnector(@Request() req) {
     return this.adminService.testMoodleConnector(req.user.organizationId);
   }
 
   @Patch("connectors/:id")
-  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN)
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.DEVELOPER, UserRole.SUPERADMIN)
   @ApiOperation({ summary: "Обновить коннектор университета" })
   async updateConnector(
     @Request() req,

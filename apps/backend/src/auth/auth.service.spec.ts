@@ -48,6 +48,7 @@ describe("AuthService", () => {
   beforeEach(async () => {
     usersService = {
       findByEmail: jest.fn(),
+      findByUsername: jest.fn(),
       findByMaxUserId: jest.fn(),
       create: jest.fn(),
       findById: jest.fn(),
@@ -91,16 +92,17 @@ describe("AuthService", () => {
 
   describe("login", () => {
     it("should throw UnauthorizedException for non-existent user", async () => {
-      (usersService.findByEmail as jest.Mock).mockResolvedValue(null);
+      (usersService.findByUsername as jest.Mock).mockResolvedValue(null);
       await expect(
-        service.login({ email: "test@test.com", password: "pass" }),
+        service.login({ username: "test.user", password: "pass" }),
       ).rejects.toThrow(UnauthorizedException);
     });
 
-    it("finds an account with an email entered in a different case", async () => {
+    it("finds an account with a username entered in a different case", async () => {
       const passwordHash = await bcrypt.hash("correct-password", 4);
-      (usersService.findByEmail as jest.Mock).mockResolvedValue({
+      (usersService.findByUsername as jest.Mock).mockResolvedValue({
         id: "user-1",
+        username: "student.sibit",
         email: "student@sibit.ru",
         passwordHash,
         isActive: true,
@@ -112,11 +114,11 @@ describe("AuthService", () => {
       });
 
       await service.login({
-        email: "Student@SIBIT.RU",
+        username: "Student.SIBIT",
         password: "correct-password",
       });
 
-      expect(usersService.findByEmail).toHaveBeenCalledWith("Student@SIBIT.RU");
+      expect(usersService.findByUsername).toHaveBeenCalledWith("student.sibit");
       expect(jwtService.sign).toHaveBeenCalled();
     });
   });
@@ -129,8 +131,9 @@ describe("AuthService", () => {
       ["developer", "developer"],
     ])("assigns %s to the %s workspace", async (role, workspace) => {
       const passwordHash = await bcrypt.hash("correct-password", 4);
-      (usersService.findByEmail as jest.Mock).mockResolvedValue({
+      (usersService.findByUsername as jest.Mock).mockResolvedValue({
         id: "user-1",
+        username: "user.sibit",
         email: "user@sibit.ru",
         passwordHash,
         isActive: true,
@@ -142,7 +145,7 @@ describe("AuthService", () => {
 
       await expect(
         service.portalLogin({
-          email: "user@sibit.ru",
+          username: "user.sibit",
           password: "correct-password",
         }),
       ).resolves.toMatchObject({ workspace });
@@ -200,6 +203,7 @@ describe("AuthService", () => {
       buildMaxInitData(Math.floor(Date.now() / 1000) - 60);
     const linkedUser = {
       id: "user-1",
+    username: "student.sibit",
       email: "student@sibit.ru",
       maxUserId: "424242",
       isActive: true,
@@ -226,7 +230,7 @@ describe("AuthService", () => {
     it("links the account on the first login with credentials", async () => {
       const passwordHash = await bcrypt.hash("correct-password", 4);
       (usersService.findByMaxUserId as jest.Mock).mockResolvedValue(null);
-      (usersService.findByEmail as jest.Mock).mockResolvedValue({
+      (usersService.findByUsername as jest.Mock).mockResolvedValue({
         ...linkedUser,
         maxUserId: null,
         passwordHash,
@@ -236,7 +240,7 @@ describe("AuthService", () => {
       await expect(
         service.maxAuth({
           initData: freshInitData(),
-          email: "student@sibit.ru",
+          username: "student.sibit",
           password: "correct-password",
         }),
       ).resolves.toMatchObject({ user: { id: "user-1" } });
@@ -256,7 +260,7 @@ describe("AuthService", () => {
     it("rejects invalid credentials when linking", async () => {
       const passwordHash = await bcrypt.hash("correct-password", 4);
       (usersService.findByMaxUserId as jest.Mock).mockResolvedValue(null);
-      (usersService.findByEmail as jest.Mock).mockResolvedValue({
+      (usersService.findByUsername as jest.Mock).mockResolvedValue({
         ...linkedUser,
         maxUserId: null,
         passwordHash,
@@ -265,7 +269,7 @@ describe("AuthService", () => {
       await expect(
         service.maxAuth({
           initData: freshInitData(),
-          email: "student@sibit.ru",
+          username: "student.sibit",
           password: "wrong-password",
         }),
       ).rejects.toThrow(UnauthorizedException);
@@ -275,7 +279,7 @@ describe("AuthService", () => {
     it("does not overwrite an account already linked to another MAX user", async () => {
       const passwordHash = await bcrypt.hash("correct-password", 4);
       (usersService.findByMaxUserId as jest.Mock).mockResolvedValue(null);
-      (usersService.findByEmail as jest.Mock).mockResolvedValue({
+      (usersService.findByUsername as jest.Mock).mockResolvedValue({
         ...linkedUser,
         maxUserId: "another-max-user",
         passwordHash,
@@ -286,7 +290,7 @@ describe("AuthService", () => {
 
       await expect(service.maxAuth({
         initData: freshInitData(),
-        email: "student@sibit.ru",
+        username: "student.sibit",
         password: "correct-password",
       })).rejects.toThrow(ConflictException);
       expect(usersService.bindMaxUserIdIfUnlinked).toHaveBeenCalledWith("user-1", "424242");
@@ -303,11 +307,11 @@ describe("AuthService", () => {
       expect(usersService.findByMaxUserId).not.toHaveBeenCalled();
     });
 
-    it("requires email and password together", async () => {
+    it("requires username and password together", async () => {
       await expect(
         service.maxAuth({
           initData: freshInitData(),
-          email: "student@sibit.ru",
+          username: "student.sibit",
         }),
       ).rejects.toThrow(BadRequestException);
     });

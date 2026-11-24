@@ -64,14 +64,14 @@ const ROLE_HIERARCHY: Record<UserRole, number> = {
   [UserRole.EMPLOYER]: 0,
   [UserRole.CAREER_STAFF]: 2,
   [UserRole.CAREER_ADMIN]: 3,
-  [UserRole.DEVELOPER]: 0,
+  [UserRole.DEVELOPER]: 7,
   [UserRole.STUDENT]: 1,
   [UserRole.TEACHER]: 2,
   [UserRole.CURATOR]: 3,
   [UserRole.DEPARTMENT_HEAD]: 4,
   [UserRole.FACULTY_DEAN]: 5,
   [UserRole.UNIVERSITY_ADMIN]: 6,
-  [UserRole.SUPERADMIN]: 7,
+  [UserRole.SUPERADMIN]: 8,
 };
 
 @Injectable()
@@ -163,25 +163,26 @@ export class AdminService {
     organizationId: string,
     userId: string,
     updateUserRoleDto: UpdateUserRoleDto,
+    requesterId: string,
     requesterRole: UserRole,
   ): Promise<User> {
     if (updateUserRoleDto.role === UserRole.CURATOR) throw new BadRequestException('Кураторство назначается существующему аккаунту через раздел «Кураторство», без изменения основной роли.');
-    if (!this.canManageRole(requesterRole, updateUserRoleDto.role)) {
-      throw new ForbiddenException(
-        "Insufficient permissions to assign this role",
-      );
-    }
-
     const user = await this.usersService.findById(userId);
-
     if (!user || user.organizationId !== organizationId) {
       throw new ForbiddenException("User not found in this university");
+    }
+    if (
+      userId === requesterId ||
+      !this.canManageRole(requesterRole, user.role) ||
+      !this.canAssignRole(requesterRole, user.role, updateUserRoleDto.role)
+    ) {
+      throw new ForbiddenException("Недостаточно прав для изменения роли этой учётной записи");
     }
 
     const updatedUser = await this.usersService.update(userId, {
       role: updateUserRoleDto.role,
     });
-    await this.usersService.invalidateSessions(userId);
+    await this.usersService.invalidateSessions(userId, { afterAuthorizedRoleChange: true });
     return updatedUser;
   }
 
@@ -772,13 +773,18 @@ export class AdminService {
     targetRole: UserRole,
   ): boolean {
     if (targetRole === UserRole.EMPLOYER) return false;
-    if (targetRole === UserRole.DEVELOPER) {
-      return requesterRole === UserRole.SUPERADMIN;
-    }
-
     const requesterLevel = ROLE_HIERARCHY[requesterRole] ?? -1;
     const targetLevel = ROLE_HIERARCHY[targetRole] ?? -1;
     return requesterLevel > targetLevel;
+  }
+
+  private canAssignRole(requesterRole: UserRole, currentTargetRole: UserRole, role: UserRole): boolean {
+    if (role === UserRole.EMPLOYER) return false;
+    const requesterLevel = ROLE_HIERARCHY[requesterRole] ?? -1;
+    const targetLevel = ROLE_HIERARCHY[role] ?? -1;
+    const promoteDeveloperToSuperadmin = requesterRole === UserRole.SUPERADMIN &&
+      currentTargetRole === UserRole.DEVELOPER && role === UserRole.SUPERADMIN;
+    return promoteDeveloperToSuperadmin || targetLevel < requesterLevel;
   }
 
   async getAuditLog(
@@ -946,13 +952,8 @@ export class AdminService {
   }
 
   private getVisibleUserRoles(requesterRole: UserRole): UserRole[] {
-    if (requesterRole === UserRole.SUPERADMIN) {
-      return Object.values(UserRole);
-    }
-
-    return Object.values(UserRole).filter(
-      (role) => role !== UserRole.DEVELOPER && role !== UserRole.SUPERADMIN,
-    );
+    const requesterLevel = ROLE_HIERARCHY[requesterRole] ?? -1;
+    return Object.values(UserRole).filter((role) => ROLE_HIERARCHY[role] < requesterLevel);
   }
 }
 
