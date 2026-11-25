@@ -61,6 +61,7 @@ export class PlatformUniversityDto {
   @ApiProperty() @IsString() @MinLength(1) @MaxLength(200) name: string;
   @ApiProperty() @IsString() @MinLength(1) @MaxLength(100) city: string;
   @ApiProperty({ enum: ['active','inactive','pending'] }) @IsIn(['active','inactive','pending']) status: string;
+  @ApiPropertyOptional({ description: 'Причина изменения для журнала действий' }) @IsOptional() @IsString() @MinLength(3) @MaxLength(500) reason?: string;
 }
 export class PlatformFacultyDto {
   @ApiProperty() @IsString() @MinLength(1) @MaxLength(200) name: string;

@@ -529,10 +529,13 @@ export class PlatformService {
     const access = await this.require('universities.write');
     if (!access.owner) throw new ForbiddenException('Создание и изменение университетов доступно только владельцу платформы.');
     if (!dto.name.trim() || !dto.city.trim()) throw new BadRequestException('Укажите название и город.');
+    const reason = dto.reason?.trim();
+    if (id && (!reason || reason.length < 3)) throw new BadRequestException('Укажите причину изменения университета.');
     return this.db.transaction(async manager => {
-      if (id && !await manager.existsBy(University, { id })) throw new NotFoundException('Университет не найден.');
-      const saved = await manager.save(University, manager.create(University, { ...(id ? { id } : {}), ...dto, name: dto.name.trim(), city: dto.city.trim() }));
-      await manager.save(AuditLog, { userId: access.actorId, action: id ? 'platform.university.updated' : 'platform.university.created', entity: 'platform', entityId: saved.id, newValues: { name: saved.name, city: saved.city, status: saved.status } });
+      const previous = id ? await manager.getRepository(University).createQueryBuilder('u').where('u.id = :id', { id }).setLock('pessimistic_write').getOne() : null;
+      if (id && !previous) throw new NotFoundException('Университет не найден.');
+      const saved = await manager.save(University, manager.create(University, { ...(id ? { id } : {}), name: dto.name.trim(), city: dto.city.trim(), status: dto.status }));
+      await manager.save(AuditLog, { userId: access.actorId, action: id ? 'platform.university.updated' : 'platform.university.created', entity: 'platform', entityId: saved.id, oldValues: previous ? { name: previous.name, city: previous.city, status: previous.status } : undefined, newValues: { name: saved.name, city: saved.city, status: saved.status, ...(reason ? { reason } : {}) } });
       return { id: saved.id, name: saved.name, city: saved.city, status: saved.status };
     });
   }

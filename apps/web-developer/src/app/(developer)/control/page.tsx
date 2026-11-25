@@ -66,14 +66,16 @@ const tabs: Array<{ id: string; label: string; description: string; permission: 
 ];
 export default function PlatformControlPage() {
   const context = useResource<Access>('/platform/access', 30000);
-  const [tab,setTab] = useState('services');
+  const [tab,setTab] = useState('home');
   const [requestedTab, setRequestedTab] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const access = context.data;
   const available = tabs.filter(item => item.permission === 'owner' ? access?.owner : item.permission === 'user-directory' ? access?.permissions.some(permission => ['accounts.read', 'personal-data.read'].includes(permission)) : access?.permissions.includes(item.permission));
+  const canEditUniversityMetadata = Boolean(access?.owner && access.permissions.includes('universities.write'));
+  const universityScopeLabel = access?.owner || access?.organizationIds === null ? 'глобальная область' : `выбранные вузы (${access?.organizationIds?.length ?? 0})`;
   useEffect(() => { const query = new URLSearchParams(window.location.search).get('tab'); if (query) { setRequestedTab(query); if (tabs.some(item => item.id === query)) setTab(query); } }, []);
   useEffect(() => { const refresh = () => context.refresh(); window.addEventListener('focus', refresh); return () => window.removeEventListener('focus', refresh); }, [context.refresh]);
-  const active = available.find(item => item.id === tab)?.id || available[0]?.id;
+  const active = tab === 'home' ? undefined : available.find(item => item.id === tab)?.id || available[0]?.id;
   const activeTab = available.find(item => item.id === active);
   const activeSection = activeTab?.section;
   const activeSectionMeta = sections.find(item => item.id === activeSection);
@@ -133,6 +135,40 @@ export default function PlatformControlPage() {
         </nav>
       </aside>
       <section aria-live="polite" aria-label={activeTab ? `Раздел: ${activeTab.label}` : 'Раздел управления'} className="control-content min-w-0 space-y-4">
+        {tab === 'home' && <div className="space-y-5">
+          <section className="rounded-2xl border border-[var(--color-border)] bg-white p-5 shadow-sm sm:p-6">
+            <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--color-brand)]">Рабочее место супер-администратора</p>
+            <h2 className="mt-2 text-xl font-bold tracking-tight sm:text-2xl">Что нужно сделать?</h2>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--color-text-secondary)]">Основные операции вынесены сюда. Выберите аккаунт или вуз и переходите к его данным; остальные инструменты собраны ниже по областям.</p>
+            <div className="mt-5 grid gap-3 xl:grid-cols-2">
+              {available.some(item => item.id === 'accounts') && <button type="button" onClick={() => select('accounts')} className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 text-left transition hover:border-[var(--color-brand)] hover:bg-[var(--color-brand-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand)]">
+                <span className="flex items-center gap-2 text-base font-semibold"><Icon name="users" size={18} /> Пользователи и аккаунты</span>
+                <span className="mt-2 block text-sm leading-5 text-[var(--color-text-secondary)]">Найти человека, открыть карточку, создать аккаунт, изменить роль и вуз, заблокировать доступ или завершить сессии.</span>
+                <span className="mt-3 block text-sm font-semibold text-[var(--color-brand)]">Открыть аккаунты →</span>
+              </button>}
+              {available.some(item => item.id === 'universities') && <button type="button" onClick={() => select('universities')} className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 text-left transition hover:border-[var(--color-brand)] hover:bg-[var(--color-brand-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand)]">
+                <span className="flex items-center gap-2 text-base font-semibold"><Icon name="building" size={18} /> Университеты и структура</span>
+                <span className="mt-2 block text-sm leading-5 text-[var(--color-text-secondary)]">{canEditUniversityMetadata ? 'Открыть список вузов, изменить сведения об университете, просмотреть и редактировать факультеты и учебные группы.' : access?.permissions.includes('universities.write') ? 'Открыть список доступных вузов, просмотреть и редактировать факультеты и учебные группы.' : 'Открыть список доступных вузов и просмотреть их структуру.'}</span>
+                <span className="mt-3 block text-sm font-semibold text-[var(--color-brand)]">Открыть вузы →</span>
+              </button>}
+            </div>
+            {!access?.owner && <p className="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900">Область: {universityScopeLabel}. Разрешения на разделы показаны по списку слева. Сведения самого университета может менять только владелец платформы.</p>}
+            {access?.owner && <p className="mt-4 rounded-lg bg-emerald-50 px-3 py-2 text-xs leading-5 text-emerald-900">Статус: владелец платформы · полный глобальный доступ. Изменения пользователей и структуры записываются в журнал действий.</p>}
+          </section>
+          <section aria-label="Все доступные инструменты" className="space-y-3">
+            <div><h2 className="text-lg font-semibold">Все разделы управления</h2><p className="mt-1 text-sm text-[var(--color-text-secondary)]">Разделы показаны по областям данных; недоступные по разрешениям скрыты.</p></div>
+            <div className="grid gap-3 xl:grid-cols-2">
+              {sections.map(section => {
+                const items = available.filter(item => item.section === section.id && matches(item));
+                if (!items.length) return null;
+                return <div key={section.id} className="rounded-xl border border-[var(--color-border)] bg-white p-4">
+                  <h3 className="font-semibold">{section.label}</h3><p className="mt-1 text-xs text-[var(--color-text-secondary)]">{section.description}</p>
+                  <div className="mt-3 flex flex-wrap gap-2">{items.map(item => <button key={item.id} type="button" onClick={() => select(item.id)} className="min-h-10 rounded-lg border border-[var(--color-border)] px-3 py-2 text-left text-sm font-medium hover:border-[var(--color-brand)] hover:text-[var(--color-brand)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand)]">{item.label}</button>)}</div>
+                </div>;
+              })}
+            </div>
+          </section>
+        </div>}
         {activeTab && <div className="control-context"><p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--color-brand)]">{activeSectionMeta?.label}</p><p className="mt-1 text-sm text-[var(--color-text-secondary)]">{activeTab.description}</p></div>}
         {access && <>{active === 'services' && <ServicesPanel access={access} />}{active === 'user-hub' && <UserHubPanel access={access} onNavigate={openUserSection} />}{active === 'accounts' && <AccountsPanel access={access} />}{active === 'student-data' && <StudentDataPanel access={access} />}{active === 'personal-records' && <PersonalRecordsPanel access={access} />}{active === 'notifications-data' && <NotificationsDataPanel access={access} />}{active === 'homework-submissions' && <HomeworkSubmissionsPanel access={access} />}{active === 'curator-assignments' && <CuratorAssignmentsPanel access={access} />}{active === 'announcements' && <AnnouncementsPanel access={access} />}{active === 'pair-spaces' && <PairSpacesPanel access={access} />}{active === 'academic-schedule' && <AcademicSchedulePanel access={access} />}{active === 'events' && <EventsPanel access={access} />}{active === 'attachments' && <AttachmentsPanel access={access} />}{active === 'career-data' && <CareerDataPanel access={access} />}{active === 'career-companies' && <CareerCompaniesPanel access={access} />}{active === 'career-tasks' && <CareerTasksPanel access={access} />}{active === 'career-operations' && <CareerOperationsPanel access={access} />}{active === 'career-memberships' && <CareerMembershipsPanel access={access} />}{active === 'career-tests' && <CareerTestsPanel access={access} />}{active === 'career-content' && <CareerContentPanel access={access} />}{active === 'career-planning' && <CareerAvailabilityPanel access={access} />}{active === 'discussions' && <DiscussionsPanel access={access} />}{active === 'universities' && <UniversitiesPanel access={access} />}{active === 'permissions' && access.owner && <PermissionsPanel access={access} />}{active === 'settings' && <SettingsPanel access={access} />}{active === 'audit' && <AuditPanel access={access} />}</>}
       </section>
