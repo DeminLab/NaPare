@@ -9,7 +9,7 @@ import { PortalHeader } from '../../components/PortalHeader';
 import './login.css';
 
 type Workspace = 'student' | 'staff' | 'admin' | 'developer' | 'career';
-type LoginResponse = { accessToken: string; refreshToken: string; workspace: Workspace };
+type LoginResponse = { accessToken: string; refreshToken: string; workspace: Workspace; user: { role: string } };
 type SessionRestoreState = 'idle' | 'checking' | 'expired' | 'incomplete' | 'unavailable' | 'unsupported' | 'manual';
 
 const destinations: Record<Workspace, string> = {
@@ -113,7 +113,7 @@ export default function LoginPage() {
           faculty_dean: '/staff/today',
           department_head: '/staff/today',
           university_admin: '/deanery/dashboard',
-          superadmin: '/deanery/dashboard',
+          superadmin: '/developer/control',
           developer: '/developer/api',
           employer: '/career',
           career_staff: '/career',
@@ -174,12 +174,13 @@ export default function LoginPage() {
       }
 
       const data = payload as LoginResponse;
-      if (!data?.accessToken || !data.refreshToken || !Object.hasOwn(destinations, data.workspace)) throw new Error('Не удалось открыть кабинет. Повторите вход.');
+      if (!data?.accessToken || !data.refreshToken || !data.user?.role || !Object.hasOwn(destinations, data.workspace)) throw new Error('Не удалось открыть кабинет. Повторите вход.');
       window.localStorage.setItem('accessToken', data.accessToken);
       window.localStorage.setItem('refreshToken', data.refreshToken);
       // Brief success state so the button confirms the login before the workspace opens.
       setSucceeded(true);
-      window.setTimeout(() => window.location.assign(destinations[data.workspace]), 450);
+      const destination = data.user.role === 'superadmin' ? '/developer/control' : destinations[data.workspace];
+      window.setTimeout(() => window.location.assign(destination), 450);
     } catch (reason) {
       setError(reason instanceof TypeError ? 'Не удалось связаться с сервером. Проверьте интернет и повторите вход.' : reason instanceof Error ? reason.message : 'Не удалось выполнить вход');
     } finally {

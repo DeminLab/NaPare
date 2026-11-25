@@ -45,18 +45,28 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<Me | null>(() => readUserCache());
   const [profileReady, setProfileReady] = useState(false);
   const [notificationCount, setNotificationCount] = useState(0);
-  const curation = useCurationContext(apiFetch, Boolean(user));
+  const curation = useCurationContext(apiFetch, Boolean(profileReady && user && user.role !== 'superadmin'));
   const [systemStatus, setSystemStatus] = useState<'checking' | 'online' | 'offline'>('checking');
   const isPlatformAdmin = user?.role === 'superadmin';
-  const isUniversitySettingsRoute = pathname === '/university' || pathname.startsWith('/university/');
   useEffect(() => {
-    getUser().then((profile) => { setUser(profile); setProfileReady(true); }).catch(() => router.push('/login'));
-    apiFetch<number>('/notifications/unread-count').then((count) => setNotificationCount(Number.isFinite(count) ? Math.max(0, count) : 0)).catch(() => undefined);
-    apiFetch<{ status: string }>('/health').then(({ status }) => setSystemStatus(status === 'ok' ? 'online' : 'offline')).catch(() => setSystemStatus('offline'));
+    let active = true;
+    getUser().then((profile) => {
+      if (!active) return;
+      setUser(profile);
+      setProfileReady(true);
+      if (profile.role === 'superadmin') return;
+      apiFetch<number>('/notifications/unread-count').then((count) => {
+        if (active) setNotificationCount(Number.isFinite(count) ? Math.max(0, count) : 0);
+      }).catch(() => undefined);
+      apiFetch<{ status: string }>('/health').then(({ status }) => {
+        if (active) setSystemStatus(status === 'ok' ? 'online' : 'offline');
+      }).catch(() => { if (active) setSystemStatus('offline'); });
+    }).catch(() => { if (active) router.push('/login'); });
+    return () => { active = false; };
   }, [router]);
   useEffect(() => {
-    if (profileReady && isPlatformAdmin && isUniversitySettingsRoute) router.replace('/dashboard');
-  }, [isPlatformAdmin, isUniversitySettingsRoute, profileReady, router]);
+    if (profileReady && isPlatformAdmin) window.location.replace('/developer/control');
+  }, [isPlatformAdmin, profileReady]);
   const commands: WorkspaceCommand[] = [
     { id: 'admin:users', label: 'Открыть пользователей', description: 'Управление доступами и ролями', icon: 'users', href: '/users', keywords: ['студенты', 'преподаватели'] },
     { id: 'admin:analytics', label: 'Открыть аналитику', icon: 'chart', href: '/analytics', keywords: ['метрики', 'статистика'] },
@@ -68,14 +78,15 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     { id: 'admin:import', label: 'Импортировать расписание', icon: 'upload', href: '/schedule-import', keywords: ['расписание'] },
     { id: 'admin:logs', label: 'Открыть журнал аудита', icon: 'list', href: '/audit-log', keywords: ['логи', 'аудит'] },
   ];
-  // No blocking gate: the shell (menu, header) renders immediately, even before the first API answer.
+  // Keep university routes and tenant-scoped API calls blocked until /users/me confirms the role.
   const fullName = user ? user.firstName + ' ' + user.lastName : '';
   const currentRole = user?.role || user?.roles?.[0];
   const roleLabel = currentRole ? roleLabels[currentRole] || 'Пользователь кабинета' : 'Роль не указана';
   const scopeLabel = getScopeLabel(user);
   const curationItems: WorkspaceNavGroup['items'] = curation?.canCurate || curation?.canManage ? [{ href: '/curation', label: 'Кураторство', icon: 'users', keywords: ['куратор', 'назначения'] }] : [];
-  const resolvedGroups = groups.map((group) => ({ ...group, label: isPlatformAdmin && group.label === 'Университет' ? 'Университеты' : group.label, items: [...group.items, ...(group.label === 'Университет' ? curationItems : [])].filter((item) => !(isPlatformAdmin && item.href === '/university')).map((item) => item.href === '/notifications' ? { ...item, badge: notificationCount } : item) }));
+  const canShowUniversityWorkspace = profileReady && !isPlatformAdmin;
+  const resolvedGroups = canShowUniversityWorkspace ? groups.map((group) => ({ ...group, items: [...group.items, ...(group.label === 'Университет' ? curationItems : [])].map((item) => item.href === '/notifications' ? { ...item, badge: notificationCount } : item) })) : [];
+  const visibleCommands = canShowUniversityWorkspace ? commands : [];
   const status = systemStatus === 'online' ? { label: 'Система работает', tone: 'success' as const } : systemStatus === 'offline' ? { label: 'Система недоступна', tone: 'danger' as const } : { label: 'Проверка системы', tone: 'warning' as const };
-  const showUniversitySettings = !isUniversitySettingsRoute || (profileReady && !isPlatformAdmin);
-  return <WorkspaceShell LinkComponent={AppLink} pathname={pathname} groups={resolvedGroups} roleLabel={isPlatformAdmin ? 'Панель платформы' : 'Кабинет ВУЗа'} homeHref="/dashboard" user={user ? { name: fullName, role: `${roleLabel} · ${scopeLabel}`, id: user.id } : undefined} unreadCount={notificationCount} status={status} commands={commands} mobileHrefs={['/dashboard', '/schedule-import', '/users', '/absences']} onLogout={logout}><div className="role-content">{showUniversitySettings ? children : <p className="p-6 text-sm text-slate-600" role="status">Проверяем доступ к настройкам…</p>}</div></WorkspaceShell>;
+  return <WorkspaceShell LinkComponent={AppLink} pathname={pathname} groups={resolvedGroups} roleLabel={isPlatformAdmin ? 'Панель платформы' : 'Кабинет ВУЗа'} homeHref="/dashboard" user={user ? { name: fullName, role: `${roleLabel} · ${scopeLabel}`, id: user.id } : undefined} unreadCount={notificationCount} status={status} commands={visibleCommands} mobileHrefs={canShowUniversityWorkspace ? ['/dashboard', '/schedule-import', '/users', '/absences'] : []} onLogout={logout}><div className="role-content">{canShowUniversityWorkspace ? children : <p className="p-6 text-sm text-slate-600" role="status">{isPlatformAdmin ? 'Открываем панель платформы…' : 'Проверяем доступ…'}</p>}</div></WorkspaceShell>;
 }

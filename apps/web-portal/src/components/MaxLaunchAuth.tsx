@@ -29,10 +29,10 @@ const MAX_RELAUNCH_MESSAGE = 'Данные MAX устарели или неде�
 
 function workspaceForRole(role: string): Workspace | null {
   if (role === 'student') return 'student';
-  if (role === 'developer') return 'developer';
+  if (['developer', 'superadmin'].includes(role)) return 'developer';
   if (['employer', 'career_staff', 'career_admin'].includes(role)) return 'career';
   if (['teacher', 'curator', 'faculty_dean', 'department_head'].includes(role)) return 'staff';
-  if (['university_admin', 'superadmin'].includes(role)) return 'admin';
+  if (role === 'university_admin') return 'admin';
   return null;
 }
 
@@ -136,7 +136,7 @@ export function MaxLaunchAuth({
       }
       window.localStorage.setItem('accessToken', payload.accessToken);
       window.localStorage.setItem('refreshToken', payload.refreshToken);
-      window.location.assign(destinations[workspace]);
+      window.location.assign(payload.user.role === 'superadmin' ? '/developer/control' : destinations[workspace]);
     } catch (reason) {
       setRetryAvailable(true);
       setError(reason instanceof Error ? reason.message : 'Не удалось войти через MAX.');

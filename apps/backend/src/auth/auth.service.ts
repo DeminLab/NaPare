@@ -450,8 +450,8 @@ export class AuthService {
       ].includes(role)
     )
       return "staff";
-    if ([UserRole.UNIVERSITY_ADMIN, UserRole.SUPERADMIN].includes(role))
-      return "admin";
+    if (role === UserRole.SUPERADMIN) return "developer";
+    if (role === UserRole.UNIVERSITY_ADMIN) return "admin";
     return null;
   }
 }

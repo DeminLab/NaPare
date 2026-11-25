@@ -178,7 +178,9 @@ export default function DeveloperLayout({ children }: { children: ReactNode }) {
       keywords: ["my sessions", "токен"],
     },
   ];
-  const name = user ? user.firstName + " " + user.lastName : "Разработчик";
+  const isSuperadmin = user?.role === "superadmin";
+  const roleLabel = isSuperadmin ? "Суперадминистратор" : "Разработчик";
+  const name = user ? user.firstName + " " + user.lastName : roleLabel;
   const apiAvailable = health
     ? ["ok", "healthy"].includes(health.status.toLowerCase())
     : false;
@@ -189,9 +191,9 @@ export default function DeveloperLayout({ children }: { children: ReactNode }) {
       LinkComponent={AppLink}
       pathname={pathname}
       groups={groups}
-      roleLabel="Разработчик"
+      roleLabel={roleLabel}
       homeHref="/overview"
-      user={{ name, role: "Разработчик", id: user?.id }}
+      user={{ name, role: roleLabel, id: user?.id }}
       unreadCount={unread}
       notificationHref="/notifications"
       status={{

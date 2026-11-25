@@ -9,7 +9,7 @@ const destinations: Record<string, string> = {
   faculty_dean: '/staff/today',
   department_head: '/staff/today',
   university_admin: '/deanery/dashboard',
-  superadmin: '/deanery/dashboard',
+  superadmin: '/developer/control',
   developer: '/developer/api',
   employer: '/career',
   career_staff: '/career',
