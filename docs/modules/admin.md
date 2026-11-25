@@ -67,6 +67,8 @@
 
 ## 5. UX / экраны
 
+- `/university` — настройки привязанного вуза для `university_admin` и `developer`; у `superadmin` этот пункт отсутствует в меню, а прямой переход возвращает на обзор платформы. Это правило интерфейса и не меняет доступность API, регулируемую существующими guards.
+
 - A01. Структура вуза — [ui/screens-admin.md](../ui/screens-admin.md)
 - A02. Расписание — [ui/screens-admin.md](../ui/screens-admin.md)
 - A03. Пользователи и роли — [ui/screens-admin.md](../ui/screens-admin.md)
