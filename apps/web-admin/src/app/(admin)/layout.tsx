@@ -29,7 +29,9 @@ const roleLabels: Record<string, string> = {
   developer: 'Разработчик',
 };
 function getScopeLabel(user: Me | null): string {
-  if (!user || user.organizationId === undefined) return 'Область загружается';
+  if (!user) return 'Область загружается';
+  if (user.role === 'superadmin') return 'Весь проект';
+  if (user.organizationId === undefined) return 'Область загружается';
   return user.organizationId === null || user.organizationId === '' ? 'Вуз не назначен' : 'Доступ в рамках вуза';
 }
 const AppLink = ({ href, children, ...props }: NavigationLinkProps) => href === '/connections'
@@ -44,6 +46,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const [notificationCount, setNotificationCount] = useState(0);
   const curation = useCurationContext(apiFetch, Boolean(user));
   const [systemStatus, setSystemStatus] = useState<'checking' | 'online' | 'offline'>('checking');
+  const isPlatformAdmin = user?.role === 'superadmin';
   useEffect(() => {
     getUser().then(setUser).catch(() => router.push('/login'));
     apiFetch<number>('/notifications/unread-count').then((count) => setNotificationCount(Number.isFinite(count) ? Math.max(0, count) : 0)).catch(() => undefined);
@@ -66,7 +69,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const roleLabel = currentRole ? roleLabels[currentRole] || 'Пользователь кабинета' : 'Роль не указана';
   const scopeLabel = getScopeLabel(user);
   const curationItems: WorkspaceNavGroup['items'] = curation?.canCurate || curation?.canManage ? [{ href: '/curation', label: 'Кураторство', icon: 'users', keywords: ['куратор', 'назначения'] }] : [];
-  const resolvedGroups = groups.map((group) => ({ ...group, items: [...group.items, ...(group.label === 'Университет' ? curationItems : [])].map((item) => item.href === '/notifications' ? { ...item, badge: notificationCount } : item) }));
+  const resolvedGroups = groups.map((group) => ({ ...group, label: isPlatformAdmin && group.label === 'Университет' ? 'Университеты' : group.label, items: [...group.items, ...(group.label === 'Университет' ? curationItems : [])].map((item) => item.href === '/notifications' ? { ...item, badge: notificationCount } : item) }));
   const status = systemStatus === 'online' ? { label: 'Система работает', tone: 'success' as const } : systemStatus === 'offline' ? { label: 'Система недоступна', tone: 'danger' as const } : { label: 'Проверка системы', tone: 'warning' as const };
-  return <WorkspaceShell LinkComponent={AppLink} pathname={pathname} groups={resolvedGroups} roleLabel="Кабинет ВУЗа" homeHref="/dashboard" user={user ? { name: fullName, role: `${roleLabel} · ${scopeLabel}`, id: user.id } : undefined} unreadCount={notificationCount} status={status} commands={commands} mobileHrefs={['/dashboard', '/schedule-import', '/users', '/absences']} onLogout={logout}><div className="role-content">{children}</div></WorkspaceShell>;
+  return <WorkspaceShell LinkComponent={AppLink} pathname={pathname} groups={resolvedGroups} roleLabel={isPlatformAdmin ? 'Панель платформы' : 'Кабинет ВУЗа'} homeHref="/dashboard" user={user ? { name: fullName, role: `${roleLabel} · ${scopeLabel}`, id: user.id } : undefined} unreadCount={notificationCount} status={status} commands={commands} mobileHrefs={['/dashboard', '/schedule-import', '/users', '/absences']} onLogout={logout}><div className="role-content">{children}</div></WorkspaceShell>;
 }
