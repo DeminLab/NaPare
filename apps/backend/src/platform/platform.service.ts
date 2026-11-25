@@ -15,7 +15,7 @@ import { CuratorAssignment } from '../curation/entities/curator-assignment.entit
 import { UserRole } from '../auth/interfaces/user-role';
 import { RaspScraperService, SIBIT_UNIVERSITY } from '../auth/rasp-scraper.service';
 import { PlatformControl, PlatformGrant } from './platform.entity';
-import { PLATFORM_PERMISSIONS, PlatformAccountDto, PlatformCreateAccountDto, PlatformFacultyDto, PlatformGrantDto, PlatformGroupDto, PlatformJobDto, PlatformPermission, PlatformQueryDto, PlatformSettingsDto, PlatformUniversityDto, SERVICE_IDS } from './platform.dto';
+import { PLATFORM_PERMISSIONS, PlatformAccountDto, PlatformAccountQueryDto, PlatformCreateAccountDto, PlatformFacultyDto, PlatformGrantDto, PlatformGroupDto, PlatformJobDto, PlatformPermission, PlatformQueryDto, PlatformSettingsDto, PlatformUniversityDto, SERVICE_IDS } from './platform.dto';
 import { ControlAgentClient } from './control-agent.client';
 import { platformDatabaseGrants, PLATFORM_TENANT_TABLES } from '../common/tenant/tenant-database-platform';
 import { TelemetryService } from '../telemetry/telemetry.service';
@@ -23,7 +23,7 @@ import { normalizeUsername } from '../auth/username';
 
 type AgentJob = { id: string; service: string; action: string; status: string; actorId: string; createdAt: string; log?: string };
 type PlatformAuditContext = { ip?: string; userAgent?: string };
-const safeAccount = ({ id, username, email, firstName, lastName, role, organizationId, groupId, isActive, lastLoginAt }: User) => ({ id, username, email, firstName, lastName, role, organizationId, groupId, isActive, lastLoginAt });
+const safeAccount = ({ id, username, email, firstName, lastName, role, organizationId, groupId, isActive, archivedAt, archivedWasActive, lastLoginAt }: User) => ({ id, username, email, firstName, lastName, role, organizationId, groupId, isActive, archivedAt, archivedWasActive, lastLoginAt });
 
 @Injectable()
 export class PlatformService {
@@ -63,7 +63,7 @@ export class PlatformService {
   }
   async protectOwner(id: string) {
     const control = await this.db.getRepository(PlatformControl).findOneBy({ id: 'platform' });
-    if (control?.ownerId === id) throw new ForbiddenException('Аккаунт владельца защищён от блокировки, смены роли и сброса доступа.');
+    if (control?.ownerId === id) throw new ForbiddenException('Аккаунт владельца защищён от блокировки, архивации, смены роли и сброса доступа.');
   }
   private roleRank(role: UserRole): number {
     if (role === UserRole.SUPERADMIN) return 2;
@@ -86,6 +86,8 @@ export class PlatformService {
     const actor = this.tenant.getUser()!;
     const target = await this.db.getRepository(User).findOneBy({ id });
     if (!target) throw new NotFoundException('Аккаунт не найден.');
+    if (target.personalDataDeletedAt) throw new NotFoundException('Аккаунт не найден.');
+    if (target.archivedAt) throw new ConflictException('Аккаунт в архиве. Сначала восстановите его.');
     this.assertTargetManageable(actor.role, actor.id, id, target.role);
     this.assertRoleAssignable(actor.role, target.role, role);
   }
@@ -99,7 +101,10 @@ export class PlatformService {
   async protectLegacyMutation(id: string) {
     await this.protectOwner(id);
     const target = await this.db.getRepository(User).findOneBy({ id });
+    if (target?.archivedAt) throw new ConflictException('Аккаунт в архиве. Сначала восстановите его.');
     if (target && [UserRole.DEVELOPER, UserRole.SUPERADMIN].includes(target.role)) {
+      if (target.personalDataDeletedAt) throw new NotFoundException('Аккаунт не найден.');
+      if (target.archivedAt) throw new ConflictException('Аккаунт в архиве. Сначала восстановите его.');
       await this.require('accounts.write');
       const actor = this.tenant.getUser();
       if (!actor) throw new ForbiddenException('Требуется авторизация.');
@@ -110,9 +115,12 @@ export class PlatformService {
   private async audit(action: string, entityId: string, values: Record<string, string | boolean | string[] | null> = {}) {
     await this.db.getRepository(AuditLog).save({ userId: this.tenant.getUser()!.id, action: `platform.${action}`, entity: 'platform', entityId, newValues: values });
   }
-  async accounts(query: PlatformQueryDto, auditContext: PlatformAuditContext = {}) {
+  async accounts(query: PlatformAccountQueryDto, auditContext: PlatformAuditContext = {}) {
     const access = await this.require('accounts.read');
     const qb = this.db.getRepository(User).createQueryBuilder('u');
+    qb.andWhere('u."personalDataDeletedAt" IS NULL');
+    if (query.status === 'active') qb.andWhere('u."archivedAt" IS NULL');
+    if (query.status === 'archived') qb.andWhere('u."archivedAt" IS NOT NULL');
     if (query.q) qb.andWhere("concat_ws(' ', u.username, u.email, u.firstName, u.lastName, u.phone, u.groupId, u.id) ILIKE :q", { q: `%${query.q}%` });
     if (query.organizationId) { this.assertUniversityScope(access, query.organizationId); qb.andWhere('u.organizationId = :organizationId', { organizationId: query.organizationId }); }
     if (!access.owner && access.organizationIds !== null) {
@@ -128,9 +136,9 @@ export class PlatformService {
     const access = await this.require('accounts.read');
     const user = await this.db.getRepository(User).findOne({
       where: { id },
-      select: ['id', 'email', 'firstName', 'lastName', 'phone', 'avatarUrl', 'role', 'organizationId', 'groupId', 'isActive', 'lastLoginAt', 'createdAt', 'updatedAt', 'maxUserId', 'telegramUserId'],
+      select: ['id', 'username', 'email', 'firstName', 'lastName', 'phone', 'avatarUrl', 'role', 'organizationId', 'groupId', 'isActive', 'archivedAt', 'archivedWasActive', 'personalDataDeletedAt', 'lastLoginAt', 'createdAt', 'updatedAt', 'maxUserId', 'telegramUserId'],
     });
-    if (!user) throw new NotFoundException('Аккаунт не найден.');
+    if (!user || user.personalDataDeletedAt) throw new NotFoundException('Аккаунт не найден.');
     this.assertUniversityScope(access, user.organizationId);
     const assignmentQuery = this.db.getRepository(CuratorAssignment).createQueryBuilder('a')
       .leftJoin(Group, 'g', 'g.id = a."groupId" AND g."organizationId" = a."organizationId"')
@@ -170,14 +178,16 @@ export class PlatformService {
       isOwner: user.id === control?.ownerId,
     };
   }
-  private async manageable(id: string, manager: EntityManager = this.db.manager) {
+  private async manageable(id: string, manager: EntityManager = this.db.manager, allowArchived = false) {
     const access = await this.require('accounts.write');
     await this.protectOwner(id);
     if (id === access.actorId) throw new ForbiddenException('Изменение собственного доступа через эту форму запрещено.');
     const target = await manager.findOne(User, { where: { id }, ...(manager.queryRunner?.isTransactionActive ? { lock: { mode: 'pessimistic_write' as const } } : {}) });
     if (!target) throw new NotFoundException('Аккаунт не найден.');
+    if (target.personalDataDeletedAt) throw new NotFoundException('Аккаунт не найден.');
     this.assertUniversityScope(access, target.organizationId);
     this.assertTargetManageable(this.tenant.getUser()!.role, access.actorId, id, target.role);
+    if (target.archivedAt && !allowArchived) throw new ConflictException('Аккаунт в архиве. Сначала восстановите его.');
     return { access, target };
   }
   async updateAccount(id: string, dto: PlatformAccountDto, auditContext: PlatformAuditContext = {}) {
@@ -241,6 +251,50 @@ export class PlatformService {
       return safeAccount(await manager.findOneByOrFail(User, { id }));
     });
     if (invalidatedBy) await this.telemetry.revokeAllForUser(id, invalidatedBy, 'Изменение доступа к аккаунту');
+    return result;
+  }
+  async archiveAccount(id: string, reason: string, auditContext: PlatformAuditContext = {}) {
+    const normalizedReason = reason.trim();
+    if (normalizedReason.length < 3 || normalizedReason.length > 500) throw new BadRequestException('Укажите причину архивации длиной от 3 до 500 символов.');
+    let actorId = '';
+    const result = await this.db.transaction(async manager => {
+      const { access, target } = await this.manageable(id, manager);
+      actorId = access.actorId;
+      if (target.archivedAt) throw new ConflictException('Аккаунт уже находится в архиве.');
+      const archivedAt = new Date();
+      await manager.update(User, id, { isActive: false, archivedAt, archivedWasActive: target.isActive, sessionVersion: () => '"sessionVersion" + 1' });
+      await manager.save(AuditLog, {
+        userId: actorId, action: 'platform.account.archived', entity: 'platform', entityId: id,
+        oldValues: { isActive: target.isActive, archivedAt: null },
+        newValues: { isActive: false, archivedAt: archivedAt.toISOString(), archivedWasActive: target.isActive, targetUserId: id, organizationId: target.organizationId ?? null, reason: normalizedReason, result: 'archived' },
+        ...(auditContext.ip ? { ip: auditContext.ip } : {}),
+        ...(auditContext.userAgent ? { userAgent: auditContext.userAgent.slice(0, 512) } : {}),
+      });
+      return safeAccount(await manager.findOneByOrFail(User, { id }));
+    });
+    await this.telemetry.revokeAllForUser(id, actorId, 'Архивация аккаунта через управление платформой');
+    return result;
+  }
+  async restoreAccount(id: string, reason: string, auditContext: PlatformAuditContext = {}) {
+    const normalizedReason = reason.trim();
+    if (normalizedReason.length < 3 || normalizedReason.length > 500) throw new BadRequestException('Укажите причину восстановления длиной от 3 до 500 символов.');
+    let actorId = '';
+    const result = await this.db.transaction(async manager => {
+      const { access, target } = await this.manageable(id, manager, true);
+      actorId = access.actorId;
+      if (!target.archivedAt || typeof target.archivedWasActive !== 'boolean') throw new ConflictException('Аккаунт не находится в архиве или данные архива неполны.');
+      const isActive = target.archivedWasActive;
+      await manager.update(User, id, { isActive, archivedAt: null, archivedWasActive: null, sessionVersion: () => '"sessionVersion" + 1' });
+      await manager.save(AuditLog, {
+        userId: actorId, action: 'platform.account.restored', entity: 'platform', entityId: id,
+        oldValues: { isActive: false, archivedAt: target.archivedAt.toISOString(), archivedWasActive: target.archivedWasActive },
+        newValues: { isActive, archivedAt: null, targetUserId: id, organizationId: target.organizationId ?? null, reason: normalizedReason, result: 'restored' },
+        ...(auditContext.ip ? { ip: auditContext.ip } : {}),
+        ...(auditContext.userAgent ? { userAgent: auditContext.userAgent.slice(0, 512) } : {}),
+      });
+      return safeAccount(await manager.findOneByOrFail(User, { id }));
+    });
+    await this.telemetry.revokeAllForUser(id, actorId, 'Восстановление аккаунта через управление платформой');
     return result;
   }
   async createAccount(dto: PlatformCreateAccountDto, auditContext: PlatformAuditContext = {}) {
@@ -311,6 +365,7 @@ export class PlatformService {
     return this.db.transaction(async manager => {
       const target = await manager.findOne(User, { where: { id }, lock: { mode: 'pessimistic_write' } });
       if (!target) throw new NotFoundException('Аккаунт не найден.');
+      if (target.archivedAt) throw new ConflictException('Аккаунт в архиве. Сначала восстановите его.');
       const control = await manager.findOne(PlatformControl, { where: { id: 'platform' }, lock: { mode: 'pessimistic_read' } });
       if (control?.ownerId === id) throw new ForbiddenException('Внешнюю привязку аккаунта владельца нельзя отозвать.');
       if (!target.maxUserId) throw new ConflictException('У аккаунта нет активной MAX-привязки.');
@@ -336,6 +391,7 @@ export class PlatformService {
     return this.db.transaction(async manager => {
       const target = await manager.findOne(User, { where: { id }, lock: { mode: 'pessimistic_write' } });
       if (!target) throw new NotFoundException('Аккаунт не найден.');
+      if (target.archivedAt) throw new ConflictException('Аккаунт в архиве. Сначала восстановите его.');
       const control = await manager.findOne(PlatformControl, { where: { id: 'platform' }, lock: { mode: 'pessimistic_read' } });
       if (control?.ownerId === id) throw new ForbiddenException('Telegram-привязку аккаунта владельца нельзя отозвать.');
       const challenges = await manager.getRepository(TelegramLinkChallenge).createQueryBuilder()

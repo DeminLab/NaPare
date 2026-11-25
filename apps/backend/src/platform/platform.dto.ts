@@ -10,6 +10,12 @@ export class PlatformQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(100) q?: string;
   @ApiPropertyOptional() @IsOptional() @IsUUID() organizationId?: string;
 }
+export class PlatformAccountQueryDto extends PlatformQueryDto {
+  @ApiPropertyOptional({ enum: ['active', 'archived', 'all'], description: 'Фильтр состояния аккаунтов; без параметра возвращаются все не удалённые через self-service' }) @IsOptional() @IsIn(['active', 'archived', 'all']) status?: 'active' | 'archived' | 'all';
+}
+export class PlatformAccountArchiveDto {
+  @ApiProperty({ minLength: 3, maxLength: 500 }) @IsString() @MinLength(3) @MaxLength(500) reason: string;
+}
 export class PlatformGrantDto {
   @ApiProperty({ enum: PLATFORM_PERMISSIONS, isArray: true }) @IsArray() @ArrayUnique() @IsIn(PLATFORM_PERMISSIONS, { each: true }) permissions: PlatformPermission[];
   @ApiProperty({ enum: SERVICE_IDS, isArray: true }) @IsArray() @ArrayUnique() @IsIn(SERVICE_IDS, { each: true }) serviceIds: string[];

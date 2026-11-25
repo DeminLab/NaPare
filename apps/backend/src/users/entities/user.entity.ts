@@ -68,6 +68,14 @@ export class User {
   @Column({ default: true })
   isActive: boolean;
 
+  /** Reversible platform archive; access is disabled while the account is archived. */
+  @Column({ type: 'timestamp', nullable: true })
+  archivedAt: Date | null;
+
+  /** Whether access was enabled before archiving, restored when the account is unarchived. */
+  @Column({ type: 'boolean', nullable: true })
+  archivedWasActive: boolean | null;
+
   /**
    * Invalidates every access and refresh token issued before the latest bump.
    * The value is embedded in JWTs and checked for every authenticated request.
