@@ -198,8 +198,8 @@ export class RaspScraperService {
     return catalog;
   }
 
-  async isValidGroup(groupId: string): Promise<boolean> {
-    const groups = await this.getGroups();
+  async isValidGroup(groupId: string, year?: string): Promise<boolean> {
+    const groups = await this.getGroups(year);
     return groups.some((group) => group.groupId === groupId);
   }
 

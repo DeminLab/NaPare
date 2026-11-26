@@ -7,6 +7,7 @@ import { getRepositoryToken } from "@nestjs/typeorm";
 import { University } from "../users/entities/university.entity";
 import { Faculty } from "../users/entities/faculty.entity";
 import { Group } from "../users/entities/group.entity";
+import { Room } from "../users/entities/room.entity";
 import { User } from "../users/entities/user.entity";
 import { BadRequestException, ForbiddenException } from "@nestjs/common";
 import { UserRole } from "../auth/interfaces/user-role";
@@ -56,7 +57,11 @@ describe("AdminService", () => {
     configure: jest.fn(),
     testConnection: jest.fn(),
   };
-  const mockRaspScraperService = { isValidGroup: jest.fn().mockResolvedValue(false) };
+  const mockRaspScraperService = {
+    isValidGroup: jest.fn().mockResolvedValue(false),
+    getYears: jest.fn().mockResolvedValue([{ value: '2026-2027', label: '2026-2027' }]),
+    getGroups: jest.fn().mockResolvedValue([{ groupId: 'group-1' }]),
+  };
 
   const mockRepo = (defaults: any = {}) => ({
     find: jest.fn().mockResolvedValue(defaults.find || []),
@@ -115,6 +120,7 @@ describe("AdminService", () => {
   beforeEach(async () => {
     mockUniversityRepository = mockRepo({ findOne: { id: "uni-1", name: "Test Uni" } });
     mockUserRepository = mockRepo();
+    mockSibitConnectorService.sync.mockClear();
     mockRaspScraperService.isValidGroup.mockReset().mockResolvedValue(false);
     mockAuditQueryBuilder = {
       innerJoin: jest.fn().mockReturnThis(),
@@ -145,6 +151,7 @@ describe("AdminService", () => {
         },
         { provide: getRepositoryToken(User), useValue: mockUserRepository },
         { provide: getRepositoryToken(Lesson), useValue: mockRepo() },
+        { provide: getRepositoryToken(Room), useValue: mockRepo() },
         {
           provide: TenantContext,
           useValue: { assertAccess: jest.fn(), getUser: jest.fn() },
@@ -163,6 +170,44 @@ describe("AdminService", () => {
 
   it("should be defined", () => {
     expect(service).toBeDefined();
+  });
+
+  describe('university schedule connector settings', () => {
+    it('returns the legacy SIBIT connector as an enabled rasp-sano tenant setting', async () => {
+      mockUniversityRepository.findOne.mockResolvedValue({ id: 'uni-1', name: 'Different University', city: 'Other city', connectorType: 'rasp-sano', connectorConfig: {} });
+      await expect(service.getScheduleConnector('uni-1')).resolves.toMatchObject({ provider: 'rasp-sano', enabled: true, sourceHost: 'rasp.sano.ru' });
+    });
+
+    it('stores only the supported provider and academic year config', async () => {
+      const university = { id: 'uni-1', name: 'Different University', city: 'Other city', connectorType: null, connectorConfig: {} };
+      mockUniversityRepository.findOne.mockResolvedValue(university);
+      await service.updateScheduleConnector('uni-1', { provider: 'rasp-sano', enabled: true, config: { academicYear: '2026-2027' } });
+      expect(university.connectorType).toBe('rasp-sano');
+      expect(university.connectorConfig).toMatchObject({ scheduleConnector: { provider: 'rasp-sano', enabled: true, config: { academicYear: '2026-2027' } } });
+      expect(JSON.stringify(university.connectorConfig)).not.toContain('url');
+    });
+
+    it('probes a configured non-SIBIT university without persisting imported rows', async () => {
+      mockUniversityRepository.findOne.mockResolvedValue({
+        id: 'uni-1', name: 'Different University', city: 'Other city', connectorType: 'rasp-sano',
+        connectorConfig: { scheduleConnector: { provider: 'rasp-sano', enabled: true, config: { academicYear: '2026-2027' } } },
+      });
+      await expect(service.testScheduleConnector('uni-1')).resolves.toMatchObject({ status: 'connected', provider: 'rasp-sano', sourceHost: 'rasp.sano.ru', academicYear: '2026-2027', groupsAvailable: 1 });
+      expect(mockRaspScraperService.getGroups).toHaveBeenLastCalledWith('2026-2027');
+      expect(mockUniversityRepository.save).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('tenant room catalog', () => {
+    it('requires a reason when archiving and keeps the archive operation auditable', async () => {
+      const roomRepo = module.get(getRepositoryToken(Room));
+      const room = { id: 'room-1', organizationId: 'uni-1', name: '101', code: 'A-101', building: null, floor: null, capacity: null, archivedAt: null, archiveReason: null };
+      roomRepo.findOne.mockResolvedValue(room);
+      await expect(service.updateRoom('uni-1', 'actor-1', 'room-1', { isArchived: true })).rejects.toBeInstanceOf(BadRequestException);
+      await expect(service.updateRoom('uni-1', 'actor-1', 'room-1', { isArchived: true, reason: 'Ремонт' })).resolves.toMatchObject({ isArchived: true, archiveReason: 'Ремонт' });
+      const auditRepo = module.get(getRepositoryToken(AuditLog));
+      expect(auditRepo.save).toHaveBeenCalledWith(expect.objectContaining({ action: 'room.archived', entityId: 'room-1', newValues: expect.objectContaining({ reason: 'Ремонт' }) }));
+    });
   });
 
   describe("faculty dean assignment", () => {
@@ -351,6 +396,7 @@ describe("AdminService", () => {
         name: "СИБИТ",
         city: "Омск",
         connectorType: "rasp-sano",
+        connectorConfig: { scheduleConnector: { provider: "rasp-sano", enabled: true, config: { academicYear: "2025-2026" } } },
       });
       mockRaspScraperService.isValidGroup.mockResolvedValue(true);
 
@@ -368,7 +414,7 @@ describe("AdminService", () => {
         UserRole.UNIVERSITY_ADMIN,
       );
 
-      expect(mockRaspScraperService.isValidGroup).toHaveBeenCalledWith("12131");
+      expect(mockRaspScraperService.isValidGroup).toHaveBeenCalledWith("12131", "2025-2026");
       expect(result.groupId).toBe("12131");
     });
 
@@ -569,6 +615,7 @@ describe("AdminService", () => {
           role: UserRole.TEACHER,
           firstName: "Иван",
           lastName: "Иванов",
+          sourceTeacherId: 'teacher-ext-1',
         },
       ]);
       mockSibitConnectorService.sync.mockResolvedValue({
@@ -599,6 +646,7 @@ describe("AdminService", () => {
               pairNumber: 2,
               subject: "Тестовый предмет",
               teacher: "Иванов И.И.",
+              teacherId: 'teacher-ext-1',
               weekType: "odd",
               academicYear: "2026-2027",
               isReplacement: false,

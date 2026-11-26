@@ -7,7 +7,7 @@ import {
   Optional,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { In, MoreThanOrEqual, Repository } from "typeorm";
+import { DeepPartial, In, MoreThanOrEqual, Repository } from "typeorm";
 import * as bcrypt from "bcrypt";
 
 import { UsersService } from "../users/users.service";
@@ -15,10 +15,11 @@ import { ScheduleImportService } from '../schedule/connectors/schedule-import.se
 import { CurationService } from "../curation/curation.service";
 import { ScheduleService } from "../schedule/schedule.service";
 import { SibitConnectorService } from "../schedule/connectors/sibit-connector.service";
-import { RaspCatalog, RaspScraperService, SIBIT_UNIVERSITY } from "../auth/rasp-scraper.service";
+import { RaspCatalog, RaspScraperService } from "../auth/rasp-scraper.service";
 import { University } from "../users/entities/university.entity";
 import { Faculty } from "../users/entities/faculty.entity";
 import { Group } from "../users/entities/group.entity";
+import { Room } from "../users/entities/room.entity";
 import { UpdateUserRoleDto } from "./dto/update-user-role.dto";
 import {
   ImportScheduleDto,
@@ -33,6 +34,7 @@ import { CreateGroupDto } from "./dto/create-group.dto";
 import { UpdateGroupDto } from "./dto/update-group.dto";
 import { UpdateUniversityDto } from "./dto/update-university.dto";
 import { AuditLog } from "../common/entities/audit-log.entity";
+import { JsonObject } from "../common/types/json-value.type";
 import { EventBusService } from "../events/event-bus.service";
 import {
   MoodleConnectionConfig,
@@ -51,6 +53,9 @@ import {
   PaginationQueryDto,
   toPaginatedResponse,
 } from "../common/dto/pagination-query.dto";
+import { UpdateScheduleConnectorDto } from './dto/update-schedule-connector.dto';
+import { CreateRoomDto } from './dto/create-room.dto';
+import { UpdateRoomDto } from './dto/update-room.dto';
 
 export interface UniversityStats {
   totalUsers: number;
@@ -92,6 +97,8 @@ export class AdminService {
     private readonly userRepository: Repository<User>,
     @InjectRepository(Lesson)
     private readonly lessonRepository: Repository<Lesson>,
+    @InjectRepository(Room)
+    private readonly roomRepository: Repository<Room>,
     private readonly tenantContext: TenantContext,
     private readonly moodleConnectorService: MoodleConnectorService,
     private readonly raspScraperService: RaspScraperService,
@@ -116,10 +123,12 @@ export class AdminService {
   async getSibitTeachers(organizationId: string) {
     this.tenantContext.assertAccess(organizationId);
     const university = await this.universityRepository.findOne({ where: { id: organizationId } });
-    if (!university || university.connectorType !== "rasp-sano") {
+    if (!university || !this.isRaspScheduleEnabled(university)) {
       throw new BadRequestException("Каталог преподавателей СИБИТ недоступен для этого университета");
     }
-    const teachers = await this.sibitConnectorService.getTeachers();
+    const teachers = await this.sibitConnectorService.getTeachers(
+      readScheduleConnectorSettings(university).config.academicYear,
+    );
     const linkedUsers = await this.userRepository.find({
       where: { organizationId, role: UserRole.TEACHER },
       select: ["id", "firstName", "lastName", "sourceTeacherId"],
@@ -239,7 +248,7 @@ export class AdminService {
           throw new BadRequestException("Внешний ID учебной группы назначается аккаунту студента.");
         }
         const university = await this.getUniversity(organizationId);
-        if (university.name !== SIBIT_UNIVERSITY.name || university.city !== SIBIT_UNIVERSITY.city || university.connectorType !== "rasp-sano" || !await this.raspScraperService.isValidGroup(data.groupId)) {
+        if (!this.isRaspScheduleEnabled(university) || !await this.raspScraperService.isValidGroup(data.groupId, readScheduleConnectorSettings(university).config.academicYear)) {
           throw new BadRequestException("Выберите группу из каталога СИБИТ для этого университета.");
         }
       } else {
@@ -255,7 +264,7 @@ export class AdminService {
     if (data.sourceTeacherId) {
       if (data.role !== UserRole.TEACHER) throw new BadRequestException("Внешний ID преподавателя можно назначить только учётной записи преподавателя.");
       const university = await this.getUniversity(organizationId);
-      if (university.connectorType !== "rasp-sano" || !(await this.sibitConnectorService.getTeachers()).some((teacher) => teacher.id === data.sourceTeacherId)) {
+      if (!this.isRaspScheduleEnabled(university) || !(await this.sibitConnectorService.getTeachers(readScheduleConnectorSettings(university).config.academicYear)).some((teacher) => teacher.id === data.sourceTeacherId)) {
         throw new BadRequestException("Преподаватель не найден в каталоге расписания СИБИТа.");
       }
       const existingLink = await this.userRepository.findOne({ where: { organizationId, sourceTeacherId: data.sourceTeacherId } });
@@ -284,7 +293,7 @@ export class AdminService {
     if (!user || user.role !== UserRole.TEACHER) throw new NotFoundException("Учётная запись преподавателя не найдена.");
     if (sourceTeacherId) {
       const university = await this.getUniversity(organizationId);
-      if (university.connectorType !== "rasp-sano" || !(await this.sibitConnectorService.getTeachers()).some((teacher) => teacher.id === sourceTeacherId)) {
+      if (!this.isRaspScheduleEnabled(university) || !(await this.sibitConnectorService.getTeachers(readScheduleConnectorSettings(university).config.academicYear)).some((teacher) => teacher.id === sourceTeacherId)) {
         throw new BadRequestException("Преподаватель не найден в каталоге расписания СИБИТа.");
       }
       const existingLink = await this.userRepository.findOne({ where: { organizationId, sourceTeacherId } });
@@ -355,6 +364,132 @@ export class AdminService {
     return this.scheduleImports.submit(organizationId, importScheduleDto);
   }
 
+  async getScheduleConnector(organizationId: string) {
+    this.tenantContext.assertAccess(organizationId);
+    return scheduleConnectorResponse(await this.getUniversity(organizationId));
+  }
+
+  async updateScheduleConnector(organizationId: string, dto: UpdateScheduleConnectorDto) {
+    this.tenantContext.assertAccess(organizationId);
+    const university = await this.getUniversity(organizationId);
+    const config = { ...(dto.config ?? {}) };
+    if (dto.provider === 'file-only' && dto.enabled) {
+      throw new BadRequestException('Для файлового источника синхронизация отключена. Загружайте файл через импорт расписания.');
+    }
+    if (dto.provider === 'rasp-sano' && dto.enabled && !university.connectorType) {
+      university.connectorType = 'rasp-sano';
+    }
+    university.connectorConfig = {
+      ...(university.connectorConfig ?? {}),
+      scheduleConnector: { provider: dto.provider, enabled: dto.enabled, config },
+      updatedAt: new Date().toISOString(),
+    };
+    await this.universityRepository.save(university);
+    return scheduleConnectorResponse(university);
+  }
+
+  async testScheduleConnector(organizationId: string) {
+    this.tenantContext.assertAccess(organizationId);
+    const university = await this.getUniversity(organizationId);
+    if (!this.isRaspScheduleEnabled(university)) {
+      throw new BadRequestException('Сначала включите источник расписания rasp.sano.ru в настройках университета.');
+    }
+    const config = readScheduleConnectorSettings(university).config;
+    const availableYears = await this.raspScraperService.getYears();
+    if (config.academicYear && !availableYears.some((year) => year.value === config.academicYear)) {
+      throw new BadRequestException('Выбранный учебный год отсутствует в каталоге rasp.sano.ru.');
+    }
+    const groups = await this.raspScraperService.getGroups(config.academicYear);
+    return {
+      status: 'connected' as const,
+      provider: 'rasp-sano' as const,
+      sourceHost: 'rasp.sano.ru' as const,
+      academicYear: config.academicYear ?? availableYears.at(-1)?.value ?? null,
+      academicYearsAvailable: availableYears.length,
+      groupsAvailable: groups.length,
+      checkedAt: new Date().toISOString(),
+    };
+  }
+
+  async getRooms(organizationId: string, pagination: PaginationQueryDto) {
+    this.tenantContext.assertAccess(organizationId);
+    const [rooms, total] = await this.roomRepository.findAndCount({
+      where: { organizationId },
+      order: { archivedAt: 'ASC', name: 'ASC' },
+      skip: (pagination.page - 1) * pagination.limit,
+      take: pagination.limit,
+    });
+    return toPaginatedResponse(rooms.map((room) => ({ ...room, isArchived: !!room.archivedAt })), total, pagination);
+  }
+
+  async createRoom(organizationId: string, actorId: string, dto: CreateRoomDto) {
+    this.tenantContext.assertAccess(organizationId);
+    const room = this.roomRepository.create({
+      organizationId,
+      name: dto.name.trim(),
+      code: dto.code?.trim() || null,
+      building: dto.building?.trim() || null,
+      floor: dto.floor?.trim() || null,
+      capacity: dto.capacity ?? null,
+      archivedAt: null,
+      archiveReason: null,
+    });
+    try {
+      const saved = await this.roomRepository.save(room);
+      await this.auditRoom(actorId, 'room.created', saved.id, null, roomAuditValues(saved));
+      return { ...saved, isArchived: false };
+    } catch (error) {
+      if (isUniqueViolation(error)) throw new ConflictException('Аудитория с таким названием или кодом уже существует в этом университете.');
+      throw error;
+    }
+  }
+
+  async updateRoom(organizationId: string, actorId: string, roomId: string, dto: UpdateRoomDto) {
+    this.tenantContext.assertAccess(organizationId);
+    const room = await this.roomRepository.findOne({ where: { id: roomId, organizationId } });
+    if (!room) throw new NotFoundException('Аудитория не найдена в этом университете.');
+    const oldValues = roomAuditValues(room);
+    const stateChanged = dto.isArchived !== undefined && dto.isArchived !== !!room.archivedAt;
+    if (stateChanged && !dto.reason?.trim()) {
+      throw new BadRequestException('Укажите причину архивирования или восстановления аудитории.');
+    }
+    if (dto.name !== undefined) room.name = dto.name.trim();
+    if (dto.code !== undefined) room.code = dto.code.trim() || null;
+    if (dto.building !== undefined) room.building = dto.building.trim() || null;
+    if (dto.floor !== undefined) room.floor = dto.floor.trim() || null;
+    if (dto.capacity !== undefined) room.capacity = dto.capacity;
+    if (stateChanged) {
+      room.archivedAt = dto.isArchived ? new Date() : null;
+      room.archiveReason = dto.isArchived ? dto.reason!.trim() : null;
+    }
+    try {
+      const saved = await this.roomRepository.save(room);
+      await this.auditRoom(actorId, stateChanged ? (dto.isArchived ? 'room.archived' : 'room.restored') : 'room.updated', room.id, oldValues, { ...roomAuditValues(saved), ...(stateChanged ? { reason: dto.reason!.trim() } : {}) });
+      return { ...saved, isArchived: !!saved.archivedAt };
+    } catch (error) {
+      if (isUniqueViolation(error)) throw new ConflictException('Аудитория с таким названием или кодом уже существует в этом университете.');
+      throw error;
+    }
+  }
+
+  private async auditRoom(actorId: string, action: string, roomId: string, oldValues: JsonObject | null, newValues: JsonObject) {
+    await this.auditLogRepository.save(this.auditLogRepository.create({
+      userId: actorId,
+      action,
+      entity: 'room',
+      entityId: roomId,
+      oldValues,
+      newValues,
+      ip: undefined,
+      userAgent: undefined,
+    } as DeepPartial<AuditLog>));
+  }
+
+  private isRaspScheduleEnabled(university: University): boolean {
+    return readScheduleConnectorSettings(university).provider === 'rasp-sano'
+      && readScheduleConnectorSettings(university).enabled;
+  }
+
   async syncSchedule(organizationId: string): Promise<{
     status: string;
     timestamp: string;
@@ -367,12 +502,13 @@ export class AdminService {
   }> {
     this.tenantContext.assertAccess(organizationId);
     const university = await this.getUniversity(organizationId);
-    if (!connectorCapabilities(university.connectorType || "").scheduleSync) {
+    if (!this.isRaspScheduleEnabled(university)) {
       throw new BadRequestException(
         "Для этого ВУЗа не настроен источник расписания с поддержкой синхронизации.",
       );
     }
-    const { catalog, ...summary } = await this.sibitConnectorService.sync();
+    const settings = readScheduleConnectorSettings(university);
+    const { catalog, ...summary } = await this.sibitConnectorService.sync(settings.config.academicYear);
     const persisted = await this.persistSibitCatalog(organizationId, catalog);
     const timestamp = new Date().toISOString();
     university.connectorConfig = {
@@ -1026,39 +1162,65 @@ function sibitScheduleEventType(
   return "lesson.changed";
 }
 
-/**
- * Prefer the exact external source ID. If no account has a source-ID link,
- * retain the legacy fallback only for one unambiguous name match.
- */
+/** Link imported lesson rows only to accounts explicitly linked by source ID. */
 function resolveTeacherId(
   sourceName: string | undefined,
   sourceTeacherId: string | undefined,
   teachers: User[],
 ): string | undefined {
-  if (sourceTeacherId) {
-    const linked = teachers.find((teacher) => teacher.sourceTeacherId === sourceTeacherId);
-    if (linked) return linked.id;
+  void sourceName;
+  if (!sourceTeacherId) return undefined;
+  return teachers.find((teacher) => teacher.sourceTeacherId === sourceTeacherId)?.id;
+}
+
+function readScheduleConnectorSettings(university: University): {
+  provider: 'rasp-sano' | 'file-only';
+  enabled: boolean;
+  config: { academicYear?: string };
+} {
+  const stored = university.connectorConfig?.scheduleConnector;
+  if (stored && typeof stored === 'object' && !Array.isArray(stored)) {
+    const value = stored as Record<string, unknown>;
+    const provider = value.provider === 'rasp-sano' ? 'rasp-sano' : 'file-only';
+    const configValue = value.config && typeof value.config === 'object' && !Array.isArray(value.config)
+      ? value.config as Record<string, unknown>
+      : {};
+    const academicYear = configValue.academicYear;
+    return {
+      provider,
+      enabled: provider === 'rasp-sano' && value.enabled === true,
+      config: typeof academicYear === 'string' && /^\d{4}-\d{4}$/.test(academicYear) ? { academicYear } : {},
+    };
   }
-  if (!sourceName) return undefined;
-  const source = normalizedKey(sourceName).replace(/[^а-яa-z]/g, "");
-  if (!source) return undefined;
-  const matches = teachers.filter((teacher) => {
-    const fullName = normalizedKey(
-      `${teacher.lastName} ${teacher.firstName}`,
-    ).replace(/[^а-яa-z]/g, "");
-    const surname = normalizedKey(teacher.lastName).replace(/[^а-яa-z]/g, "");
-    const firstInitial = normalizedKey(teacher.firstName).replace(
-      /[^а-яa-z]/g,
-      "",
-    )[0];
-    return (
-      source === fullName ||
-      (Boolean(firstInitial) &&
-        source.startsWith(surname) &&
-        source[surname.length] === firstInitial)
-    );
-  });
-  return matches.length === 1 ? matches[0].id : undefined;
+  // The existing connectorType is the legacy explicit provider setting for SIBIT tenants.
+  return university.connectorType === 'rasp-sano'
+    ? { provider: 'rasp-sano', enabled: true, config: {} }
+    : { provider: 'file-only', enabled: false, config: {} };
+}
+
+function scheduleConnectorResponse(university: University) {
+  const settings = readScheduleConnectorSettings(university);
+  return {
+    ...settings,
+    sourceHost: settings.provider === 'rasp-sano' ? 'rasp.sano.ru' as const : null,
+  };
+}
+
+function roomAuditValues(room: Room): JsonObject {
+  return {
+    name: room.name,
+    code: room.code,
+    building: room.building,
+    floor: room.floor,
+    capacity: room.capacity,
+    isArchived: !!room.archivedAt,
+    archiveReason: room.archiveReason,
+  };
+}
+
+function isUniqueViolation(error: unknown): boolean {
+  const value = error as { code?: string; driverError?: { code?: string } };
+  return value?.code === '23505' || value?.driverError?.code === '23505';
 }
 function connectorName(type: string): string {
   if (type === "rasp-sano") return "СИБИТ Расписание";

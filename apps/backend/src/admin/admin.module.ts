@@ -18,6 +18,7 @@ import { MoodleModule } from "../moodle/moodle.module";
 import { CurationModule } from "../curation/curation.module";
 import { RaspModule } from "../rasp/rasp.module";
 import { ScheduleConnectorsModule } from '../schedule/connectors/schedule-connectors.module';
+import { Room } from '../users/entities/room.entity';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { ScheduleConnectorsModule } from '../schedule/connectors/schedule-connec
       AuditLog,
       Lesson,
       User,
+      Room,
     ]),
     UsersModule,
     ScheduleModule,

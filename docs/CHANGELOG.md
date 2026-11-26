@@ -1,5 +1,12 @@
 # Changelog
 
+## [Unreleased] — 2026-11-26
+
+### Кабинет ВУЗа: источники расписания и аудитории
+- Добавлены tenant-scoped настройки расписания Rasp.SANO для СИБИТа с выбором учебного года, проверкой источника без записи и ручной синхронизацией; файловый импорт для других вузов остаётся доступен.
+- Добавлен каталог аудиторий с журналируемым архивированием и восстановлением. Занятия пока сохраняют исходное текстовое поле аудитории; каталог с ними не связывается.
+- Привязка аккаунта преподавателя к источнику выполняется только по точному внешнему ID; автоматически создавать аккаунты или угадывать связь по ФИО синхронизация не будет.
+
 > Entries below preserve the original change history and may mention paths/components that were subsequently renamed, removed, or never implemented. Treat them as historical notes, not as a current file index. Current behavior is described by code/configuration and the docs linked from [00_START_HERE](00_START_HERE.md).
 
 ## [Unreleased] — 2026-11-10

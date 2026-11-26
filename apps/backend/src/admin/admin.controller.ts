@@ -47,6 +47,9 @@ import { UpdateUniversityUserUsernameDto } from "./dto/update-university-user-us
 import { ConfigureMoodleConnectorDto } from "./dto/configure-moodle-connector.dto";
 import { LinkSibitTeacherDto } from "./dto/link-sibit-teacher.dto";
 import { ScheduleImportService } from '../schedule/connectors/schedule-import.service';
+import { UpdateScheduleConnectorDto } from './dto/update-schedule-connector.dto';
+import { CreateRoomDto } from './dto/create-room.dto';
+import { UpdateRoomDto } from './dto/update-room.dto';
 
 @ApiTags("admin")
 @ApiBearerAuth()
@@ -271,6 +274,48 @@ export class AdminController {
       lastSync: typeof config.lastSync === "string" ? config.lastSync : null,
       status: typeof config.status === "string" ? config.status : "idle",
     };
+  }
+
+  @Get('connectors/schedule')
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.DEVELOPER, UserRole.SUPERADMIN)
+  @ApiOperation({ summary: 'Получить настройки источника расписания университета' })
+  getScheduleConnector(@Request() req) {
+    return this.adminService.getScheduleConnector(req.user.organizationId);
+  }
+
+  @Patch('connectors/schedule')
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.DEVELOPER, UserRole.SUPERADMIN)
+  @ApiOperation({ summary: 'Настроить источник расписания университета' })
+  updateScheduleConnector(@Request() req, @Body() dto: UpdateScheduleConnectorDto) {
+    return this.adminService.updateScheduleConnector(req.user.organizationId, dto);
+  }
+
+  @Post('connectors/schedule/test')
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.DEVELOPER, UserRole.SUPERADMIN)
+  @ApiOperation({ summary: 'Проверить подключение к rasp.sano.ru без записи данных' })
+  testScheduleConnector(@Request() req) {
+    return this.adminService.testScheduleConnector(req.user.organizationId);
+  }
+
+  @Get('rooms')
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.DEVELOPER, UserRole.SUPERADMIN)
+  @ApiOperation({ summary: 'Получить аудитории университета' })
+  getRooms(@Request() req, @Query() pagination: PaginationQueryDto) {
+    return this.adminService.getRooms(req.user.organizationId, pagination);
+  }
+
+  @Post('rooms')
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.DEVELOPER, UserRole.SUPERADMIN)
+  @ApiOperation({ summary: 'Добавить аудиторию' })
+  createRoom(@Request() req, @Body() dto: CreateRoomDto) {
+    return this.adminService.createRoom(req.user.organizationId, req.user.id, dto);
+  }
+
+  @Patch('rooms/:id')
+  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.DEVELOPER, UserRole.SUPERADMIN)
+  @ApiOperation({ summary: 'Изменить, архивировать или восстановить аудиторию' })
+  updateRoom(@Request() req, @Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateRoomDto) {
+    return this.adminService.updateRoom(req.user.organizationId, req.user.id, id, dto);
   }
 
   @Get("university")
