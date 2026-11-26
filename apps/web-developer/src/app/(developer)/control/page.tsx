@@ -27,6 +27,7 @@ import PairSpacesPanel from './PairSpacesPanel';
 import AcademicSchedulePanel from './AcademicSchedulePanel';
 import EventsPanel from './EventsPanel';
 import AttachmentsPanel from './AttachmentsPanel';
+import GlobalObjectSearch from './GlobalObjectSearch';
 import { type Access, Button, Notice, roles, useResource } from './control-ui';
 
 const sections = [
@@ -109,14 +110,26 @@ export default function PlatformControlPage() {
     const target = available.find(item => item.id === id);
     setTab(id); setRequestedTab(null); setQuery('');
     if (target) setExpandedSection(target.section);
-    const url = new URL(window.location.href); url.searchParams.set('tab', id); url.searchParams.delete('userId');
+    const url = new URL(window.location.href); url.searchParams.set('tab', id); url.searchParams.delete('userId'); url.searchParams.delete('universityId'); url.searchParams.delete('universityQuery');
     window.history.pushState(null, '', url);
   };
   const toggleSection = (id: SectionId) => setExpandedSection(current => current === id ? 'none' : id);
   const openUserSection = (id: string, userId: string) => {
     const target = available.find(item => item.id === id);
     setTab(id); setRequestedTab(null); if (target) setExpandedSection(target.section);
-    const url = new URL(window.location.href); url.searchParams.set('tab', id); url.searchParams.set('userId', userId);
+    const url = new URL(window.location.href); url.searchParams.set('tab', id); url.searchParams.set('userId', userId); url.searchParams.delete('universityId'); url.searchParams.delete('universityQuery');
+    window.history.pushState(null, '', url);
+  };
+  const openAccount = (userId: string) => openUserSection('accounts', userId);
+  const openUniversity = (universityId: string, name: string) => {
+    const target = available.find(item => item.id === 'universities');
+    if (!target) return;
+    setTab('universities'); setRequestedTab(null); setQuery(''); setExpandedSection(target.section);
+    const url = new URL(window.location.href);
+    url.searchParams.set('tab', 'universities');
+    url.searchParams.set('universityId', universityId);
+    url.searchParams.set('universityQuery', name);
+    url.searchParams.delete('userId');
     window.history.pushState(null, '', url);
   };
   const homeActions: Array<{ id: string; title: string; description: string; icon: IconName }> = [
@@ -181,6 +194,7 @@ export default function PlatformControlPage() {
             {access && <p className="mt-4 border-t border-[var(--color-border)] pt-3 text-sm text-[var(--color-text-secondary)]">Область данных: <strong className="font-semibold text-[var(--color-text)]">{universityScopeLabel}</strong>{!access.owner && ' · права владельца платформы и изменение глобальных настроек не входят в эту роль.'}</p>}
           </section>
           <p className="px-1 text-sm text-[var(--color-text-secondary)]">Нужен другой раздел? Используйте поиск инструментов или раскройте рабочую область слева.</p>
+          {access && <GlobalObjectSearch access={access} onOpenAccount={openAccount} onOpenUniversity={openUniversity} />}
         </div>}
         {activeTab && <div className="control-context"><p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--color-brand)]">{activeSectionMeta?.label}</p><p className="mt-1 text-sm text-[var(--color-text-secondary)]">{activeTab.description}</p></div>}
         {access && <>{active === 'services' && <ServicesPanel access={access} />}{active === 'user-hub' && <UserHubPanel access={access} onNavigate={openUserSection} />}{active === 'accounts' && <AccountsPanel access={access} />}{active === 'student-data' && <StudentDataPanel access={access} />}{active === 'personal-records' && <PersonalRecordsPanel access={access} />}{active === 'notifications-data' && <NotificationsDataPanel access={access} />}{active === 'homework-submissions' && <HomeworkSubmissionsPanel access={access} />}{active === 'curator-assignments' && <CuratorAssignmentsPanel access={access} />}{active === 'announcements' && <AnnouncementsPanel access={access} />}{active === 'pair-spaces' && <PairSpacesPanel access={access} />}{active === 'academic-schedule' && <AcademicSchedulePanel access={access} />}{active === 'events' && <EventsPanel access={access} />}{active === 'attachments' && <AttachmentsPanel access={access} />}{active === 'career-data' && <CareerDataPanel access={access} />}{active === 'career-companies' && <CareerCompaniesPanel access={access} />}{active === 'career-tasks' && <CareerTasksPanel access={access} />}{active === 'career-operations' && <CareerOperationsPanel access={access} />}{active === 'career-memberships' && <CareerMembershipsPanel access={access} />}{active === 'career-tests' && <CareerTestsPanel access={access} />}{active === 'career-content' && <CareerContentPanel access={access} />}{active === 'career-planning' && <CareerAvailabilityPanel access={access} />}{active === 'discussions' && <DiscussionsPanel access={access} />}{active === 'universities' && <UniversitiesPanel access={access} />}{active === 'permissions' && access.owner && <PermissionsPanel access={access} />}{active === 'settings' && <SettingsPanel access={access} />}{active === 'audit' && <AuditPanel access={access} />}</>}

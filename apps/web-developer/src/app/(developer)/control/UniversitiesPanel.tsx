@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api';
 import { type Access, type Page, Button, Notice, Pager, errorText, inputClass, panelClass, useResource } from './control-ui';
 import AccountsPanel from './AccountsPanel';
@@ -41,6 +41,13 @@ export default function UniversitiesPanel({ access }: { access: Access }) {
   const [workspaceTab, setWorkspaceTab] = useState<'overview' | 'people' | 'structure' | 'schedule' | 'history'>('overview');
   const [connectorReason, setConnectorReason] = useState(''), [connectorBusy, setConnectorBusy] = useState(false), [connectorError, setConnectorError] = useState(''), [connectorNotice, setConnectorNotice] = useState(''), [connectorCheck, setConnectorCheck] = useState<ScheduleConnectorCheck | null>(null), [connectorDraft, setConnectorDraft] = useState<ScheduleConnector | null>(null);
   const [auditPage, setAuditPage] = useState(1);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const universityId = params.get('universityId');
+    const universityQuery = params.get('universityQuery');
+    if (universityQuery) setQ(universityQuery.slice(0, 100));
+    if (universityId) setStructureUniversity(universityId);
+  }, []);
   const list = useResource<Page<University>>(`/platform/universities?q=${encodeURIComponent(q)}&page=${page}&limit=20`);
   const organizationQuery = `organizationId=${encodeURIComponent(structureUniversity)}&q=${encodeURIComponent(orgQuery)}&limit=20`;
   const faculties = useResource<Page<Faculty>>(structureUniversity ? `/platform/organization/faculties?${organizationQuery}&status=${facultyStatus}&page=${facultyPage}` : null);
@@ -108,7 +115,7 @@ export default function UniversitiesPanel({ access }: { access: Access }) {
     {form && <form className={panelClass + ' space-y-3'} onSubmit={event => { event.preventDefault(); void save(); }}><h3 className="font-semibold">{form.id ? 'Изменить университет' : 'Новый университет'}</h3>{field('Название', form.name, name => setForm({ ...form, name }), 200)}{field('Город', form.city, city => setForm({ ...form, city }), 100)}<label className="block text-sm">Статус<select className={inputClass} value={form.status} onChange={event => setForm({ ...form, status:event.target.value })}><option value="active">Активен</option><option value="inactive">Неактивен</option><option value="pending">Ожидает подключения</option></select></label>{form.id && field('Причина изменения', form.reason || '', reason => setForm({ ...form, reason }), 500)}<div className="flex gap-2"><Button type="submit" disabled={busy || (Boolean(form.id) && (form.reason?.trim().length ?? 0) < 3)}>Сохранить университет</Button><Button disabled={busy} onClick={() => setForm(null)}>Отмена</Button></div></form>}
     {selectedUniversity && <>
       <section className={panelClass + ' space-y-4'} aria-label={`Университет: ${selectedUniversity.name}`}>
-        <div className="flex flex-wrap items-center justify-between gap-3"><div className="min-w-0"><p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-brand)]">Рабочее пространство вуза</p><h2 className="mt-1 break-words text-xl font-semibold">{selectedUniversity.name}</h2><p className="mt-1 text-sm text-slate-400">{selectedUniversity.city} · {universityStatuses[selectedUniversity.status] || selectedUniversity.status} · код {shortId(selectedUniversity.id)}</p></div><div className="flex flex-wrap gap-2"><Button onClick={() => { setStructureUniversity(''); setForm(null); setConnectorDraft(null); }}>К списку вузов</Button>{canManageUniversity && <Button onClick={() => setForm({ ...selectedUniversity, reason: '' })}>Изменить сведения</Button>}</div></div>
+        <div className="flex flex-wrap items-center justify-between gap-3"><div className="min-w-0"><p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-brand)]">Рабочее пространство вуза</p><h2 className="mt-1 break-words text-xl font-semibold">{selectedUniversity.name}</h2><p className="mt-1 text-sm text-slate-400">{selectedUniversity.city} · {universityStatuses[selectedUniversity.status] || selectedUniversity.status} · код {shortId(selectedUniversity.id)}</p></div><div className="flex flex-wrap gap-2"><Button onClick={() => { setStructureUniversity(''); setForm(null); setConnectorDraft(null); const url = new URL(window.location.href); url.searchParams.delete('universityId'); url.searchParams.delete('universityQuery'); window.history.pushState(null, '', url); }}>К списку вузов</Button>{canManageUniversity && <Button onClick={() => setForm({ ...selectedUniversity, reason: '' })}>Изменить сведения</Button>}</div></div>
         <nav aria-label="Разделы вуза" className="flex flex-wrap gap-2 border-t border-[var(--color-border)] pt-3">
           {([['overview', 'Обзор'], ...(canAccessPeople ? [['people', 'Люди'] as const] : []), ['structure', 'Структура'], ['schedule', 'Расписание и источники'], ...(access.permissions.includes('audit.read') ? [['history', 'История'] as const] : [])] as const).map(([id, label]) => <Button key={id} aria-current={workspaceTab === id ? 'page' : undefined} aria-pressed={workspaceTab === id} onClick={() => setWorkspaceTab(id)} className={workspaceTab === id ? 'border-[var(--color-brand)] bg-[var(--color-brand-soft)] text-[var(--color-brand-strong)]' : ''}>{label}</Button>)}
         </nav>

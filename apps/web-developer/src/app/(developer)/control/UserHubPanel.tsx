@@ -13,8 +13,11 @@ export default function UserHubPanel({ access, onNavigate }: { access: Access; o
   const [selectedId, setSelectedId] = useState('');
   useEffect(() => { if (targetUserId) { setQuery(targetUserId); setSelectedId(targetUserId); } }, [targetUserId]);
   const canReadAccounts = access.permissions.includes('accounts.read');
-  const params = new URLSearchParams({ q: query, page: String(page), limit: '20' });
-  const path = canReadAccounts ? `/platform/accounts?${params}` : `/platform-records/users?${params}`;
+  const normalizedQuery = query.trim();
+  const params = new URLSearchParams({ q: normalizedQuery, page: String(page), limit: '20' });
+  const path = normalizedQuery.length >= 2
+    ? canReadAccounts ? `/platform/accounts?${params}` : `/platform-records/users?${params}`
+    : null;
   const users = useResource<Page<AccountRow | UserSummary>>(path);
   const selected = users.data?.data.find(user => user.id === selectedId) || null;
   const targets = [
@@ -39,6 +42,7 @@ export default function UserHubPanel({ access, onNavigate }: { access: Access; o
     <div className="grid gap-4 lg:grid-cols-[minmax(17rem,0.8fr)_minmax(0,1.2fr)]">
       <div className="space-y-3">
         <label className="block text-sm">Поиск пользователя<input className={inputClass} type="search" maxLength={100} value={query} onChange={event => { setQuery(event.target.value); setPage(1); setSelectedId(''); }} placeholder="ФИО, email, телефон, группа или UUID" /></label>
+        {normalizedQuery.length < 2 && <p className="text-sm text-slate-400">Введите не менее 2 символов для поиска.</p>}
         {users.loading && <p role="status" className="text-sm text-slate-400">Ищем пользователей…</p>}
         <div className="max-h-[34rem] divide-y divide-slate-700 overflow-y-auto rounded-xl border border-slate-700">{users.data?.data.map(user => <button key={user.id} aria-pressed={selectedId === user.id} className={`block min-h-16 w-full p-3 text-left hover:bg-slate-800 ${selectedId === user.id ? 'bg-cyan-400/10' : ''}`} onClick={() => setSelectedId(user.id)}><span className="block text-sm font-semibold">{user.lastName} {user.firstName}</span><span className="mt-1 block break-all text-xs text-slate-400">{user.email}</span><span className="mt-1 block text-xs text-[var(--color-text-muted)]">{roles[user.role] || user.role} · {user.isActive ? 'Активен' : 'Заблокирован'}</span></button>)}</div>
         {users.data && <><p className="text-xs text-[var(--color-text-muted)]">Найдено: {users.data.meta.total}</p><Pager page={page} totalPages={users.data.meta.totalPages} onChange={setPage} /></>}
