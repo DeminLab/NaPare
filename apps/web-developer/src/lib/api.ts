@@ -97,7 +97,14 @@ export async function apiFetch<T>(
         : response.status === 404
           ? "Запрошенные данные не найдены или больше недоступны."
           : `Не удалось выполнить запрос (${response.status}).`;
-    throw new Error(body?.message || fallback);
+    const message = typeof body?.message === "string" ? body.message : fallback;
+    const details = Array.isArray(body?.details)
+      ? body.details
+          .filter((detail: unknown): detail is string => typeof detail === "string" && Boolean(detail.trim()))
+          .slice(0, 5)
+          .map((detail: string) => detail.trim().slice(0, 240))
+      : [];
+    throw new Error(details.length ? `${message}: ${details.join("; ")}` : message);
   }
 
   if (response.status === 204) return undefined as T;
