@@ -134,6 +134,47 @@ export class TelemetryService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  /**
+   * Ensures a stable server-side row for a verified legacy refresh token.
+   * The ID is derived by AuthService from that token, so retries/replays of the
+   * same legacy token reuse one row instead of creating duplicate sessions.
+   */
+  async ensureRefreshSession(id: string, user: Pick<User, 'id' | 'organizationId'>, context: TelemetryRequestContext = {}): Promise<string | null> {
+    const parsed = parseUserAgent(context.userAgent);
+    const client = context.client ?? parsed.client;
+    try {
+      await this.withWrite(['user_sessions'], async () => {
+        await this.sessions.createQueryBuilder()
+          .insert()
+          .values({
+            id,
+            userId: user.id,
+            organizationId: user.organizationId ?? null,
+            client,
+            device: parsed.device,
+            os: parsed.os,
+            browser: parsed.browser,
+            ip: context.ip?.slice(0, 64) ?? null,
+            userAgent: context.userAgent?.slice(0, 512) ?? null,
+            createdAt: new Date(),
+            lastSeenAt: new Date(),
+            expiresAt: new Date(Date.now() + this.refreshTtlMs()),
+            revokedAt: null,
+            revokedBy: null,
+            revokeReason: null,
+            metadata: null,
+          })
+          .orIgnore()
+          .execute();
+      });
+      const session = await this.withRead(['user_sessions'], () => this.sessions.findOneBy({ id, userId: user.id }));
+      return session && !session.revokedAt && session.expiresAt > new Date() ? id : null;
+    } catch (error) {
+      this.logger.warn(`Legacy refresh session was not ensured: ${error instanceof Error ? error.name : 'unknown error'}`);
+      return null;
+    }
+  }
+
   async recordAuth(input: AuthEventInput): Promise<void> {
     const parsed = parseUserAgent(input.userAgent);
     const client = input.client ?? parsed.client;

@@ -27,7 +27,7 @@ import PairSpacesPanel from './PairSpacesPanel';
 import AcademicSchedulePanel from './AcademicSchedulePanel';
 import EventsPanel from './EventsPanel';
 import AttachmentsPanel from './AttachmentsPanel';
-import { type Access, Button, Notice, useResource } from './control-ui';
+import { type Access, Button, Notice, roles, useResource } from './control-ui';
 
 const sections = [
   { id: 'users', label: 'Пользователи', description: 'Аккаунты, персональные данные и уведомления', icon: 'users' as IconName },
@@ -69,11 +69,24 @@ export default function PlatformControlPage() {
   const [tab,setTab] = useState('home');
   const [requestedTab, setRequestedTab] = useState<string | null>(null);
   const [query, setQuery] = useState('');
+  const [expandedSection, setExpandedSection] = useState<SectionId | 'none' | null>(null);
   const access = context.data;
   const available = tabs.filter(item => item.permission === 'owner' ? access?.owner : item.permission === 'user-directory' ? access?.permissions.some(permission => ['accounts.read', 'personal-data.read'].includes(permission)) : access?.permissions.includes(item.permission));
   const canEditUniversityMetadata = Boolean(access?.owner && access.permissions.includes('universities.write'));
   const universityScopeLabel = access?.owner || access?.organizationIds === null ? 'глобальная область' : `выбранные вузы (${access?.organizationIds?.length ?? 0})`;
-  useEffect(() => { const query = new URLSearchParams(window.location.search).get('tab'); if (query) { setRequestedTab(query); if (tabs.some(item => item.id === query)) setTab(query); } }, []);
+  useEffect(() => {
+    const syncFromLocation = () => {
+      const params = new URLSearchParams(window.location.search);
+      const id = params.get('tab');
+      if (!id) { setTab('home'); setRequestedTab(null); setExpandedSection(null); return; }
+      setRequestedTab(id);
+      const target = tabs.find(item => item.id === id);
+      if (target) { setTab(target.id); setExpandedSection(target.section); }
+    };
+    syncFromLocation();
+    window.addEventListener('popstate', syncFromLocation);
+    return () => window.removeEventListener('popstate', syncFromLocation);
+  }, []);
   useEffect(() => { const refresh = () => context.refresh(); window.addEventListener('focus', refresh); return () => window.removeEventListener('focus', refresh); }, [context.refresh]);
   const active = tab === 'home' ? undefined : available.find(item => item.id === tab)?.id || available[0]?.id;
   const activeTab = available.find(item => item.id === active);
@@ -92,16 +105,27 @@ export default function PlatformControlPage() {
       window.history.replaceState(null, '', url);
     }
   }, [access, active]);
-  const select = (id: string) => { setTab(id); setRequestedTab(null); setQuery(''); const url = new URL(window.location.href); url.searchParams.set('tab',id); window.history.replaceState(null,'',url); };
-  const selectSection = (id: SectionId) => { if (!term && activeSection === id) return; const next = available.find(item => item.section === id); if (next) select(next.id); };
-  const openUserSection = (id: string, userId: string) => { setTab(id); setRequestedTab(null); const url = new URL(window.location.href); url.searchParams.set('tab', id); url.searchParams.set('userId', userId); window.history.replaceState(null, '', url); };
+  const select = (id: string) => {
+    const target = available.find(item => item.id === id);
+    setTab(id); setRequestedTab(null); setQuery('');
+    if (target) setExpandedSection(target.section);
+    const url = new URL(window.location.href); url.searchParams.set('tab', id); url.searchParams.delete('userId');
+    window.history.pushState(null, '', url);
+  };
+  const toggleSection = (id: SectionId) => setExpandedSection(current => current === id ? 'none' : id);
+  const openUserSection = (id: string, userId: string) => {
+    const target = available.find(item => item.id === id);
+    setTab(id); setRequestedTab(null); if (target) setExpandedSection(target.section);
+    const url = new URL(window.location.href); url.searchParams.set('tab', id); url.searchParams.set('userId', userId);
+    window.history.pushState(null, '', url);
+  };
   return <div className="control-page mx-auto max-w-[1440px] space-y-5 p-4 text-[var(--color-text)] sm:p-6">
     <header className="control-page-header">
       <div className="min-w-0">
         <p className="workspace-kicker">Платформа · доступ по разрешениям</p>
         <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">Управление платформой</h1>
         <p className="mt-2 max-w-3xl text-sm text-[var(--color-text-secondary)]">
-          {access ? access.owner ? 'Владелец · полный доступ ко всем разделам и настройкам.' : 'Доступ по выданным разрешениям: показаны только разрешённые разделы и данные.' : 'Проверяем доступ и состав доступных разделов…'}
+          {access ? `Роль: ${roles[access.actorRole] || access.actorRole} · ${access.owner ? 'владелец платформы' : 'доступ по выданным разрешениям'}. ${access.owner ? 'Глобальная область и полный доступ к платформенным разделам.' : 'Показаны только разрешённые разделы и данные.'}` : 'Проверяем доступ и состав доступных разделов…'}
         </p>
       </div>
       <div className="flex flex-wrap items-center gap-2">
@@ -121,9 +145,9 @@ export default function PlatformControlPage() {
           {visibleSections.map(section => {
             const sectionTabs = tabsForSection(section.id);
             if (!sectionTabs.length) return null;
-            const expanded = term ? true : activeSection === section.id;
+            const expanded = term ? true : expandedSection === null ? activeSection === section.id : expandedSection === section.id;
             return <div key={section.id} className="control-nav-group">
-              <button type="button" aria-pressed={activeSection === section.id} aria-expanded={expanded} onClick={() => selectSection(section.id)} className={`control-nav-category ${activeSection === section.id ? 'is-active' : ''}`}>
+              <button type="button" aria-expanded={expanded} onClick={() => toggleSection(section.id)} className={`control-nav-category ${expanded ? 'is-active' : ''}`}>
                 <span className="control-nav-icon" aria-hidden="true"><Icon name={section.icon} size={17} /></span>
                 <span className="min-w-0 flex-1 text-left"><span className="block font-semibold">{section.label}</span><span className="mt-0.5 block text-xs font-normal opacity-75">{section.description}</span></span>
                 <span className="control-nav-count">{sectionTabs.length}</span>
@@ -152,8 +176,8 @@ export default function PlatformControlPage() {
                 <span className="mt-3 block text-sm font-semibold text-[var(--color-brand)]">Открыть вузы →</span>
               </button>}
             </div>
-            {!access?.owner && <p className="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900">Область: {universityScopeLabel}. Разрешения на разделы показаны по списку слева. Сведения самого университета может менять только владелец платформы.</p>}
-            {access?.owner && <p className="mt-4 rounded-lg bg-emerald-50 px-3 py-2 text-xs leading-5 text-emerald-900">Статус: владелец платформы · полный глобальный доступ. Изменения пользователей и структуры записываются в журнал действий.</p>}
+            {!access?.owner && <p className="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900">Роль: {roles[access?.actorRole ?? ''] || access?.actorRole}. Область данных: {universityScopeLabel}. Роль суперадминистратора сама по себе не делает аккаунт владельцем. Сведения вуза и контур доверия доступны только владельцу платформы; остальные действия зависят от разрешений слева.</p>}
+            {access?.owner && <p className="mt-4 rounded-lg bg-emerald-50 px-3 py-2 text-xs leading-5 text-emerald-900">Роль: {roles[access.actorRole] || access.actorRole} · владелец платформы · полный глобальный доступ. Изменения пользователей и структуры записываются в журнал действий.</p>}
           </section>
           <section aria-label="Все доступные инструменты" className="space-y-3">
             <div><h2 className="text-lg font-semibold">Все разделы управления</h2><p className="mt-1 text-sm text-[var(--color-text-secondary)]">Разделы показаны по областям данных; недоступные по разрешениям скрыты.</p></div>

@@ -201,8 +201,8 @@ export class AuthController {
   @ApiOperation({ summary: "Обновление токена" })
   @ApiResponse({ status: 200, description: "Токен обновлен" })
   @ApiResponse({ status: 401, description: "Неверный токен" })
-  async refreshToken(@Body() refreshTokenDto: RefreshTokenDto) {
-    return this.authService.refreshToken(refreshTokenDto.refreshToken);
+  async refreshToken(@Body() refreshTokenDto: RefreshTokenDto, @Request() req: AuthRequest) {
+    return this.authService.refreshToken(refreshTokenDto.refreshToken, requestContext(req));
   }
 
   @Post("logout")

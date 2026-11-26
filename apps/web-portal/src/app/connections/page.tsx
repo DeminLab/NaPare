@@ -157,9 +157,9 @@ export default function ConnectionsPage() {
       <main className="connections-page">
         <div className="connections-heading">
           <div>
-            <p className="connections-kicker">Личный кабинет студента</p>
+            <p className="connections-kicker">Настройки аккаунта</p>
             <h1>Подключения аккаунта</h1>
-            <p>Приложения и сервисы, связанные с вашим учебным профилем.</p>
+            <p>Приложения и сервисы, связанные с вашим аккаунтом НаПаре.</p>
           </div>
           <span className="connections-demo-label">Личный аккаунт</span>
         </div>

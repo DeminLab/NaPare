@@ -10,7 +10,7 @@ import {
 import { JwtService } from "@nestjs/jwt";
 import { ConfigService } from "@nestjs/config";
 import * as bcrypt from "bcrypt";
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, createHmac, randomBytes } from "node:crypto";
 
 import { UsersService } from "../users/users.service";
 import { LoginDto } from "./dto/login.dto";
@@ -212,7 +212,7 @@ export class AuthService {
     return { linked: Boolean(user.maxUserId) };
   }
 
-  async refreshToken(refreshToken: string): Promise<AuthResponse> {
+  async refreshToken(refreshToken: string, context: TelemetryRequestContext = {}): Promise<AuthResponse> {
     try {
       const payload = this.jwtService.verify<JwtPayload>(refreshToken, {
         secret: this.configService.getOrThrow<string>("auth.jwt.refreshSecret"),
@@ -232,17 +232,32 @@ export class AuthService {
         throw new UnauthorizedException("User not found");
       }
 
-      if (payload.sid && this.telemetry) {
-        if (!await this.telemetry.isSessionActive(payload.sid, user.id)) {
+      let sessionId = payload.sid;
+      if (sessionId && this.telemetry) {
+        if (!await this.telemetry.isSessionActive(sessionId, user.id)) {
           throw new UnauthorizedException("Session revoked");
         }
-        void this.telemetry.touchSession(payload.sid);
+        void this.telemetry.touchSession(sessionId);
+      } else if (!sessionId && this.telemetry) {
+        sessionId = this.legacyRefreshSessionId(refreshToken);
+        if (!await this.telemetry.ensureRefreshSession(sessionId, user, context)) {
+          throw new UnauthorizedException("Legacy session unavailable");
+        }
       }
 
-      return this.generateTokens(user, payload.sid);
+      return this.generateTokens(user, sessionId);
     } catch {
       throw new UnauthorizedException("Invalid refresh token");
     }
+  }
+
+  private legacyRefreshSessionId(refreshToken: string): string {
+    const secret = this.configService.getOrThrow<string>("auth.jwt.refreshSecret");
+    const hex = createHmac("sha256", secret).update(refreshToken).digest("hex").slice(0, 32).split("");
+    hex[12] = "4";
+    hex[16] = ((Number.parseInt(hex[16], 16) & 0x3) | 0x8).toString(16);
+    const value = hex.join("");
+    return `${value.slice(0, 8)}-${value.slice(8, 12)}-${value.slice(12, 16)}-${value.slice(16, 20)}-${value.slice(20)}`;
   }
 
   async logout(userId: string, context: TelemetryRequestContext = {}): Promise<void> {
