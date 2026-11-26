@@ -65,6 +65,30 @@ const entityNames: Record<string, string> = {
   absence: 'Отсутствие',
   attendance: 'Посещаемость',
 };
+const operationNames: Record<string, string> = {
+  search: 'Поиск',
+  read: 'Просмотр',
+  viewed: 'Просмотр',
+  created: 'Создание',
+  updated: 'Изменение',
+  archived: 'Архивирование',
+  restored: 'Восстановление',
+  corrected: 'Корректировка',
+  revoked: 'Отзыв',
+  granted: 'Выдача доступа',
+  approved: 'Одобрение',
+  rejected: 'Отклонение',
+  deleted: 'Удаление',
+  hidden: 'Скрытие',
+  published: 'Публикация',
+  canceled: 'Отмена',
+  cancelled: 'Отмена',
+  imported: 'Импорт',
+  exported: 'Экспорт',
+  owner_transferred: 'Передача владения',
+  owner_received: 'Получение владения',
+  status_changed: 'Изменение статуса',
+};
 const sensitiveKey = /(password|passwd|secret|token|authorization|cookie|email|e.?mail|phone|mobile|login|username|user.?name|ip|user.?agent|birth|snils|passport|address|full.?name|first.?name|last.?name|middle.?name|personal.?data|challenge|code)/i;
 const freeTextKey = /^(?:case|submission|body|content|message|comment|answer|response|description|details|note|text|transcript|payload|free.?text)(?:text|body|content|value|data)?$/i;
 function maskSensitive(value: unknown): unknown {
@@ -73,7 +97,18 @@ function maskSensitive(value: unknown): unknown {
   return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([key, item]) => [key, sensitiveKey.test(key) || freeTextKey.test(key.replace(/[_-]/g, '')) ? '••••••' : maskSensitive(item)]));
 }
 const shortId = (value: string | null) => value ? value.replace(/-/g, '').slice(0, 8).toUpperCase() : 'ID недоступен';
-const actionLabel = (action: string) => actionNames[action] || 'Другое действие';
+const actionLabel = (action: string, entity: string) => {
+  if (actionNames[action]) return actionNames[action];
+  const actionParts = action.split('.');
+  const operation = actionParts[actionParts.length - 1] || '';
+  const actionEntity = actionParts[actionParts.length - 2];
+  const knownEntity = entityNames[entity];
+  const entityKey = entity.split('.').at(-1);
+  if (actionParts.length === 3 && actionParts[0] === 'platform' && entity !== 'platform' && actionEntity === entityKey && knownEntity && operationNames[operation]) {
+    return `${operationNames[operation]} · ${knownEntity}`;
+  }
+  return 'Другое действие';
+};
 const entityLabel = (entity: string) => entityNames[entity] || 'Другой объект';
 const entityReference = (value: string | null) => value === 'search' || value === 'accounts' ? 'Список' : shortId(value);
 
@@ -100,7 +135,7 @@ export default function AuditPanel({ access }: { access: Access }) {
       {list.loading && !list.data && <p role="status" className="text-sm text-slate-400">Загружаем журнал…</p>}
       {list.data?.data.map(entry => (
         <article key={entry.id} className={panelClass}>
-          <h3 className="break-words text-sm font-semibold text-[var(--color-text)]">{actionLabel(entry.action)}</h3>
+          <h3 className="break-words text-sm font-semibold text-[var(--color-text)]">{actionLabel(entry.action, entry.entity)}</h3>
           <p className="mt-2 text-xs text-slate-400">{new Date(entry.createdAt).toLocaleString('ru-RU')}</p>
           <p className="mt-2 break-words text-sm text-slate-300">{entityLabel(entry.entity)}: <span className="font-mono text-xs">{entityReference(entry.entityId)}</span></p>
           {typeof entry.newValues?.reason === 'string' && <p className="mt-2 break-words text-sm text-amber-100">Причина: {entry.newValues.reason}</p>}
