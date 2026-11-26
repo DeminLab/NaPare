@@ -9,6 +9,7 @@ import {
   Badge,
   Button,
   EmptyState,
+  PageHeader,
   RequestState,
   Skeleton,
 } from "@/components/ui";
@@ -140,15 +141,15 @@ export default function InboxPage() {
       }, {}),
     [items],
   );
+  const filteredItems = Object.values(grouped).flat().filter(item =>
+    `${item.title} ${item.description}`.toLocaleLowerCase('ru-RU').includes(search.toLocaleLowerCase('ru-RU')),
+  );
   return (
     <div className="mx-auto max-w-[var(--layout-content-max)] space-y-6">
-      <div>
-
-        <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">
-          Центр внимания
-        </h1>
-
-      </div>
+      <PageHeader
+        title="Центр внимания"
+        description="Сначала показаны срочные события и ближайшие сроки. Отмечайте разобранные действия, чтобы держать очередь в порядке."
+      />
       <AttentionNavigation active="tasks" />
       <div role="group" aria-label="Статус действий" className="flex gap-2 overflow-x-auto">{([{ id: "open", label: "Открытые" }, { id: "snoozed", label: "Отложены" }, { id: "done", label: "Разобраны" }] as const).map(item => <button type="button" key={item.id} aria-pressed={filter === item.id} onClick={() => { setActionError(""); setActionStatus(""); setSearch(""); setFilter(item.id); }} className={"min-h-11 shrink-0 rounded-xl border px-3 text-sm font-semibold " + (filter === item.id ? "border-indigo-700 bg-indigo-50 text-indigo-700" : "border-slate-200 bg-white text-slate-600")}>{item.label}</button>)}</div>
 
@@ -172,7 +173,7 @@ export default function InboxPage() {
           description="Новые события доступны в разделе «Все уведомления»."
         />
       ) : (
-        <div className="space-y-3"><label className="block"><span className="sr-only">Поиск событий</span><input type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder="Найти событие…" className="min-h-11 w-full rounded-xl border bg-white px-3 text-sm" /></label>{search && hasMore && <p className="text-xs text-slate-500">Поиск охватывает {items.length} загруженных действий. Загрузите ещё, чтобы искать в более ранних.</p>}{Object.values(grouped).flat().filter(item => `${item.title} ${item.description}`.toLocaleLowerCase('ru-RU').includes(search.toLocaleLowerCase('ru-RU'))).map(item => <article
+        <div className="space-y-3"><label className="block"><span className="sr-only">Поиск событий</span><input type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder="Найти событие…" className="min-h-11 w-full rounded-xl border bg-white px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]" /></label>{search && hasMore && <p className="text-xs text-slate-500">Поиск охватывает {items.length} загруженных действий. Загрузите ещё, чтобы искать в более ранних.</p>}{search && <p role="status" className="text-sm text-slate-500">Найдено: {filteredItems.length}</p>}{filteredItems.map(item => <article
                     key={item.id}
                     aria-labelledby={`inbox-item-${item.id}`}
                     className={`overflow-hidden rounded-xl border bg-white px-4 py-3 ${item.status === "open" ? "border-l-2 border-l-indigo-500 bg-indigo-50/30" : ""}`}
@@ -201,7 +202,7 @@ export default function InboxPage() {
                     </div>
                     {item.dueAt && <p className="mt-2 text-xs font-medium text-slate-600">Срок · {new Date(item.dueAt).toLocaleString('ru-RU', { day:'numeric',month:'short',hour:'2-digit',minute:'2-digit' })}</p>}
                     <div className="mt-3 flex flex-wrap items-center gap-2"><a href={eventHref(item.deepLink)} className="inline-flex min-h-11 items-center rounded-lg border border-slate-200 px-3 text-sm font-semibold text-indigo-700">Открыть событие</a>{item.status !== "done" && <Button variant="ghost" size="sm" disabled={!!savingId} onClick={() => void complete(item.id)}>{savingId === item.id ? "Сохраняем…" : "Отметить разобранным"}</Button>}</div>
-</article>)}{search && !items.some(item => `${item.title} ${item.description}`.toLocaleLowerCase('ru-RU').includes(search.toLocaleLowerCase('ru-RU'))) && <p className="py-4 text-sm text-slate-500">Событий не найдено.</p>}{loadMoreError && <p role="alert" className="text-sm text-red-700">Не удалось загрузить предыдущие действия: {loadMoreError}</p>}{hasMore && <div className="flex justify-center pt-2"><Button variant="secondary" disabled={loadingMore} onClick={() => void loadMore()}>{loadingMore ? "Загружаем…" : "Загрузить ещё"}</Button></div>}</div>
+</article>)}{search && filteredItems.length === 0 && <EmptyState title="Событий не найдено" description="Измените поисковый запрос или сбросьте его, чтобы вернуться к списку." action={<Button variant="secondary" size="sm" onClick={() => setSearch("")}>Сбросить поиск</Button>} />}{loadMoreError && <p role="alert" className="text-sm text-red-700">Не удалось загрузить предыдущие действия: {loadMoreError}</p>}{hasMore && <div className="flex justify-center pt-2"><Button variant="secondary" disabled={loadingMore} onClick={() => void loadMore()}>{loadingMore ? "Загружаем…" : "Загрузить ещё"}</Button></div>}</div>
       )}
     </div>
   );

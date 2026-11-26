@@ -46,16 +46,18 @@ export default function ModerationWorkspace() {
   function change(value:Kind){setKind(value);setOffset(0);setQueue(null);setError('');setStatus('');}
   return <div aria-busy={busy}>
     <div className={layout.actions} aria-label="Очередь рассмотрения">
-      <button type="button" className={kind==='tasks'?career.active:career.button} aria-pressed={kind==='tasks'} disabled={busy} onClick={()=>change('tasks')}>Задачи</button>
-      <button type="button" className={kind==='complaints'?career.active:career.button} aria-pressed={kind==='complaints'} disabled={busy} onClick={()=>change('complaints')}>Жалобы студентов</button>
+      <div className={layout.queueTabs} role="group" aria-label="Тип очереди">
+        <button type="button" className={kind==='tasks'?career.active:career.button} aria-pressed={kind==='tasks'} disabled={busy} onClick={()=>change('tasks')}>Задачи</button>
+        <button type="button" className={kind==='complaints'?career.active:career.button} aria-pressed={kind==='complaints'} disabled={busy} onClick={()=>change('complaints')}>Жалобы студентов</button>
+      </div>
       <button type="button" className={career.button} disabled={busy} onClick={()=>void load()}>Обновить очередь</button>
     </div>
     <div role="status" aria-live="polite">{busy?'Обрабатываем запрос…':status}</div>
     {error&&<p role="alert" className={career.error}>{error}</p>}
     {!queue&&!busy&&<p><Link href="/login">Войти заново</Link>. Права центра назначает администратор вуза.</p>}
     {queue&&<>
-      <p>Всего: {queue.total}. Показано: {queue.items.length}.</p>
-      {!queue.items.length&&!busy&&<p className={career.empty}>{kind==='tasks'?'Задач на проверку пока нет.':'Открытых жалоб пока нет.'}</p>}
+      <div className={layout.queueSummary}><div><p className={layout.cardEyebrow}>{kind==='tasks'?'Очередь проверки':'Обращения студентов'}</p><p className={layout.queueCount}>{queue.total.toLocaleString('ru-RU')}</p></div><p>Всего · показано {queue.items.length}</p></div>
+      {!queue.items.length&&!busy&&<div className={`${career.empty} ${layout.emptyState}`}><h2>{kind==='tasks'?'Очередь задач пуста':'Открытых жалоб нет'}</h2><p>{kind==='tasks'?'Новые задачи появятся здесь после отправки работодателем на модерацию.':'Здесь появятся обращения студентов, ожидающие решения.'}</p></div>}
       {queue.items.map(item=><ModerationDecisionCard key={`${kind}:${item.id}:${'moderationContentVersion' in item?item.moderationContentVersion:''}`} item={item} kind={kind} labels={queue.policy?.labels||{}} busy={busy} onDecision={decide}/>)}
       <div className={layout.actions} aria-label="Страницы очереди">
         <button type="button" className={career.button} disabled={busy||offset===0} onClick={()=>{setQueue(null);setOffset(value=>Math.max(0,value-20));}}>Предыдущая страница</button>

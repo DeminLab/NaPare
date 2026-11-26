@@ -243,6 +243,7 @@ export default function UsersPage() {
       }),
     [users, groups, faculties, raspGroups, search, role, faculty, group, status],
   );
+  const activeFilterCount = [role !== "all", faculty !== "all", group !== "all", status !== "all"].filter(Boolean).length;
   const allVisibleSelected =
     filtered.length > 0 &&
     filtered.every((user) => selectedIds.includes(user.id));
@@ -509,7 +510,7 @@ export default function UsersPage() {
           Добавить пользователя
         </Button></div>
       </div>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5" aria-label="Быстрые фильтры пользователей">
+      <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5" aria-label="Быстрые фильтры пользователей">
         {statCards.map((stat) => (
           <button
             key={stat.label}
@@ -531,9 +532,9 @@ export default function UsersPage() {
             </Card>
           </button>
         ))}
-      </div>
-      <Card padding="md" className="!rounded-2xl"><SearchInput value={search} onChange={event => setSearch(event.target.value)} onSearch={setSearch} placeholder="Имя или электронная почта…" />
-        <details className="mt-3"><summary className="min-h-11 cursor-pointer py-2 text-sm font-semibold text-[var(--color-text)]">Роль, факультет, группа и статус</summary><div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      </section>
+      <Card padding="md" className="!rounded-2xl"><SearchInput value={search} onChange={event => setSearch(event.target.value)} onSearch={setSearch} placeholder="Имя, логин или email…" />
+        <details className="mt-3"><summary className="flex min-h-11 cursor-pointer items-center justify-between gap-3 py-2 text-sm font-semibold text-[var(--color-text)]"><span>Роль, факультет, группа и статус</span><span className="text-xs font-medium text-[var(--color-text-secondary)]">{activeFilterCount ? `Активно фильтров: ${activeFilterCount}` : 'Не выбраны'}</span></summary><div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
 
           <select
             aria-label="Роль"
@@ -619,7 +620,7 @@ export default function UsersPage() {
         </p>
       )}
       {error && users.length > 0 && (
-        <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
           {error}
         </p>
       )}

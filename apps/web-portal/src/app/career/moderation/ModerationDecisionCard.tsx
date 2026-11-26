@@ -17,25 +17,26 @@ export function ModerationDecisionCard({item,kind,labels,busy,onDecision}:{item:
     if(!button||busy||reason.trim().length<10)return;
     await onDecision(item.id,button.value,reason.trim(),task?.moderationContentVersion);
   }
-  return <article className={career.card} style={{margin:'20px 0'}}>
+  return <article className={`${career.card} ${layout.queueCard}`}>
+    <div className={layout.cardEyebrow}>{task ? 'Задача на проверку' : 'Обращение студента'}</div>
     {task&&<>
-      <h2>{task.title}</h2><p>{task.description}</p>
-      <p><strong>{money.format(task.rewardKopecks/100)}</strong> · {task.hours} ч. · до {new Date(task.deadline+'T12:00:00').toLocaleDateString('ru-RU')}</p>
+      <h2 className={layout.cardTitle}>{task.title}</h2><p>{task.description}</p>
+      <dl className={layout.taskFacts}><div><dt>Вознаграждение</dt><dd>{money.format(task.rewardKopecks/100)}</dd></div><div><dt>Занятость</dt><dd>{task.hours} ч.</dd></div><div><dt>Срок</dt><dd>{new Date(task.deadline+'T12:00:00').toLocaleDateString('ru-RU')}</dd></div></dl>
       <h3>Критерии приёмки</h3><p>{task.criteria}</p>
       {task.requirements&&<><h3>Требования</h3><p>{task.requirements}</p></>}
       <h3>На что обратить внимание</h3>
-      {task.moderationFlags?.length?<ul>{task.moderationFlags.map(flag=><li key={flag}>{labels[flag]||'Требуется дополнительное рассмотрение условий'}</li>)}</ul>:<p>Автоматические признаки не найдены. Прочитайте условия перед решением.</p>}
+      {task.moderationFlags?.length?<ul className={layout.riskList}>{task.moderationFlags.map(flag=><li key={flag}>{labels[flag]||'Требуется дополнительное рассмотрение условий'}</li>)}</ul>:<p className={layout.reviewHint}>Автоматические признаки не найдены. Прочитайте условия перед решением.</p>}
       {task.moderationReason&&<p>Предыдущее решение: {task.moderationReason}</p>}
       <p>Ключевые слова требуют чтения в контексте, в том числе при отрицании. Само наличие признака не доказывает мошенничество.</p>
     </>}
     {complaint&&<>
-      <h2>{category[complaint.category]||'Жалоба студента'}</h2><p>{complaint.details}</p>
+      <h2 className={layout.cardTitle}>{category[complaint.category]||'Жалоба студента'}</h2><p>{complaint.details}</p>
       <p>Отправлено: {new Date(complaint.createdAt).toLocaleString('ru-RU')}.</p>
       {complaint.taskSnapshot?.title&&<><h3>Условия в момент обращения: {complaint.taskSnapshot.title}</h3><p>{complaint.taskSnapshot.description}</p><p>Критерии: {complaint.taskSnapshot.criteria}</p></>}
       {complaint.task&&<details><summary>Текущие условия: {complaint.task.title}</summary><p>{complaint.task.companyName}</p><p>{complaint.task.description}</p><p>{complaint.task.criteria}</p></details>}
-      <p>Подтверждение ограничивает новые отклики на открытую задачу. Существующие работы и платежи автоматически не отменяются.</p>
+      <p className={layout.reviewHint}>Подтверждение ограничивает новые отклики на открытую задачу. Существующие работы и платежи автоматически не отменяются.</p>
     </>}
-    <form onSubmit={submit} className={career.form}>
+    <form onSubmit={submit} className={`${career.form} ${layout.decisionForm}`}>
       <label className={career.field}>Причина решения, видимая участникам
         <textarea value={reason} onChange={event=>setReason(event.target.value)} required minLength={10} maxLength={2000} disabled={busy}/>
       </label>

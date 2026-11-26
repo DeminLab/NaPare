@@ -68,29 +68,44 @@ export default function ReportView() {
     finally { pending.current = false; if (!next.signal.aborted) setBusy(false); }
   }
   return <div aria-busy={busy}>
-    <div role="status" aria-live="polite">{busy ? 'Подготавливаем отчёт…' : status}</div>
+    <div className={styles.liveStatus} role="status" aria-live="polite">{busy ? 'Подготавливаем отчёт…' : status}</div>
     {error && <p role="alert" className={career.error}>{error}</p>}
-    <div className={styles.actions}>
+    <div className={styles.actions} role="group" aria-label="Действия с отчётом">
       <button className={career.button} type="button" disabled={busy} onClick={() => void load()}>Обновить отчёт</button>
       {report && <button className={`${career.button} ${career.primary}`} type="button" disabled={busy} onClick={() => void download()}>Скачать XLSX</button>}
       {!report && !busy && <Link href="/login">Войти заново</Link>}
     </div>
     {report && <>
-      <h2>{report.universityName}</h2>
-      <p>Снимок: {new Date(report.asOf).toLocaleString('ru-RU')}. Период: за всё время.</p>
-      {report.tasks === 0 && <p className={career.empty}>У этого вуза пока нет карьерных задач. Нулевые показатели отражают отсутствие записей.</p>}
-      <table className={styles.table}><caption>Показатели карьерного модуля</caption>
-        <thead><tr><th scope="col">Показатель</th><th scope="col">Количество</th></tr></thead>
-        <tbody><tr><th scope="row">Задачи</th><td>{report.tasks}</td></tr><tr><th scope="row">Отклики</th><td>{report.applications}</td></tr><tr><th scope="row">Принятые работы</th><td>{report.acceptedWorks}</td></tr></tbody>
-      </table>
-      <h2>Как читать отчёт</h2><ul>{report.limitations.map(item => <li key={item}>{item}</li>)}</ul>
-      <h2>Разбивка по статусам</h2>
-      {([['tasks', 'Задачи'], ['applications', 'Отклики'], ['works', 'Работы']] as const).map(([key, title]) => <section key={key}>
-        <h3>{title}</h3>{report.byState[key].length ? <table className={styles.table}>
-          <caption className={styles.srOnly}>{title}: статусы записей</caption>
-          <thead><tr><th scope="col">Статус</th><th scope="col">Количество</th></tr></thead><tbody>{report.byState[key].map(row => <tr key={row.state}><th scope="row">{stateLabels[row.state] || row.state}</th><td>{row.count}</td></tr>)}</tbody>
-        </table> : <p>Записей нет.</p>}
-      </section>)}
+      <section className={styles.reportIntro} aria-labelledby="report-scope-title">
+        <div>
+          <p className={styles.eyebrow}>Отчёт вуза</p>
+          <h2 id="report-scope-title">{report.universityName}</h2>
+        </div>
+        <p className={styles.snapshot}>Снимок на {new Date(report.asOf).toLocaleString('ru-RU')} · За всё время</p>
+      </section>
+      <section className={styles.metrics} aria-label="Сводные показатели карьерного модуля">
+        <article className={styles.metric}><h3>Задачи</h3><p>{report.tasks.toLocaleString('ru-RU')}</p></article>
+        <article className={styles.metric}><h3>Отклики</h3><p>{report.applications.toLocaleString('ru-RU')}</p></article>
+        <article className={styles.metric}><h3>Принятые работы</h3><p>{report.acceptedWorks.toLocaleString('ru-RU')}</p></article>
+      </section>
+      {report.tasks === 0 && <p className={`${career.empty} ${styles.emptyPanel}`}>За всё время карьерных задач нет. Нулевые показатели отражают отсутствие записей в этом отчёте.</p>}
+      <section className={styles.infoSection} aria-labelledby="report-limitations-title">
+        <h2 id="report-limitations-title">Как читать отчёт</h2>
+        <ul>{report.limitations.map(item => <li key={item}>{item}</li>)}</ul>
+      </section>
+      <section className={styles.infoSection} aria-labelledby="report-states-title">
+        <h2 id="report-states-title">Разбивка по статусам</h2>
+        <div className={styles.statusGrid}>
+          {([['tasks', 'Задачи'], ['applications', 'Отклики'], ['works', 'Работы']] as const).map(([key, title]) => <section className={styles.statusCard} key={key}>
+            <h3>{title}</h3>{report.byState[key].length ? <div className={styles.tableScroller} role="region" tabIndex={0} aria-label={`${title}: таблица, которую можно прокручивать по горизонтали`}>
+              <table className={styles.table}>
+                <caption className={styles.srOnly}>{title}: статусы записей</caption>
+                <thead><tr><th scope="col">Статус</th><th scope="col">Количество</th></tr></thead><tbody>{report.byState[key].map(row => <tr key={row.state}><th scope="row">{stateLabels[row.state] || row.state}</th><td>{row.count.toLocaleString('ru-RU')}</td></tr>)}</tbody>
+              </table>
+            </div> : <p className={styles.noRows}>Записей нет.</p>}
+          </section>)}
+        </div>
+      </section>
     </>}
   </div>;
 }

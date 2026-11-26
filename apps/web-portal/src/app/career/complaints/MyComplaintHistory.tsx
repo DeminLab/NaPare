@@ -24,14 +24,14 @@ export default function MyComplaintHistory(){
     <div role="status" aria-live="polite">{busy?'Загружаем обращения…':page?`Всего: ${page.total}`:''}</div>
     {error&&<p role="alert" className={career.error}>{error}</p>}
     <div className={layout.actions}><button className={career.button} type="button" disabled={busy} onClick={()=>void load()}>Обновить обращения</button>{!page&&!busy&&<Link href="/login">Войти заново</Link>}</div>
-    {page?.total===0&&!busy&&<p>Вы ещё не отправляли жалобы на карьерные задачи.</p>}
-    {page?.items.map(item=><article className={career.card} style={{margin:'20px 0'}} key={item.id}>
-      <h2>{item.taskSnapshot?.title||'Обращение по карьерной задаче'}</h2><p><strong>{statuses[item.state]||'Статус неизвестен'}</strong></p>
-      <p>Отправлено: {new Date(item.createdAt).toLocaleString('ru-RU')}.</p><p>{item.details}</p>
-      {item.resolution&&<p>Решение центра: {item.resolution}</p>}
-      {item.resolvedAt&&<p>Рассмотрено: {new Date(item.resolvedAt).toLocaleString('ru-RU')}.</p>}
-      {item.taskSnapshot?.description&&<details><summary>Условия задачи в момент обращения</summary><p>{item.taskSnapshot.description}</p></details>}
+    {page?.total===0&&!busy&&<div className={layout.emptyState}><h2>Обращений пока нет</h2><p>Здесь появятся ваши жалобы на карьерные задачи и решения по ним.</p></div>}
+    {page?.items.map(item=><article className={`${career.card} ${layout.complaintCard}`} key={item.id}>
+      <div className={layout.complaintHeader}><div><p className={layout.cardEyebrow}>Обращение от {new Date(item.createdAt).toLocaleDateString('ru-RU')}</p><h2 className={layout.cardTitle}>{item.taskSnapshot?.title||'Обращение по карьерной задаче'}</h2></div><span className={layout.stateBadge} data-state={item.state}>{statuses[item.state]||'Статус неизвестен'}</span></div>
+      <p>{item.details}</p>
+      {item.resolution&&<div className={layout.resolution}><h3>Решение карьерного центра</h3><p>{item.resolution}</p></div>}
+      {item.resolvedAt&&<p className={layout.dateMeta}>Рассмотрено {new Date(item.resolvedAt).toLocaleString('ru-RU')}.</p>}
+      {item.taskSnapshot?.description&&<details className={layout.taskSnapshot}><summary>Условия задачи в момент обращения</summary><p>{item.taskSnapshot.description}</p></details>}
     </article>)}
-    {page&&<div className={layout.actions}><button className={career.button} type="button" disabled={busy||offset===0} onClick={()=>{setPage(null);setOffset(v=>Math.max(0,v-20));}}>Предыдущая страница</button><button className={career.button} type="button" disabled={busy||!page.hasMore} onClick={()=>{setPage(null);setOffset(v=>v+20);}}>Следующая страница</button></div>}
+    {page&&page.total>0&&<div className={layout.pagination}><p>Показано {offset+1}–{offset+page.items.length} из {page.total}</p><div className={layout.actions}><button className={career.button} type="button" disabled={busy||offset===0} onClick={()=>{setPage(null);setOffset(v=>Math.max(0,v-20));}}>Предыдущая</button><button className={career.button} type="button" disabled={busy||!page.hasMore} onClick={()=>{setPage(null);setOffset(v=>v+20);}}>Следующая</button></div></div>}
   </div>;
 }
