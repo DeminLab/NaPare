@@ -4,6 +4,7 @@ import { In, IsNull, Repository } from "typeorm";
 
 import { User } from "./entities/user.entity";
 import { Group } from "./entities/group.entity";
+import { Faculty } from "./entities/faculty.entity";
 import { TelegramLinkChallenge } from "./entities/telegram-link-challenge.entity";
 import { CreateUserDto } from "./dto/create-user.dto";
 import { TenantContext } from "../common/tenant/tenant-context";
@@ -247,12 +248,22 @@ export class UsersService {
   }
 
   async bindGroup(id: string, groupId: string): Promise<User> {
-    const user = await this.findById(id);
-    if (!user) throw new NotFoundException('Аккаунт недоступен');
-    if (!user.organizationId || !this.groups || !await this.groups.findOne({ where: { id: groupId, organizationId: user.organizationId } })) {
-      throw new NotFoundException('Группа своего университета не найдена');
-    }
-    return this.update(id, { groupId });
+    return this.usersRepository.manager.transaction(async manager => {
+      const user = await manager.findOne(User, { where: { id }, lock: { mode: 'pessimistic_write' } });
+      if (!user) throw new NotFoundException('Аккаунт недоступен');
+      this.tenantContext.assertAccess(user.organizationId);
+      if (!user.organizationId || !this.groups) throw new NotFoundException('Группа своего университета не найдена');
+      const group = await manager.getRepository(Group).createQueryBuilder('g')
+        .where('g.id = :groupId AND g."organizationId" = :organizationId AND g."archivedAt" IS NULL', { groupId, organizationId: user.organizationId })
+        .setLock('pessimistic_read').getOne();
+      if (!group) throw new NotFoundException('Группа своего университета не найдена');
+      const faculty = await manager.getRepository(Faculty).createQueryBuilder('f')
+        .where('f.id = :facultyId AND f."organizationId" = :organizationId AND f."archivedAt" IS NULL', { facultyId: group.facultyId, organizationId: user.organizationId })
+        .setLock('pessimistic_read').getOne();
+      if (!faculty) throw new NotFoundException('Группа своего университета не найдена');
+      user.groupId = group.id;
+      return manager.save(User, user);
+    });
   }
 
   async updateLastLogin(id: string): Promise<void> {

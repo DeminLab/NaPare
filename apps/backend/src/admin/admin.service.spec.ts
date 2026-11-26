@@ -69,6 +69,8 @@ describe("AdminService", () => {
   });
   let mockUniversityRepository: ReturnType<typeof mockRepo>;
   let mockUserRepository: ReturnType<typeof mockRepo>;
+  let sibitFacultyRepository: any;
+  let sibitGroupRepository: any;
   let mockAuditQueryBuilder: {
     innerJoin: jest.Mock;
     where: jest.Mock;
@@ -76,6 +78,38 @@ describe("AdminService", () => {
     skip: jest.Mock;
     take: jest.Mock;
     getManyAndCount: jest.Mock;
+  };
+
+  const configureSibitTransaction = (options: { faculties?: any[]; groups?: any[] } = {}) => {
+    const facultyRows = options.faculties ?? [];
+    const groupRows = options.groups ?? [];
+    const facultyQueryBuilder = {
+      where: jest.fn().mockReturnThis(),
+      setLock: jest.fn().mockReturnThis(),
+      getMany: jest.fn().mockResolvedValue(facultyRows),
+    };
+    const groupQueryBuilder = {
+      where: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      setLock: jest.fn().mockReturnThis(),
+      getOne: jest.fn().mockResolvedValue(groupRows[0] ?? null),
+    };
+    sibitFacultyRepository = {
+      ...mockRepo(),
+      createQueryBuilder: jest.fn().mockReturnValue(facultyQueryBuilder),
+    };
+    sibitGroupRepository = {
+      ...mockRepo(),
+      createQueryBuilder: jest.fn().mockReturnValue(groupQueryBuilder),
+    };
+    const manager = {
+      getRepository: jest.fn((entity: unknown) => entity === Faculty ? sibitFacultyRepository : sibitGroupRepository),
+    };
+    const groupRepository = module.get(getRepositoryToken(Group));
+    groupRepository.manager = {
+      transaction: jest.fn((callback: (transactionManager: typeof manager) => Promise<unknown>) => callback(manager)),
+    };
+    return { facultyQueryBuilder, groupQueryBuilder };
   };
 
   beforeEach(async () => {
@@ -519,10 +553,9 @@ describe("AdminService", () => {
   describe("syncSchedule", () => {
     it("imports source groups and lessons, and links students with the source group id", async () => {
       const universityRepository = module.get(getRepositoryToken(University));
-      const facultyRepository = module.get(getRepositoryToken(Faculty));
-      const groupRepository = module.get(getRepositoryToken(Group));
       const userRepository = module.get(getRepositoryToken(User));
       const lessonRepository = module.get(getRepositoryToken(Lesson));
+      configureSibitTransaction();
       universityRepository.findOne.mockResolvedValue({
         id: "uni-1",
         name: "СИБИТ",
@@ -585,8 +618,8 @@ describe("AdminService", () => {
         updated: 0,
         studentsLinked: 1,
       });
-      expect(facultyRepository.save).toHaveBeenCalled();
-      expect(groupRepository.save).toHaveBeenCalledWith(
+      expect(sibitFacultyRepository.save).toHaveBeenCalled();
+      expect(sibitGroupRepository.save).toHaveBeenCalledWith(
         expect.objectContaining({ externalId: "12136", name: "ГМУ-25" }),
       );
       expect(userRepository.save).toHaveBeenCalledWith(
@@ -628,28 +661,18 @@ describe("AdminService", () => {
 
     it("does not rewrite an unchanged SIBIT lesson on a repeated sync", async () => {
       const universityRepository = module.get(getRepositoryToken(University));
-      const facultyRepository = module.get(getRepositoryToken(Faculty));
-      const groupRepository = module.get(getRepositoryToken(Group));
       const userRepository = module.get(getRepositoryToken(User));
       const lessonRepository = module.get(getRepositoryToken(Lesson));
+      configureSibitTransaction({
+        faculties: [{ id: "faculty-1", organizationId: "uni-1", name: "ДОО", code: "sibit-24", archivedAt: null }],
+        groups: [{ id: "group-1", organizationId: "uni-1", facultyId: "faculty-1", name: "ГМУ-25", externalId: "12136", archivedAt: null }],
+      });
       universityRepository.findOne.mockResolvedValue({
         id: "uni-1",
         name: "СИБИТ",
         connectorType: "rasp-sano",
         connectorConfig: {},
       });
-      facultyRepository.find.mockResolvedValue([
-        { id: "faculty-1", organizationId: "uni-1", name: "ДОО" },
-      ]);
-      groupRepository.find.mockResolvedValue([
-        {
-          id: "group-1",
-          organizationId: "uni-1",
-          facultyId: "faculty-1",
-          name: "ГМУ-25",
-          externalId: "12136",
-        },
-      ]);
       userRepository.find.mockResolvedValue([]);
       lessonRepository.find.mockResolvedValue([
         {
@@ -746,6 +769,39 @@ describe("AdminService", () => {
           payload: expect.objectContaining({ groupId: "group-1" }),
         }),
       );
+    });
+
+    it("does not create active duplicates or link students and lessons for archived source structure", async () => {
+      const universityRepository = module.get(getRepositoryToken(University));
+      const userRepository = module.get(getRepositoryToken(User));
+      const lessonRepository = module.get(getRepositoryToken(Lesson));
+      const archivedFaculty = { id: "faculty-archived", organizationId: "uni-1", name: "ДОО", code: "sibit-24", archivedAt: new Date() };
+      const archivedGroup = { id: "group-archived", organizationId: "uni-1", facultyId: archivedFaculty.id, name: "ГМУ-25", externalId: "12136", archivedAt: new Date() };
+      const { groupQueryBuilder } = configureSibitTransaction({ faculties: [archivedFaculty], groups: [archivedGroup] });
+      universityRepository.findOne.mockResolvedValue({
+        id: "uni-1", name: "СИБИТ", connectorType: "rasp-sano", connectorConfig: {},
+      });
+      userRepository.find.mockResolvedValue([
+        { id: "student-1", role: UserRole.STUDENT, groupId: "12136" },
+      ]);
+      mockSibitConnectorService.sync.mockResolvedValue({
+        groups: 1,
+        lessons: 1,
+        teachers: 0,
+        catalog: {
+          academicYear: "2026-2027",
+          groups: [{ groupId: "12136", name: "ГМУ-25", faculty: "ДОО", facultyId: 24, course: 2, academicYear: "2026-2027" }],
+          lessons: [{ lessonId: "5632268", groupId: "12136", groupName: "ГМУ-25", date: "2026-09-17", dayOfWeek: 4, startTime: "10:10", endTime: "11:40", pairNumber: 2, subject: "Тестовый предмет", teacher: "Иванов И.И.", weekType: "odd", academicYear: "2026-2027", isReplacement: false }],
+        },
+      });
+
+      await expect(service.syncSchedule("uni-1")).resolves.toMatchObject({
+        imported: 0, updated: 0, studentsLinked: 0,
+      });
+      expect(groupQueryBuilder.getOne).toHaveBeenCalledTimes(1);
+      expect(sibitGroupRepository.save).not.toHaveBeenCalled();
+      expect(userRepository.save).not.toHaveBeenCalled();
+      expect(lessonRepository.save).not.toHaveBeenCalled();
     });
   });
 

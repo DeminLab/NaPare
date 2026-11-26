@@ -1,6 +1,6 @@
 import { ForbiddenException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, In, Repository } from 'typeorm';
+import { DataSource, In, IsNull, Repository } from 'typeorm';
 import { CurationService } from '../curation/curation.service';
 
 import { EventBusService } from '../events/event-bus.service';
@@ -137,25 +137,36 @@ export class AcademicService {
   async createSeries(courseId: string, dto: CreateLessonSeriesDto): Promise<LessonSeries> {
     const course = await this.getCourse(courseId);
     await this.assertCourseManageable(course);
-    await this.assertGroup(course.organizationId, dto.groupId);
     const user = this.requireUser();
     const teacherId = dto.teacherId ?? (user.role === UserRole.TEACHER ? user.id : null);
     if (user.role === UserRole.TEACHER && teacherId !== user.id) {
       throw new ForbiddenException('Teacher can only create their own lesson series');
     }
-    if (teacherId && !await this.dataSource.getRepository(User).findOne({ where: { id: teacherId, organizationId: course.organizationId } })) {
-      throw new NotFoundException('Teacher not found in this university');
-    }
-    return this.seriesRepository.save(this.seriesRepository.create({
-      ...dto,
-      courseId: course.id,
-      organizationId: course.organizationId,
-      teacherId,
-      validFrom: new Date(dto.validFrom),
-      validTo: dto.validTo ? new Date(dto.validTo) : null,
-      source: 'manual',
-      syncStatus: 'synced',
-    }));
+    return this.dataSource.transaction(async manager => {
+      const group = await manager.getRepository(Group).createQueryBuilder('g')
+        .where('g.id = :groupId AND g."organizationId" = :organizationId AND g."archivedAt" IS NULL', { groupId: dto.groupId, organizationId: course.organizationId })
+        .setLock('pessimistic_read').getOne();
+      if (!group || !await manager.getRepository(Faculty).existsBy({ id: group.facultyId, organizationId: course.organizationId, archivedAt: IsNull() })) {
+        throw new NotFoundException('Group not found in this university');
+      }
+      if (user.role === UserRole.CURATOR) {
+        if (!this.curation) throw new ForbiddenException('Curator scope unavailable');
+        await this.curation.assertGroup(group.id);
+      }
+      if (teacherId && !await manager.getRepository(User).findOne({ where: { id: teacherId, organizationId: course.organizationId } })) {
+        throw new NotFoundException('Teacher not found in this university');
+      }
+      return manager.getRepository(LessonSeries).save(manager.getRepository(LessonSeries).create({
+        ...dto,
+        courseId: course.id,
+        organizationId: course.organizationId,
+        teacherId,
+        validFrom: new Date(dto.validFrom),
+        validTo: dto.validTo ? new Date(dto.validTo) : null,
+        source: 'manual',
+        syncStatus: 'synced',
+      }));
+    });
   }
 
   async findOccurrences(
@@ -452,8 +463,9 @@ export class AcademicService {
   }
 
   private async assertGroup(organizationId: string, groupId: string): Promise<Group> {
-    const group = await this.groupRepository.findOne({ where: { id: groupId, organizationId } });
+    const group = await this.groupRepository.findOne({ where: { id: groupId, organizationId, archivedAt: IsNull() } });
     if (!group) throw new NotFoundException('Group not found in this university');
+    if (!await this.dataSource.getRepository(Faculty).existsBy({ id: group.facultyId, organizationId, archivedAt: IsNull() })) throw new NotFoundException('Group not found in this university');
     const user = this.requireUser();
     if (user.role === UserRole.CURATOR) {
       if (!this.curation) throw new ForbiddenException('Curator scope unavailable');

@@ -402,73 +402,59 @@ export class AdminService {
     organizationId: string,
     catalog: RaspCatalog,
   ): Promise<{ imported: number; updated: number; studentsLinked: number }> {
-    const [existingFaculties, existingGroups, users, existingLessons] =
+    const [users, existingLessons] =
       await Promise.all([
-        this.facultyRepository.find({ where: { organizationId } }),
-        this.groupRepository.find({ where: { organizationId } }),
         this.userRepository.find({ where: { organizationId } }),
         this.lessonRepository.find({
           where: { organizationId, source: "sibit" },
         }),
       ]);
 
-    const facultyByName = new Map(
-      existingFaculties.map((faculty) => [
-        normalizedKey(faculty.name),
-        faculty,
-      ]),
-    );
-    const groupByExternalId = new Map(
-      existingGroups
-        .filter((group) => group.externalId)
-        .map((group) => [group.externalId!, group]),
-    );
-    const groupByName = new Map(
-      existingGroups.map((group) => [normalizedKey(group.name), group]),
-    );
     const groupsBySourceId = new Map<string, Group>();
+    const blockedSourceGroupIds = new Set<string>();
 
     for (const sourceGroup of catalog.groups) {
-      const facultyKey = normalizedKey(sourceGroup.faculty || "Не указан");
-      let faculty = facultyByName.get(facultyKey);
-      if (!faculty) {
-        faculty = await this.facultyRepository.save(
-          this.facultyRepository.create({
-            organizationId,
-            name: sourceGroup.faculty || "Не указан",
-            code: `sibit-${sourceGroup.facultyId}`,
-          }),
-        );
-        facultyByName.set(facultyKey, faculty);
-      }
-
-      let group = groupByExternalId.get(sourceGroup.groupId);
-      if (!group) group = groupByName.get(normalizedKey(sourceGroup.name));
-      if (group) {
-        const changed =
-          group.externalId !== sourceGroup.groupId ||
-          group.facultyId !== faculty.id ||
-          group.name !== sourceGroup.name;
-        if (changed) {
-          Object.assign(group, {
-            externalId: sourceGroup.groupId,
-            facultyId: faculty.id,
-            name: sourceGroup.name,
-          });
-          group = await this.groupRepository.save(group);
+      const sourceFacultyName = sourceGroup.faculty || "Не указан";
+      const result = await this.groupRepository.manager.transaction(async manager => {
+        const faculties = manager.getRepository(Faculty);
+        const groups = manager.getRepository(Group);
+        const sameNameFaculties = await faculties.createQueryBuilder('f')
+          .where('f."organizationId" = :organizationId AND (LOWER(f.name) = LOWER(:name) OR f.code = :sourceCode)', { organizationId, name: sourceFacultyName, sourceCode: `sibit-${sourceGroup.facultyId}` })
+          .setLock('pessimistic_read').getMany();
+        let faculty = sameNameFaculties.find(row => row.code === `sibit-${sourceGroup.facultyId}`)
+          ?? sameNameFaculties.find(row => !row.archivedAt)
+          ?? sameNameFaculties[0];
+        const archivedFaculty = !!faculty?.archivedAt;
+        if (!faculty) {
+          faculty = await faculties.save(faculties.create({ organizationId, name: sourceFacultyName, code: `sibit-${sourceGroup.facultyId}` }));
         }
-      } else {
-        group = await this.groupRepository.save(
-          this.groupRepository.create({
-            organizationId,
-            facultyId: faculty.id,
-            name: sourceGroup.name,
-            externalId: sourceGroup.groupId,
-            curriculumYear: academicStartYear(sourceGroup.academicYear),
-          }),
-        );
-      }
-      groupByExternalId.set(sourceGroup.groupId, group);
+        const group = await groups.createQueryBuilder('g')
+          .where('g."organizationId" = :organizationId AND (g."externalId" = :externalId OR LOWER(g.name) = LOWER(:name))', { organizationId, externalId: sourceGroup.groupId, name: sourceGroup.name })
+          .orderBy('CASE WHEN g."externalId" = :externalId THEN 0 ELSE 1 END', 'ASC')
+          .setLock('pessimistic_write').getOne();
+        if (archivedFaculty || group?.archivedAt) {
+          // Preserve source-ID resolution for an archived row, but do not
+          // create, move, rename, or reactivate anything under an archive.
+          return { group, blocked: true };
+        }
+        if (group) {
+          const changed = group.externalId !== sourceGroup.groupId || group.facultyId !== faculty.id || group.name !== sourceGroup.name;
+          if (changed) {
+            Object.assign(group, { externalId: sourceGroup.groupId, facultyId: faculty.id, name: sourceGroup.name });
+            await groups.save(group);
+          }
+          return { group, blocked: false };
+        }
+        const created = await groups.save(groups.create({
+          organizationId, facultyId: faculty.id, name: sourceGroup.name,
+          externalId: sourceGroup.groupId,
+          curriculumYear: academicStartYear(sourceGroup.academicYear),
+        }));
+        return { group: created, blocked: false };
+      });
+      let group = result.group;
+      if (!group) continue;
+      if (result.blocked) blockedSourceGroupIds.add(sourceGroup.groupId);
       groupsBySourceId.set(sourceGroup.groupId, group);
     }
 
@@ -476,7 +462,7 @@ export class AdminService {
     for (const user of users) {
       if (user.role !== UserRole.STUDENT || !user.groupId) continue;
       const group = groupsBySourceId.get(user.groupId);
-      if (group && user.groupId !== group.id) {
+      if (group && !group.archivedAt && !blockedSourceGroupIds.has(user.groupId) && user.groupId !== group.id) {
         user.groupId = group.id;
         await this.userRepository.save(user);
         studentsLinked++;
@@ -496,7 +482,7 @@ export class AdminService {
 
     for (const sourceLesson of catalog.lessons) {
       const group = groupsBySourceId.get(sourceLesson.groupId);
-      if (!group) continue;
+      if (!group || group.archivedAt || blockedSourceGroupIds.has(sourceLesson.groupId)) continue;
       const key = sibitLessonKey(sourceLesson.lessonId, group.id);
       const existing = lessonBySourceKey.get(key);
       const source = {
@@ -735,37 +721,38 @@ export class AdminService {
   ): Promise<Group> {
     this.tenantContext.assertAccess(organizationId);
     if (data.curatorId) throw new BadRequestException('Назначьте кураторов через управление кураторством после создания группы.');
-    await this.assertFacultyInUniversity(data.facultyId, organizationId);
-    const group = this.groupRepository.create({
-      name: data.name,
-      specialization: data.specialization,
-      facultyId: data.facultyId,
-      curatorId: data.curatorId,
-      organizationId,
-      curriculumYear: Number(data.curriculumYear),
+    return this.groupRepository.manager.transaction(async manager => {
+      const faculty = await manager.getRepository(Faculty).createQueryBuilder('f')
+        .where('f.id = :facultyId AND f."organizationId" = :organizationId AND f."archivedAt" IS NULL', { facultyId: data.facultyId, organizationId })
+        .setLock('pessimistic_read').getOne();
+      if (!faculty) throw new NotFoundException('Факультет своего университета не найден');
+      const group = manager.getRepository(Group).create({
+        name: data.name,
+        specialization: data.specialization,
+        facultyId: faculty.id,
+        curatorId: data.curatorId,
+        organizationId,
+        curriculumYear: Number(data.curriculumYear),
+      });
+      return manager.getRepository(Group).save(group);
     });
-    return this.groupRepository.save(group);
   }
 
   async updateGroup(id: string, data: UpdateGroupDto): Promise<Group> {
     if (data.curatorId !== undefined) throw new BadRequestException('Используйте управление кураторством для назначения и снятия кураторов.');
-    const group = await this.groupRepository.findOne({ where: { id } });
-
-    if (!group) {
-      throw new NotFoundException(`Group with id ${id} not found`);
-    }
-    this.tenantContext.assertAccess(group.organizationId);
-
-    if (data.facultyId !== undefined) await this.assertFacultyInUniversity(data.facultyId, group.organizationId);
-
-    Object.assign(group, data);
-    return this.groupRepository.save(group) as Promise<Group>;
-  }
-
-  private async assertFacultyInUniversity(facultyId: string | undefined, organizationId: string): Promise<void> {
-    if (facultyId && !await this.facultyRepository.findOne({ where: { id: facultyId, organizationId } })) {
-      throw new NotFoundException('Факультет своего университета не найден');
-    }
+    return this.groupRepository.manager.transaction(async manager => {
+      const group = await manager.getRepository(Group).createQueryBuilder('g').where('g.id = :id', { id }).setLock('pessimistic_write').getOne();
+      if (!group) throw new NotFoundException(`Group with id ${id} not found`);
+      this.tenantContext.assertAccess(group.organizationId);
+      if (group.archivedAt) throw new ConflictException('Восстановите группу перед изменением её данных.');
+      const facultyId = data.facultyId ?? group.facultyId;
+      const faculty = await manager.getRepository(Faculty).createQueryBuilder('f')
+        .where('f.id = :facultyId AND f."organizationId" = :organizationId AND f."archivedAt" IS NULL', { facultyId, organizationId: group.organizationId })
+        .setLock('pessimistic_read').getOne();
+      if (!faculty) throw new NotFoundException('Факультет своего университета не найден');
+      Object.assign(group, data);
+      return manager.getRepository(Group).save(group);
+    });
   }
 
   private canManageRole(

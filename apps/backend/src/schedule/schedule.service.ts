@@ -24,6 +24,7 @@ import { LessonOccurrence } from "../academic/entities/lesson-occurrence.entity"
 import { ScheduleChange } from "../academic/entities/schedule-change.entity";
 import { RaspLesson, RaspScraperService } from "../auth/rasp-scraper.service";
 import { Group } from "../users/entities/group.entity";
+import { Faculty } from "../users/entities/faculty.entity";
 import { User } from "../users/entities/user.entity";
 import { UserRole } from "../auth/interfaces/user-role";
 import { isPersistedLessonId, parseRaspLessonId } from "../common/identifiers/lesson-id";
@@ -706,8 +707,9 @@ export class ScheduleService {  private readonly logger = new Logger(ScheduleSer
     // must never attach an own-university row to a foreign group or teacher.
     if (!this.tenantContext.getUser()) return;
     if (!organizationId) throw new ForbiddenException('Для занятия необходим университет');
-    if (groupId && (!this.groupRepository || !await this.groupRepository.findOne({ where: { id: groupId, organizationId } }))) {
-      throw new NotFoundException('Группа своего университета не найдена');
+    if (groupId) {
+      const group = this.groupRepository && await this.groupRepository.findOne({ where: { id: groupId, organizationId, archivedAt: IsNull() } });
+      if (!group || !await this.dataSource.getRepository(Faculty).existsBy({ id: group.facultyId, organizationId, archivedAt: IsNull() })) throw new NotFoundException('Группа своего университета не найдена');
     }
     if (teacherId && !await this.dataSource.getRepository(User).findOne({ where: { id: teacherId, organizationId } })) {
       throw new NotFoundException('Преподаватель своего университета не найден');

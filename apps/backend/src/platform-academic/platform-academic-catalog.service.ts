@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { DataSource, EntityManager, In } from 'typeorm';
+import { DataSource, EntityManager, In, IsNull } from 'typeorm';
 import { UserRole } from '../auth/interfaces/user-role';
 import { PaginationQueryDto, toPaginatedResponse } from '../common/dto/pagination-query.dto';
 import { AuditLog } from '../common/entities/audit-log.entity';
@@ -48,8 +48,8 @@ export class PlatformAcademicCatalogService {
     const university = await this.db.getRepository(University).findOne({ where: { id: organizationId }, select: ['id'] });
     if (!university) throw new NotFoundException('Университет не найден.');
     const [faculties, groups, teachers] = await Promise.all([
-      this.db.getRepository(Faculty).createQueryBuilder('f').select(['f.id', 'f.name']).where('f.organizationId = :organizationId', { organizationId }).orderBy('f.name', 'ASC').getMany(),
-      this.db.getRepository(Group).createQueryBuilder('g').select(['g.id', 'g.name']).where('g.organizationId = :organizationId', { organizationId }).orderBy('g.name', 'ASC').getMany(),
+      this.db.getRepository(Faculty).createQueryBuilder('f').select(['f.id', 'f.name']).where('f.organizationId = :organizationId AND f."archivedAt" IS NULL', { organizationId }).orderBy('f.name', 'ASC').getMany(),
+      this.db.getRepository(Group).createQueryBuilder('g').innerJoin(Faculty, 'f', 'f.id = g."facultyId" AND f."organizationId" = g."organizationId" AND f."archivedAt" IS NULL').select(['g.id', 'g.name']).where('g.organizationId = :organizationId AND g."archivedAt" IS NULL', { organizationId }).orderBy('g.name', 'ASC').getMany(),
       this.db.getRepository(User).createQueryBuilder('u').select(['u.id', 'u.firstName', 'u.lastName']).where('u.organizationId = :organizationId AND u.role = :role AND u.isActive = true', { organizationId, role: UserRole.TEACHER }).orderBy('u.lastName', 'ASC').addOrderBy('u.firstName', 'ASC').getMany(),
     ]);
     return { faculties, groups, teachers: teachers.map(user => ({ id: user.id, name: `${user.firstName} ${user.lastName}`.trim() })) };
@@ -197,7 +197,7 @@ export class PlatformAcademicCatalogService {
         if (dto.facultyId !== undefined) {
           if (dto.facultyId === null) course.facultyId = null;
           else {
-            const faculty = await manager.getRepository(Faculty).findOne({ where: { id: dto.facultyId, organizationId: course.organizationId } });
+            const faculty = await manager.getRepository(Faculty).createQueryBuilder('f').where('f.id = :facultyId AND f."organizationId" = :organizationId AND f."archivedAt" IS NULL', { facultyId: dto.facultyId, organizationId: course.organizationId }).setLock('pessimistic_read').getOne();
             if (!faculty) throw new BadRequestException('Факультет должен принадлежать тому же вузу, что и курс.');
             course.facultyId = faculty.id;
           }
@@ -253,8 +253,9 @@ export class PlatformAcademicCatalogService {
       const oldValues = this.seriesSnapshot(series);
 
       if (dto.groupId !== undefined) {
-        const group = await manager.getRepository(Group).findOne({ where: { id: dto.groupId, organizationId: series.organizationId } });
+        const group = await manager.getRepository(Group).createQueryBuilder('g').where('g.id = :groupId AND g."organizationId" = :organizationId AND g."archivedAt" IS NULL', { groupId: dto.groupId, organizationId: series.organizationId }).setLock('pessimistic_read').getOne();
         if (!group) throw new BadRequestException('Группа должна принадлежать тому же вузу, что и серия.');
+        if (!await manager.getRepository(Faculty).existsBy({ id: group.facultyId, organizationId: series.organizationId, archivedAt: IsNull() })) throw new BadRequestException('Группа относится к архивному факультету.');
         series.groupId = group.id;
       }
       if (dto.teacherId !== undefined) {

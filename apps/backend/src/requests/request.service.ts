@@ -107,8 +107,11 @@ export class RequestService {
     const actor = this.access.admin();
     return this.db.transaction(async manager => {
       await this.lock(manager); await this.access.staff(manager, dto.userId);
-      for (const id of dto.groupIds) await this.access.group(manager, id);
-      for (const id of dto.facultyIds) if (!await manager.findOneBy(Faculty, { id, organizationId: actor.organizationId })) throw new BadRequestException('Факультет другого вуза или недоступен.');
+      for (const id of dto.groupIds) await this.access.activeGroup(manager, id);
+      for (const id of dto.facultyIds) {
+        const faculty = await manager.getRepository(Faculty).createQueryBuilder('f').where('f.id = :id AND f."organizationId" = :organizationId AND f."archivedAt" IS NULL', { id, organizationId: actor.organizationId }).setLock('pessimistic_read').getOne();
+        if (!faculty) throw new BadRequestException('Факультет другого вуза, архивирован или недоступен.');
+      }
       if (dto.canCreateForStudents && dto.duty !== 'office') throw new BadRequestException('Подача от имени студента доступна только учебному офису.');
       const sameScope = (a: string[], b: string[]) => JSON.stringify([...a].sort()) === JSON.stringify([...b].sort());
       const active = await manager.findBy(OfficeAssignment, { organizationId: actor.organizationId, userId: dto.userId, duty: dto.duty, revokedAt: IsNull() });
@@ -134,7 +137,7 @@ export class RequestService {
     const actor = this.access.admin();
     return this.db.transaction(async manager => {
       await this.lock(manager);
-      const group = await this.access.group(manager, dto.groupId);
+      const group = await this.access.activeGroup(manager, dto.groupId);
       await this.access.validateRoute(manager, group, dto.type, dto.assigneeIds);
       const existing = await manager.findOneBy(OfficeRoute, { organizationId: actor.organizationId, groupId: group.id, type: dto.type });
       if ((existing?.version ?? 0) !== dto.version) throw new ConflictException('Маршрут изменён. Обновите страницу.');
@@ -146,8 +149,9 @@ export class RequestService {
   private async studentGroup(manager: EntityManager, studentId: string) {
     const student = await manager.findOneBy(User, { id: studentId, organizationId: this.access.actor().organizationId, role: UserRole.STUDENT, isActive: true });
     if (!student?.groupId) throw new BadRequestException('Студент или его учебная группа недоступны.');
-    const group = await manager.getRepository(Group).createQueryBuilder('g').where('g.organizationId = :uni AND (g.id::text = :id OR g.externalId = :id)', { uni: student.organizationId, id: student.groupId }).getOne();
+    const group = await manager.getRepository(Group).createQueryBuilder('g').where('g.organizationId = :uni AND (g.id::text = :id OR g.externalId = :id)', { uni: student.organizationId, id: student.groupId }).setLock('pessimistic_read').getOne();
     if (!group) throw new BadRequestException('Сначала привяжите студента к существующей группе своего вуза.');
+    if (group.archivedAt || !await manager.getRepository(Faculty).existsBy({ id: group.facultyId, organizationId: group.organizationId, archivedAt: IsNull() })) throw new BadRequestException('Архивная группа недоступна для нового заявления.');
     return group;
   }
   async create(dto: CreateRequestDto) {

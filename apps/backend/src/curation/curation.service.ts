@@ -8,6 +8,7 @@ import { PaginationQueryDto, toPaginatedResponse } from '../common/dto/paginatio
 import { AuditLog } from '../common/entities/audit-log.entity';
 import { User } from '../users/entities/user.entity';
 import { Group } from '../users/entities/group.entity';
+import { Faculty } from '../users/entities/faculty.entity';
 import { Lesson } from '../schedule/entities/lesson.entity';
 import { Absence } from '../absences/entities/absence.entity';
 import { AbsenceConfirmation } from '../absences/entities/absence-confirmation.entity';
@@ -43,7 +44,7 @@ export class CurationService {
 
   async assignedGroupIds(): Promise<string[]> {
     const actor = this.actor();
-    const rows = await this.db.getRepository(CuratorAssignment).find({ where: { organizationId: requireOrganizationId(actor), userId: actor.id, revokedAt: IsNull() }, select: ['groupId'] });
+    const rows = await this.db.getRepository(CuratorAssignment).createQueryBuilder('ca').innerJoin(Group, 'g', 'g.id = ca."groupId" AND g."organizationId" = ca."organizationId" AND g."archivedAt" IS NULL').where('ca."organizationId" = :organizationId AND ca."userId" = :userId AND ca."revokedAt" IS NULL', { organizationId: requireOrganizationId(actor), userId: actor.id }).select('ca."groupId"', 'groupId').getRawMany<{ groupId: string }>();
     return rows.map(row => row.groupId);
   }
 
@@ -71,7 +72,7 @@ export class CurationService {
 
   async groups(query: CurationQueryDto, manage = false) {
     const actor = manage ? this.managerActor() : this.actor();
-    const qb = this.db.getRepository(Group).createQueryBuilder('g').where('g.organizationId = :organizationId', { organizationId: requireOrganizationId(actor) });
+    const qb = this.db.getRepository(Group).createQueryBuilder('g').innerJoin(Faculty, 'f', 'f.id = g."facultyId" AND f."organizationId" = g."organizationId" AND f."archivedAt" IS NULL').where('g.organizationId = :organizationId AND g."archivedAt" IS NULL', { organizationId: requireOrganizationId(actor) });
     if (!manage) this.assignedGroups(qb, actor);
     if (query.q) qb.andWhere('g.name ILIKE :q', { q: `%${query.q}%` });
     const [data, total] = await qb.orderBy('g.name', 'ASC').addOrderBy('g.id', 'ASC').skip((query.page - 1) * query.limit).take(query.limit).getManyAndCount();
@@ -117,6 +118,7 @@ export class CurationService {
       // Serialize grant/revoke and curator decisions for this group.
       const group = await manager.findOne(Group, { where: { id: groupId, organizationId: requireOrganizationId(actor) }, lock: { mode: 'pessimistic_write' } });
       if (!group) throw new NotFoundException('Группа не найдена.');
+      if (grant && (group.archivedAt || !await manager.getRepository(Faculty).existsBy({ id: group.facultyId, organizationId: group.organizationId, archivedAt: IsNull() }))) throw new BadRequestException('Нельзя назначить куратора в архивную группу или архивный факультет.');
       const current = await manager.findOne(CuratorAssignment, { where: { groupId, userId, revokedAt: IsNull() } });
       if (grant && current) return { changed: false };
       if (!grant && !current) return { changed: false };
@@ -158,7 +160,7 @@ export class CurationService {
       .innerJoin(User, 's', 's.id = a.studentId AND s.organizationId = a.organizationId')
       .where('a.organizationId = :organizationId', { organizationId: requireOrganizationId(actor) });
     if (assignedOnly || !REVIEW_MANAGERS.includes(actor.role)) {
-      qb.andWhere(`EXISTS (SELECT 1 FROM groups g JOIN curator_assignments ca ON ca."groupId" = g.id AND ca."organizationId" = g."organizationId" WHERE g."organizationId" = a."organizationId" AND (s."groupId" = g.id::text OR s."groupId" = g."externalId") AND ca."userId" = :actorId AND ca."revokedAt" IS NULL ${query.groupId ? 'AND g.id = :groupId' : ''})`, { actorId: actor.id, groupId: query.groupId });
+      qb.andWhere(`EXISTS (SELECT 1 FROM groups g JOIN curator_assignments ca ON ca."groupId" = g.id AND ca."organizationId" = g."organizationId" WHERE g."organizationId" = a."organizationId" AND g."archivedAt" IS NULL AND (s."groupId" = g.id::text OR s."groupId" = g."externalId") AND ca."userId" = :actorId AND ca."revokedAt" IS NULL ${query.groupId ? 'AND g.id = :groupId' : ''})`, { actorId: actor.id, groupId: query.groupId });
     }
     if (query.status === 'pending') qb.andWhere('a.confirmationRequired = true');
     if (query.startDate) qb.andWhere('a.startDate >= :startDate', { startDate: new Date(query.startDate) });
@@ -187,7 +189,7 @@ export class CurationService {
       const student = await manager.findOne(User, { where: { id: source.studentId, organizationId: source.organizationId }, lock: { mode: 'pessimistic_read' } });
       const group = student?.groupId ? await manager.getRepository(Group).createQueryBuilder('g').where('g.organizationId = :organizationId AND (g.id::text = :groupId OR g.externalId = :groupId)', { organizationId: source.organizationId, groupId: student.groupId }).setLock('pessimistic_write').getOne() : null;
       if (!REVIEW_MANAGERS.includes(actor.role)) {
-        const assignment = group && await manager.findOne(CuratorAssignment, { where: { groupId: group.id, organizationId: source.organizationId, userId: actor.id, revokedAt: IsNull() } });
+        const assignment = group && !group.archivedAt && await manager.findOne(CuratorAssignment, { where: { groupId: group.id, organizationId: source.organizationId, userId: actor.id, revokedAt: IsNull() } });
         const ownLesson = !assignment && allowTeacher && actor.role === UserRole.TEACHER && source.affectedLessonIds?.length && await manager.findOne(Lesson, { where: { id: In(source.affectedLessonIds), organizationId: source.organizationId, teacherId: actor.id } });
         if (!assignment && !ownLesson) throw new ForbiddenException('Нет прав на рассмотрение обращения этой группы.');
       }

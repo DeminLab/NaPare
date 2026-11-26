@@ -2,7 +2,7 @@ import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Put, Query, R
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { PlatformService } from './platform.service';
-import { PlatformAccountArchiveDto, PlatformAccountDto, PlatformAccountQueryDto, PlatformCreateAccountDto, PlatformEmergencyDto, PlatformFacultyDto, PlatformGrantDto, PlatformGroupDto, PlatformIdentityLinkDto, PlatformJobDto, PlatformPasswordDto, PlatformQueryDto, PlatformSettingsDto, PlatformUniversityDto } from './platform.dto';
+import { PlatformAccountArchiveDto, PlatformAccountDto, PlatformAccountQueryDto, PlatformCreateAccountDto, PlatformEmergencyDto, PlatformFacultyDto, PlatformGrantDto, PlatformGroupDto, PlatformIdentityLinkDto, PlatformJobDto, PlatformPasswordDto, PlatformQueryDto, PlatformSettingsDto, PlatformStructureArchiveDto, PlatformStructureQueryDto, PlatformUniversityDto } from './platform.dto';
 
 @ApiTags('platform') @ApiBearerAuth() @UseGuards(JwtAuthGuard) @Controller('platform')
 export class PlatformController {
@@ -32,12 +32,16 @@ export class PlatformController {
   @Get('groups') groups(@Query('organizationId', ParseUUIDPipe) organizationId: string) { return this.platform.groups(organizationId); }
   @Post('universities') createUniversity(@Body() dto: PlatformUniversityDto) { return this.platform.saveUniversity(dto); }
   @Put('universities/:id') updateUniversity(@Param('id', ParseUUIDPipe) id: string, @Body() dto: PlatformUniversityDto) { return this.platform.saveUniversity(dto, id); }
-  @Get('organization/faculties') organizationFaculties(@Query() query: PlatformQueryDto) { return this.platform.organizationFaculties(query); }
+  @Get('organization/faculties') organizationFaculties(@Query() query: PlatformStructureQueryDto) { return this.platform.organizationFaculties(query); }
   @Post('organization/faculties') createOrganizationFaculty(@Query('organizationId', ParseUUIDPipe) organizationId: string, @Body() dto: PlatformFacultyDto) { return this.platform.saveOrganizationFaculty(organizationId, dto); }
   @Put('organization/faculties/:id') updateOrganizationFaculty(@Param('id', ParseUUIDPipe) id: string, @Body() dto: PlatformFacultyDto) { return this.platform.saveOrganizationFaculty(undefined, dto, id); }
-  @Get('organization/groups') organizationGroups(@Query() query: PlatformQueryDto) { return this.platform.organizationGroups(query); }
+  @Post('organization/faculties/:id/archive') archiveFaculty(@Param('id', ParseUUIDPipe) id: string, @Body() dto: PlatformStructureArchiveDto, @Request() req: { ip: string; get(name: string): string | undefined }) { return this.platform.archiveOrganizationFaculty(id, dto.reason, { ip: req.ip, userAgent: req.get('user-agent') }); }
+  @Post('organization/faculties/:id/restore') restoreFaculty(@Param('id', ParseUUIDPipe) id: string, @Body() dto: PlatformStructureArchiveDto, @Request() req: { ip: string; get(name: string): string | undefined }) { return this.platform.restoreOrganizationFaculty(id, dto.reason, { ip: req.ip, userAgent: req.get('user-agent') }); }
+  @Get('organization/groups') organizationGroups(@Query() query: PlatformStructureQueryDto) { return this.platform.organizationGroups(query); }
   @Post('organization/groups') createOrganizationGroup(@Query('organizationId', ParseUUIDPipe) organizationId: string, @Body() dto: PlatformGroupDto) { return this.platform.saveOrganizationGroup(organizationId, dto); }
   @Put('organization/groups/:id') updateOrganizationGroup(@Param('id', ParseUUIDPipe) id: string, @Body() dto: PlatformGroupDto) { return this.platform.saveOrganizationGroup(undefined, dto, id); }
+  @Post('organization/groups/:id/archive') archiveGroup(@Param('id', ParseUUIDPipe) id: string, @Body() dto: PlatformStructureArchiveDto, @Request() req: { ip: string; get(name: string): string | undefined }) { return this.platform.archiveOrganizationGroup(id, dto.reason, { ip: req.ip, userAgent: req.get('user-agent') }); }
+  @Post('organization/groups/:id/restore') restoreGroup(@Param('id', ParseUUIDPipe) id: string, @Body() dto: PlatformStructureArchiveDto, @Request() req: { ip: string; get(name: string): string | undefined }) { return this.platform.restoreOrganizationGroup(id, dto.reason, { ip: req.ip, userAgent: req.get('user-agent') }); }
   @Get('audit') audit(@Query() query: PlatformQueryDto) { return this.platform.auditLog(query); }
 }
 @ApiTags('platform') @Controller('platform')

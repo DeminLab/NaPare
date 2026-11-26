@@ -393,8 +393,10 @@ export class ScheduleImportService implements OnModuleInit, OnModuleDestroy, Sch
     const byName = new Map(groups.map(group => [normalizeName(group.name), group]));
     const bySource = new Map(groups.filter(group => group.externalId).map(group => [group.externalId!, group]));
     for (const name of payload.groupNames) if (!byName.has(normalizeName(name))) throw new BadRequestException(`Не найдена группа ВУЗа: ${name}. Сначала добавьте её в структуру ВУЗа.`);
+    if (payload.groupNames.some(name => byName.get(normalizeName(name))?.archivedAt)) throw new BadRequestException('Импорт расписания недоступен для архивной группы. Восстановите группу перед синхронизацией.');
     const resolved = payload.lessons.map(lesson => ({ lesson, group: lesson.groupExternalId ? bySource.get(lesson.groupExternalId) : byName.get(normalizeName(lesson.groupName)) }));
     if (resolved.some(item => !item.group)) throw new BadRequestException('Не все группы источника сопоставлены с группами этого вуза.');
+    if (resolved.some(item => item.group!.archivedAt)) throw new BadRequestException('Расписание не импортируется в архивную группу. Восстановите группу перед синхронизацией.');
     const repository = manager.getRepository(Lesson);
     const existing = await repository.find({ where: { organizationId, source: payload.source }, withDeleted: true });
     const legacy = payload.lessons.some(lesson => lesson.externalId.startsWith(payload.fileName + ':')) ? await repository.find({ where: { organizationId, source: 'university-import' }, withDeleted: true }) : [];

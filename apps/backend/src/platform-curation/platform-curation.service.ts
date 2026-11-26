@@ -7,6 +7,7 @@ import { JsonObject } from '../common/types/json-value.type';
 import { CuratorAssignment } from '../curation/entities/curator-assignment.entity';
 import { PlatformService } from '../platform/platform.service';
 import { Group } from '../users/entities/group.entity';
+import { Faculty } from '../users/entities/faculty.entity';
 import { University } from '../users/entities/university.entity';
 import { User } from '../users/entities/user.entity';
 import { PlatformCurationAssignmentDto, PlatformCurationQueryDto, PlatformCurationResourceQueryDto, PlatformCurationRevokeDto } from './platform-curation.dto';
@@ -85,8 +86,8 @@ export class PlatformCurationService {
     const access = await this.platform.require('curation-data.read');
     this.platform.assertUniversityScope(access, query.organizationId);
     if (!await this.db.getRepository(University).existsBy({ id: query.organizationId })) throw new NotFoundException('Университет не найден.');
-    const qb = this.db.getRepository(Group).createQueryBuilder('g').select(['g.id', 'g.name', 'g.externalId', 'g.organizationId'])
-      .where('g.organizationId = :organizationId', { organizationId: query.organizationId });
+    const qb = this.db.getRepository(Group).createQueryBuilder('g').innerJoin(Faculty, 'f', 'f.id = g."facultyId" AND f."organizationId" = g."organizationId" AND f."archivedAt" IS NULL').select(['g.id', 'g.name', 'g.externalId', 'g.organizationId'])
+      .where('g.organizationId = :organizationId AND g."archivedAt" IS NULL', { organizationId: query.organizationId });
     if (query.q?.trim()) qb.andWhere('(g.name ILIKE :q OR g."externalId" ILIKE :q)', { q: `%${query.q.trim()}%` });
     const [data, total] = await qb.orderBy('g.name', 'ASC').addOrderBy('g.id', 'ASC').skip((query.page - 1) * query.limit).take(query.limit).getManyAndCount();
     await this.audit(this.db.manager, access.actorId, 'platform.curation_data.group_search', 'curator_assignment_search', 'groups', { organizationId: query.organizationId, queryEntered: Boolean(query.q?.trim()), page: query.page, limit: query.limit, resultCount: data.length, total, groupIds: data.map(group => group.id) }, context);
@@ -114,6 +115,7 @@ export class PlatformCurationService {
         const group = await manager.findOne(Group, { where: { id: dto.groupId }, lock: { mode: 'pessimistic_write' } });
         if (!group) throw new NotFoundException('Группа не найдена.');
         this.platform.assertUniversityScope(access, group.organizationId);
+        if (group.archivedAt || !await manager.getRepository(Faculty).existsBy({ id: group.facultyId, organizationId: group.organizationId, archivedAt: IsNull() })) throw new BadRequestException('Нельзя назначить куратора в архивную группу или архивный факультет.');
         const university = await manager.findOne(University, { where: { id: group.organizationId } });
         if (!university) throw new NotFoundException('Университет группы не найден.');
         const user = await manager.findOne(User, { where: { id: dto.userId, organizationId: group.organizationId, isActive: true }, lock: { mode: 'pessimistic_read' } });

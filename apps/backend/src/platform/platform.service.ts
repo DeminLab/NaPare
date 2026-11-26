@@ -15,7 +15,7 @@ import { CuratorAssignment } from '../curation/entities/curator-assignment.entit
 import { UserRole } from '../auth/interfaces/user-role';
 import { RaspScraperService, SIBIT_UNIVERSITY } from '../auth/rasp-scraper.service';
 import { PlatformControl, PlatformGrant } from './platform.entity';
-import { PLATFORM_PERMISSIONS, PlatformAccountDto, PlatformAccountQueryDto, PlatformCreateAccountDto, PlatformFacultyDto, PlatformGrantDto, PlatformGroupDto, PlatformJobDto, PlatformPermission, PlatformQueryDto, PlatformSettingsDto, PlatformUniversityDto, SERVICE_IDS } from './platform.dto';
+import { PLATFORM_PERMISSIONS, PlatformAccountDto, PlatformAccountQueryDto, PlatformCreateAccountDto, PlatformFacultyDto, PlatformGrantDto, PlatformGroupDto, PlatformJobDto, PlatformPermission, PlatformQueryDto, PlatformSettingsDto, PlatformStructureQueryDto, PlatformUniversityDto, SERVICE_IDS } from './platform.dto';
 import { ControlAgentClient } from './control-agent.client';
 import { platformDatabaseGrants, PLATFORM_TENANT_TABLES } from '../common/tenant/tenant-database-platform';
 import { TelemetryService } from '../telemetry/telemetry.service';
@@ -222,7 +222,14 @@ export class PlatformService {
         if (nextRole !== UserRole.STUDENT) throw new BadRequestException('Учебную группу можно назначить только аккаунту студента.');
         if (!nextOrganizationId) throw new BadRequestException('Сначала привяжите аккаунт к университету.');
         const localGroup = await manager.getRepository(Group).createQueryBuilder('g')
-          .where('g.organizationId = :organizationId AND (g.id::text = :groupId OR g."externalId" = :groupId)', { organizationId: nextOrganizationId, groupId: nextGroupId }).getOne();
+          .where('g.organizationId = :organizationId AND (g.id::text = :groupId OR g."externalId" = :groupId)', { organizationId: nextOrganizationId, groupId: nextGroupId }).setLock('pessimistic_read').getOne();
+        if (localGroup?.archivedAt) {
+          const unchangedArchivedAssignment = dto.groupId === undefined && current.groupId === nextGroupId;
+          if (!unchangedArchivedAssignment) throw new BadRequestException('Архивную группу нельзя назначить. Восстановите её или выберите действующую группу.');
+        }
+        if (localGroup && !localGroup.archivedAt && await manager.getRepository(Faculty).existsBy({ id: localGroup.facultyId, organizationId: nextOrganizationId, archivedAt: IsNull() }) === false) {
+          throw new BadRequestException('Группа относится к архивному факультету и недоступна для назначения.');
+        }
         if (!localGroup) {
           const university = await manager.getRepository(University).findOneBy({ id: nextOrganizationId });
           const isSibit = university?.name === SIBIT_UNIVERSITY.name && university.city === SIBIT_UNIVERSITY.city && university.connectorType === 'rasp-sano';
@@ -314,6 +321,8 @@ export class PlatformService {
       const university = dto.organizationId ? await this.db.getRepository(University).findOneBy({ id: dto.organizationId }) : null;
       if (university?.name !== SIBIT_UNIVERSITY.name || university.city !== SIBIT_UNIVERSITY.city || university.connectorType !== 'rasp-sano') throw new BadRequestException('Выберите университет СИБИТ с подключённым каталогом расписания.');
       if (!/^\d+$/.test(dto.groupId) || !await this.raspScraper.isValidGroup(dto.groupId)) throw new BadRequestException('Выберите группу из каталога СИБИТ.');
+      const localGroup = await this.db.getRepository(Group).findOne({ where: { organizationId: dto.organizationId, externalId: dto.groupId } });
+      if (localGroup?.archivedAt || (localGroup && !await this.db.getRepository(Faculty).existsBy({ id: localGroup.facultyId, organizationId: dto.organizationId, archivedAt: IsNull() }))) throw new BadRequestException('Архивную группу нельзя назначить. Выберите действующую группу.');
     }
     const email = dto.email.trim().toLowerCase();
     const username = normalizeUsername(dto.username);
@@ -321,6 +330,14 @@ export class PlatformService {
     if (await this.db.getRepository(User).createQueryBuilder('u').where('LOWER(u.username) = :username', { username }).getExists()) throw new ConflictException('Этот логин уже используется.');
     const passwordHash = await bcrypt.hash(dto.password, 12);
     return this.db.transaction(async manager => {
+      if (dto.groupId && dto.organizationId) {
+        const group = await manager.getRepository(Group).createQueryBuilder('g')
+          .where('g."organizationId" = :organizationId AND g."externalId" = :groupId', { organizationId: dto.organizationId, groupId: dto.groupId })
+          .setLock('pessimistic_read').getOne();
+        if (group?.archivedAt || (group && !await manager.getRepository(Faculty).existsBy({ id: group.facultyId, organizationId: dto.organizationId, archivedAt: IsNull() }))) {
+          throw new BadRequestException('Архивную группу нельзя назначить. Выберите действующую группу.');
+        }
+      }
       let user: User;
       try { user = await manager.save(User, manager.create(User, { username, email, firstName: dto.firstName!.trim(), lastName: dto.lastName!.trim(), role: dto.role, organizationId: dto.organizationId ?? null, groupId: dto.groupId ?? undefined, passwordHash, isActive: dto.isActive ?? true })); }
       catch (error) { if ((error as { code?: string }).code === '23505') throw new ConflictException('Email или логин уже используется.'); throw error; }
@@ -512,40 +529,46 @@ export class PlatformService {
     return this.db.getRepository(Group).createQueryBuilder('g')
       .select(['g.id', 'g.name', 'g.externalId', 'g.curriculumYear', 'g.organizationId'])
       .where('g.organizationId = :organizationId', { organizationId })
+      .andWhere('g.archivedAt IS NULL')
+      .andWhere('EXISTS (SELECT 1 FROM faculties f WHERE f.id = g."facultyId" AND f."organizationId" = g."organizationId" AND f."archivedAt" IS NULL)')
       .orderBy('g.name', 'ASC').getMany();
   }
-  async organizationFaculties(query: PlatformQueryDto) {
+  async organizationFaculties(query: PlatformStructureQueryDto) {
     const access = await this.require('universities.read');
     if (!query.organizationId) throw new BadRequestException('Выберите университет.');
     this.assertUniversityScope(access, query.organizationId);
     if (!await this.db.getRepository(University).existsBy({ id: query.organizationId })) throw new NotFoundException('Университет не найден.');
     const qb = this.db.getRepository(Faculty).createQueryBuilder('f')
-      .select(['f.id', 'f.organizationId', 'f.name', 'f.code', 'f.createdAt', 'f.updatedAt'])
-      .addSelect('(SELECT COUNT(*) FROM "groups" g WHERE g."facultyId" = f.id)', 'groupCount')
+      .select(['f.id', 'f.organizationId', 'f.name', 'f.code', 'f.archivedAt', 'f.createdAt', 'f.updatedAt'])
+      .addSelect('(SELECT COUNT(*) FROM "groups" g WHERE g."facultyId" = f.id AND g."archivedAt" IS NULL)', 'groupCount')
       .where('f.organizationId = :organizationId', { organizationId: query.organizationId });
+    if (query.status === 'archived') qb.andWhere('f.archivedAt IS NOT NULL');
+    else if (query.status !== 'all') qb.andWhere('f.archivedAt IS NULL');
     if (query.q?.trim()) qb.andWhere("(f.name ILIKE :q OR f.code ILIKE :q OR f.id::text ILIKE :q)", { q: `%${query.q.trim().replace(/[\\%_]/g, '\\$&')}%` });
     const total = await qb.clone().getCount();
     const rows = await qb.orderBy('f.name', 'ASC').addOrderBy('f.id', 'ASC').skip((query.page - 1) * query.limit).take(query.limit).getRawAndEntities();
     const countById = new Map(rows.raw.map(row => [row.f_id, Number(row.groupCount)]));
     await this.db.getRepository(AuditLog).save({ userId: this.tenant.getUser()!.id, action: 'platform.organization.faculty.search', entity: 'platform', entityId: query.organizationId, newValues: { organizationId: query.organizationId, queryEntered: Boolean(query.q?.trim()), page: query.page, limit: query.limit, resultCount: rows.entities.length, total } });
-    return toPaginatedResponse(rows.entities.map(faculty => ({ id: faculty.id, organizationId: faculty.organizationId, name: faculty.name, code: faculty.code, groupCount: countById.get(faculty.id) ?? 0, createdAt: faculty.createdAt, updatedAt: faculty.updatedAt })), total, query);
+    return toPaginatedResponse(rows.entities.map(faculty => ({ id: faculty.id, organizationId: faculty.organizationId, name: faculty.name, code: faculty.code, archivedAt: faculty.archivedAt, groupCount: countById.get(faculty.id) ?? 0, createdAt: faculty.createdAt, updatedAt: faculty.updatedAt })), total, query);
   }
-  async organizationGroups(query: PlatformQueryDto) {
+  async organizationGroups(query: PlatformStructureQueryDto) {
     const access = await this.require('universities.read');
     if (!query.organizationId) throw new BadRequestException('Выберите университет.');
     this.assertUniversityScope(access, query.organizationId);
     if (!await this.db.getRepository(University).existsBy({ id: query.organizationId })) throw new NotFoundException('Университет не найден.');
     const qb = this.db.getRepository(Group).createQueryBuilder('g')
       .leftJoin(Faculty, 'f', 'f.id = g."facultyId" AND f."organizationId" = g."organizationId"')
-      .select(['g.id', 'g.organizationId', 'g.facultyId', 'g.name', 'g.externalId', 'g.curriculumYear', 'g.specialization', 'g.createdAt', 'g.updatedAt'])
+      .select(['g.id', 'g.organizationId', 'g.facultyId', 'g.name', 'g.externalId', 'g.curriculumYear', 'g.specialization', 'g.archivedAt', 'g.createdAt', 'g.updatedAt'])
       .addSelect('f.name', 'facultyName')
       .where('g.organizationId = :organizationId', { organizationId: query.organizationId });
+    if (query.status === 'archived') qb.andWhere('g.archivedAt IS NOT NULL');
+    else if (query.status !== 'all') qb.andWhere('g.archivedAt IS NULL AND f.archivedAt IS NULL');
     if (query.q?.trim()) qb.andWhere("(g.name ILIKE :q OR COALESCE(g.\"externalId\", '') ILIKE :q OR COALESCE(g.specialization, '') ILIKE :q OR f.name ILIKE :q OR g.id::text ILIKE :q)", { q: `%${query.q.trim().replace(/[\\%_]/g, '\\$&')}%` });
     const total = await qb.clone().getCount();
     const rows = await qb.orderBy('g.name', 'ASC').addOrderBy('g.id', 'ASC').skip((query.page - 1) * query.limit).take(query.limit).getRawAndEntities();
     const facultyNameByGroup = new Map(rows.raw.map(row => [row.g_id, row.facultyName ?? '']));
     await this.db.getRepository(AuditLog).save({ userId: this.tenant.getUser()!.id, action: 'platform.organization.group.search', entity: 'platform', entityId: query.organizationId, newValues: { organizationId: query.organizationId, queryEntered: Boolean(query.q?.trim()), page: query.page, limit: query.limit, resultCount: rows.entities.length, total } });
-    return toPaginatedResponse(rows.entities.map(group => ({ id: group.id, organizationId: group.organizationId, facultyId: group.facultyId, facultyName: facultyNameByGroup.get(group.id) ?? '', name: group.name, externalId: group.externalId, curriculumYear: group.curriculumYear, specialization: group.specialization ?? '', curatorManagedSeparately: Boolean(group.curatorId), createdAt: group.createdAt, updatedAt: group.updatedAt })), total, query);
+    return toPaginatedResponse(rows.entities.map(group => ({ id: group.id, organizationId: group.organizationId, facultyId: group.facultyId, facultyName: facultyNameByGroup.get(group.id) ?? '', name: group.name, externalId: group.externalId, curriculumYear: group.curriculumYear, specialization: group.specialization ?? '', archivedAt: group.archivedAt, curatorManagedSeparately: Boolean(group.curatorId), createdAt: group.createdAt, updatedAt: group.updatedAt })), total, query);
   }
   async saveOrganizationFaculty(organizationId: string | undefined, dto: PlatformFacultyDto, id?: string) {
     const access = await this.require('universities.write');
@@ -557,6 +580,7 @@ export class PlatformService {
       const targetOrganizationId = faculty?.organizationId ?? organizationId;
       if (!targetOrganizationId || !await manager.getRepository(University).existsBy({ id: targetOrganizationId })) throw new NotFoundException('Университет не найден.');
       this.assertUniversityScope(access, targetOrganizationId);
+      if (faculty?.archivedAt) throw new ConflictException('Восстановите факультет перед изменением его данных.');
       const duplicate = await manager.getRepository(Faculty).createQueryBuilder('f').where('f."organizationId" = :organizationId AND f.id IS DISTINCT FROM :id AND (LOWER(f.name) = LOWER(:name) OR LOWER(f.code) = LOWER(:code))', { organizationId: targetOrganizationId, id: id ?? null, name, code }).getExists();
       if (duplicate) throw new ConflictException('Факультет с таким названием или кодом уже есть в университете.');
       const saved = await manager.save(Faculty, manager.create(Faculty, { ...(faculty ? { ...faculty, id: faculty.id } : {}), organizationId: targetOrganizationId, name, code }));
@@ -574,11 +598,80 @@ export class PlatformService {
       const targetOrganizationId = group?.organizationId ?? organizationId;
       if (!targetOrganizationId || !await manager.getRepository(University).existsBy({ id: targetOrganizationId })) throw new NotFoundException('Университет не найден.');
       this.assertUniversityScope(access, targetOrganizationId);
-      const faculty = await manager.getRepository(Faculty).findOneBy({ id: dto.facultyId, organizationId: targetOrganizationId });
+      if (group?.archivedAt) throw new ConflictException('Восстановите группу перед изменением её данных.');
+      const faculty = await manager.getRepository(Faculty).createQueryBuilder('f').where('f.id = :facultyId AND f."organizationId" = :organizationId AND f."archivedAt" IS NULL', { facultyId: dto.facultyId, organizationId: targetOrganizationId }).setLock('pessimistic_read').getOne();
       if (!faculty) throw new BadRequestException('Факультет должен принадлежать выбранному университету.');
       const saved = await manager.save(Group, manager.create(Group, { ...(group ? { ...group, id: group.id } : {}), organizationId: targetOrganizationId, facultyId: faculty.id, name, curriculumYear: dto.curriculumYear, specialization }));
       await manager.save(AuditLog, { userId: access.actorId, action: id ? 'platform.organization.group.updated' : 'platform.organization.group.created', entity: 'platform', entityId: saved.id, oldValues: group ? { organizationId: group.organizationId, facultyId: group.facultyId, name: group.name, curriculumYear: group.curriculumYear, specialization: group.specialization } : undefined, newValues: { organizationId: saved.organizationId, facultyId: saved.facultyId, name: saved.name, curriculumYear: saved.curriculumYear, specialization: saved.specialization, externalId: saved.externalId, reason } });
       return { id: saved.id, organizationId: saved.organizationId, facultyId: saved.facultyId, name: saved.name, curriculumYear: saved.curriculumYear, specialization: saved.specialization ?? '', externalId: saved.externalId };
+    });
+  }
+  async archiveOrganizationFaculty(id: string, suppliedReason: string, auditContext: PlatformAuditContext = {}) {
+    const access = await this.require('universities.write');
+    const reason = suppliedReason?.trim();
+    if (!reason || reason.length < 3 || reason.length > 500) throw new BadRequestException('Укажите причину архивирования (3–500 символов).');
+    return this.db.transaction(async manager => {
+      const faculty = await manager.getRepository(Faculty).createQueryBuilder('f').where('f.id = :id', { id }).setLock('pessimistic_write').getOne();
+      if (!faculty) throw new NotFoundException('Факультет не найден.');
+      this.assertUniversityScope(access, faculty.organizationId);
+      if (faculty.archivedAt) throw new ConflictException('Факультет уже находится в архиве.');
+      const activeGroups = await manager.getRepository(Group).countBy({ facultyId: id, organizationId: faculty.organizationId, archivedAt: IsNull() });
+      if (activeGroups) throw new ConflictException(`Нельзя архивировать факультет: сначала архивируйте активные группы (${activeGroups}).`);
+      const archivedAt = new Date();
+      faculty.archivedAt = archivedAt;
+      await manager.save(Faculty, faculty);
+      await manager.save(AuditLog, { userId: access.actorId, action: 'platform.organization.faculty.archived', entity: 'platform', entityId: id, oldValues: { organizationId: faculty.organizationId, archivedAt: null }, newValues: { organizationId: faculty.organizationId, archivedAt: archivedAt.toISOString(), reason }, ...(auditContext.ip ? { ip: auditContext.ip } : {}), ...(auditContext.userAgent ? { userAgent: auditContext.userAgent.slice(0, 512) } : {}) });
+      return { id, archivedAt };
+    });
+  }
+  async restoreOrganizationFaculty(id: string, suppliedReason: string, auditContext: PlatformAuditContext = {}) {
+    const access = await this.require('universities.write');
+    const reason = suppliedReason?.trim();
+    if (!reason || reason.length < 3 || reason.length > 500) throw new BadRequestException('Укажите причину восстановления (3–500 символов).');
+    return this.db.transaction(async manager => {
+      const faculty = await manager.getRepository(Faculty).createQueryBuilder('f').where('f.id = :id', { id }).setLock('pessimistic_write').getOne();
+      if (!faculty) throw new NotFoundException('Факультет не найден.');
+      this.assertUniversityScope(access, faculty.organizationId);
+      if (!faculty.archivedAt) throw new ConflictException('Факультет уже активен.');
+      const oldArchivedAt = faculty.archivedAt;
+      faculty.archivedAt = null;
+      await manager.save(Faculty, faculty);
+      await manager.save(AuditLog, { userId: access.actorId, action: 'platform.organization.faculty.restored', entity: 'platform', entityId: id, oldValues: { organizationId: faculty.organizationId, archivedAt: oldArchivedAt.toISOString() }, newValues: { organizationId: faculty.organizationId, archivedAt: null, reason }, ...(auditContext.ip ? { ip: auditContext.ip } : {}), ...(auditContext.userAgent ? { userAgent: auditContext.userAgent.slice(0, 512) } : {}) });
+      return { id, archivedAt: null };
+    });
+  }
+  async archiveOrganizationGroup(id: string, suppliedReason: string, auditContext: PlatformAuditContext = {}) {
+    const access = await this.require('universities.write');
+    const reason = suppliedReason?.trim();
+    if (!reason || reason.length < 3 || reason.length > 500) throw new BadRequestException('Укажите причину архивирования (3–500 символов).');
+    return this.db.transaction(async manager => {
+      const group = await manager.getRepository(Group).createQueryBuilder('g').where('g.id = :id', { id }).setLock('pessimistic_write').getOne();
+      if (!group) throw new NotFoundException('Группа не найдена.');
+      this.assertUniversityScope(access, group.organizationId);
+      if (group.archivedAt) throw new ConflictException('Группа уже находится в архиве.');
+      const archivedAt = new Date();
+      group.archivedAt = archivedAt;
+      await manager.save(Group, group);
+      await manager.save(AuditLog, { userId: access.actorId, action: 'platform.organization.group.archived', entity: 'platform', entityId: id, oldValues: { organizationId: group.organizationId, archivedAt: null }, newValues: { organizationId: group.organizationId, archivedAt: archivedAt.toISOString(), reason }, ...(auditContext.ip ? { ip: auditContext.ip } : {}), ...(auditContext.userAgent ? { userAgent: auditContext.userAgent.slice(0, 512) } : {}) });
+      return { id, archivedAt };
+    });
+  }
+  async restoreOrganizationGroup(id: string, suppliedReason: string, auditContext: PlatformAuditContext = {}) {
+    const access = await this.require('universities.write');
+    const reason = suppliedReason?.trim();
+    if (!reason || reason.length < 3 || reason.length > 500) throw new BadRequestException('Укажите причину восстановления (3–500 символов).');
+    return this.db.transaction(async manager => {
+      const group = await manager.getRepository(Group).createQueryBuilder('g').where('g.id = :id', { id }).setLock('pessimistic_write').getOne();
+      if (!group) throw new NotFoundException('Группа не найдена.');
+      this.assertUniversityScope(access, group.organizationId);
+      if (!group.archivedAt) throw new ConflictException('Группа уже активна.');
+      const faculty = await manager.getRepository(Faculty).createQueryBuilder('f').where('f.id = :facultyId AND f.organizationId = :organizationId AND f."archivedAt" IS NULL', { facultyId: group.facultyId, organizationId: group.organizationId }).setLock('pessimistic_read').getOne();
+      if (!faculty) throw new ConflictException('Сначала восстановите факультет этой группы.');
+      const oldArchivedAt = group.archivedAt;
+      group.archivedAt = null;
+      await manager.save(Group, group);
+      await manager.save(AuditLog, { userId: access.actorId, action: 'platform.organization.group.restored', entity: 'platform', entityId: id, oldValues: { organizationId: group.organizationId, archivedAt: oldArchivedAt.toISOString() }, newValues: { organizationId: group.organizationId, archivedAt: null, reason }, ...(auditContext.ip ? { ip: auditContext.ip } : {}), ...(auditContext.userAgent ? { userAgent: auditContext.userAgent.slice(0, 512) } : {}) });
+      return { id, archivedAt: null };
     });
   }
   async saveUniversity(dto: PlatformUniversityDto, id?: string) {

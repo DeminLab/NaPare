@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   HttpException,
   HttpStatus,
@@ -105,10 +106,16 @@ export class InvitesService {
       });
     }
 
+    const targetGroupId = dto.groupId ?? student.groupId ?? null;
+    if (targetGroupId) {
+      const group = await this.db.getRepository(Group).createQueryBuilder('g')
+        .where('g.organizationId = :organizationId AND (g.id::text = :groupId OR g."externalId" = :groupId)', { organizationId, groupId: targetGroupId }).getOne();
+      if (!group || group.archivedAt) throw new BadRequestException('Для нового приглашения выберите действующую группу своего вуза.');
+    }
     const token = randomBytes(32).toString('base64url');
     const invite = await this.db.getRepository(Invite).save({
       organizationId,
-      groupId: dto.groupId ?? student.groupId ?? null,
+      groupId: targetGroupId,
       studentId: student.id,
       studentEmail: student.email,
       expectedFullName: `${student.firstName} ${student.lastName}`,

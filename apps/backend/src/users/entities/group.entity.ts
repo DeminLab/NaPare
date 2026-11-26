@@ -53,6 +53,9 @@ export class Group {
   @Column({ type: "uuid", nullable: true })
   curatorId: string | null;
 
+  @Column({ type: "timestamp", nullable: true })
+  archivedAt: Date | null;
+
   @CreateDateColumn()
   createdAt: Date;
 

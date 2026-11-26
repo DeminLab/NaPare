@@ -31,6 +31,13 @@ export class OfficeAccessService {
     if (!group) throw new NotFoundException('Группа недоступна.');
     return group;
   }
+  async activeGroup(manager: EntityManager, id: string) {
+    const group = await manager.getRepository(Group).createQueryBuilder('g')
+      .innerJoin(Faculty, 'f', 'f.id = g."facultyId" AND f."organizationId" = g."organizationId" AND f."archivedAt" IS NULL')
+      .where('g.id = :id AND g."organizationId" = :organizationId AND g."archivedAt" IS NULL', { id, organizationId: this.actor().organizationId }).setLock('pessimistic_read').getOne();
+    if (!group) throw new BadRequestException('Для нового маршрута выберите действующую группу.');
+    return group;
+  }
   async staff(manager: EntityManager, id: string) {
     const user = await manager.findOneBy(User, { id, organizationId: this.actor().organizationId, isActive: true });
     if (!user || !OFFICE_STAFF_ROLES.includes(user.role)) throw new BadRequestException('Нужен действующий сотрудник своего вуза.');
@@ -43,11 +50,13 @@ export class OfficeAccessService {
     return assignment.groupIds.includes(group.id) || assignment.facultyIds.includes(group.facultyId);
   }
   async hasDuty(manager: EntityManager, group: Group, duty: OfficeDuty, userId = this.actor().id, create = false) {
+    if (group.archivedAt || !await manager.getRepository(Faculty).existsBy({ id: group.facultyId, organizationId: group.organizationId, archivedAt: IsNull() })) return false;
     const user = await manager.findOneBy(User, { id: userId, organizationId: group.organizationId, isActive: true });
     if (!user || !OFFICE_STAFF_ROLES.includes(user.role)) return false;
     return (await this.assignments(manager, userId)).some(row => row.duty === duty && this.covers(row, group) && (!create || row.canCreateForStudents));
   }
   async canPerform(manager: EntityManager, group: Group, duty: StepDuty, userId: string) {
+    if (group.archivedAt) return false;
     const user = await manager.findOneBy(User, { id: userId, organizationId: group.organizationId, isActive: true });
     if (!user || ![...OFFICE_STAFF_ROLES, UserRole.STUDENT].includes(user.role)) return false;
     if (duty === 'office' || duty === 'methodologist') return this.hasDuty(manager, group, duty, userId);
@@ -59,7 +68,7 @@ export class OfficeAccessService {
   async scope(manager: EntityManager) {
     const actor = this.actor();
     const [groups, assignments, curatorAssignments, faculties] = await Promise.all([
-      manager.find(Group, { where: { organizationId: actor.organizationId }, order: { name: 'ASC' } }),
+      manager.getRepository(Group).createQueryBuilder('g').innerJoin(Faculty, 'f', 'f.id = g."facultyId" AND f."organizationId" = g."organizationId" AND f."archivedAt" IS NULL').where('g."organizationId" = :organizationId AND g."archivedAt" IS NULL', { organizationId: actor.organizationId }).orderBy('g.name', 'ASC').getMany(),
       this.assignments(manager),
       manager.findBy(CuratorAssignment, { organizationId: actor.organizationId, userId: actor.id, revokedAt: IsNull() }),
       manager.findBy(Faculty, { organizationId: actor.organizationId, deanUserId: actor.id }),

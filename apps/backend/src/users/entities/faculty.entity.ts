@@ -35,6 +35,9 @@ export class Faculty {
   @Column({ type: 'uuid', nullable: true })
   deanUserId: string | null;
 
+  @Column({ type: 'timestamp', nullable: true })
+  archivedAt: Date | null;
+
   @OneToMany(() => Group, (group) => group.faculty)
   groups: Group[];
 
