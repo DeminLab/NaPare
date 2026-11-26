@@ -82,7 +82,7 @@ export default function LoginPage() {
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;"
+                placeholder="Введите пароль"
                 className="ds-input block w-full px-4 py-3 text-sm"
               />
             </div>

@@ -47,7 +47,7 @@ export default function LoginPage() {
                 id="username" name="username" type="text" autoComplete="username" autoCapitalize="none" spellCheck={false} required value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="Введите логин"
-                className="ds-input block min-h-11 w-full px-3 py-2.5 text-base placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-role)] focus:outline-none"
+                className="ds-input block min-h-11 w-full px-3 py-2.5 text-base placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-role)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2"
               />
             </div>
             <div>
@@ -55,12 +55,12 @@ export default function LoginPage() {
               <input
                 id="password" name="password" type="password" autoComplete="current-password" required value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="ds-input block min-h-11 w-full px-3 py-2.5 text-base focus:border-[var(--color-role)] focus:outline-none"
+                className="ds-input block min-h-11 w-full px-3 py-2.5 text-base focus:border-[var(--color-role)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2"
               />
             </div>
             <button
               type="submit" disabled={loading}
-              className="min-h-11 w-full rounded-[var(--radius-md)] bg-[var(--color-role)] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:brightness-95 disabled:cursor-wait disabled:opacity-60"
+              className="min-h-11 w-full rounded-[var(--radius-md)] bg-[var(--color-role)] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60"
             >
               {loading ? (
                 <span className="inline-flex items-center gap-2">

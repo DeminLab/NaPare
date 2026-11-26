@@ -410,7 +410,7 @@ export default function PairSpacePage() {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-2xl space-y-6 p-4">
+      <div className="mx-auto max-w-2xl space-y-6 p-4"><h1 className="sr-only">Пространство пары</h1>
         <Skeleton className="h-24" />
         <Skeleton className="h-48" />
       </div>
@@ -426,7 +426,7 @@ export default function PairSpacePage() {
       : isForbidden
         ? 'Это занятие не входит в расписание вашей группы. Выберите пару из своего расписания.'
         : error;
-    return <div className="mx-auto max-w-3xl"><RequestState kind={isForbidden ? 'forbidden' : 'error'} title={title} description={description} onRetry={!isNotFound && !isForbidden ? () => window.location.reload() : undefined} action={<Link href="/week" className="inline-flex min-h-11 items-center rounded-xl border border-[var(--color-border)] px-4 text-sm font-semibold text-[var(--color-brand)] hover:bg-[var(--color-surface-secondary)]">Вернуться к расписанию</Link>} /></div>;
+    return <div className="mx-auto max-w-3xl"><h1 className="sr-only">Пространство пары</h1><RequestState kind={isForbidden ? 'forbidden' : 'error'} title={title} description={description} onRetry={!isNotFound && !isForbidden ? () => window.location.reload() : undefined} action={<Link href="/week" className="inline-flex min-h-11 items-center rounded-xl border border-[var(--color-border)] px-4 text-sm font-semibold text-[var(--color-brand)] hover:bg-[var(--color-surface-secondary)]">Вернуться к расписанию</Link>} /></div>;
   }
 
   const tabs = [

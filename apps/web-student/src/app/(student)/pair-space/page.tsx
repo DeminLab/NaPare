@@ -108,8 +108,8 @@ export default function PairSpaceIndex() {
   };
   const grouped = ['Срок прошёл', 'Сегодня', 'Завтра', 'На неделе', 'Позже', 'Без срока'].map(title => ({ title, items: visible.filter(item => bucket(item) === title) })).filter(group => group.items.length);
 
-  if (loading) return <div className="mx-auto max-w-5xl space-y-4"><Skeleton className="h-20" /><Skeleton className="h-40" /><Skeleton className="h-40" /></div>;
-  if (error && !preparations.length) return <div className="mx-auto max-w-3xl"><RequestState title="Не удалось загрузить список" description={error} onRetry={() => window.location.reload()} /></div>;
+  if (loading) return <div className="mx-auto max-w-5xl space-y-4"><h1 className="sr-only">Подготовка</h1><Skeleton className="h-20" /><Skeleton className="h-40" /><Skeleton className="h-40" /></div>;
+  if (error && !preparations.length) return <div className="mx-auto max-w-3xl"><h1 className="sr-only">Подготовка</h1><RequestState title="Не удалось загрузить список" description={error} onRetry={() => window.location.reload()} /></div>;
 
   return (
     <div className="student-preparation-page mx-auto max-w-[1400px] space-y-6">

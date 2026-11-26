@@ -49,7 +49,7 @@ export default function Home() {
               Кабинет преподавателя
             </div>
             <h1 className="mt-6 text-4xl font-bold tracking-[-0.045em] text-[#111b34] sm:text-6xl sm:leading-[1.08]">
-              Учебный день —
+              Учебный день —{" "}
               <span className="block text-[#5146e8]">в одном месте</span>
             </h1>
             <p className="mt-6 max-w-xl text-base leading-7 text-slate-600 sm:text-lg sm:leading-8">

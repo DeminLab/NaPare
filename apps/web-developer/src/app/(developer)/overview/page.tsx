@@ -73,7 +73,7 @@ export default function DeveloperOverviewPage() {
                   type="button"
                   aria-pressed={days === range.days}
                   onClick={() => setDays(range.days)}
-                  className={`min-h-9 rounded-md px-3 text-xs font-semibold transition-colors ${days === range.days ? 'bg-white text-[var(--color-text)] shadow-sm' : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text)]'}`}
+                  className={`min-h-9 rounded-md px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-surface)] ${days === range.days ? 'bg-white text-[var(--color-text)] shadow-sm' : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text)]'}`}
                 >
                   {range.label}
                 </button>

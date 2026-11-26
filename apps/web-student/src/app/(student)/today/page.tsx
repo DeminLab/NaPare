@@ -257,9 +257,9 @@ export default function TodayPage() {
     { label: 'Пропуски', count: absenceStatus === 'ready' ? weekAbsenceCount : undefined, tone: 'rose' },
   ];
 
-  if (loading && !day) return <LoadingDay />;
-  if (error && !day) return <div className="mx-auto max-w-3xl"><RequestState title="Учебный день недоступен" description={error} onRetry={() => void loadDay()} /></div>;
-  if (!day || !user) return <EmptyState title="Учебный день пока не сформирован" description="Попробуйте обновить данные позже." action={<Button onClick={() => void loadDay()}>Обновить</Button>} />;
+  if (loading && !day) return <><h1 className="sr-only">Сегодня</h1><LoadingDay /></>;
+  if (error && !day) return <div className="mx-auto max-w-3xl"><h1 className="sr-only">Сегодня</h1><RequestState title="Учебный день недоступен" description={error} onRetry={() => void loadDay()} /></div>;
+  if (!day || !user) return <><h1 className="sr-only">Сегодня</h1><EmptyState title="Учебный день пока не сформирован" description="Попробуйте обновить данные позже." action={<Button onClick={() => void loadDay()}>Обновить</Button>} /></>;
 
   return <div className="today-dashboard mx-auto max-w-[1320px]">
     <header className="today-heading"><div><h1 className="ds-page-title">{user.firstName}, добрый день</h1><p className="today-date">{dateLabel(day.date)}</p>{offlineSavedAt && <p role="status" className="mt-2 text-xs font-medium text-[var(--color-warning)]">{cacheRefreshing ? 'Сохраненная копия · проверяем актуальность' : 'Офлайн · сохранено'} {new Date(offlineSavedAt).toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' })}</p>}</div><div className="today-heading-actions">{stale && <Badge variant="warning">Данные могли устареть</Badge>}<Button variant="ghost" size="md" aria-label="Обновить данные" onClick={() => void loadDay()}><Icon name="refresh" size={16} /></Button></div></header>

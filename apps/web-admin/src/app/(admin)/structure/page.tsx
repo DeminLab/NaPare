@@ -52,7 +52,7 @@ export default function StructurePage() {
       <Link href="/faculties" className="role-link role-link-secondary">Управлять факультетами</Link>
     </header>
 
-    <div className="grid gap-3 sm:grid-cols-3" aria-label="Сводка структуры">
+    <div className="grid gap-3 sm:grid-cols-3" role="group" aria-label="Сводка структуры">
       {[{ label: 'Факультеты', value: faculties.length }, { label: 'Группы', value: groups.length }, { label: 'Студенты в группах', value: assignedStudents }].map((item) => <Card key={item.label} padding="sm" className="!rounded-2xl !p-5"><p className="text-sm text-[var(--color-text-secondary)]">{item.label}</p><p className="mt-2 text-2xl font-bold tracking-tight text-[var(--color-text)]">{item.value}</p></Card>)}
     </div>
 

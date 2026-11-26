@@ -110,7 +110,7 @@ export default function EventJournalPage() {
         <div className="flex flex-col gap-3 rounded-xl border border-[var(--color-border)] bg-white p-3 shadow-sm">
           <div className="flex flex-wrap items-center gap-2">
             <div className="inline-flex rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-secondary)] p-1" role="group" aria-label="Период">
-              {ranges.map(range => <button key={range.days} type="button" aria-pressed={days === range.days} onClick={() => { setDays(range.days); setPage(1); }} className={`min-h-9 rounded-md px-3 text-xs font-semibold transition-colors ${days === range.days ? 'bg-white text-[var(--color-text)] shadow-sm' : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text)]'}`}>{range.label}</button>)}
+              {ranges.map(range => <button key={range.days} type="button" aria-pressed={days === range.days} onClick={() => { setDays(range.days); setPage(1); }} className={`min-h-9 rounded-md px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-surface)] ${days === range.days ? 'bg-white text-[var(--color-text)] shadow-sm' : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text)]'}`}>{range.label}</button>)}
             </div>
             <span className="text-xs text-[var(--color-text-secondary)]">{events.data ? `${formatNumber(events.data.meta.total)} событий` : 'Загрузка…'}</span>
           </div>
