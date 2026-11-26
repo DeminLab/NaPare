@@ -81,8 +81,8 @@ export function ScheduleSourceSettings() {
         throw new Error("Сначала выберите Rasp.SANO и включите источник.");
       }
       if (action === "test") {
-        const result = await apiFetch<{ status?: string; academicYear?: string; groups?: number; lessons?: number; teachers?: number }>("/admin/connectors/schedule/test", { method: "POST" });
-        setNotice(`Источник доступен${result.academicYear ? ` · учебный год ${result.academicYear}` : ""}. Групп: ${result.groups ?? 0}, занятий: ${result.lessons ?? 0}, преподавателей: ${result.teachers ?? 0}. Данные не записывались.`);
+        const result = await apiFetch<{ status?: string; academicYear?: string | null; academicYearsAvailable?: number; groupsAvailable?: number }>("/admin/connectors/schedule/test", { method: "POST" });
+        setNotice(`Источник доступен${result.academicYear ? ` · учебный год ${result.academicYear}` : ""}. Доступно групп: ${result.groupsAvailable ?? 0}, учебных лет: ${result.academicYearsAvailable ?? 0}. Данные не записывались.`);
       } else {
         const result = await apiFetch<SyncResult>("/admin/schedule/sync", { method: "POST" });
         setNotice(`Синхронизация завершена: ${result.imported ?? result.lessons ?? 0} добавлено, ${result.updated ?? 0} обновлено; групп — ${result.groups ?? 0}.`);

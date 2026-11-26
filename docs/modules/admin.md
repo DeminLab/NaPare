@@ -43,7 +43,7 @@
 | `/api/v1/admin/schedule/sync`               | POST      | Ручной синк                                                   |
 | `/api/v1/admin/schedule/sync-status`        | GET       | Статус синка                                                  |
 | `/api/v1/admin/connectors/schedule`          | GET/PATCH | Источник расписания, включение и безопасная настройка учебного года |
-| `/api/v1/admin/connectors/schedule/test`     | POST      | Read-only проверка `rasp.sano.ru`: выбранный учебный год и число групп, занятий и преподавателей |
+| `/api/v1/admin/connectors/schedule/test`     | POST      | Read-only проверка `rasp.sano.ru`: выбранный учебный год, число доступных учебных лет и групп |
 | `/api/v1/admin/rooms`                        | GET/POST  | Аудитории текущего университета                               |
 | `/api/v1/admin/rooms/{id}`                   | PATCH     | Изменение, архивирование или восстановление аудитории; для смены состояния требуется причина |
 | `/api/v1/admin/connectors/moodle/configure` | POST      | Сохранить HTTPS URL и зашифрованный Moodle Web Services token |
