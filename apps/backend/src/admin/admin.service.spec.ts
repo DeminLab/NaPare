@@ -18,6 +18,7 @@ import { EventBusService } from "../events/event-bus.service";
 import { MoodleConnectorService } from "../moodle/moodle-connector.service";
 import { ScheduleImportService } from '../schedule/connectors/schedule-import.service';
 import { RaspScraperService } from "../auth/rasp-scraper.service";
+import { SibitScheduleConnector } from "../schedule/connectors/external-schedule-connectors";
 
 describe("AdminService", () => {
   let service: AdminService;
@@ -61,6 +62,7 @@ describe("AdminService", () => {
     isValidGroup: jest.fn().mockResolvedValue(false),
     getYears: jest.fn().mockResolvedValue([{ value: '2026-2027', label: '2026-2027' }]),
     getGroups: jest.fn().mockResolvedValue([{ groupId: 'group-1' }]),
+    getCatalog: jest.fn().mockResolvedValue({ lessons: [] }),
   };
 
   const mockRepo = (defaults: any = {}) => ({
@@ -154,7 +156,11 @@ describe("AdminService", () => {
         { provide: getRepositoryToken(Room), useValue: mockRepo() },
         {
           provide: TenantContext,
-          useValue: { assertAccess: jest.fn(), getUser: jest.fn() },
+          useValue: {
+            assertAccess: jest.fn(),
+            getUser: jest.fn(),
+            runWithDatabaseAccess: jest.fn((_grant, callback: () => unknown) => callback()),
+          },
         },
         { provide: EventBusService, useValue: mockEventBus },
         {
@@ -173,28 +179,50 @@ describe("AdminService", () => {
   });
 
   describe('university schedule connector settings', () => {
-    it('returns the legacy SIBIT connector as an enabled rasp-sano tenant setting', async () => {
-      mockUniversityRepository.findOne.mockResolvedValue({ id: 'uni-1', name: 'Different University', city: 'Other city', connectorType: 'rasp-sano', connectorConfig: {} });
-      await expect(service.getScheduleConnector('uni-1')).resolves.toMatchObject({ provider: 'rasp-sano', enabled: true, sourceHost: 'rasp.sano.ru' });
+    it('exposes rasp.sano as available only for the unique active SIBIT tenant', async () => {
+      const university = { id: 'uni-1', name: 'СИБИТ', city: 'Омск', status: 'active', connectorType: 'rasp-sano', connectorConfig: {} };
+      mockUniversityRepository.findOne.mockResolvedValue(university);
+      mockUniversityRepository.find.mockResolvedValue([university]);
+      await expect(service.getScheduleConnector('uni-1')).resolves.toMatchObject({ provider: 'rasp-sano', enabled: true, sourceHost: 'rasp.sano.ru', raspSanoAvailable: true });
     });
 
-    it('stores only the supported provider and academic year config', async () => {
-      const university = { id: 'uni-1', name: 'Different University', city: 'Other city', connectorType: null, connectorConfig: {} };
+    it('stores only the supported provider and academic year config for the unique active SIBIT tenant', async () => {
+      const university = { id: 'uni-1', name: 'СИБИТ', city: 'Омск', status: 'active', connectorType: 'moodle', connectorConfig: {} };
       mockUniversityRepository.findOne.mockResolvedValue(university);
+      mockUniversityRepository.find.mockResolvedValue([university]);
       await service.updateScheduleConnector('uni-1', { provider: 'rasp-sano', enabled: true, config: { academicYear: '2026-2027' } });
       expect(university.connectorType).toBe('rasp-sano');
       expect(university.connectorConfig).toMatchObject({ scheduleConnector: { provider: 'rasp-sano', enabled: true, config: { academicYear: '2026-2027' } } });
       expect(JSON.stringify(university.connectorConfig)).not.toContain('url');
+      await expect(new SibitScheduleConnector(mockRaspScraperService as unknown as RaspScraperService).fetchSchedule(university as University, {})).resolves.toEqual([]);
     });
 
-    it('probes a configured non-SIBIT university without persisting imported rows', async () => {
+    it('rejects a non-SIBIT university before enabling or probing the global SIBIT catalog', async () => {
       mockUniversityRepository.findOne.mockResolvedValue({
         id: 'uni-1', name: 'Different University', city: 'Other city', connectorType: 'rasp-sano',
         connectorConfig: { scheduleConnector: { provider: 'rasp-sano', enabled: true, config: { academicYear: '2026-2027' } } },
       });
-      await expect(service.testScheduleConnector('uni-1')).resolves.toMatchObject({ status: 'connected', provider: 'rasp-sano', sourceHost: 'rasp.sano.ru', academicYear: '2026-2027', groupsAvailable: 1 });
-      expect(mockRaspScraperService.getGroups).toHaveBeenLastCalledWith('2026-2027');
+      await expect(service.updateScheduleConnector('uni-1', { provider: 'rasp-sano', enabled: true })).rejects.toBeInstanceOf(BadRequestException);
+      await expect(service.testScheduleConnector('uni-1')).rejects.toBeInstanceOf(BadRequestException);
+      expect(mockRaspScraperService.getYears).not.toHaveBeenCalled();
+      expect(mockRaspScraperService.getGroups).not.toHaveBeenCalled();
       expect(mockUniversityRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('rejects a duplicate SIBIT identity even if one record is active', async () => {
+      const university = { id: 'uni-1', name: 'СИБИТ', city: 'Омск', status: 'active', connectorType: null, connectorConfig: {} };
+      mockUniversityRepository.findOne.mockResolvedValue(university);
+      mockUniversityRepository.find.mockResolvedValue([university, { ...university, id: 'duplicate' }]);
+      await expect(service.updateScheduleConnector('uni-1', { provider: 'rasp-sano', enabled: true })).rejects.toThrow('несколько вузов СИБИТ');
+      expect(mockUniversityRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('does not let an inactive duplicate block the sole active SIBIT', async () => {
+      const university = { id: 'uni-1', name: 'СИБИТ', city: 'Омск', status: 'active', connectorType: null, connectorConfig: {} };
+      mockUniversityRepository.findOne.mockResolvedValue(university);
+      mockUniversityRepository.find.mockResolvedValue([university]);
+      await expect(service.updateScheduleConnector('uni-1', { provider: 'rasp-sano', enabled: true })).resolves.toMatchObject({ raspSanoAvailable: true });
+      expect(mockUniversityRepository.find).toHaveBeenCalledWith(expect.objectContaining({ where: { name: 'СИБИТ', city: 'Омск', status: 'active' } }));
     });
   });
 
@@ -391,10 +419,12 @@ describe("AdminService", () => {
     });
 
     it("creates a student with the validated external SIBIT group id", async () => {
+      mockUniversityRepository.find.mockResolvedValue([{ id: "uni-1", name: "СИБИТ", city: "Омск", status: "active" }]);
       mockUniversityRepository.findOne.mockResolvedValue({
         id: "uni-1",
         name: "СИБИТ",
         city: "Омск",
+        status: "active",
         connectorType: "rasp-sano",
         connectorConfig: { scheduleConnector: { provider: "rasp-sano", enabled: true, config: { academicYear: "2025-2026" } } },
       });
@@ -597,6 +627,9 @@ describe("AdminService", () => {
   });
 
   describe("syncSchedule", () => {
+    beforeEach(() => {
+      mockUniversityRepository.find.mockResolvedValue([{ id: "uni-1", name: "СИБИТ", city: "Омск", status: "active" }]);
+    });
     it("imports source groups and lessons, and links students with the source group id", async () => {
       const universityRepository = module.get(getRepositoryToken(University));
       const userRepository = module.get(getRepositoryToken(User));
@@ -605,6 +638,8 @@ describe("AdminService", () => {
       universityRepository.findOne.mockResolvedValue({
         id: "uni-1",
         name: "СИБИТ",
+        city: "Омск",
+        status: "active",
         connectorType: "rasp-sano",
         connectorConfig: {},
       });
@@ -696,6 +731,8 @@ describe("AdminService", () => {
       universityRepository.findOne.mockResolvedValue({
         id: "uni-1",
         name: "СИБИТ",
+        city: "Омск",
+        status: "active",
         connectorType: "moodle",
         connectorConfig: { status: "active" },
       });
@@ -718,6 +755,8 @@ describe("AdminService", () => {
       universityRepository.findOne.mockResolvedValue({
         id: "uni-1",
         name: "СИБИТ",
+        city: "Омск",
+        status: "active",
         connectorType: "rasp-sano",
         connectorConfig: {},
       });
@@ -827,7 +866,7 @@ describe("AdminService", () => {
       const archivedGroup = { id: "group-archived", organizationId: "uni-1", facultyId: archivedFaculty.id, name: "ГМУ-25", externalId: "12136", archivedAt: new Date() };
       const { groupQueryBuilder } = configureSibitTransaction({ faculties: [archivedFaculty], groups: [archivedGroup] });
       universityRepository.findOne.mockResolvedValue({
-        id: "uni-1", name: "СИБИТ", connectorType: "rasp-sano", connectorConfig: {},
+        id: "uni-1", name: "СИБИТ", city: "Омск", status: "active", connectorType: "rasp-sano", connectorConfig: {},
       });
       userRepository.find.mockResolvedValue([
         { id: "student-1", role: UserRole.STUDENT, groupId: "12136" },

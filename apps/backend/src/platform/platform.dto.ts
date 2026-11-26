@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { ArrayUnique, IsArray, IsBoolean, IsEmail, IsEnum, IsIn, IsInt, IsOptional, IsString, IsUUID, IsUrl, Matches, Max, MaxLength, Min, MinLength } from 'class-validator';
+import { Type } from 'class-transformer';
+import { ArrayUnique, IsArray, IsBoolean, IsEmail, IsEnum, IsIn, IsInt, IsOptional, IsString, IsUUID, IsUrl, Matches, Max, MaxLength, Min, MinLength, ValidateNested } from 'class-validator';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import { UserRole } from '../auth/interfaces/user-role';
 
@@ -15,6 +16,34 @@ export class PlatformStructureQueryDto extends PlatformQueryDto {
 }
 export class PlatformStructureArchiveDto {
   @ApiProperty({ minLength: 3, maxLength: 500 }) @IsString() @MinLength(3) @MaxLength(500) reason: string;
+}
+export class PlatformScheduleConnectorConfigDto {
+  @ApiPropertyOptional({ example: '2026-2027' })
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d{4}-\d{4}$/)
+  academicYear?: string;
+}
+export class PlatformScheduleConnectorDto {
+  @ApiProperty({ enum: ['rasp-sano', 'file-only'], description: 'Поддерживаемые адаптеры платформы; произвольные URL не принимаются.' })
+  @IsIn(['rasp-sano', 'file-only'])
+  provider: 'rasp-sano' | 'file-only';
+
+  @ApiProperty()
+  @IsBoolean()
+  enabled: boolean;
+
+  @ApiPropertyOptional({ type: PlatformScheduleConnectorConfigDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => PlatformScheduleConnectorConfigDto)
+  config?: PlatformScheduleConnectorConfigDto;
+
+  @ApiProperty({ minLength: 3, maxLength: 500, description: 'Причина изменения настроек источника' })
+  @IsString()
+  @MinLength(3)
+  @MaxLength(500)
+  reason: string;
 }
 export class PlatformAccountQueryDto extends PlatformQueryDto {
   @ApiPropertyOptional({ enum: ['active', 'archived', 'all'], description: 'Фильтр состояния аккаунтов; без параметра возвращаются все не удалённые через self-service' }) @IsOptional() @IsIn(['active', 'archived', 'all']) status?: 'active' | 'archived' | 'all';

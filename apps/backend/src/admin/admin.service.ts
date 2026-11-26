@@ -15,7 +15,7 @@ import { ScheduleImportService } from '../schedule/connectors/schedule-import.se
 import { CurationService } from "../curation/curation.service";
 import { ScheduleService } from "../schedule/schedule.service";
 import { SibitConnectorService } from "../schedule/connectors/sibit-connector.service";
-import { RaspCatalog, RaspScraperService } from "../auth/rasp-scraper.service";
+import { RaspCatalog, RaspScraperService, SIBIT_UNIVERSITY } from "../auth/rasp-scraper.service";
 import { University } from "../users/entities/university.entity";
 import { Faculty } from "../users/entities/faculty.entity";
 import { Group } from "../users/entities/group.entity";
@@ -123,7 +123,7 @@ export class AdminService {
   async getSibitTeachers(organizationId: string) {
     this.tenantContext.assertAccess(organizationId);
     const university = await this.universityRepository.findOne({ where: { id: organizationId } });
-    if (!university || !this.isRaspScheduleEnabled(university)) {
+    if (!university || !await this.isRaspScheduleEnabled(university)) {
       throw new BadRequestException("Каталог преподавателей СИБИТ недоступен для этого университета");
     }
     const teachers = await this.sibitConnectorService.getTeachers(
@@ -248,7 +248,7 @@ export class AdminService {
           throw new BadRequestException("Внешний ID учебной группы назначается аккаунту студента.");
         }
         const university = await this.getUniversity(organizationId);
-        if (!this.isRaspScheduleEnabled(university) || !await this.raspScraperService.isValidGroup(data.groupId, readScheduleConnectorSettings(university).config.academicYear)) {
+        if (!await this.isRaspScheduleEnabled(university) || !await this.raspScraperService.isValidGroup(data.groupId, readScheduleConnectorSettings(university).config.academicYear)) {
           throw new BadRequestException("Выберите группу из каталога СИБИТ для этого университета.");
         }
       } else {
@@ -264,7 +264,7 @@ export class AdminService {
     if (data.sourceTeacherId) {
       if (data.role !== UserRole.TEACHER) throw new BadRequestException("Внешний ID преподавателя можно назначить только учётной записи преподавателя.");
       const university = await this.getUniversity(organizationId);
-      if (!this.isRaspScheduleEnabled(university) || !(await this.sibitConnectorService.getTeachers(readScheduleConnectorSettings(university).config.academicYear)).some((teacher) => teacher.id === data.sourceTeacherId)) {
+      if (!await this.isRaspScheduleEnabled(university) || !(await this.sibitConnectorService.getTeachers(readScheduleConnectorSettings(university).config.academicYear)).some((teacher) => teacher.id === data.sourceTeacherId)) {
         throw new BadRequestException("Преподаватель не найден в каталоге расписания СИБИТа.");
       }
       const existingLink = await this.userRepository.findOne({ where: { organizationId, sourceTeacherId: data.sourceTeacherId } });
@@ -293,7 +293,7 @@ export class AdminService {
     if (!user || user.role !== UserRole.TEACHER) throw new NotFoundException("Учётная запись преподавателя не найдена.");
     if (sourceTeacherId) {
       const university = await this.getUniversity(organizationId);
-      if (!this.isRaspScheduleEnabled(university) || !(await this.sibitConnectorService.getTeachers(readScheduleConnectorSettings(university).config.academicYear)).some((teacher) => teacher.id === sourceTeacherId)) {
+      if (!await this.isRaspScheduleEnabled(university) || !(await this.sibitConnectorService.getTeachers(readScheduleConnectorSettings(university).config.academicYear)).some((teacher) => teacher.id === sourceTeacherId)) {
         throw new BadRequestException("Преподаватель не найден в каталоге расписания СИБИТа.");
       }
       const existingLink = await this.userRepository.findOne({ where: { organizationId, sourceTeacherId } });
@@ -366,7 +366,8 @@ export class AdminService {
 
   async getScheduleConnector(organizationId: string) {
     this.tenantContext.assertAccess(organizationId);
-    return scheduleConnectorResponse(await this.getUniversity(organizationId));
+    const university = await this.getUniversity(organizationId);
+    return { ...scheduleConnectorResponse(university), raspSanoAvailable: await this.isUniqueActiveSibit(university) };
   }
 
   async updateScheduleConnector(organizationId: string, dto: UpdateScheduleConnectorDto) {
@@ -376,22 +377,22 @@ export class AdminService {
     if (dto.provider === 'file-only' && dto.enabled) {
       throw new BadRequestException('Для файлового источника синхронизация отключена. Загружайте файл через импорт расписания.');
     }
-    if (dto.provider === 'rasp-sano' && dto.enabled && !university.connectorType) {
-      university.connectorType = 'rasp-sano';
-    }
+    if (dto.provider === 'rasp-sano') await this.assertUniqueActiveSibit(university);
+    if (dto.provider === 'rasp-sano' && dto.enabled) university.connectorType = 'rasp-sano';
     university.connectorConfig = {
       ...(university.connectorConfig ?? {}),
       scheduleConnector: { provider: dto.provider, enabled: dto.enabled, config },
       updatedAt: new Date().toISOString(),
     };
     await this.universityRepository.save(university);
-    return scheduleConnectorResponse(university);
+    return { ...scheduleConnectorResponse(university), raspSanoAvailable: await this.isUniqueActiveSibit(university) };
   }
 
   async testScheduleConnector(organizationId: string) {
     this.tenantContext.assertAccess(organizationId);
     const university = await this.getUniversity(organizationId);
-    if (!this.isRaspScheduleEnabled(university)) {
+    await this.assertUniqueActiveSibit(university);
+    if (!await this.isRaspScheduleEnabled(university)) {
       throw new BadRequestException('Сначала включите источник расписания rasp.sano.ru в настройках университета.');
     }
     const config = readScheduleConnectorSettings(university).config;
@@ -485,9 +486,38 @@ export class AdminService {
     } as DeepPartial<AuditLog>));
   }
 
-  private isRaspScheduleEnabled(university: University): boolean {
-    return readScheduleConnectorSettings(university).provider === 'rasp-sano'
-      && readScheduleConnectorSettings(university).enabled;
+  private async isUniqueActiveSibit(university: University): Promise<boolean> {
+    if (university.name !== SIBIT_UNIVERSITY.name || university.city !== SIBIT_UNIVERSITY.city || university.status !== 'active') return false;
+    const matches = await this.tenantContext.runWithDatabaseAccess(
+      { tables: ['universities'], organizationIds: null, replaceActor: true },
+      () => this.universityRepository.find({
+        where: { name: SIBIT_UNIVERSITY.name, city: SIBIT_UNIVERSITY.city, status: 'active' },
+        select: { id: true, name: true, city: true, status: true },
+      }),
+    );
+    return matches.length === 1 && matches[0].id === university.id;
+  }
+
+  private async assertUniqueActiveSibit(university: University): Promise<void> {
+    if (university.name !== SIBIT_UNIVERSITY.name || university.city !== SIBIT_UNIVERSITY.city || university.status !== 'active') {
+      throw new BadRequestException('Источник rasp.sano.ru поддерживает только активный вуз СИБИТ (Омск). Для другого вуза загрузите файл расписания.');
+    }
+    const matches = await this.tenantContext.runWithDatabaseAccess(
+      { tables: ['universities'], organizationIds: null, replaceActor: true },
+      () => this.universityRepository.find({
+        where: { name: SIBIT_UNIVERSITY.name, city: SIBIT_UNIVERSITY.city, status: 'active' },
+        select: { id: true, name: true, city: true, status: true },
+      }),
+    );
+    if (matches.length > 1) throw new ConflictException('Источник rasp.sano.ru отключён: найдено несколько вузов СИБИТ с одинаковым городом. Сначала разберите дубликаты.');
+    if (matches.length !== 1 || matches[0].id !== university.id) {
+      throw new BadRequestException('Нельзя подключить rasp.sano.ru: для этого вуза нет единственного подтверждённого каталога СИБИТ.');
+    }
+  }
+
+  private async isRaspScheduleEnabled(university: University): Promise<boolean> {
+    const settings = readScheduleConnectorSettings(university);
+    return settings.provider === 'rasp-sano' && settings.enabled && await this.isUniqueActiveSibit(university);
   }
 
   async syncSchedule(organizationId: string): Promise<{
@@ -502,7 +532,7 @@ export class AdminService {
   }> {
     this.tenantContext.assertAccess(organizationId);
     const university = await this.getUniversity(organizationId);
-    if (!this.isRaspScheduleEnabled(university)) {
+    if (!await this.isRaspScheduleEnabled(university)) {
       throw new BadRequestException(
         "Для этого ВУЗа не настроен источник расписания с поддержкой синхронизации.",
       );
@@ -740,6 +770,12 @@ export class AdminService {
     updateData: UpdateUniversityDto,
   ): Promise<University> {
     const university = await this.getUniversity(organizationId);
+    const requestedSchedule = updateData.connectorConfig?.scheduleConnector;
+    const requestsRaspSchedule = requestedSchedule && typeof requestedSchedule === 'object'
+      && !Array.isArray(requestedSchedule)
+      && (requestedSchedule as Record<string, unknown>).provider === 'rasp-sano'
+      && (requestedSchedule as Record<string, unknown>).enabled === true;
+    if (updateData.connectorType === 'rasp-sano' || requestsRaspSchedule) await this.assertUniqueActiveSibit(university);
     // Tenant administrators can configure the university and its imports, but
     // lifecycle status is controlled by the platform owner only.
     Object.assign(university, {

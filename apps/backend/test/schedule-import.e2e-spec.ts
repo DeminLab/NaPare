@@ -5,6 +5,8 @@ import { createCurationFixture } from './curation.fixture';
 import { TenantContext } from '../src/common/tenant/tenant-context';
 import { User } from '../src/users/entities/user.entity';
 import { UserRole } from '../src/auth/interfaces/user-role';
+import { SIBIT_UNIVERSITY } from '../src/auth/rasp-scraper.service';
+import { University } from '../src/users/entities/university.entity';
 import { Lesson } from '../src/schedule/entities/lesson.entity';
 import { ScheduleChange } from '../src/academic/entities/schedule-change.entity';
 import { ScheduleImportService } from '../src/schedule/connectors/schedule-import.service';
@@ -113,7 +115,11 @@ suite('Queued schedule import: real HTTP/JWT/PostgreSQL FORCE RLS', () => {
   it('never falls back from a foreign SIBIT group ID to a matching name or autoassigns a teacher by name', async () => {
     const connector = f.app.get(SibitScheduleConnector);
     const fetch = jest.spyOn(connector, 'fetchSchedule').mockResolvedValue([{ ...normalizeScheduleRow(row('sibit-foreign'), '+06:00'), groupExternalId: '999999', sourceTeacherId: '456' }]);
+    const universities = f.db.getRepository(University);
+    const original = await universities.findOneByOrFail({ id: f.uni.id });
+    await universities.update(f.uni.id, { name: SIBIT_UNIVERSITY.name, city: SIBIT_UNIVERSITY.city, status: 'active', connectorType: 'rasp-sano' });
     try {
+      await submit({ fileName: 'sibit', format: 'sibit', sourceKey: 'sibit-foreign-tenant' }, 'outsider').expect(400);
       await submit({ fileName: 'sibit', format: 'sibit', sourceKey: 'sibit-test' }).expect(400);
       fetch.mockResolvedValue([
         { ...normalizeScheduleRow(row('sibit-own'), '+06:00'), groupExternalId: '101', sourceTeacherId: '456', teacherName: f.users.teacher.lastName },
@@ -122,7 +128,19 @@ suite('Queued schedule import: real HTTP/JWT/PostgreSQL FORCE RLS', () => {
       await submit({ fileName: 'sibit', format: 'sibit', sourceKey: 'sibit-test' }).expect(201).expect(({ body }) => expect(body.imported).toBe(2));
       const saved = await f.db.getRepository(Lesson).findOneByOrFail({ source: 'university-import:sibit-test', groupId: f.groups[0].id });
       expect(saved.sourceTeacherId).toBe('456'); expect(saved.teacherId).toBeNull(); expect(saved.groupId).toBe(f.groups[0].id);
-    } finally { fetch.mockRestore(); }
+      fetch.mockResolvedValue([{ ...normalizeScheduleRow(row('sibit-queued'), '+06:00'), groupExternalId: '101' }]);
+      const queued = await submit({ fileName: 'sibit', format: 'sibit', sourceKey: 'sibit-queued', queued: true }).expect(201);
+      const queuedJob = await f.db.getRepository(ScheduleImportJob).findOneByOrFail({ id: queued.body.jobId });
+      expect(queuedJob.payload?.format).toBe('sibit');
+      await universities.update(f.uni.id, { status: 'pending' });
+      await service.processJob(queued.body.jobId);
+      const rejectedJob = await f.db.getRepository(ScheduleImportJob).findOneByOrFail({ id: queued.body.jobId });
+      expect(rejectedJob.status).toBe('failed');
+      expect(await f.db.getRepository(Lesson).countBy({ source: 'university-import:sibit-queued' })).toBe(0);
+    } finally {
+      fetch.mockRestore();
+      await universities.update(f.uni.id, { name: original.name, city: original.city, status: original.status, connectorType: original.connectorType });
+    }
   });
   it('accepts bounded file JSON above the default 100 KiB limit only on the upload route', async () => {
     const rows = Array.from({ length: 400 }, (_, index) => row(`large-${index}`, { subject: 'Математика '.repeat(20) }));

@@ -63,6 +63,7 @@ Project guides, reference material and historical records live under this direct
 - [Modules](modules/) and [Product](product/) — feature behavior and product boundaries.
 - [Moodle semester overview](integrations/moodle-semester.md) — self API, explicit numeric identities, source attribution and unavailable-data semantics.
 - [University onboarding](modules/university-onboarding.md) — owner bootstrap, administrator handoff, schedule import and scoped readiness checklist.
+- [Superadmin console specification](product/superadmin-console-spec.md) — compact workspace, university lifecycle, account controls, connector limitations, access model and acceptance criteria.
 
 - [Academic office](modules/academic-office.md) — заявления, назначения, согласования и рабочее место диспетчера.
 

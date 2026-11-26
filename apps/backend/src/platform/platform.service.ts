@@ -15,7 +15,7 @@ import { CuratorAssignment } from '../curation/entities/curator-assignment.entit
 import { UserRole } from '../auth/interfaces/user-role';
 import { RaspScraperService, SIBIT_UNIVERSITY } from '../auth/rasp-scraper.service';
 import { PlatformControl, PlatformGrant } from './platform.entity';
-import { PLATFORM_PERMISSIONS, PlatformAccountDto, PlatformAccountQueryDto, PlatformCreateAccountDto, PlatformFacultyDto, PlatformGrantDto, PlatformGroupDto, PlatformJobDto, PlatformPermission, PlatformQueryDto, PlatformSettingsDto, PlatformStructureQueryDto, PlatformUniversityDto, SERVICE_IDS } from './platform.dto';
+import { PLATFORM_PERMISSIONS, PlatformAccountDto, PlatformAccountQueryDto, PlatformCreateAccountDto, PlatformFacultyDto, PlatformGrantDto, PlatformGroupDto, PlatformJobDto, PlatformPermission, PlatformQueryDto, PlatformScheduleConnectorDto, PlatformSettingsDto, PlatformStructureQueryDto, PlatformUniversityDto, SERVICE_IDS } from './platform.dto';
 import { ControlAgentClient } from './control-agent.client';
 import { platformDatabaseGrants, PLATFORM_TENANT_TABLES } from '../common/tenant/tenant-database-platform';
 import { TelemetryService } from '../telemetry/telemetry.service';
@@ -522,6 +522,101 @@ export class PlatformService {
     const [data, total] = await qb.orderBy('u.name', 'ASC').skip((query.page - 1) * query.limit).take(query.limit).getManyAndCount();
     return toPaginatedResponse(data, total, query);
   }
+  async scheduleConnector(organizationId: string) {
+    const access = await this.require('universities.read');
+    this.assertUniversityScope(access, organizationId);
+    const university = await this.db.getRepository(University).findOneBy({ id: organizationId });
+    if (!university) throw new NotFoundException('Университет не найден.');
+    return { ...platformScheduleConnectorResponse(university), raspSanoAvailable: await this.isUniqueActiveSibit(university) };
+  }
+  async updateScheduleConnector(organizationId: string, dto: PlatformScheduleConnectorDto, auditContext: PlatformAuditContext = {}) {
+    const access = await this.require('universities.write');
+    this.assertUniversityScope(access, organizationId);
+    const reason = dto.reason?.trim();
+    if (!reason || reason.length < 3 || reason.length > 500) throw new BadRequestException('Укажите причину изменения (3–500 символов).');
+    if (dto.provider === 'file-only' && dto.enabled) {
+      throw new BadRequestException('Для файлового источника автоматическая синхронизация отключена. Загружайте файл через импорт расписания.');
+    }
+    if (dto.provider === 'rasp-sano') await this.assertUniqueActiveSibit(organizationId);
+    const config = { ...(dto.config ?? {}) };
+    return this.db.transaction(async manager => {
+      const university = await manager.getRepository(University).createQueryBuilder('u')
+        .where('u.id = :organizationId', { organizationId })
+        .setLock('pessimistic_write')
+        .getOne();
+      if (!university) throw new NotFoundException('Университет не найден.');
+      this.assertUniversityScope(access, university.id);
+      const before = platformScheduleConnectorResponse(university);
+      if (dto.provider === 'rasp-sano' && dto.enabled) university.connectorType = 'rasp-sano';
+      university.connectorConfig = {
+        ...(university.connectorConfig ?? {}),
+        scheduleConnector: { provider: dto.provider, enabled: dto.enabled, config },
+        updatedAt: new Date().toISOString(),
+      };
+      await manager.save(University, university);
+      await manager.save(AuditLog, {
+        userId: access.actorId,
+        action: 'platform.university.schedule_connector.updated',
+        entity: 'platform',
+        entityId: organizationId,
+        oldValues: { organizationId, provider: before.provider, enabled: before.enabled, academicYear: before.config.academicYear ?? null },
+        newValues: { organizationId, provider: dto.provider, enabled: dto.enabled, academicYear: config.academicYear ?? null, reason },
+        ...(auditContext.ip ? { ip: auditContext.ip } : {}),
+        ...(auditContext.userAgent ? { userAgent: auditContext.userAgent.slice(0, 512) } : {}),
+      });
+      return { ...platformScheduleConnectorResponse(university), raspSanoAvailable: await this.isUniqueActiveSibit(university) };
+    });
+  }
+  async testScheduleConnector(organizationId: string) {
+    const access = await this.require('universities.read');
+    this.assertUniversityScope(access, organizationId);
+    const university = await this.db.getRepository(University).findOneBy({ id: organizationId });
+    if (!university) throw new NotFoundException('Университет не найден.');
+    const settings = platformScheduleConnectorResponse(university);
+    if (settings.provider !== 'rasp-sano' || !settings.enabled) {
+      throw new BadRequestException('Сначала включите источник расписания rasp.sano.ru в настройках университета.');
+    }
+    await this.assertUniqueActiveSibit(organizationId);
+    const availableYears = await this.raspScraper.getYears();
+    if (settings.config.academicYear && !availableYears.some(year => year.value === settings.config.academicYear)) {
+      throw new BadRequestException('Выбранный учебный год отсутствует в каталоге rasp.sano.ru.');
+    }
+    const groups = await this.raspScraper.getGroups(settings.config.academicYear);
+    return {
+      status: 'connected' as const,
+      provider: 'rasp-sano' as const,
+      sourceHost: 'rasp.sano.ru' as const,
+      academicYear: settings.config.academicYear ?? availableYears.at(-1)?.value ?? null,
+      academicYearsAvailable: availableYears.length,
+      groupsAvailable: groups.length,
+      checkedAt: new Date().toISOString(),
+    };
+  }
+  private async isUniqueActiveSibit(university: University) {
+    if (university.name !== SIBIT_UNIVERSITY.name || university.city !== SIBIT_UNIVERSITY.city || university.status !== 'active') return false;
+    const matches = await this.tenant.runWithDatabaseAccess(
+      { tables: ['universities'], organizationIds: null, replaceActor: true },
+      () => this.db.getRepository(University).find({
+        where: { name: SIBIT_UNIVERSITY.name, city: SIBIT_UNIVERSITY.city, status: 'active' },
+        select: { id: true, name: true, city: true, status: true },
+      }),
+    );
+    return matches.length === 1 && matches[0].id === university.id;
+  }
+  private async assertUniqueActiveSibit(organizationId: string) {
+    const matches = await this.tenant.runWithDatabaseAccess(
+      { tables: ['universities'], organizationIds: null, replaceActor: true },
+      () => this.db.getRepository(University).find({
+        where: { name: SIBIT_UNIVERSITY.name, city: SIBIT_UNIVERSITY.city, status: 'active' },
+        select: { id: true, name: true, city: true, status: true },
+      }),
+    );
+    if (matches.length > 1) throw new ConflictException('Источник rasp.sano.ru отключён: найдено несколько вузов СИБИТ с одинаковым городом. Сначала разберите дубликаты.');
+    const university = matches[0];
+    if (!university || university.id !== organizationId || university.status !== 'active') {
+      throw new BadRequestException('Источник rasp.sano.ru поддерживает только единственный активный вуз СИБИТ (Омск). Для другого вуза загрузите файл расписания.');
+    }
+  }
   async groups(organizationId: string) {
     const access = await this.require('universities.read');
     this.assertUniversityScope(access, organizationId);
@@ -771,4 +866,30 @@ export class PlatformService {
     await this.audit('service.requested', dto.idempotencyKey, { service: dto.service, action: dto.action });
     return this.agent.call<AgentJob>('/jobs', 'POST', { ...dto, actorId: access.actorId });
   }
+}
+
+function platformScheduleConnectorResponse(university: University) {
+  const stored = university.connectorConfig?.scheduleConnector;
+  if (stored && typeof stored === 'object' && !Array.isArray(stored)) {
+    const value = stored as Record<string, unknown>;
+    const provider = value.provider === 'rasp-sano' ? 'rasp-sano' as const : 'file-only' as const;
+    const configValue = value.config && typeof value.config === 'object' && !Array.isArray(value.config)
+      ? value.config as Record<string, unknown>
+      : {};
+    const academicYear = configValue.academicYear;
+    const config = typeof academicYear === 'string' && /^\d{4}-\d{4}$/.test(academicYear) ? { academicYear } : {};
+    return {
+      provider,
+      enabled: provider === 'rasp-sano' && value.enabled === true,
+      config,
+      sourceHost: provider === 'rasp-sano' ? 'rasp.sano.ru' as const : null,
+    };
+  }
+  const isLegacyRasp = university.connectorType === 'rasp-sano';
+  return {
+    provider: isLegacyRasp ? 'rasp-sano' as const : 'file-only' as const,
+    enabled: isLegacyRasp,
+    config: {},
+    sourceHost: isLegacyRasp ? 'rasp.sano.ru' as const : null,
+  };
 }

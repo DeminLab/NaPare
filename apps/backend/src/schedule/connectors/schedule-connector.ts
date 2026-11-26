@@ -40,6 +40,8 @@ export const SCHEDULE_MAPPING_VERSION = '1';
 
 export interface ScheduleImportPayload {
   lessons: NormalizedScheduleLesson[];
+  /** Connector used to fetch rows; retained so queued jobs can recheck source eligibility before apply. */
+  format?: string;
   source: string;
   fileName: string;
   replace: boolean;

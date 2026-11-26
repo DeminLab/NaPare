@@ -9,6 +9,7 @@ interface ScheduleSettings {
   provider: ScheduleProvider;
   enabled: boolean;
   config: Record<string, unknown>;
+  raspSanoAvailable: boolean;
 }
 interface SyncResult {
   timestamp?: string;
@@ -36,6 +37,7 @@ export function ScheduleSourceSettings() {
         provider: result.provider === "rasp-sano" ? "rasp-sano" : "file-only",
         enabled: Boolean(result.enabled),
         config: result.config ?? {},
+        raspSanoAvailable: Boolean(result.raspSanoAvailable),
       });
       setAcademicYear(typeof result.config?.academicYear === "string" ? result.config.academicYear : "");
     } catch (reason) {
@@ -56,7 +58,11 @@ export function ScheduleSourceSettings() {
       if (academicYear && !/^\d{4}-\d{4}$/.test(academicYear)) {
         throw new Error("Укажите учебный год в формате 2026-2027.");
       }
-      const payload = { ...settings, config: { ...settings.config, ...(academicYear ? { academicYear } : {}) } };
+      const payload = {
+        provider: settings.provider,
+        enabled: settings.enabled,
+        config: { ...settings.config, ...(academicYear ? { academicYear } : {}) },
+      };
       if (!academicYear) delete payload.config.academicYear;
       const saved = await apiFetch<ScheduleSettings>("/admin/connectors/schedule", {
         method: "PATCH",
@@ -79,6 +85,9 @@ export function ScheduleSourceSettings() {
     try {
       if (settings?.provider !== "rasp-sano" || !settings.enabled) {
         throw new Error("Сначала выберите Rasp.SANO и включите источник.");
+      }
+      if (!settings.raspSanoAvailable) {
+        throw new Error("Rasp.SANO доступен только единственному активному вузу СИБИТ в Омске. Используйте файловый импорт.");
       }
       if (action === "test") {
         const result = await apiFetch<{ status?: string; academicYear?: string | null; academicYearsAvailable?: number; groupsAvailable?: number }>("/admin/connectors/schedule/test", { method: "POST" });
@@ -105,12 +114,12 @@ export function ScheduleSourceSettings() {
         <label className="block text-sm font-semibold text-[var(--color-text)]" htmlFor="schedule-provider">Способ получения расписания
           <select id="schedule-provider" value={settings.provider} disabled={busy} onChange={event => setSettings(current => { if (!current) return current; const provider = event.target.value as ScheduleProvider; return { ...current, provider, enabled: provider === "file-only" ? false : current.enabled }; })} className="mt-1.5 h-11 w-full rounded-xl border border-[var(--color-border)] bg-white px-3 text-sm font-normal outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]">
             <option value="file-only">Только импорт файлов</option>
-            <option value="rasp-sano">Rasp.SANO · расписание СИБИТа</option>
+            <option value="rasp-sano" disabled={!settings.raspSanoAvailable && settings.provider !== "rasp-sano"}>Rasp.SANO · расписание СИБИТа</option>
           </select>
         </label>
         <div className="flex items-center rounded-xl border border-[var(--color-border)] px-4 py-3">
           <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm font-semibold text-[var(--color-text)]">
-            <input type="checkbox" checked={settings.enabled} disabled={busy || settings.provider === "file-only"} onChange={event => setSettings(current => current ? { ...current, enabled: event.target.checked } : current)} className="h-5 w-5 rounded border-slate-300 text-[var(--color-brand)] focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]" />
+            <input type="checkbox" checked={settings.enabled} disabled={busy || settings.provider === "file-only" || !settings.raspSanoAvailable} onChange={event => setSettings(current => current ? { ...current, enabled: event.target.checked } : current)} className="h-5 w-5 rounded border-slate-300 text-[var(--color-brand)] focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]" />
             Включить автоматический источник
           </label>
         </div>
@@ -122,13 +131,14 @@ export function ScheduleSourceSettings() {
       <div className="rounded-xl border border-indigo-100 bg-indigo-50/70 p-4 text-sm text-indigo-950">
         <p className="font-semibold">Адрес источника задан платформой</p>
         <p className="mt-1">{settings.provider === "rasp-sano" ? "Источник содержит расписание СИБИТа и использует rasp.sano.ru. Адрес нельзя заменить на произвольный сайт." : "Rasp.SANO сейчас поддерживает расписание СИБИТа. Для другого источника используйте файловый импорт."}</p>
+        {!settings.raspSanoAvailable && <p role="status" className="mt-2 font-semibold">Автоматический источник доступен только единственному активному вузу СИБИТ в Омске. Для этого вуза он не разрешён; используйте файловый импорт или обратитесь к владельцу платформы, если название вуза-дубликата ошибочно.</p>}
       </div>
       {error && <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
       {notice && <p role="status" aria-live="polite" className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{notice}</p>}
       <div className="flex flex-wrap gap-2">
-        <Button loading={busy} disabled={busy} onClick={() => void save()}>Сохранить настройки</Button>
-        <Button variant="secondary" loading={busy} disabled={busy || settings.provider !== "rasp-sano" || !settings.enabled} onClick={() => void run("test")}>Проверить источник</Button>
-        <Button variant="secondary" loading={busy} disabled={busy || settings.provider !== "rasp-sano" || !settings.enabled} onClick={() => void run("sync")}>Загрузить расписание</Button>
+        <Button loading={busy} disabled={busy || (settings.provider === "rasp-sano" && !settings.raspSanoAvailable)} onClick={() => void save()}>Сохранить настройки</Button>
+        <Button variant="secondary" loading={busy} disabled={busy || settings.provider !== "rasp-sano" || !settings.enabled || !settings.raspSanoAvailable} onClick={() => void run("test")}>Проверить источник</Button>
+        <Button variant="secondary" loading={busy} disabled={busy || settings.provider !== "rasp-sano" || !settings.enabled || !settings.raspSanoAvailable} onClick={() => void run("sync")}>Загрузить расписание</Button>
       </div>
     </> : <div role="alert" className="space-y-3 text-sm"><p className="text-red-700">{error || "Настройки источника недоступны."}</p><Button variant="secondary" onClick={() => void load()}>Повторить</Button></div>}
   </Card>;

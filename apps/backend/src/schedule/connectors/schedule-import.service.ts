@@ -4,6 +4,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { DataSource, EntityManager, IsNull, Repository } from 'typeorm';
 import { ImportScheduleDto } from '../../admin/dto/import-schedule.dto';
 import { UserRole } from '../../auth/interfaces/user-role';
+import { SIBIT_UNIVERSITY } from '../../auth/rasp-scraper.service';
 import { ScheduleChange } from '../../academic/entities/schedule-change.entity';
 import { TenantContext } from '../../common/tenant/tenant-context';
 import { JsonObject } from '../../common/types/json-value.type';
@@ -127,6 +128,7 @@ export class ScheduleImportService implements OnModuleInit, OnModuleDestroy, Sch
     if (!actor || ![UserRole.UNIVERSITY_ADMIN, UserRole.DEVELOPER, UserRole.SUPERADMIN].includes(actor.role) || !organizationId) throw new ForbiddenException('Нужны права администратора вуза.');
     const university = await this.universities.findOneBy({ id: organizationId });
     if (!university) throw new NotFoundException('Вуз не найден.');
+    if (dto.format === 'sibit') await this.assertUniqueActiveSibit(university);
     // FR-IMP-04: a server dry-run answers with the plan only and never queues a job.
     const payload = await this.prepare(university, dto, dto.dryRun ? 'diagnostic' : 'apply');
     const payloadHash = createHash('sha256').update(JSON.stringify(payload)).digest('hex');
@@ -378,7 +380,7 @@ export class ScheduleImportService implements OnModuleInit, OnModuleDestroy, Sch
       const missingId = dto.rows.some((row, index) => !row.id && planned.has(index + 1));
       if (missingId) rowWarnings.push({ row: 0, message: 'Нет внешнего ID: использован составной ключ «файл:номер строки».' });
     }
-    return { lessons, source: `university-import:${sourceKey}`, fileName: dto.fileName, replace: !!dto.replace, groupNames, startDate: from, endDate: to, utcOffset: dto.format === 'ics' ? '+00:00' : dto.utcOffset || '+00:00', groupScopedIdentity, rowIssues, rowWarnings };
+    return { lessons, format: dto.format, source: `university-import:${sourceKey}`, fileName: dto.fileName, replace: !!dto.replace, groupNames, startDate: from, endDate: to, utcOffset: dto.format === 'ics' ? '+00:00' : dto.utcOffset || '+00:00', groupScopedIdentity, rowIssues, rowWarnings };
   }
 
   /**
@@ -510,6 +512,23 @@ export class ScheduleImportService implements OnModuleInit, OnModuleDestroy, Sch
     return this.tenant.runWithDatabaseAccess({ tables, organizationIds, write }, callback);
   }
 
+  private async assertUniqueActiveSibit(university: University, repository: Repository<University> = this.universities): Promise<void> {
+    if (university.name !== SIBIT_UNIVERSITY.name || university.city !== SIBIT_UNIVERSITY.city || university.status !== 'active') {
+      throw new BadRequestException('Импорт из rasp.sano.ru поддерживается только для активного вуза СИБИТ (Омск).');
+    }
+    const matches = await this.tenant.runWithDatabaseAccess(
+      { tables: ['universities'], organizationIds: null, replaceActor: true, write: false },
+      () => repository.find({
+        where: { name: SIBIT_UNIVERSITY.name, city: SIBIT_UNIVERSITY.city, status: 'active' },
+        select: { id: true, name: true, city: true, status: true },
+      }),
+    );
+    if (matches.length > 1) throw new ConflictException('Импорт из rasp.sano.ru запрещён: найдено несколько активных организаций СИБИТ.');
+    if (matches.length !== 1 || matches[0].id !== university.id) {
+      throw new BadRequestException('Импорт из rasp.sano.ru требует единственную активную организацию СИБИТ.');
+    }
+  }
+
   /** Executes exactly the ops the shared plan produced, atomically (FR-IMP-07). */
   private async apply(manager: EntityManager, job: ScheduleImportJob): Promise<ScheduleImportPlan> {
     const payload = job.payload!;
@@ -519,6 +538,14 @@ export class ScheduleImportService implements OnModuleInit, OnModuleDestroy, Sch
       (actor.role === UserRole.UNIVERSITY_ADMIN && actor.organizationId === job.organizationId)
     );
     if (!canStillImport) throw new ForbiddenException('Автор задания больше не имеет права импортировать расписание этого вуза.');
+    if (payload.format === 'sibit') {
+      const university = await this.tenant.runWithDatabaseAccess(
+        { tables: ['universities'], organizationIds: null, replaceActor: true, write: false },
+        () => manager.getRepository(University).findOneBy({ id: job.organizationId }),
+      );
+      if (!university) throw new NotFoundException('Вуз не найден.');
+      await this.assertUniqueActiveSibit(university, manager.getRepository(University));
+    }
     await manager.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [`schedule-import:${job.organizationId}:${payload.source}`]);
     const { plan, ops } = await this.plan(manager, job.organizationId, payload);
     const repository = manager.getRepository(Lesson);

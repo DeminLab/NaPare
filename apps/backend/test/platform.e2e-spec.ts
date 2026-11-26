@@ -11,6 +11,7 @@ import { Test } from '@nestjs/testing';
 import { ValidationPipe } from '@nestjs/common';
 import { ControlAgentClient } from '../src/platform/control-agent.client';
 import { PLATFORM_PERMISSIONS, SERVICE_IDS } from '../src/platform/platform.dto';
+import { RaspScraperService } from '../src/auth/rasp-scraper.service';
 
 const suite = process.env.PLATFORM_TEST_DATABASE_URL ? describe : describe.skip;
 suite('Platform owner and explicitly delegated rights: real PostgreSQL/JWT/HTTP', () => {
@@ -83,6 +84,65 @@ suite('Platform owner and explicitly delegated rights: real PostgreSQL/JWT/HTTP'
     await http().post('/api/v1/auth/login').send({email:account.email,password:account.password}).expect(200);
     await http().post('/api/v1/platform/accounts').auth(tokens.owner,{type:'bearer'}).send(account).expect(409);
     await get('/platform/audit').expect(200).expect(({body})=>expect(JSON.stringify(body)).not.toContain(account.password));
+  });
+  it('configures and tests a schedule connector within the explicitly delegated university scope',async()=>{
+    const uni=await http().post('/api/v1/platform/universities').auth(tokens.owner,{type:'bearer'}).send({name:'СИБИТ',city:'Омск',status:'active'}).expect(201);
+    const path=`/api/v1/platform/universities/${uni.body.id}/schedule-connector`;
+    await get(`/platform/universities/${uni.body.id}/schedule-connector`)
+      .expect(200)
+      .expect(({body})=>{
+        expect(body).toMatchObject({provider:'file-only',enabled:false,sourceHost:null,raspSanoAvailable:true});
+        expect(JSON.stringify(body)).not.toMatch(/password|token|secret|url/i);
+      });
+    await http().patch(path).auth(tokens.owner,{type:'bearer'}).send({provider:'rasp-sano',enabled:true,config:{academicYear:'2026-2027'},reason:'Подключение расписания'}).expect(200).expect(({body})=>{
+      expect(body).toMatchObject({provider:'rasp-sano',enabled:true,config:{academicYear:'2026-2027'},sourceHost:'rasp.sano.ru',raspSanoAvailable:true});
+      expect(JSON.stringify(body)).not.toMatch(/password|token|secret|url/i);
+    });
+    await http().patch(path).auth(tokens.owner,{type:'bearer'}).send({provider:'https://example.test',enabled:true,reason:'Произвольный адрес'}).expect(400);
+    await http().patch(path).auth(tokens.owner,{type:'bearer'}).send({provider:'file-only',enabled:true,reason:'Файлы не синхронизируются'}).expect(400);
+    await http().patch(path).auth(tokens.owner,{type:'bearer'}).send({provider:'rasp-sano',enabled:false,reason:'x'}).expect(400);
+
+    const rasp=f.app.get(RaspScraperService);
+    const years=jest.spyOn(rasp,'getYears').mockResolvedValue([{value:'2026-2027',label:'2026–2027'}]);
+    const groups=jest.spyOn(rasp,'getGroups').mockResolvedValue([{groupId:'12',name:'Тестовая группа',faculty:'ИТ',facultyId:1,course:1,academicYear:'2026-2027'}]);
+    await http().post(`${path}/test`).auth(tokens.owner,{type:'bearer'}).expect(201).expect(({body})=>expect(body).toMatchObject({status:'connected',provider:'rasp-sano',sourceHost:'rasp.sano.ru',academicYear:'2026-2027',groupsAvailable:1}));
+    expect(years).toHaveBeenCalledTimes(1);
+    expect(groups).toHaveBeenCalledWith('2026-2027');
+
+    const otherPath=`/api/v1/platform/universities/${f.otherUni.id}/schedule-connector`;
+    await get(`/platform/universities/${f.otherUni.id}/schedule-connector`).expect(200).expect(({body})=>expect(body.raspSanoAvailable).toBe(false));
+    await http().patch(otherPath).auth(tokens.owner,{type:'bearer'}).send({provider:'rasp-sano',enabled:true,reason:'Проверка чужого источника'}).expect(400);
+    await http().post(`${otherPath}/test`).auth(tokens.owner,{type:'bearer'}).expect(400);
+    expect(years).toHaveBeenCalledTimes(1);
+
+    await http().put(`/api/v1/platform/universities/${f.otherUni.id}`).auth(tokens.owner,{type:'bearer'}).send({name:'СИБИТ',city:'Омск',status:'active',reason:'Проверка защиты от дублей'}).expect(200);
+    await get(`/platform/universities/${uni.body.id}/schedule-connector`).expect(200).expect(({body})=>expect(body.raspSanoAvailable).toBe(false));
+    await http().patch(path).auth(tokens.owner,{type:'bearer'}).send({provider:'rasp-sano',enabled:true,config:{academicYear:'2026-2027'},reason:'Повторная проверка'}).expect(409);
+    await http().post(`${path}/test`).auth(tokens.owner,{type:'bearer'}).expect(409);
+    await http().put(`/api/v1/platform/universities/${f.otherUni.id}`).auth(tokens.owner,{type:'bearer'}).send({name:'Другой вуз — тест',city:'Омск',status:'active',reason:'Восстановление тестовых данных'}).expect(200);
+
+    await http().put(`/api/v1/platform/universities/${f.otherUni.id}`).auth(tokens.owner,{type:'bearer'}).send({name:'СИБИТ',city:'Омск',status:'inactive',reason:'Проверка неактивного дубликата'}).expect(200);
+    await get(`/platform/universities/${uni.body.id}/schedule-connector`).expect(200).expect(({body})=>expect(body.raspSanoAvailable).toBe(true));
+    await http().put(`/api/v1/platform/universities/${f.otherUni.id}`).auth(tokens.owner,{type:'bearer'}).send({name:'Другой вуз — тест',city:'Омск',status:'active',reason:'Восстановление тестовых данных'}).expect(200);
+
+    await http().put(`/api/v1/platform/universities/${uni.body.id}`).auth(tokens.owner,{type:'bearer'}).send({name:'СИБИТ',city:'Омск',status:'inactive',reason:'Проверка статуса вуза'}).expect(200);
+    await get(`/platform/universities/${uni.body.id}/schedule-connector`).expect(200).expect(({body})=>expect(body.raspSanoAvailable).toBe(false));
+    await http().patch(path).auth(tokens.owner,{type:'bearer'}).send({provider:'rasp-sano',enabled:true,config:{academicYear:'2026-2027'},reason:'Неактивный вуз'}).expect(400);
+    await http().post(`${path}/test`).auth(tokens.owner,{type:'bearer'}).expect(400);
+    await http().put(`/api/v1/platform/universities/${uni.body.id}`).auth(tokens.owner,{type:'bearer'}).send({name:'СИБИТ',city:'Омск',status:'active',reason:'Восстановление тестового вуза'}).expect(200);
+
+    await http().put('/api/v1/platform/permissions/'+f.developer.id).auth(tokens.owner,{type:'bearer'}).send({permissions:['universities.read','universities.write'],serviceIds:[],organizationIds:[uni.body.id]}).expect(200);
+    await get(`/platform/universities/${uni.body.id}/schedule-connector`,'developer').expect(200);
+    await get(`/platform/universities/${f.otherUni.id}/schedule-connector`,'developer').expect(403);
+    await http().patch(otherPath).auth(tokens.developer,{type:'bearer'}).send({provider:'rasp-sano',enabled:true,reason:'Не мой вуз'}).expect(403);
+    await http().post(`${otherPath}/test`).auth(tokens.developer,{type:'bearer'}).expect(403);
+
+    const audit=await f.db.getRepository(AuditLog).findOneByOrFail({entityId:uni.body.id,action:'platform.university.schedule_connector.updated'});
+    expect(audit.newValues).toMatchObject({provider:'rasp-sano',enabled:true,academicYear:'2026-2027',reason:'Подключение расписания'});
+    expect(audit.oldValues).toMatchObject({provider:'file-only',enabled:false});
+    expect(JSON.stringify(audit)).not.toMatch(/secret|password|token/i);
+    jest.restoreAllMocks();
+    await grant([],[]);
   });
   it('limits service operations by action and service; disconnected agent never reports success',async()=>{
     await grant(['services.restart'],['web-student']).expect(200);

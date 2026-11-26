@@ -30,39 +30,40 @@ import AttachmentsPanel from './AttachmentsPanel';
 import { type Access, Button, Notice, roles, useResource } from './control-ui';
 
 const sections = [
-  { id: 'users', label: 'Пользователи', description: 'Аккаунты, персональные данные и уведомления', icon: 'users' as IconName },
-  { id: 'learning', label: 'Учебная среда', description: 'Расписание, пары, задания и посещаемость', icon: 'book' as IconName },
-  { id: 'career', label: 'Карьера', description: 'Профили, компании, задачи и практика', icon: 'briefcase' as IconName },
-  { id: 'platform', label: 'Платформа', description: 'Сервисы, структура вузов, права и настройки', icon: 'settings' as IconName },
+  { id: 'organizations', label: 'Университеты', description: 'Организации, факультеты и учебные группы', icon: 'building' as IconName },
+  { id: 'people', label: 'Пользователи', description: 'Аккаунты, роли и назначения', icon: 'users' as IconName },
+  { id: 'data', label: 'Данные и интеграции', description: 'Расписание, учебные данные и карьера', icon: 'book' as IconName },
+  { id: 'operations', label: 'Операции', description: 'Сервисы, события и доставка уведомлений', icon: 'settings' as IconName },
+  { id: 'security', label: 'Безопасность и аудит', description: 'Права команды, журнал и настройки платформы', icon: 'lock' as IconName },
 ] as const;
 type SectionId = typeof sections[number]['id'];
 const tabs: Array<{ id: string; label: string; description: string; permission: string; section: SectionId }> = [
-  { id: 'services', label: 'Сервисы', description: 'Состояние API и контейнеров, перезапуск и пересборка', permission: 'services.read', section: 'platform' },
-  { id: 'user-hub', label: 'Каталог пользователей', description: 'Единый поиск аккаунта и переход к связанным разделам', permission: 'user-directory', section: 'users' },
-  { id: 'accounts', label: 'Аккаунты', description: 'Создание, роли, привязка к вузу и группе, пароли и сессии', permission: 'accounts.read', section: 'users' },
-  { id: 'personal-records', label: 'Личные записи', description: 'Настройки, избранное, заметки и прогресс подготовки', permission: 'personal-data.read', section: 'users' },
-  { id: 'notifications-data', label: 'Уведомления и устройства', description: 'Уведомления, входящие и push-устройства', permission: 'notification-data.read', section: 'users' },
-  { id: 'student-data', label: 'Посещаемость и отсутствия', description: 'Посещаемость, отсутствия и решения кураторов', permission: 'student-data.read', section: 'learning' },
-  { id: 'homework-submissions', label: 'Сдачи заданий', description: 'Сдачи домашних заданий и исправление статусов', permission: 'homework-data.read', section: 'learning' },
-  { id: 'curator-assignments', label: 'Назначения кураторов', description: 'Выдача и отзыв кураторских назначений', permission: 'curation-data.read', section: 'learning' },
-  { id: 'announcements', label: 'Объявления', description: 'Объявления в пространствах пар', permission: 'pairspace-content.read', section: 'learning' },
-  { id: 'pair-spaces', label: 'Пространства пар', description: 'Связь занятия, группы и преподавателя', permission: 'pairspace-content.read', section: 'learning' },
-  { id: 'academic-schedule', label: 'Расписание и каталог', description: 'Занятия, курсы, серии и изменения расписания', permission: 'academic-data.read', section: 'learning' },
-  { id: 'events', label: 'События', description: 'Системные события и доставка', permission: 'events-data.read', section: 'learning' },
-  { id: 'attachments', label: 'Вложения', description: 'Файлы PairSpace и скрытие ссылок', permission: 'attachments-data.read', section: 'learning' },
-  { id: 'discussions', label: 'Обсуждения', description: 'Модерация сообщений и ответов', permission: 'discussion-data.read', section: 'learning' },
-  { id: 'career-data', label: 'Профили и поступление', description: 'Карьерные профили, заявки и допуски', permission: 'career-data.read', section: 'career' },
-  { id: 'career-companies', label: 'Компании и партнёрства', description: 'Компании, участники и связи с вузами', permission: 'career-data.read', section: 'career' },
-  { id: 'career-tasks', label: 'Задачи и проекты', description: 'Задачи, проекты и условия публикации', permission: 'career-data.read', section: 'career' },
-  { id: 'career-operations', label: 'Отклики и работы', description: 'Отклики, работы и решения по результатам', permission: 'career-data.read', section: 'career' },
-  { id: 'career-memberships', label: 'Доступы компаний', description: 'Доступы сотрудников карьерных центров и компаний', permission: 'career-data.read', section: 'career' },
-  { id: 'career-tests', label: 'Тесты и попытки', description: 'Тесты, вопросы и попытки студентов', permission: 'career-data.read', section: 'career' },
-  { id: 'career-content', label: 'Портфолио и отзывы', description: 'Кейсы, отзывы и уведомления', permission: 'career-data.read', section: 'career' },
-  { id: 'career-planning', label: 'Доступность студентов', description: 'Доступность студентов и окна практики', permission: 'career-data.read', section: 'career' },
-  { id: 'universities', label: 'Университеты и структура', description: 'Вузы, факультеты и учебные группы', permission: 'universities.read', section: 'platform' },
-  { id: 'permissions', label: 'Контур доверия', description: 'Владелец, делегированные права и экстренный отзыв', permission: 'owner', section: 'platform' },
-  { id: 'settings', label: 'Настройки', description: 'Название платформы, поддержка и режим обслуживания', permission: 'settings.read', section: 'platform' },
-  { id: 'audit', label: 'Журнал аудита', description: 'История действий, причины и изменения данных', permission: 'audit.read', section: 'platform' },
+  { id: 'services', label: 'Сервисы', description: 'Состояние API и контейнеров, перезапуск и пересборка', permission: 'services.read', section: 'operations' },
+  { id: 'user-hub', label: 'Каталог пользователей', description: 'Единый поиск аккаунта и переход к связанным разделам', permission: 'user-directory', section: 'people' },
+  { id: 'accounts', label: 'Аккаунты', description: 'Создание, роли, привязка к вузу и группе, пароли и сессии', permission: 'accounts.read', section: 'people' },
+  { id: 'personal-records', label: 'Личные записи', description: 'Настройки, избранное, заметки и прогресс подготовки', permission: 'personal-data.read', section: 'data' },
+  { id: 'notifications-data', label: 'Уведомления и устройства', description: 'Уведомления, входящие и push-устройства', permission: 'notification-data.read', section: 'operations' },
+  { id: 'student-data', label: 'Посещаемость и отсутствия', description: 'Посещаемость, отсутствия и решения кураторов', permission: 'student-data.read', section: 'data' },
+  { id: 'homework-submissions', label: 'Сдачи заданий', description: 'Сдачи домашних заданий и исправление статусов', permission: 'homework-data.read', section: 'data' },
+  { id: 'curator-assignments', label: 'Назначения кураторов', description: 'Выдача и отзыв кураторских назначений', permission: 'curation-data.read', section: 'people' },
+  { id: 'announcements', label: 'Объявления', description: 'Объявления в пространствах пар', permission: 'pairspace-content.read', section: 'data' },
+  { id: 'pair-spaces', label: 'Пространства пар', description: 'Связь занятия, группы и преподавателя', permission: 'pairspace-content.read', section: 'data' },
+  { id: 'academic-schedule', label: 'Расписание и каталог', description: 'Занятия, курсы, серии и изменения расписания', permission: 'academic-data.read', section: 'data' },
+  { id: 'events', label: 'События', description: 'Системные события и доставка', permission: 'events-data.read', section: 'operations' },
+  { id: 'attachments', label: 'Вложения', description: 'Файлы PairSpace и скрытие ссылок', permission: 'attachments-data.read', section: 'data' },
+  { id: 'discussions', label: 'Обсуждения', description: 'Модерация сообщений и ответов', permission: 'discussion-data.read', section: 'data' },
+  { id: 'career-data', label: 'Профили и поступление', description: 'Карьерные профили, заявки и допуски', permission: 'career-data.read', section: 'data' },
+  { id: 'career-companies', label: 'Компании и партнёрства', description: 'Компании, участники и связи с вузами', permission: 'career-data.read', section: 'data' },
+  { id: 'career-tasks', label: 'Задачи и проекты', description: 'Задачи, проекты и условия публикации', permission: 'career-data.read', section: 'data' },
+  { id: 'career-operations', label: 'Отклики и работы', description: 'Отклики, работы и решения по результатам', permission: 'career-data.read', section: 'data' },
+  { id: 'career-memberships', label: 'Доступы компаний', description: 'Доступы сотрудников карьерных центров и компаний', permission: 'career-data.read', section: 'people' },
+  { id: 'career-tests', label: 'Тесты и попытки', description: 'Тесты, вопросы и попытки студентов', permission: 'career-data.read', section: 'data' },
+  { id: 'career-content', label: 'Портфолио и отзывы', description: 'Кейсы, отзывы и уведомления', permission: 'career-data.read', section: 'data' },
+  { id: 'career-planning', label: 'Доступность студентов', description: 'Доступность студентов и окна практики', permission: 'career-data.read', section: 'data' },
+  { id: 'universities', label: 'Каталог вузов и структура', description: 'Вузы, факультеты и учебные группы', permission: 'universities.read', section: 'organizations' },
+  { id: 'permissions', label: 'Контур доверия', description: 'Владелец, делегированные права и экстренный отзыв', permission: 'owner', section: 'security' },
+  { id: 'settings', label: 'Настройки платформы', description: 'Название платформы, поддержка и режим обслуживания', permission: 'settings.read', section: 'security' },
+  { id: 'audit', label: 'Журнал аудита', description: 'История действий, причины и изменения данных', permission: 'audit.read', section: 'security' },
 ];
 export default function PlatformControlPage() {
   const context = useResource<Access>('/platform/access', 30000);
@@ -72,7 +73,6 @@ export default function PlatformControlPage() {
   const [expandedSection, setExpandedSection] = useState<SectionId | 'none' | null>(null);
   const access = context.data;
   const available = tabs.filter(item => item.permission === 'owner' ? access?.owner : item.permission === 'user-directory' ? access?.permissions.some(permission => ['accounts.read', 'personal-data.read'].includes(permission)) : access?.permissions.includes(item.permission));
-  const canEditUniversityMetadata = Boolean(access?.owner && access.permissions.includes('universities.write'));
   const universityScopeLabel = access?.owner || access?.organizationIds === null ? 'глобальная область' : `выбранные вузы (${access?.organizationIds?.length ?? 0})`;
   useEffect(() => {
     const syncFromLocation = () => {
@@ -119,17 +119,23 @@ export default function PlatformControlPage() {
     const url = new URL(window.location.href); url.searchParams.set('tab', id); url.searchParams.set('userId', userId);
     window.history.pushState(null, '', url);
   };
+  const homeActions: Array<{ id: string; title: string; description: string; icon: IconName }> = [
+    ...(available.some(item => item.id === 'universities') ? [{ id: 'universities', title: 'Университеты', description: 'Открыть вуз, его факультеты и учебные группы.', icon: 'building' as IconName }] : []),
+    ...(available.some(item => item.id === 'user-hub') ? [{ id: 'user-hub', title: 'Найти пользователя', description: 'Поиск аккаунта и переход к связанным разделам.', icon: 'users' as IconName }] : available.some(item => item.id === 'accounts') ? [{ id: 'accounts', title: 'Аккаунты', description: 'Создать аккаунт, изменить роль или доступ.', icon: 'users' as IconName }] : []),
+    ...(available.some(item => item.id === 'academic-schedule') ? [{ id: 'academic-schedule', title: 'Расписание и каталог', description: 'Учебные данные, занятия и изменения расписания.', icon: 'calendar' as IconName }] : []),
+    ...(available.some(item => item.id === 'services') ? [{ id: 'services', title: 'Состояние сервисов', description: 'Проверить состояние и доступные операции.', icon: 'pulse' as IconName }] : []),
+    ...(available.some(item => item.id === 'audit') ? [{ id: 'audit', title: 'Журнал аудита', description: 'Найти действие, оператора и указанную причину.', icon: 'clipboard' as IconName }] : []),
+  ];
   return <div className="control-page mx-auto max-w-[1440px] space-y-5 p-4 text-[var(--color-text)] sm:p-6">
     <header className="control-page-header">
       <div className="min-w-0">
-        <p className="workspace-kicker">Платформа · доступ по разрешениям</p>
+        <p className="workspace-kicker">Панель платформы</p>
         <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">Управление платформой</h1>
         <p className="mt-2 max-w-3xl text-sm text-[var(--color-text-secondary)]">
-          {access ? `Роль: ${roles[access.actorRole] || access.actorRole} · ${access.owner ? 'владелец платформы' : 'доступ по выданным разрешениям'}. ${access.owner ? 'Глобальная область и полный доступ к платформенным разделам.' : 'Показаны только разрешённые разделы и данные.'}` : 'Проверяем доступ и состав доступных разделов…'}
+          {access ? `${roles[access.actorRole] || access.actorRole} · область: ${universityScopeLabel}. ${access.owner ? 'Вы владелец платформы.' : 'Доступ ограничен выданными правами; роль сама по себе не даёт прав владельца.'}` : 'Проверяем вашу роль и доступ…'}
         </p>
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        {access && <span className="control-count">Доступно {available.length} из {tabs.length} разделов</span>}
         <Button onClick={context.refresh} disabled={context.loading}>{context.loading ? 'Обновляем…' : 'Обновить доступ'}</Button>
       </div>
     </header>
@@ -138,10 +144,10 @@ export default function PlatformControlPage() {
     {access?.ownerConfigured && !available.length && <Notice>Разрешения на управление пока не выданы. Их назначает владелец платформы.</Notice>}
     {access && active && requestedTab && requestedTab !== active && <Notice>Запрошенный раздел недоступен по текущим разрешениям. Открыт первый доступный раздел.</Notice>}
     {!!available.length && <div className="grid items-start gap-5 lg:grid-cols-[19rem_minmax(0,1fr)] xl:grid-cols-[21rem_minmax(0,1fr)]">
-      <aside aria-label="Разделы управления платформой" className="control-nav-card lg:sticky lg:top-20">
-        <label className="block text-sm font-semibold">Найти раздел<input type="search" className="mt-2 min-h-11 w-full rounded-lg border border-[var(--color-border-strong)] bg-white px-3 py-2 text-sm outline-none focus:border-[var(--color-brand)] focus:ring-2 focus:ring-[var(--color-brand-soft)]" value={query} maxLength={80} placeholder="Например: аккаунты, расписание, аудит" onChange={event => setQuery(event.target.value)} /></label>
-        <p className="mt-2 text-xs text-[var(--color-text-secondary)]">{term ? searchCount ? `Найдено разделов: ${searchCount}` : 'Ничего не найдено. Уточните запрос или очистите поле.' : 'Выберите категорию, затем нужный раздел.'}</p>
-        <nav aria-label="Категории и разделы управления" className="mt-3 space-y-1">
+      <aside aria-label="Навигация панели платформы" className="control-nav-card lg:sticky lg:top-20">
+        <label className="block text-sm font-semibold">Найти инструмент<input type="search" className="mt-2 min-h-11 w-full rounded-lg border border-[var(--color-border-strong)] bg-white px-3 py-2 text-sm outline-none focus:border-[var(--color-brand)] focus:ring-2 focus:ring-[var(--color-brand-soft)]" value={query} maxLength={80} placeholder="Например: преподаватель, группа, расписание" onChange={event => setQuery(event.target.value)} /></label>
+        <p className="mt-2 text-xs text-[var(--color-text-secondary)]" role="status" aria-live="polite">{term ? searchCount ? `Найдено инструментов: ${searchCount}` : 'Совпадений нет. Проверьте запрос или очистите поиск.' : 'Выберите рабочую область. Доступные действия отфильтрованы по вашим правам.'}</p>
+        <nav aria-label="Рабочие области и инструменты" className="mt-3 space-y-1">
           {visibleSections.map(section => {
             const sectionTabs = tabsForSection(section.id);
             if (!sectionTabs.length) return null;
@@ -159,39 +165,22 @@ export default function PlatformControlPage() {
         </nav>
       </aside>
       <section aria-live="polite" aria-label={activeTab ? `Раздел: ${activeTab.label}` : 'Раздел управления'} className="control-content min-w-0 space-y-4">
-        {tab === 'home' && <div className="space-y-5">
-          <section className="rounded-2xl border border-[var(--color-border)] bg-white p-5 shadow-sm sm:p-6">
-            <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--color-brand)]">Рабочее место супер-администратора</p>
-            <h2 className="mt-2 text-xl font-bold tracking-tight sm:text-2xl">Что нужно сделать?</h2>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--color-text-secondary)]">Основные операции вынесены сюда. Выберите аккаунт или вуз и переходите к его данным; остальные инструменты собраны ниже по областям.</p>
-            <div className="mt-5 grid gap-3 xl:grid-cols-2">
-              {available.some(item => item.id === 'accounts') && <button type="button" onClick={() => select('accounts')} className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 text-left transition hover:border-[var(--color-brand)] hover:bg-[var(--color-brand-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand)]">
-                <span className="flex items-center gap-2 text-base font-semibold"><Icon name="users" size={18} /> Пользователи и аккаунты</span>
-                <span className="mt-2 block text-sm leading-5 text-[var(--color-text-secondary)]">Найти человека, открыть карточку, создать аккаунт, изменить роль и вуз, заблокировать доступ или завершить сессии.</span>
-                <span className="mt-3 block text-sm font-semibold text-[var(--color-brand)]">Открыть аккаунты →</span>
-              </button>}
-              {available.some(item => item.id === 'universities') && <button type="button" onClick={() => select('universities')} className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 text-left transition hover:border-[var(--color-brand)] hover:bg-[var(--color-brand-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand)]">
-                <span className="flex items-center gap-2 text-base font-semibold"><Icon name="building" size={18} /> Университеты и структура</span>
-                <span className="mt-2 block text-sm leading-5 text-[var(--color-text-secondary)]">{canEditUniversityMetadata ? 'Открыть список вузов, изменить сведения об университете, просмотреть и редактировать факультеты и учебные группы.' : access?.permissions.includes('universities.write') ? 'Открыть список доступных вузов, просмотреть и редактировать факультеты и учебные группы.' : 'Открыть список доступных вузов и просмотреть их структуру.'}</span>
-                <span className="mt-3 block text-sm font-semibold text-[var(--color-brand)]">Открыть вузы →</span>
-              </button>}
+        {tab === 'home' && <div className="space-y-4">
+          <section className="rounded-xl border border-[var(--color-border)] bg-white p-4 shadow-sm sm:p-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div><p className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--color-brand)]">Обзор</p><h2 className="mt-1 text-xl font-bold tracking-tight">С чего начать</h2><p className="mt-1 max-w-2xl text-sm text-[var(--color-text-secondary)]">Выберите задачу. Панель покажет только разделы и данные, доступные вашей роли.</p></div>
+              {access && <span className="control-count">{access.owner ? 'Владелец платформы' : roles[access.actorRole] || access.actorRole}</span>}
             </div>
-            {!access?.owner && <p className="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900">Роль: {roles[access?.actorRole ?? ''] || access?.actorRole}. Область данных: {universityScopeLabel}. Роль суперадминистратора сама по себе не делает аккаунт владельцем. Сведения вуза и контур доверия доступны только владельцу платформы; остальные действия зависят от разрешений слева.</p>}
-            {access?.owner && <p className="mt-4 rounded-lg bg-emerald-50 px-3 py-2 text-xs leading-5 text-emerald-900">Роль: {roles[access.actorRole] || access.actorRole} · владелец платформы · полный глобальный доступ. Изменения пользователей и структуры записываются в журнал действий.</p>}
+            {homeActions.length ? <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3" aria-label="Быстрый переход к задачам">
+              {homeActions.map(action => <button key={action.id} type="button" onClick={() => select(action.id)} className="group flex min-h-[5.5rem] items-start gap-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-3 text-left transition hover:border-[var(--color-brand)] hover:bg-[var(--color-brand-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand)]">
+                <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-white text-[var(--color-brand)]" aria-hidden="true"><Icon name={action.icon} size={18} /></span>
+                <span className="min-w-0 flex-1"><span className="block font-semibold group-hover:text-[var(--color-brand-strong)]">{action.title}</span><span className="mt-1 block text-sm leading-5 text-[var(--color-text-secondary)]">{action.description}</span></span>
+                <Icon name="arrow-right" size={16} />
+              </button>)}
+            </div> : <Notice>Для этой учётной записи нет доступных действий. Если доступ должен быть выдан, обратитесь к владельцу платформы.</Notice>}
+            {access && <p className="mt-4 border-t border-[var(--color-border)] pt-3 text-sm text-[var(--color-text-secondary)]">Область данных: <strong className="font-semibold text-[var(--color-text)]">{universityScopeLabel}</strong>{!access.owner && ' · права владельца платформы и изменение глобальных настроек не входят в эту роль.'}</p>}
           </section>
-          <section aria-label="Все доступные инструменты" className="space-y-3">
-            <div><h2 className="text-lg font-semibold">Все разделы управления</h2><p className="mt-1 text-sm text-[var(--color-text-secondary)]">Разделы показаны по областям данных; недоступные по разрешениям скрыты.</p></div>
-            <div className="grid gap-3 xl:grid-cols-2">
-              {sections.map(section => {
-                const items = available.filter(item => item.section === section.id && matches(item));
-                if (!items.length) return null;
-                return <div key={section.id} className="rounded-xl border border-[var(--color-border)] bg-white p-4">
-                  <h3 className="font-semibold">{section.label}</h3><p className="mt-1 text-xs text-[var(--color-text-secondary)]">{section.description}</p>
-                  <div className="mt-3 flex flex-wrap gap-2">{items.map(item => <button key={item.id} type="button" onClick={() => select(item.id)} className="min-h-10 rounded-lg border border-[var(--color-border)] px-3 py-2 text-left text-sm font-medium hover:border-[var(--color-brand)] hover:text-[var(--color-brand)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand)]">{item.label}</button>)}</div>
-                </div>;
-              })}
-            </div>
-          </section>
+          <p className="px-1 text-sm text-[var(--color-text-secondary)]">Нужен другой раздел? Используйте поиск инструментов или раскройте рабочую область слева.</p>
         </div>}
         {activeTab && <div className="control-context"><p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--color-brand)]">{activeSectionMeta?.label}</p><p className="mt-1 text-sm text-[var(--color-text-secondary)]">{activeTab.description}</p></div>}
         {access && <>{active === 'services' && <ServicesPanel access={access} />}{active === 'user-hub' && <UserHubPanel access={access} onNavigate={openUserSection} />}{active === 'accounts' && <AccountsPanel access={access} />}{active === 'student-data' && <StudentDataPanel access={access} />}{active === 'personal-records' && <PersonalRecordsPanel access={access} />}{active === 'notifications-data' && <NotificationsDataPanel access={access} />}{active === 'homework-submissions' && <HomeworkSubmissionsPanel access={access} />}{active === 'curator-assignments' && <CuratorAssignmentsPanel access={access} />}{active === 'announcements' && <AnnouncementsPanel access={access} />}{active === 'pair-spaces' && <PairSpacesPanel access={access} />}{active === 'academic-schedule' && <AcademicSchedulePanel access={access} />}{active === 'events' && <EventsPanel access={access} />}{active === 'attachments' && <AttachmentsPanel access={access} />}{active === 'career-data' && <CareerDataPanel access={access} />}{active === 'career-companies' && <CareerCompaniesPanel access={access} />}{active === 'career-tasks' && <CareerTasksPanel access={access} />}{active === 'career-operations' && <CareerOperationsPanel access={access} />}{active === 'career-memberships' && <CareerMembershipsPanel access={access} />}{active === 'career-tests' && <CareerTestsPanel access={access} />}{active === 'career-content' && <CareerContentPanel access={access} />}{active === 'career-planning' && <CareerAvailabilityPanel access={access} />}{active === 'discussions' && <DiscussionsPanel access={access} />}{active === 'universities' && <UniversitiesPanel access={access} />}{active === 'permissions' && access.owner && <PermissionsPanel access={access} />}{active === 'settings' && <SettingsPanel access={access} />}{active === 'audit' && <AuditPanel access={access} />}</>}

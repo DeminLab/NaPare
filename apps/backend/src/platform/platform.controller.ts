@@ -2,7 +2,7 @@ import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Put, Query, R
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { PlatformService } from './platform.service';
-import { PlatformAccountArchiveDto, PlatformAccountDto, PlatformAccountQueryDto, PlatformCreateAccountDto, PlatformEmergencyDto, PlatformFacultyDto, PlatformGrantDto, PlatformGroupDto, PlatformIdentityLinkDto, PlatformJobDto, PlatformPasswordDto, PlatformQueryDto, PlatformSettingsDto, PlatformStructureArchiveDto, PlatformStructureQueryDto, PlatformUniversityDto } from './platform.dto';
+import { PlatformAccountArchiveDto, PlatformAccountDto, PlatformAccountQueryDto, PlatformCreateAccountDto, PlatformEmergencyDto, PlatformFacultyDto, PlatformGrantDto, PlatformGroupDto, PlatformIdentityLinkDto, PlatformJobDto, PlatformPasswordDto, PlatformQueryDto, PlatformScheduleConnectorDto, PlatformSettingsDto, PlatformStructureArchiveDto, PlatformStructureQueryDto, PlatformUniversityDto } from './platform.dto';
 
 @ApiTags('platform') @ApiBearerAuth() @UseGuards(JwtAuthGuard) @Controller('platform')
 export class PlatformController {
@@ -32,6 +32,9 @@ export class PlatformController {
   @Get('groups') groups(@Query('organizationId', ParseUUIDPipe) organizationId: string) { return this.platform.groups(organizationId); }
   @Post('universities') createUniversity(@Body() dto: PlatformUniversityDto) { return this.platform.saveUniversity(dto); }
   @Put('universities/:id') updateUniversity(@Param('id', ParseUUIDPipe) id: string, @Body() dto: PlatformUniversityDto) { return this.platform.saveUniversity(dto, id); }
+  @Get('universities/:id/schedule-connector') @ApiOperation({ summary: 'Прочитать безопасные настройки источника расписания выбранного вуза' }) scheduleConnector(@Param('id', ParseUUIDPipe) id: string) { return this.platform.scheduleConnector(id); }
+  @Patch('universities/:id/schedule-connector') @ApiOperation({ summary: 'Изменить источник расписания выбранного вуза с аудитом' }) updateScheduleConnector(@Param('id', ParseUUIDPipe) id: string, @Body() dto: PlatformScheduleConnectorDto, @Request() req: { ip: string; get(name: string): string | undefined }) { return this.platform.updateScheduleConnector(id, dto, { ip: req.ip, userAgent: req.get('user-agent') }); }
+  @Post('universities/:id/schedule-connector/test') @ApiOperation({ summary: 'Проверить rasp.sano.ru для выбранного вуза без записи учебных данных' }) testScheduleConnector(@Param('id', ParseUUIDPipe) id: string) { return this.platform.testScheduleConnector(id); }
   @Get('organization/faculties') organizationFaculties(@Query() query: PlatformStructureQueryDto) { return this.platform.organizationFaculties(query); }
   @Post('organization/faculties') createOrganizationFaculty(@Query('organizationId', ParseUUIDPipe) organizationId: string, @Body() dto: PlatformFacultyDto) { return this.platform.saveOrganizationFaculty(organizationId, dto); }
   @Put('organization/faculties/:id') updateOrganizationFaculty(@Param('id', ParseUUIDPipe) id: string, @Body() dto: PlatformFacultyDto) { return this.platform.saveOrganizationFaculty(undefined, dto, id); }
