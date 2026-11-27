@@ -662,6 +662,7 @@ body .login-layout.login-focused.login-focused {
     radial-gradient(ellipse at 18% 77%, rgb(65 91 239 / .48), transparent 43%),
     linear-gradient(135deg, #071a43 0%, #173a78 52%, #172765 100%);
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   isolation: isolate;
   justify-items: center;
   min-height: 100svh;
