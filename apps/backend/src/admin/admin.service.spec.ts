@@ -70,6 +70,7 @@ describe("AdminService", () => {
     findOne: jest.fn().mockResolvedValue(defaults.findOne || null),
     create: jest.fn().mockImplementation((dto) => ({ id: "1", ...dto })),
     save: jest.fn().mockImplementation((entity) => Promise.resolve(entity)),
+    softDelete: jest.fn().mockResolvedValue({ affected: 0 }),
     findAndCount: jest.fn().mockResolvedValue([[], 0]),
     count: jest.fn().mockResolvedValue(0),
     delete: jest.fn(),
@@ -856,6 +857,76 @@ describe("AdminService", () => {
           payload: expect.objectContaining({ groupId: "group-1" }),
         }),
       );
+    });
+
+    it("soft-deletes stale SIBIT lessons only in the selected year and keeps archived-group rows", async () => {
+      const universityRepository = module.get(getRepositoryToken(University));
+      const userRepository = module.get(getRepositoryToken(User));
+      const lessonRepository = module.get(getRepositoryToken(Lesson));
+      const groupRepository = module.get(getRepositoryToken(Group));
+      configureSibitTransaction({
+        faculties: [{ id: "faculty-1", organizationId: "uni-1", name: "ДОО", code: "sibit-24", archivedAt: null }],
+        groups: [{ id: "group-1", organizationId: "uni-1", facultyId: "faculty-1", name: "ГМУ-25", externalId: "12136", archivedAt: null }],
+      });
+      universityRepository.findOne.mockResolvedValue({
+        id: "uni-1", name: "СИБИТ", city: "Омск", status: "active", connectorType: "rasp-sano", connectorConfig: {},
+      });
+      userRepository.find.mockResolvedValue([]);
+      groupRepository.find.mockResolvedValue([
+        { id: "group-1", archivedAt: null },
+        { id: "group-archived", archivedAt: new Date() },
+      ]);
+      const currentLesson = {
+        id: "lesson-current",
+        organizationId: "uni-1",
+        groupId: "group-1",
+        teacherId: null,
+        sourceTeacherId: null,
+        subject: "Тестовый предмет",
+        subjectType: undefined,
+        room: undefined,
+        dayOfWeek: 4,
+        startTime: "10:10",
+        endTime: "11:40",
+        pairNumber: 2,
+        weekType: "odd",
+        startDate: new Date("2026-09-17T10:10:00"),
+        endDate: new Date("2026-09-17T11:40:00"),
+        teacherName: "Иванов И.И.",
+        groupName: "ГМУ-25",
+        subgroup: undefined,
+        faculty: "ДОО",
+        notes: undefined,
+        isChanged: false,
+        changeDescription: undefined,
+        source: "sibit",
+        externalId: "5632268",
+        sourceVersion: "2026-2027",
+      };
+      lessonRepository.find.mockResolvedValue([
+        currentLesson,
+        { id: "lesson-stale", groupId: "group-1", source: "sibit", externalId: "old", sourceVersion: "2026-2027", startDate: new Date("2026-12-01T10:10:00") },
+        { id: "lesson-other-year", groupId: "group-1", source: "sibit", externalId: "old-year", sourceVersion: "2025-2026", startDate: new Date("2025-12-01T10:10:00") },
+        { id: "lesson-archived", groupId: "group-archived", source: "sibit", externalId: "archived", sourceVersion: "2026-2027", startDate: new Date("2026-12-01T10:10:00") },
+      ]);
+      mockSibitConnectorService.sync.mockResolvedValue({
+        groups: 1,
+        lessons: 1,
+        teachers: 0,
+        catalog: {
+          academicYear: "2026-2027",
+          groups: [{ groupId: "12136", name: "ГМУ-25", faculty: "ДОО", facultyId: 24, course: 2, academicYear: "2026-2027" }],
+          lessons: [{ lessonId: "5632268", groupId: "12136", groupName: "ГМУ-25", date: "2026-09-17", dayOfWeek: 4, startTime: "10:10", endTime: "11:40", pairNumber: 2, subject: "Тестовый предмет", teacher: "Иванов И.И.", weekType: "odd", academicYear: "2026-2027", isReplacement: false }],
+        },
+      });
+
+      await expect(service.syncSchedule("uni-1")).resolves.toMatchObject({ removed: 1 });
+      expect(lessonRepository.softDelete).toHaveBeenCalledTimes(1);
+      const [criteria] = lessonRepository.softDelete.mock.calls[0];
+      expect(criteria.organizationId).toBe("uni-1");
+      expect(criteria.source).toBe("sibit");
+      expect(criteria.id._value).toEqual(["lesson-stale"]);
+      expect(lessonRepository.find).toHaveBeenCalledWith({ where: { organizationId: "uni-1", source: "sibit" } });
     });
 
     it("does not create active duplicates or link students and lessons for archived source structure", async () => {

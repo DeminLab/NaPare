@@ -547,6 +547,7 @@ export class AdminService {
     teachers: number;
     imported: number;
     updated: number;
+    removed: number;
     studentsLinked: number;
   }> {
     this.tenantContext.assertAccess(organizationId);
@@ -589,6 +590,7 @@ export class AdminService {
   ): Promise<{
     imported: number;
     updated: number;
+    removed: number;
     studentsLinked: number;
     groupsPersisted: number;
     groupsCreated: number;
@@ -693,12 +695,15 @@ export class AdminService {
     );
     let imported = 0;
     let updated = 0;
+    let removed = 0;
+    const seenSourceKeys = new Set<string>();
     const syncedAt = new Date();
 
     for (const sourceLesson of catalog.lessons) {
       const group = groupsBySourceId.get(sourceLesson.groupId);
       if (!group || group.archivedAt || blockedSourceGroupIds.has(sourceLesson.groupId)) continue;
       const key = sibitLessonKey(sourceLesson.lessonId, group.id);
+      seenSourceKeys.add(key);
       const existing = lessonBySourceKey.get(key);
       const source = {
         organizationId,
@@ -764,9 +769,42 @@ export class AdminService {
       }
     }
 
+    // SIBIT is a full academic-year snapshot. Remove source-owned rows that
+    // disappeared from the current catalog so obsolete dates do not remain
+    // visible to teachers or keep old groups attached to their account.
+    // Manual rows, other academic years and lessons in archived groups stay
+    // untouched.
+    if (catalog.lessons.length > 0) {
+      const groups = await this.groupRepository.find({
+        where: { organizationId },
+        select: { id: true, archivedAt: true },
+      });
+      const archivedGroupIds = new Set(
+        groups.filter((group) => group.archivedAt).map((group) => group.id),
+      );
+      const currentYear = Number(catalog.academicYear.slice(0, 4));
+      const academicYearStart = `${currentYear}-09-01`;
+      const academicYearEnd = `${currentYear + 1}-08-31`;
+      const staleIds = existingLessons
+        .filter((lesson) => {
+          if (archivedGroupIds.has(lesson.groupId)) return false;
+          if (lesson.sourceVersion && lesson.sourceVersion !== catalog.academicYear) return false;
+          const lessonDate = new Date(lesson.startDate).toISOString().slice(0, 10);
+          const isCurrentYear = lesson.sourceVersion === catalog.academicYear
+            || (lesson.sourceVersion == null && lessonDate >= academicYearStart && lessonDate <= academicYearEnd);
+          return isCurrentYear && !seenSourceKeys.has(sibitLessonKey(lesson.externalId, lesson.groupId));
+        })
+        .map((lesson) => lesson.id);
+      if (staleIds.length) {
+        await this.lessonRepository.softDelete({ id: In(staleIds), organizationId, source: "sibit" });
+        removed = staleIds.length;
+      }
+    }
+
     return {
       imported,
       updated,
+      removed,
       studentsLinked,
       groupsPersisted,
       groupsCreated,
