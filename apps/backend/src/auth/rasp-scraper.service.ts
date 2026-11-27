@@ -13,6 +13,8 @@ export const SIBIT_UNIVERSITY = {
 const RASP_BASE_URL = 'https://rasp.sano.ru';
 const CACHE_TTL_MS = 15 * 60 * 1000;
 const REQUEST_TIMEOUT_MS = 15_000;
+const CATALOG_SCHEDULE_CONCURRENCY = 8;
+const CATALOG_TIMEOUT_MS = 45_000;
 
 interface RaspApiResponse<T> {
   state?: number;
@@ -177,13 +179,68 @@ export class RaspScraperService {
     }
   }
 
-  async getCatalog(year?: string): Promise<RaspCatalog> {
+  async getCatalog(
+    year?: string,
+    options: { allowPartial?: boolean } = {},
+  ): Promise<RaspCatalog> {
+    const deadlineAt = Date.now() + CATALOG_TIMEOUT_MS;
     const academicYear = await this.resolveYear(year);
     const cached = this.catalogCache.get(academicYear);
     if (cached && cached.expiresAt > Date.now()) return cached.value;
     const groups = await this.getGroups(academicYear);
-    const scheduleChunks = await Promise.all(groups.map((group) => this.getSchedule(group.groupId, academicYear)));
-    const lessons = scheduleChunks.flat();
+    const remainingBudgetMs = deadlineAt - Date.now();
+    if (remainingBudgetMs <= 0) {
+      throw new BadGatewayException('Не удалось полностью загрузить расписание СИБИТа');
+    }
+    const scheduleResults: Array<PromiseSettledResult<RaspLesson[]> | undefined> = new Array(groups.length);
+    let nextGroupIndex = 0;
+    let stopScheduling = false;
+    const worker = async () => {
+      while (!stopScheduling) {
+        const index = nextGroupIndex++;
+        if (index >= groups.length) return;
+        try {
+          const lessons = await this.getSchedule(groups[index].groupId, academicYear);
+          if (!stopScheduling) scheduleResults[index] = { status: 'fulfilled', value: lessons };
+        } catch (reason) {
+          if (!stopScheduling) scheduleResults[index] = { status: 'rejected', reason };
+        }
+      }
+    };
+    const workersDone = Promise.all(
+      Array.from({ length: Math.min(CATALOG_SCHEDULE_CONCURRENCY, groups.length) }, () => worker()),
+    );
+    let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+    await Promise.race([
+      workersDone,
+      new Promise<void>((resolve) => {
+        timeoutHandle = setTimeout(() => {
+          stopScheduling = true;
+          resolve();
+        }, remainingBudgetMs);
+      }),
+    ]);
+    if (timeoutHandle) clearTimeout(timeoutHandle);
+
+    const successfulSchedules = scheduleResults.filter(
+      (result): result is PromiseFulfilledResult<RaspLesson[]> => result?.status === 'fulfilled',
+    ).length;
+    const failedSchedules = scheduleResults.filter(
+      (result): result is PromiseRejectedResult => result?.status === 'rejected',
+    ).length;
+    const pendingSchedules = groups.length - successfulSchedules - failedSchedules;
+    const incomplete = failedSchedules > 0 || pendingSchedules > 0;
+    if (incomplete && (!options.allowPartial || successfulSchedules === 0)) {
+      throw new BadGatewayException('Не удалось полностью загрузить расписание СИБИТа');
+    }
+    const lessons = scheduleResults.flatMap((result) =>
+      result?.status === 'fulfilled' ? result.value : [],
+    );
+    if (incomplete) {
+      this.logger.warn(
+        `Loaded a partial SIBIT catalog for ${academicYear}: ${failedSchedules} failed, ${pendingSchedules} not completed of ${groups.length} group schedules`,
+      );
+    }
     const catalog: RaspCatalog = {
       university: SIBIT_UNIVERSITY,
       academicYear,
@@ -193,7 +250,9 @@ export class RaspScraperService {
       subjects: this.collectSubjects(lessons),
       lessons,
     };
-    this.catalogCache.set(academicYear, { value: catalog, expiresAt: Date.now() + CACHE_TTL_MS });
+    if (!incomplete) {
+      this.catalogCache.set(academicYear, { value: catalog, expiresAt: Date.now() + CACHE_TTL_MS });
+    }
     this.logger.log(`Fetched SIBIT catalog for ${academicYear}: ${groups.length} groups, ${catalog.subjects.length} subjects, ${lessons.length} lessons`);
     return catalog;
   }

@@ -1,4 +1,4 @@
-import { RaspScraperService } from './rasp-scraper.service';
+import { RaspScraperService, type RaspLesson } from './rasp-scraper.service';
 
 describe('RaspScraperService', () => {
   const sourceLesson = (groupId: number, code: number) => ({
@@ -58,6 +58,131 @@ describe('RaspScraperService', () => {
       { key: 'Тестовый предмет::лек', name: 'Тестовый предмет', type: 'лек', groupIds: ['12136', '12134'] },
     ]);
     expect(fetchMock).toHaveBeenCalledTimes(4);
+  });
+
+  it('returns successful schedules when a teacher-catalog request allows partial results', async () => {
+    const fetchMock = jest.fn() as jest.MockedFunction<typeof fetch>;
+    fetchMock.mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.endsWith('/api/Rasp/ListYears')) {
+        return { ok: true, json: async () => ({ state: 1, data: { years: ['2026-2027'] } }) } as Response;
+      }
+      if (url.includes('/api/raspGrouplist?year=2026-2027')) {
+        return { ok: true, json: async () => ({ state: 1, data: groups }) } as Response;
+      }
+      if (url.includes('idGroup=12136')) {
+        return {
+          ok: true,
+          json: async () => ({ state: 1, data: { rasp: [sourceLesson(12136, 12136)] } }),
+        } as Response;
+      }
+      throw new Error('upstream unavailable');
+    });
+    global.fetch = fetchMock;
+
+    const service = new RaspScraperService();
+    const catalog = await service.getCatalog('2026-2027', { allowPartial: true });
+
+    expect(catalog.groups).toHaveLength(2);
+    expect(catalog.lessons).toHaveLength(1);
+    expect(catalog.lessons[0].groupId).toBe('12136');
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+  });
+
+  it('returns available schedules at the catalog deadline in partial mode', async () => {
+    jest.useFakeTimers();
+    try {
+      const fetchMock = jest.fn() as jest.MockedFunction<typeof fetch>;
+      fetchMock.mockImplementation(async (input) => {
+        const url = String(input);
+        if (url.endsWith('/api/Rasp/ListYears')) {
+          return { ok: true, json: async () => ({ state: 1, data: { years: ['2026-2027'] } }) } as Response;
+        }
+        if (url.includes('/api/raspGrouplist?year=2026-2027')) {
+          return { ok: true, json: async () => ({ state: 1, data: groups }) } as Response;
+        }
+        return {
+          ok: true,
+          json: async () => ({ state: 1, data: { rasp: [sourceLesson(12136, 12136)] } }),
+        } as Response;
+      });
+      global.fetch = fetchMock;
+
+      const service = new RaspScraperService();
+      const fetchSchedule = service.getSchedule.bind(service);
+      const getSchedule = jest.spyOn(service, 'getSchedule').mockImplementation((groupId, year) =>
+        groupId === '12136'
+          ? fetchSchedule(groupId, year)
+          : new Promise<RaspLesson[]>(() => undefined),
+      );
+      const catalogPromise = service.getCatalog('2026-2027', { allowPartial: true });
+
+      await jest.advanceTimersByTimeAsync(45_000);
+      const catalog = await catalogPromise;
+
+      expect(catalog.lessons).toHaveLength(1);
+      expect(catalog.lessons[0].groupId).toBe('12136');
+      expect(getSchedule).toHaveBeenCalledTimes(2);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('rejects strict catalog loading at the deadline', async () => {
+    jest.useFakeTimers();
+    try {
+      const fetchMock = jest.fn() as jest.MockedFunction<typeof fetch>;
+      fetchMock.mockImplementation(async (input) => {
+        const url = String(input);
+        if (url.endsWith('/api/Rasp/ListYears')) {
+          return { ok: true, json: async () => ({ state: 1, data: { years: ['2026-2027'] } }) } as Response;
+        }
+        if (url.includes('/api/raspGrouplist?year=2026-2027')) {
+          return { ok: true, json: async () => ({ state: 1, data: groups }) } as Response;
+        }
+        return {
+          ok: true,
+          json: async () => ({ state: 1, data: { rasp: [sourceLesson(12136, 12136)] } }),
+        } as Response;
+      });
+      global.fetch = fetchMock;
+
+      const service = new RaspScraperService();
+      const fetchSchedule = service.getSchedule.bind(service);
+      const getSchedule = jest.spyOn(service, 'getSchedule').mockImplementation((groupId, year) =>
+        groupId === '12136'
+          ? fetchSchedule(groupId, year)
+          : new Promise<RaspLesson[]>(() => undefined),
+      );
+      const catalogPromise = service.getCatalog('2026-2027');
+      const rejection = expect(catalogPromise)
+        .rejects.toThrow('Не удалось полностью загрузить расписание СИБИТа');
+
+      await jest.advanceTimersByTimeAsync(45_000);
+      await rejection;
+      expect(getSchedule).toHaveBeenCalledTimes(2);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('rejects a teacher catalog when every group schedule fails', async () => {
+    const fetchMock = jest.fn() as jest.MockedFunction<typeof fetch>;
+    fetchMock.mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.endsWith('/api/Rasp/ListYears')) {
+        return { ok: true, json: async () => ({ state: 1, data: { years: ['2026-2027'] } }) } as Response;
+      }
+      if (url.includes('/api/raspGrouplist?year=2026-2027')) {
+        return { ok: true, json: async () => ({ state: 1, data: groups }) } as Response;
+      }
+      throw new Error('upstream unavailable');
+    });
+    global.fetch = fetchMock;
+
+    const service = new RaspScraperService();
+    await expect(service.getCatalog('2026-2027', { allowPartial: true }))
+      .rejects.toThrow('Не удалось полностью загрузить расписание СИБИТа');
   });
 
   it('rejects a group that is not in the current source list', async () => {

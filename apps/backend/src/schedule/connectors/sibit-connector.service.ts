@@ -69,7 +69,7 @@ export class SibitConnectorService {
   }
 
   async getTeachers(year?: string): Promise<SibitTeacher[]> {
-    const catalog = await this.raspScraperService.getCatalog(year);
+    const catalog = await this.raspScraperService.getCatalog(year, { allowPartial: true });
     return this.collectTeachers(catalog.lessons);
   }
 

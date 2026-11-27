@@ -159,6 +159,7 @@ describe("SibitConnectorService", () => {
         groups: [{ id: "12136", name: "ГМУ-25" }],
       },
     ]);
+    expect(scraper.getCatalog).toHaveBeenCalledWith(undefined, { allowPartial: true });
   });
 
   it("summarises the full catalog for a manual sync", async () => {
