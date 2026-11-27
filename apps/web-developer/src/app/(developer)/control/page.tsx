@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Icon, type IconName } from '@napare/ui';
 import ServicesPanel from './ServicesPanel';
 import AccountsPanel from './AccountsPanel';
@@ -72,6 +72,8 @@ export default function PlatformControlPage() {
   const [requestedTab, setRequestedTab] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [expandedSection, setExpandedSection] = useState<SectionId | 'none' | null>(null);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const mobileNavTrigger = useRef<HTMLButtonElement | null>(null);
   const access = context.data;
   const available = tabs.filter(item => item.permission === 'owner' ? access?.owner : item.permission === 'user-directory' ? access?.permissions.some(permission => ['accounts.read', 'personal-data.read'].includes(permission)) : access?.permissions.includes(item.permission));
   const universityScopeLabel = access?.owner || access?.organizationIds === null ? 'глобальная область' : `выбранные вузы (${access?.organizationIds?.length ?? 0})`;
@@ -112,6 +114,10 @@ export default function PlatformControlPage() {
     if (target) setExpandedSection(target.section);
     const url = new URL(window.location.href); url.searchParams.set('tab', id); url.searchParams.delete('userId'); url.searchParams.delete('universityId'); url.searchParams.delete('universityQuery');
     window.history.pushState(null, '', url);
+    setMobileNavOpen(false);
+    if (window.matchMedia('(max-width: 1023px)').matches) {
+      window.requestAnimationFrame(() => mobileNavTrigger.current?.focus());
+    }
   };
   const toggleSection = (id: SectionId) => setExpandedSection(current => current === id ? 'none' : id);
   const openUserSection = (id: string, userId: string) => {
@@ -119,6 +125,10 @@ export default function PlatformControlPage() {
     setTab(id); setRequestedTab(null); if (target) setExpandedSection(target.section);
     const url = new URL(window.location.href); url.searchParams.set('tab', id); url.searchParams.set('userId', userId); url.searchParams.delete('universityId'); url.searchParams.delete('universityQuery');
     window.history.pushState(null, '', url);
+    setMobileNavOpen(false);
+    if (window.matchMedia('(max-width: 1023px)').matches) {
+      window.requestAnimationFrame(() => mobileNavTrigger.current?.focus());
+    }
   };
   const openAccount = (userId: string) => openUserSection('accounts', userId);
   const openUniversity = (universityId: string, name: string) => {
@@ -131,6 +141,10 @@ export default function PlatformControlPage() {
     url.searchParams.set('universityQuery', name);
     url.searchParams.delete('userId');
     window.history.pushState(null, '', url);
+    setMobileNavOpen(false);
+    if (window.matchMedia('(max-width: 1023px)').matches) {
+      window.requestAnimationFrame(() => mobileNavTrigger.current?.focus());
+    }
   };
   const homeActions: Array<{ id: string; title: string; description: string; icon: IconName }> = [
     ...(available.some(item => item.id === 'universities') ? [{ id: 'universities', title: 'Университеты', description: 'Открыть вуз, его факультеты и учебные группы.', icon: 'building' as IconName }] : []),
@@ -157,7 +171,21 @@ export default function PlatformControlPage() {
     {access?.ownerConfigured && !available.length && <Notice>Разрешения на управление пока не выданы. Их назначает владелец платформы.</Notice>}
     {access && active && requestedTab && requestedTab !== active && <Notice>Запрошенный раздел недоступен по текущим разрешениям. Открыт первый доступный раздел.</Notice>}
     {!!available.length && <div className="grid items-start gap-5 lg:grid-cols-[19rem_minmax(0,1fr)] xl:grid-cols-[21rem_minmax(0,1fr)]">
-      <aside aria-label="Навигация панели платформы" className="control-nav-card lg:sticky lg:top-20">
+      <button
+        ref={mobileNavTrigger}
+        type="button"
+        className="control-mobile-nav-trigger lg:hidden"
+        aria-expanded={mobileNavOpen}
+        aria-controls="platform-control-navigation"
+        onClick={() => setMobileNavOpen(open => !open)}
+      >
+        <span>
+          <span className="block text-xs font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">Разделы платформы</span>
+          <span className="mt-0.5 block truncate font-semibold">{activeTab ? activeTab.label : 'Выберите задачу'}</span>
+        </span>
+        <span className="control-mobile-nav-action">{mobileNavOpen ? 'Свернуть' : 'Все разделы'}</span>
+      </button>
+      <aside id="platform-control-navigation" aria-label="Навигация панели платформы" className={`control-nav-card lg:sticky lg:top-20 ${mobileNavOpen ? 'block' : 'hidden lg:block'}`}>
         <label className="block text-sm font-semibold">Найти инструмент<input type="search" className="mt-2 min-h-11 w-full rounded-lg border border-[var(--color-border-strong)] bg-white px-3 py-2 text-sm outline-none focus:border-[var(--color-brand)] focus:ring-2 focus:ring-[var(--color-brand-soft)]" value={query} maxLength={80} placeholder="Например: преподаватель, группа, расписание" onChange={event => setQuery(event.target.value)} /></label>
         <p className="mt-2 text-xs text-[var(--color-text-secondary)]" role="status" aria-live="polite">{term ? searchCount ? `Найдено инструментов: ${searchCount}` : 'Совпадений нет. Проверьте запрос или очистите поиск.' : 'Выберите рабочую область. Доступные действия отфильтрованы по вашим правам.'}</p>
         <nav aria-label="Рабочие области и инструменты" className="mt-3 space-y-1">

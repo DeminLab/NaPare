@@ -12,7 +12,7 @@ import {
   type WorkspaceCommand,
   type WorkspaceNavGroup,
 } from "@napare/ui/workspace-shell";
-import { apiFetch, getUnreadCount, getUser, isLoggedIn, logout, readUserCache } from "@/lib/api";
+import { apiFetch, getUnreadCount, getUser, isLoggedIn, logout } from "@/lib/api";
 
 const groups: WorkspaceNavGroup[] = [
   {
@@ -69,6 +69,7 @@ const AppLink = ({ href, children, ...props }: NavigationLinkProps) => (
 const searchWorkspace = async (query: string, signal: AbortSignal) => searchCommands(await apiFetch<WorkspaceSearchResponse>("/search?q=" + encodeURIComponent(query), { signal }));
 
 const roleLabels: Record<string, string> = { teacher: "Преподаватель", curator: "Куратор", faculty_dean: "Декан", department_head: "Заведующий кафедрой" };
+const staffRoles = new Set(["teacher", "curator", "faculty_dean", "department_head", "university_admin", "superadmin"]);
 const staffHistoryIndexKey = "__napareStaffHistoryIndex";
 
 const readStaffHistoryIndex = (state: unknown) => {
@@ -161,10 +162,11 @@ const installStaffHistoryTracker = () => {
 export default function StaffLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  // Paint instantly from the cached profile; the fresh /users/me response reconciles in the background.
-  const [user, setUser] = useState<Awaited<ReturnType<typeof getUser>> | null>(() => (isLoggedIn() ? readUserCache() : null));
+  // Keep SSR and the first client render identical; render the profile only after /users/me confirms it.
+  const [user, setUser] = useState<Awaited<ReturnType<typeof getUser>> | null>(null);
+  const [profileReady, setProfileReady] = useState(false);
   const [unread, setUnread] = useState(0);
-  const curation = useCurationContext(apiFetch, Boolean(user));
+  const curation = useCurationContext(apiFetch, profileReady && Boolean(user && user.role !== "superadmin"));
   useEffect(() => {
     let active = true;
     let uninstall: (() => void) | undefined;
@@ -177,16 +179,27 @@ export default function StaffLayout({ children }: { children: ReactNode }) {
     };
   }, []);
   useEffect(() => {
+    let active = true;
     if (!isLoggedIn()) {
       router.push("/login");
-      return;
+      return () => { active = false; };
     }
     getUser()
-      .then(setUser)
-      .catch(() => router.push("/login"));
-    getUnreadCount()
-      .then(setUnread)
-      .catch(() => undefined);
+      .then((profile) => {
+        if (!active) return;
+        const hasOrganization = typeof profile.organizationId === "string" && profile.organizationId.trim().length > 0;
+        if (!staffRoles.has(profile.role) || (profile.role !== "superadmin" && !hasOrganization)) {
+          router.push("/login");
+          return;
+        }
+        setUser(profile);
+        setProfileReady(true);
+        getUnreadCount()
+          .then((count) => { if (active) setUnread(count); })
+          .catch(() => undefined);
+      })
+      .catch(() => { if (active) router.push("/login"); });
+    return () => { active = false; };
   }, [router]);
   const commands: WorkspaceCommand[] = [
     {
@@ -219,7 +232,6 @@ export default function StaffLayout({ children }: { children: ReactNode }) {
       href: "/profile",
     },
   ];
-  // No blocking gate: the shell (menu, header) renders immediately, even before the first API answer.
   const fullName = user ? user.firstName + " " + user.lastName : "";
   const baseRoleLabel = (user && roleLabels[user.role]) || "Сотрудник университета";
   // A curator assignment augments the teacher account; it never creates a second
@@ -234,6 +246,13 @@ export default function StaffLayout({ children }: { children: ReactNode }) {
       item.href === "/inbox" || item.href === "/notifications" ? { ...item, badge: unread } : item,
     ),
   }));
+  if (!profileReady || !user) {
+    return (
+      <div className="flex min-h-[40vh] items-center justify-center p-4 text-sm text-slate-600" role="status" aria-live="polite">
+        Проверяем доступ…
+      </div>
+    );
+  }
   return (
     <WorkspaceShell
       className="staff-workspace"

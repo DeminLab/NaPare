@@ -9,7 +9,7 @@ import {
   type WorkspaceCommand,
   type WorkspaceNavGroup,
 } from "@napare/ui/workspace-shell";
-import { apiFetch, getHealth, getUser, logout, readUserCache } from "@/lib/api";
+import { apiFetch, getHealth, getUser, logout } from "@/lib/api";
 import type { HealthInfo, UserInfo } from "@/lib/api";
 
 const groups: WorkspaceNavGroup[] = [
@@ -89,12 +89,9 @@ const AppLink = ({ href, children, ...props }: NavigationLinkProps) => href === 
 export default function DeveloperLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  // Paint instantly from a cached developer profile; the fresh /users/me response reconciles in the background.
-  // The cache is only trusted when the role still grants access to this workspace.
-  const [user, setUser] = useState<UserInfo | null>(() => {
-    const cached = readUserCache();
-    return cached && ['developer', 'superadmin'].includes(cached.role) ? cached : null;
-  });
+  // Keep SSR and the first client render identical; only a fresh /users/me response can open this workspace.
+  const [user, setUser] = useState<UserInfo | null>(null);
+  const [profileReady, setProfileReady] = useState(false);
   const [health, setHealth] = useState<HealthInfo | null>(null);
   const [healthChecked, setHealthChecked] = useState(false);
   const [unread, setUnread] = useState(0);
@@ -108,13 +105,14 @@ export default function DeveloperLayout({ children }: { children: ReactNode }) {
           return;
         }
         setUser(profile);
+        setProfileReady(true);
         getHealth()
-          .then(setHealth)
-          .catch(() => setHealth(null))
-          .finally(() => setHealthChecked(true));
+          .then((info) => { if (active) setHealth(info); })
+          .catch(() => { if (active) setHealth(null); })
+          .finally(() => { if (active) setHealthChecked(true); });
         apiFetch<{ data: Array<{ isRead: boolean }> }>("/notifications")
           .then((response) =>
-            setUnread(response.data.filter((item) => !item.isRead).length),
+            { if (active) setUnread(response.data.filter((item) => !item.isRead).length); },
           )
           .catch(() => undefined);
       })
@@ -184,7 +182,13 @@ export default function DeveloperLayout({ children }: { children: ReactNode }) {
   const apiAvailable = health
     ? ["ok", "healthy"].includes(health.status.toLowerCase())
     : false;
-  // No blocking gate: the shell (menu, header) renders immediately; access is re-verified in the background.
+  if (!profileReady || !user) {
+    return (
+      <div className="flex min-h-[40vh] items-center justify-center p-4 text-sm text-slate-600" role="status" aria-live="polite">
+        Проверяем доступ…
+      </div>
+    );
+  }
   return (
     <WorkspaceShell
       className="developer-shell"

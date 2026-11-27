@@ -28,7 +28,7 @@ export default function AnalyticsDashboard(){
   function submit(event:FormEvent){event.preventDefault();if(!sessionChanged)void load({weekStart,semesterStart,semesterEnd});}
   return <div className={styles.page}>
     <Link className={styles.back} href="/university">← Настройки университета</Link>
-    <header className={styles.intro}><p className={styles.eyebrow}>Данные своего вуза · 10 показателей</p><h1>Аналитика использования</h1><p>Наблюдаемая активность, учебный процесс и работа сервисов. Каждый показатель показывает свой источник и ограничения расчёта.</p></header>
+    <header className={styles.intro}><p className={styles.eyebrow}>Данные своего вуза · 9 показателей</p><h1>Аналитика использования</h1><p>Наблюдаемая активность, учебный процесс и работа сервисов. Каждый показатель показывает свой источник и ограничения расчёта.</p></header>
     <form onSubmit={submit} className={styles.filters}>
       <label>Начало учебной недели<input type="date" required value={weekStart} onChange={event=>setWeekStart(event.target.value)} disabled={sessionChanged}/></label>
       <label>Начало семестра<input type="date" required value={semesterStart} onChange={event=>setSemesterStart(event.target.value)} disabled={sessionChanged}/></label>

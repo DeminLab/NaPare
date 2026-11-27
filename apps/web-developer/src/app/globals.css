@@ -44,6 +44,9 @@ html, body { min-width: 0; overflow-x: clip; } img, svg, video { max-width: 100%
 .control-page-header { align-items: flex-end; background: linear-gradient(135deg, var(--color-surface) 0%, var(--color-surface-secondary) 100%); border: 1px solid var(--color-border); border-radius: var(--radius-xl); box-shadow: var(--shadow-sm); display: flex; flex-wrap: wrap; gap: 1rem; justify-content: space-between; padding: 1.25rem 1.5rem; }
 .control-page-header h1 { text-wrap: balance; }
 .control-count { background: var(--color-brand-soft); border: 1px solid color-mix(in srgb, var(--color-brand) 18%, transparent); border-radius: var(--radius-pill); color: var(--color-brand-strong); font-size: .8125rem; font-weight: 700; padding: .45rem .75rem; }
+.control-mobile-nav-trigger { align-items: center; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); color: var(--color-text); display: flex; gap: .75rem; justify-content: space-between; min-height: 3.75rem; padding: .625rem .875rem; text-align: left; width: 100%; }
+.control-mobile-nav-trigger:focus-visible { outline: 2px solid var(--color-brand); outline-offset: 2px; }
+.control-mobile-nav-action { background: var(--color-brand-soft); border-radius: var(--radius-pill); color: var(--color-brand-strong); flex: 0 0 auto; font-size: .8125rem; font-weight: 700; padding: .35rem .625rem; }
 .control-nav-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-xl); box-shadow: var(--shadow-sm); padding: .875rem; }
 .control-nav-group { border-top: 1px solid var(--color-border); margin-top: .5rem; padding-top: .5rem; }
 .control-nav-group:first-child { border-top: 0; margin-top: 0; padding-top: 0; }

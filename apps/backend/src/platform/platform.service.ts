@@ -15,7 +15,7 @@ import { CuratorAssignment } from '../curation/entities/curator-assignment.entit
 import { UserRole } from '../auth/interfaces/user-role';
 import { RaspScraperService, SIBIT_UNIVERSITY } from '../auth/rasp-scraper.service';
 import { PlatformControl, PlatformGrant } from './platform.entity';
-import { PLATFORM_PERMISSIONS, PlatformAccountDto, PlatformAccountQueryDto, PlatformCreateAccountDto, PlatformFacultyDto, PlatformGrantDto, PlatformGroupDto, PlatformJobDto, PlatformPermission, PlatformQueryDto, PlatformScheduleConnectorDto, PlatformSettingsDto, PlatformStructureQueryDto, PlatformUniversityDto, SERVICE_IDS } from './platform.dto';
+import { PLATFORM_PERMISSIONS, PlatformAccountDto, PlatformAccountQueryDto, PlatformCreateAccountDto, PlatformCreateUniversityDto, PlatformFacultyDto, PlatformGrantDto, PlatformGroupDto, PlatformJobDto, PlatformPermission, PlatformQueryDto, PlatformScheduleConnectorDto, PlatformSettingsDto, PlatformStructureQueryDto, PlatformUniversityDto, SERVICE_IDS } from './platform.dto';
 import { ControlAgentClient } from './control-agent.client';
 import { platformDatabaseGrants, PLATFORM_TENANT_TABLES } from '../common/tenant/tenant-database-platform';
 import { TelemetryService } from '../telemetry/telemetry.service';
@@ -767,6 +767,80 @@ export class PlatformService {
       await manager.save(Group, group);
       await manager.save(AuditLog, { userId: access.actorId, action: 'platform.organization.group.restored', entity: 'platform', entityId: id, oldValues: { organizationId: group.organizationId, archivedAt: oldArchivedAt.toISOString() }, newValues: { organizationId: group.organizationId, archivedAt: null, reason }, ...(auditContext.ip ? { ip: auditContext.ip } : {}), ...(auditContext.userAgent ? { userAgent: auditContext.userAgent.slice(0, 512) } : {}) });
       return { id, archivedAt: null };
+    });
+  }
+  async createUniversityWithAdministrator(dto: PlatformCreateUniversityDto, auditContext: PlatformAuditContext = {}) {
+    const access = await this.require('universities.write');
+    if (!access.owner) throw new ForbiddenException('Создание и изменение университетов доступно только владельцу платформы.');
+    await this.require('accounts.write');
+
+    const administrator = dto.administrator;
+    const username = normalizeUsername(administrator.username);
+    if (Buffer.byteLength(administrator.password) > 72) throw new BadRequestException('Пароль должен занимать не более 72 байт UTF-8.');
+    if (!dto.name.trim() || !dto.city.trim()) throw new BadRequestException('Укажите название и город вуза.');
+
+    return this.db.transaction(async manager => {
+      const users = manager.getRepository(User);
+      const duplicateUsername = await users.createQueryBuilder('u').where('LOWER(u.username) = :username', { username }).getExists();
+      if (duplicateUsername) throw new ConflictException('Этот логин уже используется.');
+
+      const university = await manager.save(University, manager.create(University, {
+        name: dto.name.trim(),
+        city: dto.city.trim(),
+        status: dto.status,
+      }));
+      const email = `${university.id}@university-admin.invalid`;
+      const duplicateEmail = await users.createQueryBuilder('u').where('LOWER(u.email) = :email', { email }).getExists();
+      if (duplicateEmail) throw new ConflictException('Не удалось создать системный email администратора.');
+      const passwordHash = await bcrypt.hash(administrator.password, 12);
+      let user: User;
+      try {
+        user = await manager.save(User, manager.create(User, {
+          username,
+          email,
+          firstName: university.name,
+          lastName: 'Администратор',
+          role: UserRole.UNIVERSITY_ADMIN,
+          organizationId: university.id,
+          passwordHash,
+          isActive: true,
+        }));
+      } catch (error) {
+        if ((error as { code?: string }).code === '23505') throw new ConflictException('Email или логин уже используется.');
+        throw error;
+      }
+
+      await manager.save(AuditLog, {
+        userId: access.actorId,
+        action: 'platform.university.created',
+        entity: 'platform',
+        entityId: university.id,
+        newValues: { name: university.name, city: university.city, status: university.status, administratorId: user.id },
+        ...(auditContext.ip ? { ip: auditContext.ip } : {}),
+        ...(auditContext.userAgent ? { userAgent: auditContext.userAgent.slice(0, 512) } : {}),
+      });
+      await manager.save(AuditLog, {
+        userId: access.actorId,
+        action: 'platform.account.created',
+        entity: 'platform',
+        entityId: user.id,
+        newValues: { role: user.role, organizationId: university.id, result: 'created_with_university' },
+        ...(auditContext.ip ? { ip: auditContext.ip } : {}),
+        ...(auditContext.userAgent ? { userAgent: auditContext.userAgent.slice(0, 512) } : {}),
+      });
+
+      return {
+        university: { id: university.id, name: university.name, city: university.city, status: university.status },
+        administrator: {
+          id: user.id,
+          username: user.username,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role,
+          organizationId: user.organizationId,
+          isActive: user.isActive,
+        },
+      };
     });
   }
   async saveUniversity(dto: PlatformUniversityDto, id?: string) {

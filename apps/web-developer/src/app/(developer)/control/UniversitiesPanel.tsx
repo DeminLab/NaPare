@@ -4,6 +4,8 @@ import { apiFetch } from '@/lib/api';
 import { type Access, type Page, Button, Notice, Pager, errorText, inputClass, panelClass, useResource } from './control-ui';
 import AccountsPanel from './AccountsPanel';
 interface University { id?: string; name: string; city: string; status: string; connectorType?: string; reason?: string }
+interface AdministratorDraft { username: string; password: string }
+interface CreatedUniversityResponse { university: University; administrator: { username: string } }
 interface Faculty { id: string; organizationId: string; name: string; code: string; groupCount: number; archivedAt?: string | null }
 interface Group { id: string; organizationId: string; facultyId: string; facultyName: string; name: string; externalId: string | null; curriculumYear: number; specialization: string; curatorManagedSeparately: boolean; archivedAt?: string | null }
 interface ScheduleConnector { provider: 'rasp-sano' | 'file-only'; enabled: boolean; config: { academicYear?: string }; sourceHost: string | null; raspSanoAvailable?: boolean }
@@ -36,6 +38,7 @@ const auditActionNames: Record<string, string> = {
 const auditActionLabel = (action: string) => auditActionNames[action] || 'Другое действие управления';
 export default function UniversitiesPanel({ access }: { access: Access }) {
   const [q, setQ] = useState(''), [page, setPage] = useState(1), [form, setForm] = useState<University | null>(null), [busy,setBusy] = useState(false), [error,setError] = useState(''), [notice,setNotice] = useState('');
+  const [administrator, setAdministrator] = useState<AdministratorDraft>({ username: '', password: '' });
   const [structureUniversity, setStructureUniversity] = useState(''), [orgQuery, setOrgQuery] = useState(''), [facultyPage, setFacultyPage] = useState(1), [groupPage, setGroupPage] = useState(1), [facultyForm, setFacultyForm] = useState<FacultyForm | null>(null), [groupForm, setGroupForm] = useState<GroupForm | null>(null);
   const [facultyStatus, setFacultyStatus] = useState<OrganizationStatus>('active'), [groupStatus, setGroupStatus] = useState<OrganizationStatus>('active'), [archiveTarget, setArchiveTarget] = useState<ArchiveTarget | null>(null);
   const [workspaceTab, setWorkspaceTab] = useState<'overview' | 'people' | 'structure' | 'schedule' | 'history'>('overview');
@@ -60,7 +63,45 @@ export default function UniversitiesPanel({ access }: { access: Access }) {
   const canWriteAccounts = access.permissions.includes('accounts.write');
   const canAccessPeople = canReadAccounts || canWriteAccounts;
   const canManageUniversity = writable && access.owner;
-  const save = async () => { if (!form) return; setBusy(true); setError(''); try { await apiFetch('/platform/universities' + (form.id ? '/' + form.id : ''), { method: form.id ? 'PUT' : 'POST', body: JSON.stringify({ name: form.name, city: form.city, status: form.status, ...(form.id ? { reason: form.reason?.trim() } : {}) }) }); setForm(null); setNotice('Университет сохранён.'); list.refresh(); } catch (reason) { setError(errorText(reason)); } finally { setBusy(false); } };
+  const beginCreateUniversity = () => {
+    setAdministrator({ username: '', password: '' });
+    setError('');
+    setNotice('');
+    setForm({ name: '', city: '', status: 'active' });
+  };
+  const save = async () => {
+    if (!form) return;
+    if (!form.id && !canWriteAccounts) {
+      setError('Для создания вуза вместе с аккаунтом администратора нужно право accounts.write.');
+      return;
+    }
+    setBusy(true);
+    setError('');
+    try {
+      const body = {
+        name: form.name.trim(),
+        city: form.city.trim(),
+        status: form.status,
+        ...(form.id
+          ? { reason: form.reason?.trim() }
+          : { administrator: { ...administrator, username: administrator.username.trim() } }),
+      };
+      if (form.id) {
+        await apiFetch(`/platform/universities/${form.id}`, { method: 'PUT', body: JSON.stringify(body) });
+        setNotice('Университет сохранён.');
+      } else {
+        const created = await apiFetch<CreatedUniversityResponse>('/platform/universities', { method: 'POST', body: JSON.stringify(body) });
+        setNotice(`Создан вуз «${created.university.name}» и аккаунт администратора. Логин: ${created.administrator.username}.`);
+        setAdministrator(current => ({ ...current, password: '' }));
+      }
+      setForm(null);
+      list.refresh();
+    } catch (reason) {
+      setError(errorText(reason));
+    } finally {
+      setBusy(false);
+    }
+  };
   const saveFaculty = async () => { if (!facultyForm || !structureUniversity) return; setBusy(true); setError(''); try { const { id, ...body } = facultyForm; await apiFetch('/platform/organization/faculties' + (id ? `/${id}` : `?organizationId=${encodeURIComponent(structureUniversity)}`), { method: id ? 'PUT' : 'POST', body: JSON.stringify(body) }); setFacultyForm(null); setNotice('Факультет сохранён.'); faculties.refresh(); groups.refresh(); } catch (reason) { setError(errorText(reason)); } finally { setBusy(false); } };
   const saveGroup = async () => { if (!groupForm || !structureUniversity) return; setBusy(true); setError(''); try { const { id, ...body } = groupForm; await apiFetch('/platform/organization/groups' + (id ? `/${id}` : `?organizationId=${encodeURIComponent(structureUniversity)}`), { method: id ? 'PUT' : 'POST', body: JSON.stringify(body) }); setGroupForm(null); setNotice('Группа сохранена.'); groups.refresh(); faculties.refresh(); } catch (reason) { setError(errorText(reason)); } finally { setBusy(false); } };
   const saveConnector = async () => {
@@ -100,7 +141,8 @@ export default function UniversitiesPanel({ access }: { access: Access }) {
   const field = (label: string, value: string, onChange: (value: string) => void, maxLength: number, required = true) => <label className="block text-sm">{label}<input className={inputClass} maxLength={maxLength} required={required} value={value} onChange={event => onChange(event.target.value)} /></label>;
   return <div className="space-y-4">
     {!selectedUniversity && <>
-      <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-lg font-semibold">Университеты</h2><p className="mt-1 text-sm text-slate-400">{access.owner ? 'Вся платформа' : access.organizationIds === null ? 'Вся платформа' : `Разрешено вузов: ${access.organizationIds?.length ?? 0}`}</p></div>{canManageUniversity && <Button onClick={() => setForm({ name:'', city:'', status:'active' })}>Добавить университет</Button>}</div>
+      <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-lg font-semibold">Университеты</h2><p className="mt-1 text-sm text-slate-400">{access.owner ? 'Вся платформа' : access.organizationIds === null ? 'Вся платформа' : `Разрешено вузов: ${access.organizationIds?.length ?? 0}`}</p></div>{canManageUniversity && <Button disabled={!canWriteAccounts} title={!canWriteAccounts ? 'Для создания вуза вместе с администратором нужно право accounts.write.' : undefined} onClick={beginCreateUniversity}>Добавить университет</Button>}</div>
+      {canManageUniversity && !canWriteAccounts && <Notice>Создание вуза требует права `accounts.write`, потому что вместе с вузом создаётся аккаунт его администратора. Обратитесь к владельцу платформы за этим разрешением.</Notice>}
       {writable && !access.owner && <Notice>Можно редактировать структуру разрешённых вузов. Название, город и статус вуза меняет только владелец платформы.</Notice>}
       <label className="block text-sm">Найти вуз<input className={inputClass} type="search" value={q} maxLength={100} placeholder="Название вуза" onChange={event => { setQ(event.target.value); setPage(1); }} /></label>
       {(error || list.error) && <Notice error>{error || list.error}</Notice>}{notice && <Notice>{notice}</Notice>}
@@ -112,7 +154,7 @@ export default function UniversitiesPanel({ access }: { access: Access }) {
       {list.data && <Pager page={page} totalPages={list.data.meta.totalPages} onChange={setPage} />}
     </>}
     {(error || notice) && <Notice error={!!error}>{error || notice}</Notice>}
-    {form && <form className={panelClass + ' space-y-3'} onSubmit={event => { event.preventDefault(); void save(); }}><h3 className="font-semibold">{form.id ? 'Изменить университет' : 'Новый университет'}</h3>{field('Название', form.name, name => setForm({ ...form, name }), 200)}{field('Город', form.city, city => setForm({ ...form, city }), 100)}<label className="block text-sm">Статус<select className={inputClass} value={form.status} onChange={event => setForm({ ...form, status:event.target.value })}><option value="active">Активен</option><option value="inactive">Неактивен</option><option value="pending">Ожидает подключения</option></select></label>{form.id && field('Причина изменения', form.reason || '', reason => setForm({ ...form, reason }), 500)}<div className="flex gap-2"><Button type="submit" disabled={busy || (Boolean(form.id) && (form.reason?.trim().length ?? 0) < 3)}>Сохранить университет</Button><Button disabled={busy} onClick={() => setForm(null)}>Отмена</Button></div></form>}
+    {form && <form className={panelClass + ' space-y-3'} onSubmit={event => { event.preventDefault(); void save(); }}><h3 className="font-semibold">{form.id ? 'Изменить университет' : 'Новый университет'}</h3>{field('Название', form.name, name => setForm({ ...form, name }), 200)}{field('Город', form.city, city => setForm({ ...form, city }), 100)}<label className="block text-sm">Статус<select className={inputClass} value={form.status} onChange={event => setForm({ ...form, status:event.target.value })}><option value="active">Активен</option><option value="inactive">Неактивен</option><option value="pending">Ожидает подключения</option></select></label>{form.id ? field('Причина изменения', form.reason || '', reason => setForm({ ...form, reason }), 500) : <fieldset className="space-y-3 rounded-xl border border-[var(--color-border)] p-4"><legend className="px-1 font-semibold">Доступ администратора вуза</legend><p className="text-sm text-slate-400">Будет создан отдельный аккаунт с ролью администратора и доступом только к этому вузу.</p><label className="block text-sm">Логин для входа<input className={inputClass} autoComplete="username" autoCapitalize="none" spellCheck={false} minLength={3} maxLength={32} pattern="[A-Za-z0-9._-]+" required value={administrator.username} onChange={event => setAdministrator({ ...administrator, username: event.target.value })} /><span className="mt-1 block text-xs text-slate-400">3–32 символа: латинские буквы, цифры, точка, дефис или подчёркивание.</span></label><label className="block text-sm">Пароль<input className={inputClass} type="password" autoComplete="new-password" minLength={6} maxLength={72} required value={administrator.password} onChange={event => setAdministrator({ ...administrator, password: event.target.value })} /><span className="mt-1 block text-xs text-slate-400">Пароль не попадёт в журнал и не будет показан повторно после создания.</span></label></fieldset>}<div className="flex gap-2"><Button type="submit" disabled={busy || (!form.id && !canWriteAccounts) || (Boolean(form.id) && (form.reason?.trim().length ?? 0) < 3)}>{busy ? 'Сохраняем…' : form.id ? 'Сохранить университет' : 'Создать вуз и администратора'}</Button><Button disabled={busy} onClick={() => { setForm(null); setAdministrator({ username: '', password: '' }); }}>Отмена</Button></div></form>}
     {selectedUniversity && <>
       <section className={panelClass + ' space-y-4'} aria-label={`Университет: ${selectedUniversity.name}`}>
         <div className="flex flex-wrap items-center justify-between gap-3"><div className="min-w-0"><p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-brand)]">Рабочее пространство вуза</p><h2 className="mt-1 break-words text-xl font-semibold">{selectedUniversity.name}</h2><p className="mt-1 text-sm text-slate-400">{selectedUniversity.city} · {universityStatuses[selectedUniversity.status] || selectedUniversity.status} · код {shortId(selectedUniversity.id)}</p></div><div className="flex flex-wrap gap-2"><Button onClick={() => { setStructureUniversity(''); setForm(null); setConnectorDraft(null); const url = new URL(window.location.href); url.searchParams.delete('universityId'); url.searchParams.delete('universityQuery'); window.history.pushState(null, '', url); }}>К списку вузов</Button>{canManageUniversity && <Button onClick={() => setForm({ ...selectedUniversity, reason: '' })}>Изменить сведения</Button>}</div></div>

@@ -246,36 +246,43 @@ export default function ConnectorsPage() {
       finishAction();
     }
   };
+  const pageHeader = (
+    <header>
+      <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--color-brand)]">Кабинет ВУЗа · расписание и данные</p>
+      <h1 className="mt-2 text-2xl font-bold tracking-tight text-[var(--color-text)] sm:text-3xl">
+        Источники данных
+      </h1>
+      <p className="mt-2 max-w-2xl text-sm text-[var(--color-text-secondary)]">Состояние интеграций, синхронизация расписания и подключение учебных систем.</p>
+      <Link href="/onboarding?step=3" className="mt-3 inline-flex min-h-11 items-center text-sm font-semibold text-[var(--color-brand)] underline underline-offset-4">Вернуться к шагу импорта расписания →</Link>
+      <Link href="/connectors/rooms" className="ml-4 mt-3 inline-flex min-h-11 items-center text-sm font-semibold text-[var(--color-brand)] underline underline-offset-4">Каталог аудиторий →</Link>
+    </header>
+  );
   if (loading)
     return (
-      <div className="space-y-4" aria-busy="true" aria-label="Загрузка источников данных">
-        <p role="status" aria-live="polite" className="sr-only">Загружаем источники данных…</p>
-        <Skeleton className="h-24" />
-        <Skeleton className="h-32" />
-        <Skeleton className="h-44" />
+      <div className="mx-auto max-w-[var(--layout-content-max)] space-y-6">
+        {pageHeader}
+        <div className="space-y-4" aria-busy="true" aria-label="Загрузка источников данных">
+          <p role="status" aria-live="polite" className="sr-only">Загружаем источники данных…</p>
+          <Skeleton className="h-32" />
+          <Skeleton className="h-44" />
+        </div>
       </div>
     );
   if (error && !connectors.length)
     return (
-      <RequestState
-        title="Не удалось загрузить центр коннекторов"
-        description={error}
-        onRetry={load}
-      />
+      <div className="mx-auto max-w-[var(--layout-content-max)] space-y-4">
+        {pageHeader}
+        <RequestState
+          title="Не удалось загрузить центр коннекторов"
+          description={error}
+          headingLevel={2}
+          onRetry={load}
+        />
+      </div>
     );
   return (
     <div className="mx-auto max-w-[var(--layout-content-max)] space-y-6">
-      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--color-brand)]">Кабинет ВУЗа · расписание и данные</p>
-          <h1 className="mt-2 text-2xl font-bold tracking-tight text-[var(--color-text)] sm:text-3xl">
-            Источники данных
-          </h1>
-          <p className="mt-2 max-w-2xl text-sm text-[var(--color-text-secondary)]">Состояние интеграций, синхронизация расписания и подключение учебных систем.</p>
-          <Link href="/onboarding?step=3" className="mt-3 inline-flex min-h-11 items-center text-sm font-semibold text-[var(--color-brand)] underline underline-offset-4">Вернуться к шагу импорта расписания →</Link>
-          <Link href="/connectors/rooms" className="ml-4 mt-3 inline-flex min-h-11 items-center text-sm font-semibold text-[var(--color-brand)] underline underline-offset-4">Каталог аудиторий →</Link>
-        </div>
-      </div>
+      {pageHeader}
       <ScheduleSourceSettings />
       {connectors.length > 0 && <div className="metric-strip">
         {[

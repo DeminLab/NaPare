@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import Link from 'next/link';
-import { apiFetch, apiFetchAllPages, type Me } from '@/lib/api';
+import { apiFetch, apiFetchAllPages, ApiError, type Me } from '@/lib/api';
 import { useWorkspaceQuery } from '@napare/ui/workspace-shell';
 import { Button, Card, RequestState } from '@/components/ui';
 import StructureStep from './StructureStep';
@@ -20,6 +20,8 @@ export default function OnboardingPage() {
   const [faculties, setFaculties] = useState<Faculty[]>([]), [groups, setGroups] = useState<Group[]>([]), [users, setUsers] = useState<Account[]>([]);
   const [dataReady, setDataReady] = useState(false);
   const [step, setStep] = useState(0), [form, setForm] = useState({ name: '', city: '' });
+  const [administrator, setAdministrator] = useState({ username: '', password: '' });
+  const [createdAdministrator, setCreatedAdministrator] = useState('');
   const heading = useRef<HTMLHeadingElement>(null), generation = useRef(0);
   useWorkspaceQuery({ step: String(step) }, query => {
     const requested = Number(query.get('step'));
@@ -61,9 +63,30 @@ export default function OnboardingPage() {
   async function createUniversity(event: FormEvent) {
     event.preventDefault(); setBusy(true); setError('');
     try {
-      const saved = await apiFetch<University>('/platform/universities', { method: 'POST', body: JSON.stringify({ name: form.name.trim(), city: form.city.trim(), status: 'pending' }) });
-      setUniversities(current => [...current, saved]); setUniversity(saved); setForm({ name: '', city: '' }); setStep(1);
-    } catch (cause) { setUncertain(true); setError(`${errorMessage(cause)} Перед повторным созданием обновите список вузов и убедитесь, что запись не появилась.`); }
+      const result = await apiFetch<{ university: University; administrator: { username: string } }>('/platform/universities', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: form.name.trim(),
+          city: form.city.trim(),
+          status: 'pending',
+          administrator: { username: administrator.username.trim(), password: administrator.password },
+        }),
+      });
+      setUniversities(current => [...current, result.university]);
+      setUniversity(result.university);
+      setCreatedAdministrator(result.administrator.username);
+      setForm({ name: '', city: '' });
+      setAdministrator({ username: '', password: '' });
+      setStep(1);
+    } catch (cause) {
+      if (cause instanceof ApiError && cause.status >= 400 && cause.status < 500) {
+        setUncertain(false);
+        setError(errorMessage(cause));
+      } else {
+        setUncertain(true);
+        setError(`${errorMessage(cause)} Перед повторным созданием обновите список вузов и убедитесь, что запись не появилась.`);
+      }
+    }
     finally { setBusy(false); }
   }
   if (loading) return <p role="status" className="p-6 text-slate-700">Загружаем мастер настройки…</p>;
@@ -71,12 +94,26 @@ export default function OnboardingPage() {
   if (!allowed) return <Card><h1 className="text-2xl font-bold">Мастер недоступен</h1><p className="mt-3 text-slate-700">Создание вуза доступно владельцу платформы, настройка своего вуза — его администратору.</p>{error && <p role="alert" className="mt-3 text-red-800">{error}</p>}<Button className="mt-4" variant="secondary" onClick={() => void load()}>Проверить доступ повторно</Button></Card>;
   return <div className="space-y-6 text-slate-950">
     <div><Link href="/university" className="inline-flex min-h-11 items-center text-sm font-semibold text-indigo-700">← Настройки университета</Link><h1 ref={heading} tabIndex={-1} className="text-3xl font-bold tracking-tight outline-none focus-visible:ring-2 focus-visible:ring-indigo-600">{owner ? 'Новый вуз' : 'Подключение вуза'}</h1><p className="mt-2 text-slate-600">{university?.name || 'Создайте вуз или продолжите настройку существующего.'}</p></div>
+    {createdAdministrator && <p role="status" className="rounded-xl bg-emerald-50 p-4 text-sm text-emerald-900">Вуз и аккаунт его администратора созданы. Логин: <strong>{createdAdministrator}</strong>. Пароль не сохраняется в мастер и не показывается после создания; передайте его администратору отдельно защищённым способом.</p>}
     <nav aria-label="Шаги первичной настройки"><ol className="flex flex-wrap gap-2">{steps.map((label, index) => <li key={label}><button type="button" aria-current={step === index ? 'step' : undefined} disabled={busy || (index > 0 && !university) || (owner && index >= 3)} className={`min-h-11 rounded-xl px-4 py-2 text-left text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 disabled:opacity-50 ${step === index ? 'bg-indigo-700 text-white' : 'bg-slate-100 text-slate-800 hover:bg-slate-200'}`} onClick={() => { setStep(index); setError(''); }}>{index + 1}. {label}</button></li>)}</ol></nav>
     {error && <div role="alert" className="rounded-xl bg-red-50 p-4"><p className="break-words text-red-800">{error}</p><Button className="mt-3" variant="secondary" onClick={() => { setError(''); void reload().catch(cause => setError(errorMessage(cause))); }}>Перечитать данные</Button></div>}
     {step === 0 && <Card><h2 className="text-xl font-bold">{owner ? 'Создать или выбрать вуз' : 'Данные своего вуза'}</h2>{owner ? <>
       <label className="mt-5 grid gap-2 text-sm font-semibold">Продолжить настройку<select disabled={busy} className={fieldClass} value={university?.id || ''} onChange={event => { setUniversity(universities.find(row => row.id === event.target.value) || null); setError(''); }}><option value="">Новый вуз</option>{universities.map(row => <option key={row.id} value={row.id}>{row.name} · {row.city}</option>)}</select></label>
       <Button variant="secondary" className="mt-3" onClick={() => void load()}>Обновить список вузов</Button>
-      {!university && <form onSubmit={event => void createUniversity(event)} className="mt-5 grid max-w-xl gap-4"><label className="grid gap-2 text-sm font-semibold">Название вуза<input required maxLength={200} className={fieldClass} value={form.name} onChange={event => setForm(current => ({ ...current, name: event.target.value }))} /></label><label className="grid gap-2 text-sm font-semibold">Город<input required maxLength={100} className={fieldClass} value={form.city} onChange={event => setForm(current => ({ ...current, city: event.target.value }))} /></label><p className="text-sm text-slate-600">Статус новой записи — «Ожидает активации». Сначала завершите учебную и эксплуатационную проверку.</p><Button type="submit" loading={busy} disabled={busy || uncertain || !form.name.trim() || !form.city.trim()}>Создать вуз</Button></form>}
+      {!university && <form onSubmit={event => void createUniversity(event)} className="mt-5 grid max-w-xl gap-4">
+        <label className="grid gap-2 text-sm font-semibold">Название вуза<input required maxLength={200} className={fieldClass} value={form.name} onChange={event => setForm(current => ({ ...current, name: event.target.value }))} /></label>
+        <label className="grid gap-2 text-sm font-semibold">Город<input required maxLength={100} className={fieldClass} value={form.city} onChange={event => setForm(current => ({ ...current, city: event.target.value }))} /></label>
+        <div className="rounded-xl border border-slate-200 p-4">
+          <h3 className="font-bold">Доступ администратора вуза</h3>
+          <p className="mt-1 text-sm font-normal text-slate-600">Будет создан отдельный аккаунт с полным управлением этим вузом.</p>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <label className="grid gap-2 text-sm font-semibold">Логин для входа<input required minLength={3} maxLength={32} pattern="[A-Za-z0-9._-]+" autoComplete="off" autoCapitalize="none" spellCheck={false} className={fieldClass} value={administrator.username} onChange={event => setAdministrator(current => ({ ...current, username: event.target.value }))} /><span className="text-xs font-normal text-slate-500">3–32 символа: латинские буквы, цифры, точка, дефис или подчёркивание.</span></label>
+            <label className="grid gap-2 text-sm font-semibold">Начальный пароль<input required type="password" minLength={6} maxLength={72} autoComplete="new-password" className={fieldClass} value={administrator.password} onChange={event => setAdministrator(current => ({ ...current, password: event.target.value }))} /><span className="text-xs font-normal text-slate-500">Пароль будет сохранён в виде защищённого хеша; мастер не покажет его повторно.</span></label>
+          </div>
+        </div>
+        <p className="text-sm text-slate-600">Статус новой записи — «Ожидает активации». Сначала завершите учебную и эксплуатационную проверку.</p>
+        <Button type="submit" loading={busy} disabled={busy || uncertain || !form.name.trim() || !form.city.trim() || !administrator.username.trim() || !administrator.password}>Создать вуз и администратора</Button>
+      </form>}
     </> : <p className="mt-4">{university?.name} · {university?.city}. Для исправления откройте <Link href="/university" className="font-semibold text-indigo-700 underline">настройки</Link>. Новый вуз создаёт владелец платформы.</p>}</Card>}
     {university && step > 0 && !dataReady && <Card><p role="status">Структура и аккаунты ещё не загружены. При ошибке перечитайте данные, прежде чем создавать записи.</p></Card>}
     {university && dataReady && <div key={university.id}>{step === 1 && <StructureStep organizationId={university.id} owner={owner} faculties={faculties} groups={groups} reload={reload} />}{step === 2 && <AdministratorStep organizationId={university.id} owner={owner} users={users} reload={reload} />}{step === 3 && !owner && profile && <ImportStep actorId={profile.id} organizationId={university.id} groups={groups} />}{step === 4 && !owner && <ReadinessStep university={university} />}{step === 5 && !owner && <Card><h2 className="text-xl font-bold text-slate-950">Опубликовать расписание</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">После импорта и проверки откройте настройки публикации. Публичная страница показывает только данные, которые вуз разрешил публиковать; до включения публикации расписание остаётся доступно в кабинете.</p><div className="mt-5 flex flex-wrap gap-3"><Link href="/university?section=publication" className="inline-flex min-h-11 items-center rounded-xl bg-indigo-700 px-4 font-semibold text-white hover:bg-indigo-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-300">Настроить публикацию</Link><Link href="/schedule" className="inline-flex min-h-11 items-center rounded-xl border border-slate-300 px-4 font-semibold text-slate-800 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-200">Открыть публичное расписание</Link></div></Card>}</div>}

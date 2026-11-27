@@ -117,14 +117,18 @@ function AbsencesContent() {
     finally { setBusyId(''); }
   };
 
-  if (allowed === false) return <RequestState
-    kind="forbidden"
-    title="Нет доступа к очереди обращений"
-    description={role === 'teacher'
-      ? 'Вы вошли как преподаватель. Обращения рассматривают куратор группы, декан или заведующий кафедрой. Попросите назначенного сотрудника проверить заявление.'
-      : 'Рассматривать обращения могут только назначенные сотрудники вуза. Вернитесь к своему рабочему дню или уточните права у администратора вуза.'}
-    action={<Link href="/today" className="role-link role-link-secondary">Вернуться к рабочему дню</Link>}
-  />;
+  if (allowed === false) return <div className="mx-auto max-w-4xl space-y-5">
+    <h1 className="ds-page-title">Обращения об отсутствии</h1>
+    <RequestState
+      kind="forbidden"
+      headingLevel={2}
+      title="Нет доступа к очереди обращений"
+      description={role === 'teacher'
+        ? 'Вы вошли как преподаватель. Обращения рассматривают куратор группы, декан или заведующий кафедрой. Попросите назначенного сотрудника проверить заявление.'
+        : 'Рассматривать обращения могут только назначенные сотрудники вуза. Вернитесь к своему рабочему дню или уточните права у администратора вуза.'}
+      action={<Link href="/today" className="role-link role-link-secondary">Вернуться к рабочему дню</Link>}
+    />
+  </div>;
   return <div className="mx-auto max-w-4xl space-y-5">
     <header className="flex flex-wrap items-center justify-between gap-3"><div><h1 className="ds-page-title">Обращения об отсутствии</h1>{!loading && <p className="mt-2 text-sm text-slate-500">Ожидают решения: {total}</p>}</div><Button variant="secondary" disabled={Boolean(busyId)} onClick={() => void load()}>Обновить</Button></header>
     {status && <p role="status" className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800">{status}</p>}

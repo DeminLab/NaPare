@@ -128,6 +128,10 @@
     padding: 24px 20px;
   }
 
+  .privacy-document h1 {
+    font-size: clamp(24px, 7vw, 32px);
+  }
+
   .privacy-data-card {
     padding: 16px;
   }

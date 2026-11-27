@@ -284,6 +284,7 @@ export default function AssignmentsPage() {
         aria-busy="true"
         aria-label="Загрузка подготовки к парам"
       >
+        <h1 className="ds-page-title">Подготовка к парам</h1>
         <Skeleton className="h-24" />
         <Skeleton className="h-28" />
         <Skeleton className="h-80" />
@@ -294,7 +295,9 @@ export default function AssignmentsPage() {
   if (error) {
     return (
       <div className="mx-auto max-w-[var(--layout-content-max)]">
+        <h1 className="sr-only">Подготовка к парам</h1>
         <RequestState
+          headingLevel={2}
           title="Не удалось загрузить подготовку к парам"
           description={error}
           onRetry={load}

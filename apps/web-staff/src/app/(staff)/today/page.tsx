@@ -70,8 +70,8 @@ export default function TodayPage() {
     }
   }, [loadCuration]);
   useEffect(() => { void load(); const timer = window.setInterval(() => setNow(new Date()), 60000); return () => window.clearInterval(timer); }, [load]);
-  if (loading && !day) return <div aria-busy="true" className="space-y-4"><Skeleton className="h-20" /><Skeleton className="h-48" /></div>;
-  if (!day || !user) return <RequestState title="Рабочий день недоступен" description={error || 'Повторите загрузку.'} onRetry={() => void load()} />;
+  if (loading && !day) return <div aria-busy="true" className="space-y-4"><h1 className="ds-page-title">Рабочий день</h1><Skeleton className="h-20" /><Skeleton className="h-48" /></div>;
+  if (!day || !user) return <div className="mx-auto max-w-3xl"><h1 className="sr-only">Рабочий день</h1><RequestState headingLevel={2} title="Рабочий день недоступен" description={error || 'Повторите загрузку.'} onRetry={() => void load()} /></div>;
 
   const lessons = [...day.lessons].sort((a, b) => minutes(a.startTime) - minutes(b.startTime));
   const currentTime = now.getHours() * 60 + now.getMinutes();

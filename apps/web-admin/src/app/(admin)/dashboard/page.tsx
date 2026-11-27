@@ -121,8 +121,8 @@ export default function DashboardPage() {
   const scheduleNeedsSetup = hasLoaded('статистика ВУЗа') && !partial.includes('статистика ВУЗа') && stats?.totalLessons === 0;
   const scheduleStepNumber = 1 + Number(structureNeedsSetup) + Number(structureNeedsSetup && usersAvailable);
 
-  if (loading) return <div className="mx-auto max-w-[var(--layout-content-max)] space-y-6" aria-busy="true" aria-label="Загрузка dashboard"><Skeleton className="h-28" /><div className="grid gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(18rem,.7fr)]"><Skeleton className="h-72" /><Skeleton className="h-72" /></div><Skeleton className="h-48" /></div>;
-  if (error && !loadedSections.length) return <div className="mx-auto max-w-[var(--layout-content-max)]"><RequestState title="Не удалось загрузить сводку ВУЗа" description={error} onRetry={load} /></div>;
+  if (loading) return <div className="mx-auto max-w-[var(--layout-content-max)] space-y-6" aria-busy="true" aria-label="Загрузка обзора ВУЗа"><PageHeader title="Обзор ВУЗа" description="Загружаем операционную сводку…" /><div className="grid gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(18rem,.7fr)]"><Skeleton className="h-72" /><Skeleton className="h-72" /></div><Skeleton className="h-48" /></div>;
+  if (error && !loadedSections.length) return <div className="mx-auto max-w-[var(--layout-content-max)]"><h1 className="sr-only">Обзор ВУЗа</h1><RequestState headingLevel={2} title="Не удалось загрузить сводку ВУЗа" description={error} onRetry={load} /></div>;
 
   return <div className="mx-auto max-w-[var(--layout-content-max)] space-y-6">
     <PageHeader title="Обзор ВУЗа" description={currentDate} actions={<><Badge variant={backend === 'online' ? 'green' : backend === 'offline' ? 'red' : 'slate'} dot>{backend === 'online' ? 'Система работает' : backend === 'offline' ? 'Нет связи с системой' : 'Проверяем систему'}</Badge><Button variant="secondary" loading={refreshing} onClick={() => load(false)}>Обновить данные</Button></>} />

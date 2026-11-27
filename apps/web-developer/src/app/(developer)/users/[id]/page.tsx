@@ -106,14 +106,22 @@ export default function UserDetailPage() {
         </div>
 
         {activity.error ? (
-          <RequestState
-            kind={forbidden ? 'forbidden' : 'error'}
-            title={forbidden ? 'Нет доступа к карточке' : 'Не удалось загрузить пользователя'}
-            description={activity.error}
-            onRetry={activity.refresh}
-          />
+          <div className="space-y-4">
+            <PageHeader title="Карточка пользователя" />
+            <RequestState
+              headingLevel={2}
+              kind={forbidden ? 'forbidden' : 'error'}
+              title={forbidden ? 'Нет доступа к карточке' : 'Не удалось загрузить пользователя'}
+              description={activity.error}
+              onRetry={activity.refresh}
+            />
+          </div>
         ) : activity.loading && !data ? (
-          <div className="space-y-4"><Skeleton className="h-28 w-full" /><Skeleton lines={6} /></div>
+          <div className="space-y-4" aria-busy="true">
+            <PageHeader title="Карточка пользователя" description="Загружаем данные аккаунта…" />
+            <p role="status" className="sr-only">Загружаем карточку пользователя…</p>
+            <Skeleton className="h-28 w-full" /><Skeleton lines={6} />
+          </div>
         ) : data && user ? (
           <>
             <Card className="border-[var(--color-border)] bg-white p-5 sm:p-6">

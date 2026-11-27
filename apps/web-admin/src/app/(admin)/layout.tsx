@@ -41,20 +41,34 @@ const AppLink = ({ href, children, ...props }: NavigationLinkProps) => href === 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  // Paint instantly from the cached profile; the fresh /users/me response reconciles in the background.
-  const [user, setUser] = useState<Me | null>(() => readUserCache());
+  // Match SSR on the first client render; read the optional profile cache after hydration.
+  const [user, setUser] = useState<Me | null>(null);
   const [profileReady, setProfileReady] = useState(false);
   const [notificationCount, setNotificationCount] = useState(0);
-  const curation = useCurationContext(apiFetch, Boolean(profileReady && user && user.role !== 'superadmin'));
+  const curation = useCurationContext(apiFetch, Boolean(profileReady && user?.role === 'university_admin'));
   const [systemStatus, setSystemStatus] = useState<'checking' | 'online' | 'offline'>('checking');
   const isPlatformAdmin = user?.role === 'superadmin';
   useEffect(() => {
     let active = true;
+    const cachedProfile = readUserCache();
+    if (cachedProfile) setUser(cachedProfile);
     getUser().then((profile) => {
       if (!active) return;
+      if (profile.role === 'superadmin') {
+        setUser(profile);
+        setProfileReady(true);
+        return;
+      }
+      if (profile.role !== 'university_admin') {
+        router.replace('/login');
+        return;
+      }
+      if (typeof profile.organizationId !== 'string' || profile.organizationId.trim() === '') {
+        router.replace('/login');
+        return;
+      }
       setUser(profile);
       setProfileReady(true);
-      if (profile.role === 'superadmin') return;
       apiFetch<number>('/notifications/unread-count').then((count) => {
         if (active) setNotificationCount(Number.isFinite(count) ? Math.max(0, count) : 0);
       }).catch(() => undefined);
@@ -84,7 +98,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const roleLabel = currentRole ? roleLabels[currentRole] || 'Пользователь кабинета' : 'Роль не указана';
   const scopeLabel = getScopeLabel(user);
   const curationItems: WorkspaceNavGroup['items'] = curation?.canCurate || curation?.canManage ? [{ href: '/curation', label: 'Кураторство', icon: 'users', keywords: ['куратор', 'назначения'] }] : [];
-  const canShowUniversityWorkspace = profileReady && !isPlatformAdmin;
+  const canShowUniversityWorkspace = profileReady && user?.role === 'university_admin';
   const resolvedGroups = canShowUniversityWorkspace ? groups.map((group) => ({ ...group, items: [...group.items, ...(group.label === 'Университет' ? curationItems : [])].map((item) => item.href === '/notifications' ? { ...item, badge: notificationCount } : item) })) : [];
   const visibleCommands = canShowUniversityWorkspace ? commands : [];
   const status = systemStatus === 'online' ? { label: 'Система работает', tone: 'success' as const } : systemStatus === 'offline' ? { label: 'Система недоступна', tone: 'danger' as const } : { label: 'Проверка системы', tone: 'warning' as const };

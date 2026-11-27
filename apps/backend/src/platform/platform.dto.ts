@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { ArrayUnique, IsArray, IsBoolean, IsEmail, IsEnum, IsIn, IsInt, IsOptional, IsString, IsUUID, IsUrl, Matches, Max, MaxLength, Min, MinLength, ValidateNested } from 'class-validator';
+import { ArrayUnique, IsArray, IsBoolean, IsDefined, IsEmail, IsEnum, IsIn, IsInt, IsOptional, IsString, IsUUID, IsUrl, Matches, Max, MaxLength, Min, MinLength, ValidateNested } from 'class-validator';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import { UserRole } from '../auth/interfaces/user-role';
 
@@ -103,6 +103,17 @@ export class PlatformUniversityDto {
   @ApiProperty() @IsString() @MinLength(1) @MaxLength(100) city: string;
   @ApiProperty({ enum: ['active','inactive','pending'] }) @IsIn(['active','inactive','pending']) status: string;
   @ApiPropertyOptional({ description: 'Причина изменения для журнала действий' }) @IsOptional() @IsString() @MinLength(3) @MaxLength(500) reason?: string;
+}
+export class PlatformUniversityAdministratorDto {
+  @ApiProperty({ minLength: 3, maxLength: 32 }) @IsString() @Matches(/^[a-zA-Z0-9._-]+$/) @MinLength(3) @MaxLength(32) username: string;
+  @ApiProperty({ minLength: 6, maxLength: 72 }) @IsString() @MinLength(6) @MaxLength(72) password: string;
+}
+export class PlatformCreateUniversityDto extends PlatformUniversityDto {
+  @ApiProperty({ type: PlatformUniversityAdministratorDto, description: 'Первый аккаунт администратора, автоматически ограниченный новым вузом' })
+  @IsDefined()
+  @ValidateNested()
+  @Type(() => PlatformUniversityAdministratorDto)
+  administrator: PlatformUniversityAdministratorDto;
 }
 export class PlatformFacultyDto {
   @ApiProperty() @IsString() @MinLength(1) @MaxLength(200) name: string;

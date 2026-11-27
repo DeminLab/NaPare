@@ -746,14 +746,7 @@ export default function UsersPage() {
                       onClick={() => setDetail(user)}
                       className="text-xs font-semibold text-sky-700 hover:text-sky-900"
                     >
-                      Просмотр
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDetail(user)}
-                      className="text-xs font-semibold text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"
-                    >
-                      Изменить
+                      Открыть карточку
                     </button>
                     <button
                       type="button"

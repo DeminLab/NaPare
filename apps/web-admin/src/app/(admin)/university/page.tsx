@@ -58,8 +58,8 @@ export default function UniversityPage() {
   };
   const facultyGroups = useMemo(() => faculties.map((faculty) => ({ ...faculty, count: groups.filter((group) => group.facultyId === faculty.id).length })), [faculties, groups]);
 
-  if (loading) return <div className="space-y-4"><Skeleton className="h-24" /><Skeleton className="h-48" /><Skeleton className="h-64" /></div>;
-  if (!university) return <div className="space-y-4"><RequestState title="Не удалось загрузить университет" description={error || 'Данные недоступны.'} onRetry={load} /><Link href="/onboarding" className="inline-flex min-h-11 items-center font-semibold text-indigo-700 underline">Новый вуз / первичная настройка</Link></div>;
+  if (loading) return <div className="mx-auto max-w-[1500px] space-y-6"><header><p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--color-brand)]">Кабинет ВУЗа</p><h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">Настройки университета</h1><p className="mt-2 text-sm text-slate-500 sm:text-base">Управляйте основной информацией, структурой и источником данных.</p></header><div className="space-y-4" aria-busy="true" aria-label="Загрузка настроек университета"><p role="status" className="sr-only">Загружаем настройки университета…</p><Skeleton className="h-48" /><Skeleton className="h-64" /></div></div>;
+  if (!university) return <div className="mx-auto max-w-[1500px] space-y-4"><header><p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--color-brand)]">Кабинет ВУЗа</p><h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">Настройки университета</h1><p className="mt-2 text-sm text-slate-500 sm:text-base">Управляйте основной информацией, структурой и источником данных.</p></header><RequestState title="Не удалось загрузить университет" description={error || 'Данные недоступны.'} headingLevel={2} onRetry={load} /><Link href="/onboarding" className="inline-flex min-h-11 items-center font-semibold text-indigo-700 underline">Новый вуз / первичная настройка</Link></div>;
 
   return <div className="mx-auto max-w-[1500px] space-y-6">
     <header>

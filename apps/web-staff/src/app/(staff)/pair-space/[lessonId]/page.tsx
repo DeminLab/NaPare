@@ -224,6 +224,7 @@ function PairSpaceContent() {
   if (loading)
     return (
       <div className="mx-auto max-w-[1200px] space-y-6">
+        <h1 className="ds-page-title">Пространство пары</h1>
         <Skeleton className="h-32" />
         <Skeleton className="h-12" />
         <Skeleton className="h-[420px]" />
@@ -232,7 +233,9 @@ function PairSpaceContent() {
   if (error && !pairSpace)
     return (
       <div className="mx-auto max-w-[1200px]">
+        <h1 className="sr-only">Пространство пары</h1>
         <RequestState
+          headingLevel={2}
           title="Не удалось открыть пространство пары"
           description={error}
           onRetry={load}

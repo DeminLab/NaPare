@@ -61,17 +61,20 @@ suite('Platform owner and explicitly delegated rights: real PostgreSQL/JWT/HTTP'
     // This scenario requires an undelegated developer; the preceding test grants accounts.write.
     await grant([]).expect(200);
     await grant(['universities.write']).expect(200);
-    await http().post('/api/v1/platform/universities').auth(tokens.developer,{type:'bearer'}).send({name:'Не владелец',city:'Омск',status:'pending'}).expect(403);
+    await http().post('/api/v1/platform/universities').auth(tokens.developer,{type:'bearer'}).send({name:'Не владелец',city:'Омск',status:'pending',administrator:{username:'forbidden-admin',password:'test-created-account-123'}}).expect(403);
     await grant([]).expect(200);
-    const uni=await http().post('/api/v1/platform/universities').auth(tokens.owner,{type:'bearer'}).send({name:'Тестовый вуз',city:'Омск',status:'pending'}).expect(201);
-    await http().put('/api/v1/platform/universities/'+uni.body.id).auth(tokens.owner,{type:'bearer'}).send({name:'Тестовый вуз',city:'Омск',status:'active'}).expect(200);
-    const adminAccount={email:'university-admin@platform.example.test',firstName:'Администратор',lastName:'Вуза',role:'university_admin',organizationId:uni.body.id,password:'test-created-account-123'};
-    await http().post('/api/v1/platform/accounts').auth(tokens.owner,{type:'bearer'}).send(adminAccount).expect(201);
-    const universityAdminLogin=await http().post('/api/v1/auth/login').send({email:adminAccount.email,password:adminAccount.password}).expect(200);
+    const uni=await http().post('/api/v1/platform/universities').auth(tokens.owner,{type:'bearer'}).send({name:'Тестовый вуз',city:'Омск',status:'pending',administrator:{username:'university-admin',password:'test-created-account-123'}}).expect(201);
+    const universityId=uni.body.university.id;
+    expect(uni.body.administrator).toMatchObject({username:'university-admin',role:'university_admin',organizationId:universityId,isActive:true});
+    expect(JSON.stringify(uni.body)).not.toMatch(/password|passwordHash/i);
+    await http().put('/api/v1/platform/universities/'+universityId).auth(tokens.owner,{type:'bearer'}).send({name:'Тестовый вуз',city:'Омск',status:'active'}).expect(200);
+    const adminAudit=await f.db.getRepository(AuditLog).findOneByOrFail({action:'platform.account.created',entityId:uni.body.administrator.id});
+    expect(adminAudit.newValues).toMatchObject({role:'university_admin',organizationId:universityId,result:'created_with_university'});
+    const universityAdminLogin=await http().post('/api/v1/auth/login').send({username:'university-admin',password:'test-created-account-123'}).expect(200);
     await http().patch('/api/v1/admin/university').auth(universityAdminLogin.body.accessToken,{type:'bearer'}).send({status:'active'}).expect(400);
     await http().patch('/api/v1/admin/university').auth(universityAdminLogin.body.accessToken,{type:'bearer'}).send({connectorType:'csv',publicScheduleEnabled:true}).expect(200);
-    expect((await f.db.getRepository(University).findOneByOrFail({id:uni.body.id})).status).toBe('active');
-    const account={email:'new-user@platform.example.test',firstName:'Новый',lastName:'Студент',role:'student',organizationId:uni.body.id,password:'test-created-account-123'};
+    expect((await f.db.getRepository(University).findOneByOrFail({id:universityId})).status).toBe('active');
+    const account={email:'new-user@platform.example.test',firstName:'Новый',lastName:'Студент',role:'student',organizationId:universityId,password:'test-created-account-123'};
     await http().post('/api/v1/platform/accounts').send(account).expect(401);
     await http().post('/api/v1/platform/accounts').auth(tokens.developer,{type:'bearer'}).send(account).expect(403);
     const created=await http().post('/api/v1/platform/accounts').auth(tokens.owner,{type:'bearer'}).set('User-Agent','platform-audit-test').send(account).expect(201);
@@ -86,9 +89,10 @@ suite('Platform owner and explicitly delegated rights: real PostgreSQL/JWT/HTTP'
     await get('/platform/audit').expect(200).expect(({body})=>expect(JSON.stringify(body)).not.toContain(account.password));
   });
   it('configures and tests a schedule connector within the explicitly delegated university scope',async()=>{
-    const uni=await http().post('/api/v1/platform/universities').auth(tokens.owner,{type:'bearer'}).send({name:'СИБИТ',city:'Омск',status:'active'}).expect(201);
-    const path=`/api/v1/platform/universities/${uni.body.id}/schedule-connector`;
-    await get(`/platform/universities/${uni.body.id}/schedule-connector`)
+    const uni=await http().post('/api/v1/platform/universities').auth(tokens.owner,{type:'bearer'}).send({name:'СИБИТ',city:'Омск',status:'active',administrator:{username:'sibit-admin',password:'test-created-account-123'}}).expect(201);
+    const universityId=uni.body.university.id;
+    const path=`/api/v1/platform/universities/${universityId}/schedule-connector`;
+    await get(`/platform/universities/${universityId}/schedule-connector`)
       .expect(200)
       .expect(({body})=>{
         expect(body).toMatchObject({provider:'file-only',enabled:false,sourceHost:null,raspSanoAvailable:true});
@@ -116,28 +120,28 @@ suite('Platform owner and explicitly delegated rights: real PostgreSQL/JWT/HTTP'
     expect(years).toHaveBeenCalledTimes(1);
 
     await http().put(`/api/v1/platform/universities/${f.otherUni.id}`).auth(tokens.owner,{type:'bearer'}).send({name:'СИБИТ',city:'Омск',status:'active',reason:'Проверка защиты от дублей'}).expect(200);
-    await get(`/platform/universities/${uni.body.id}/schedule-connector`).expect(200).expect(({body})=>expect(body.raspSanoAvailable).toBe(false));
+    await get(`/platform/universities/${universityId}/schedule-connector`).expect(200).expect(({body})=>expect(body.raspSanoAvailable).toBe(false));
     await http().patch(path).auth(tokens.owner,{type:'bearer'}).send({provider:'rasp-sano',enabled:true,config:{academicYear:'2026-2027'},reason:'Повторная проверка'}).expect(409);
     await http().post(`${path}/test`).auth(tokens.owner,{type:'bearer'}).expect(409);
     await http().put(`/api/v1/platform/universities/${f.otherUni.id}`).auth(tokens.owner,{type:'bearer'}).send({name:'Другой вуз — тест',city:'Омск',status:'active',reason:'Восстановление тестовых данных'}).expect(200);
 
     await http().put(`/api/v1/platform/universities/${f.otherUni.id}`).auth(tokens.owner,{type:'bearer'}).send({name:'СИБИТ',city:'Омск',status:'inactive',reason:'Проверка неактивного дубликата'}).expect(200);
-    await get(`/platform/universities/${uni.body.id}/schedule-connector`).expect(200).expect(({body})=>expect(body.raspSanoAvailable).toBe(true));
+    await get(`/platform/universities/${universityId}/schedule-connector`).expect(200).expect(({body})=>expect(body.raspSanoAvailable).toBe(true));
     await http().put(`/api/v1/platform/universities/${f.otherUni.id}`).auth(tokens.owner,{type:'bearer'}).send({name:'Другой вуз — тест',city:'Омск',status:'active',reason:'Восстановление тестовых данных'}).expect(200);
 
-    await http().put(`/api/v1/platform/universities/${uni.body.id}`).auth(tokens.owner,{type:'bearer'}).send({name:'СИБИТ',city:'Омск',status:'inactive',reason:'Проверка статуса вуза'}).expect(200);
-    await get(`/platform/universities/${uni.body.id}/schedule-connector`).expect(200).expect(({body})=>expect(body.raspSanoAvailable).toBe(false));
+    await http().put(`/api/v1/platform/universities/${universityId}`).auth(tokens.owner,{type:'bearer'}).send({name:'СИБИТ',city:'Омск',status:'inactive',reason:'Проверка статуса вуза'}).expect(200);
+    await get(`/platform/universities/${universityId}/schedule-connector`).expect(200).expect(({body})=>expect(body.raspSanoAvailable).toBe(false));
     await http().patch(path).auth(tokens.owner,{type:'bearer'}).send({provider:'rasp-sano',enabled:true,config:{academicYear:'2026-2027'},reason:'Неактивный вуз'}).expect(400);
     await http().post(`${path}/test`).auth(tokens.owner,{type:'bearer'}).expect(400);
-    await http().put(`/api/v1/platform/universities/${uni.body.id}`).auth(tokens.owner,{type:'bearer'}).send({name:'СИБИТ',city:'Омск',status:'active',reason:'Восстановление тестового вуза'}).expect(200);
+    await http().put(`/api/v1/platform/universities/${universityId}`).auth(tokens.owner,{type:'bearer'}).send({name:'СИБИТ',city:'Омск',status:'active',reason:'Восстановление тестового вуза'}).expect(200);
 
-    await http().put('/api/v1/platform/permissions/'+f.developer.id).auth(tokens.owner,{type:'bearer'}).send({permissions:['universities.read','universities.write'],serviceIds:[],organizationIds:[uni.body.id]}).expect(200);
-    await get(`/platform/universities/${uni.body.id}/schedule-connector`,'developer').expect(200);
+    await http().put('/api/v1/platform/permissions/'+f.developer.id).auth(tokens.owner,{type:'bearer'}).send({permissions:['universities.read','universities.write'],serviceIds:[],organizationIds:[universityId]}).expect(200);
+    await get(`/platform/universities/${universityId}/schedule-connector`,'developer').expect(200);
     await get(`/platform/universities/${f.otherUni.id}/schedule-connector`,'developer').expect(403);
     await http().patch(otherPath).auth(tokens.developer,{type:'bearer'}).send({provider:'rasp-sano',enabled:true,reason:'Не мой вуз'}).expect(403);
     await http().post(`${otherPath}/test`).auth(tokens.developer,{type:'bearer'}).expect(403);
 
-    const audit=await f.db.getRepository(AuditLog).findOneByOrFail({entityId:uni.body.id,action:'platform.university.schedule_connector.updated'});
+    const audit=await f.db.getRepository(AuditLog).findOneByOrFail({entityId:universityId,action:'platform.university.schedule_connector.updated'});
     expect(audit.newValues).toMatchObject({provider:'rasp-sano',enabled:true,academicYear:'2026-2027',reason:'Подключение расписания'});
     expect(audit.oldValues).toMatchObject({provider:'file-only',enabled:false});
     expect(JSON.stringify(audit)).not.toMatch(/secret|password|token/i);

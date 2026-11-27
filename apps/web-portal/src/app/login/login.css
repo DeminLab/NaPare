@@ -739,6 +739,13 @@ body .login-layout.login-focused.login-focused .login-form { margin-top: 24px; }
 body .login-layout.login-focused.login-focused .login-form input { background: rgb(255 255 255 / .68); }
 body .login-layout.login-focused.login-focused .login-form > button { background: linear-gradient(105deg, #475cf4, #5146e8); box-shadow: 0 12px 25px rgb(72 81 231 / .24); }
 body .login-layout.login-focused.login-focused .login-panel > .login-privacy-link { color: rgb(236 242 255 / .84); margin-top: 16px; }
+/* Keep keyboard focus visible after portal-wide login and mobile overrides. */
+body .login-layout.login-focused .login-form input:focus-visible {
+  border-color: #5548e8;
+  box-shadow: 0 0 0 4px rgb(85 72 232 / 0.12);
+  outline: 3px solid #5548e8;
+  outline-offset: 2px;
+}
 @media (max-width: 720px) {
   body .login-layout.login-focused.login-focused { min-height: 100svh; padding: 148px 16px 44px; }
   body .login-layout.login-focused.login-focused .login-home-return { left: 16px; top: 78px; }

@@ -80,8 +80,8 @@ export default function RoomsPage() {
     finally { setBusy(false); }
   }
 
-  if (loading) return <div className="space-y-4" aria-busy="true" aria-label="Загрузка каталога аудиторий"><p role="status" className="sr-only">Загружаем аудитории…</p><Skeleton className="h-24" /><Skeleton className="h-48" /></div>;
-  if (loadError && rooms.length === 0) return <RequestState title="Каталог аудиторий недоступен" description={loadError} onRetry={() => void load()} />;
+  if (loading) return <div className="mx-auto max-w-[var(--layout-content-max)] space-y-6"><header><p className="workspace-kicker">Университет · расписание и данные</p><h1 className="mt-2 text-3xl font-bold tracking-tight text-[var(--color-text)]">Аудитории</h1><p className="mt-2 max-w-2xl text-sm text-[var(--color-text-secondary)]">Каталог помещений вашего вуза. Архивирование обратимо, история расписания сохраняется.</p></header><div className="space-y-4" aria-busy="true" aria-label="Загрузка каталога аудиторий"><p role="status" className="sr-only">Загружаем аудитории…</p><Skeleton className="h-48" /><Skeleton className="h-48" /></div></div>;
+  if (loadError && rooms.length === 0) return <div className="mx-auto max-w-[var(--layout-content-max)] space-y-4"><header><p className="workspace-kicker">Университет · расписание и данные</p><h1 className="mt-2 text-3xl font-bold tracking-tight text-[var(--color-text)]">Аудитории</h1><p className="mt-2 max-w-2xl text-sm text-[var(--color-text-secondary)]">Каталог помещений вашего вуза. Архивирование обратимо, история расписания сохраняется.</p></header><RequestState title="Каталог аудиторий недоступен" description={loadError} headingLevel={2} onRetry={() => void load()} /></div>;
 
   return <div className="mx-auto max-w-[var(--layout-content-max)] space-y-6">
     <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">

@@ -2,7 +2,7 @@ import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Put, Query, R
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { PlatformService } from './platform.service';
-import { PlatformAccountArchiveDto, PlatformAccountDto, PlatformAccountQueryDto, PlatformCreateAccountDto, PlatformEmergencyDto, PlatformFacultyDto, PlatformGrantDto, PlatformGroupDto, PlatformIdentityLinkDto, PlatformJobDto, PlatformPasswordDto, PlatformQueryDto, PlatformScheduleConnectorDto, PlatformSettingsDto, PlatformStructureArchiveDto, PlatformStructureQueryDto, PlatformUniversityDto } from './platform.dto';
+import { PlatformAccountArchiveDto, PlatformAccountDto, PlatformAccountQueryDto, PlatformCreateAccountDto, PlatformCreateUniversityDto, PlatformEmergencyDto, PlatformFacultyDto, PlatformGrantDto, PlatformGroupDto, PlatformIdentityLinkDto, PlatformJobDto, PlatformPasswordDto, PlatformQueryDto, PlatformScheduleConnectorDto, PlatformSettingsDto, PlatformStructureArchiveDto, PlatformStructureQueryDto, PlatformUniversityDto } from './platform.dto';
 
 @ApiTags('platform') @ApiBearerAuth() @UseGuards(JwtAuthGuard) @Controller('platform')
 export class PlatformController {
@@ -30,7 +30,7 @@ export class PlatformController {
   @Put('settings') updateSettings(@Body() dto: PlatformSettingsDto) { return this.platform.updateSettings(dto); }
   @Get('universities') universities(@Query() query: PlatformQueryDto) { return this.platform.universities(query); }
   @Get('groups') groups(@Query('organizationId', ParseUUIDPipe) organizationId: string) { return this.platform.groups(organizationId); }
-  @Post('universities') createUniversity(@Body() dto: PlatformUniversityDto) { return this.platform.saveUniversity(dto); }
+  @Post('universities') @ApiOperation({ summary: 'Создать вуз и его первого администратора' }) createUniversity(@Body() dto: PlatformCreateUniversityDto, @Request() req: { ip: string; get(name: string): string | undefined }) { return this.platform.createUniversityWithAdministrator(dto, { ip: req.ip, userAgent: req.get('user-agent') }); }
   @Put('universities/:id') updateUniversity(@Param('id', ParseUUIDPipe) id: string, @Body() dto: PlatformUniversityDto) { return this.platform.saveUniversity(dto, id); }
   @Get('universities/:id/schedule-connector') @ApiOperation({ summary: 'Прочитать безопасные настройки источника расписания выбранного вуза' }) scheduleConnector(@Param('id', ParseUUIDPipe) id: string) { return this.platform.scheduleConnector(id); }
   @Patch('universities/:id/schedule-connector') @ApiOperation({ summary: 'Изменить источник расписания выбранного вуза с аудитом' }) updateScheduleConnector(@Param('id', ParseUUIDPipe) id: string, @Body() dto: PlatformScheduleConnectorDto, @Request() req: { ip: string; get(name: string): string | undefined }) { return this.platform.updateScheduleConnector(id, dto, { ip: req.ip, userAgent: req.get('user-agent') }); }
