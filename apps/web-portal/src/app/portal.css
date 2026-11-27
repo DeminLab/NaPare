@@ -1,4 +1,5 @@
 @import "@napare/design-tokens/styles.css";
+@import "@napare/ui/content-styles.css";
 :root {
   color: var(--color-text);
   background: var(--color-surface);
@@ -1688,18 +1689,17 @@ footer .footer-copy {
 .schedule-feature-copy .schedule-source-note { color: #69758a; font-size: 12px; margin-top: 24px; }
 .career-feature-inner { align-items: center; display: grid; gap: 50px; grid-template-columns: minmax(0, 1fr) minmax(280px, .64fr); }
 .career-feature-inner > div:first-child > p:not(.eyebrow) { color: #5f6b80; font-size: 17px; line-height: 1.6; max-width: 650px; }
-.career-route { align-items: center; display: flex; flex-wrap: wrap; gap: 12px; margin: 30px 0 20px; }
-.career-route > span { display: grid; gap: 5px; }
-.career-route b { font-size: 14px; }
-.career-route small { color: #667085; font-size: 12px; }
-.career-route i { background: #3158c9; border-radius: 50%; height: 7px; position: relative; width: 7px; }
-.career-route i::after { background: #c9d5ee; content: ""; height: 1px; left: 7px; position: absolute; top: 3px; width: 28px; }
+.career-route { counter-reset: career-step; display: grid; gap: 10px; grid-template-columns: repeat(3, minmax(0, 1fr)); list-style: none; margin: 30px 0 20px; padding: 0; }
+.career-route li { background: #fff; border: 1px solid #e2e8f4; border-radius: 14px; counter-increment: career-step; display: grid; gap: 5px; grid-template-columns: 30px minmax(0, 1fr); min-width: 0; padding: 13px 12px; }
+.career-route li::before { align-items: center; background: #eaf0ff; border-radius: 50%; color: #3158c9; content: counter(career-step, decimal-leading-zero); display: flex; font-size: 10px; font-weight: 800; grid-row: span 2; height: 28px; justify-content: center; width: 28px; }
+.career-route b { align-self: end; font-size: 13px; line-height: 1.25; }
+.career-route small { color: #667085; font-size: 11px; line-height: 1.35; }
 .subtle-link { color: #59677d; font-size: 14px; font-weight: 650; min-height: 44px; padding: 13px 8px; }
-.career-note-panel { background: #fff0d4; border-radius: 44% 36% 42% 34% / 36% 42% 35% 45%; display: flex; flex-direction: column; justify-content: center; min-height: 340px; padding: 56px; position: relative; transform: rotate(2deg); }
-.career-note-star { color: #ee8a37; font-size: 38px; }
-.career-note-panel p { color: #81531d; font-size: 13px; font-weight: 750; margin: 22px 0 10px; }
-.career-note-panel strong { color: #493419; font-size: clamp(25px, 3vw, 34px); letter-spacing: -.04em; line-height: 1.1; }
-.career-note-panel a { color: #7a4a17; font-size: 13px; font-weight: 700; margin-top: 28px; }
+.career-note-panel { align-items: center; background: radial-gradient(circle at 85% 12%, rgb(255 255 255 / .72), transparent 36%), #fff0d4; border: 1px solid #f4dfbd; border-radius: 32px; box-shadow: 0 20px 48px rgb(104 74 27 / .09); display: flex; flex-direction: column; justify-content: center; justify-self: center; max-width: 440px; min-height: 340px; padding: clamp(28px, 5vw, 52px); position: relative; text-align: center; width: 100%; }
+.career-note-star { color: #ee8a37; font-size: 38px; line-height: 1; }
+.career-note-panel p { color: #81531d; font-size: 13px; font-weight: 750; margin: 18px 0 10px; }
+.career-note-panel strong { color: #493419; font-size: clamp(25px, 3vw, 34px); letter-spacing: -.04em; line-height: 1.1; max-width: 12ch; }
+.career-note-panel a { color: #7a4a17; font-size: 13px; font-weight: 700; margin-top: 24px; min-height: 44px; padding: 12px 4px; }
 .product-section-inner { align-items: center; display: grid; gap: 60px; grid-template-columns: minmax(0, .75fr) minmax(0, 1fr); }
 .product-section-copy > p:not(.eyebrow) { color: #5f6b80; font-size: 16px; line-height: 1.6; }
 .product-points { color: #42516a; display: grid; gap: 11px; font-size: 14px; line-height: 1.45; list-style: none; margin: 24px 0; padding: 0; }
@@ -1767,10 +1767,10 @@ footer .footer-copy {
 .university-publication-note .inline-action { flex: 0 0 auto; }
 .employer-intro-grid { align-items: center; display: grid; gap: 60px; grid-template-columns: 1fr .8fr; padding: 12px 0 76px; }
 .employer-intro-copy > .home-action { margin-top: 20px; }
-.employer-process { align-items: flex-start; background: #ffe5de; border-radius: 42% 58% 47% 53% / 48% 35% 65% 52%; display: flex; flex-direction: column; justify-content: center; min-height: 340px; padding: 48px 60px; transform: rotate(-2deg); }
+.employer-process { align-items: center; background: #ffe5de; border-radius: 42% 58% 47% 53% / 48% 35% 65% 52%; display: flex; flex-direction: column; justify-content: center; min-height: 340px; padding: 48px 60px; text-align: center; transform: rotate(-2deg); }
 .employer-process-mark { color: #bd523e; font-size: 38px; }
 .employer-process p { color: #633a31; font-size: 19px; font-weight: 750; margin: 12px 0; }
-.employer-process i { background: #d87b67; height: 16px; margin-left: 8px; width: 2px; }
+.employer-process i { background: #d87b67; height: 16px; width: 2px; }
 .employer-info-pair { border-top: 1px solid #dbe2ee; }
 
 .schedule-page-hero { padding-bottom: 66px; }
@@ -1889,10 +1889,8 @@ footer .footer-copy {
   .schedule-feature-stamp { max-width: 220px; }
   .schedule-feature-stamp strong { font-size: 70px; }
   .schedule-feature-copy > p:not(.eyebrow) { font-size: 15px; }
-  .career-route { align-items: flex-start; flex-direction: column; gap: 12px; }
-  .career-route i { height: 14px; margin-left: 6px; width: 2px; }
-  .career-route i::after { display: none; }
-  .career-note-panel { border-radius: 35% 27% 35% 25%; min-height: 280px; padding: 44px; }
+  .career-route { grid-template-columns: minmax(0, 1fr); }
+  .career-note-panel { min-height: 280px; }
   .product-showcase-frame { padding: 9px; }
   .university-band-inner, .employer-band-inner, .home-faq-inner { gap: 22px; grid-template-columns: 1fr; }
   .university-band-inner .home-action, .employer-band-inner .home-link-row { grid-column: auto; }
@@ -2837,6 +2835,61 @@ body { background: #f7f8fc; color: #111b34; }
   transform: rotate(-16deg);
   width: 1450px;
   z-index: -1;
+}
+
+/* Keep the public navigation compact on tablets before the full mobile rules apply. */
+@media (min-width: 721px) and (max-width: 960px) {
+  .portal-header {
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 8px;
+    padding: 6px 8px 6px 12px;
+  }
+  .portal-header .portal-nav { display: none; }
+  .portal-header > .text-link { margin-left: auto; min-height: 44px; order: 1; padding: 10px; }
+  .portal-menu { display: block; flex: 0 0 auto; order: 2; position: relative; }
+  .portal-menu summary {
+    align-items: center;
+    border-radius: 10px;
+    cursor: pointer;
+    display: flex;
+    height: 44px;
+    justify-content: center;
+    list-style: none;
+    width: 44px;
+  }
+  .portal-menu summary::-webkit-details-marker { display: none; }
+  .portal-menu summary:focus-visible { outline: 3px solid #93c5fd; outline-offset: 3px; }
+  .menu-lines { display: grid; gap: 5px; width: 20px; }
+  .menu-lines span { background: #fff; border-radius: 2px; height: 2px; transition: transform 180ms ease; width: 20px; }
+  .portal-menu[open] .menu-lines span:first-child { transform: translateY(3.5px) rotate(45deg); }
+  .portal-menu[open] .menu-lines span:last-child { transform: translateY(-3.5px) rotate(-45deg); }
+  .portal-menu-panel {
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    background: rgb(9 23 62 / .88);
+    border: 1px solid rgb(255 255 255 / .18);
+    border-radius: 16px;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / .1), 0 18px 46px rgb(2 8 25 / .32);
+    display: grid;
+    gap: 2px;
+    min-width: min(280px, calc(100vw - 32px));
+    padding: 8px;
+    position: absolute;
+    right: 0;
+    top: calc(100% + 10px);
+  }
+  .portal-menu-panel a { align-items: center; border-radius: 10px; color: #f8faff; display: flex; font-size: 14px; font-weight: 600; min-height: 46px; padding: 10px 12px; }
+  .portal-menu-panel a:hover, .portal-menu-panel a:active { background: rgb(255 255 255 / .1); }
+  .portal-menu-panel a[aria-current="page"] { background: rgb(105 139 255 / .24); }
+  .portal-header ~ section[id] { scroll-margin-top: 82px; }
+  .career-feature-inner { gap: 32px; grid-template-columns: minmax(0, 1fr); }
+  .career-note-panel { max-width: 560px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .portal-menu summary,
+  .menu-lines span { transition: none; }
 }
 .login-layout.login-focused.login-focused::after {
   border: 1px solid rgb(118 187 255 / .5);

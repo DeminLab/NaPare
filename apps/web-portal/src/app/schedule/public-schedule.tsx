@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Icon } from "@napare/ui";
+import { Icon, LessonTypeBadge, lessonTypeKey } from "@napare/ui";
 import styles from "./schedule.module.css";
 
 type University = { id: string; name: string; city: string };
@@ -270,16 +270,22 @@ export function PublicSchedule() {
         {activeLoading && hasActiveSchedule && <p className="schedule-state schedule-loading" role="status" aria-busy="true">Загружаем опубликованное расписание…</p>}
         {activeError && hasActiveSchedule && <div className="schedule-error schedule-error-main" role="alert"><p>{friendlySourceError()}</p><button type="button" onClick={() => browseMode === "group" ? setLessonsRetry((value) => value + 1) : setPublicSearchRetry((value) => value + 1)}>Загрузить ещё раз</button></div>}
         {hasActiveSchedule && !activeLoading && !activeError && <>
-          {browseMode === "group" && <label className={`schedule-search ${styles.searchField}`}><span className="sr-only">Поиск по занятиям выбранной группы</span><span className={styles.searchIcon} aria-hidden="true"><Icon name="search" size={21} /></span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Предмет, преподаватель или аудитория" disabled={!selectedGroup} /></label>}
+          {browseMode === "group" && <label className={`schedule-search ${styles.searchField}`}><span className="ds-sr-only">Поиск по занятиям выбранной группы</span><span className={styles.searchIcon} aria-hidden="true"><Icon name="search" size={21} /></span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Предмет, преподаватель или аудитория" disabled={!selectedGroup} /></label>}
+          {visibleLessonCount > 0 && <div className={styles.lessonTypeLegend} role="group" aria-label="Цвета типов занятий">
+            <span className={styles.lessonTypeLegendLabel}>Тип занятия</span>
+            <LessonTypeBadge subjectType="lecture" />
+            <LessonTypeBadge subjectType="practice" />
+            <LessonTypeBadge subjectType="lab" />
+          </div>}
           <div className="schedule-day-list">
             {lessonsByDay.map((day) => (
               <section key={day.date} className="schedule-day">
                 <header><h3>{day.label}</h3><span>{day.short}</span><b>{day.lessons.length} {day.lessons.length === 1 ? "пара" : day.lessons.length > 1 && day.lessons.length < 5 ? "пары" : "пар"}</b></header>
                 {day.lessons.length > 0 ? <div className="schedule-lesson-list">
                   {day.lessons.map((lesson) => (
-                    <article key={lesson.lessonId} className={lesson.isReplacement ? "schedule-lesson is-replacement" : "schedule-lesson"}>
+                    <article key={lesson.lessonId} className={lesson.isReplacement ? "schedule-lesson is-replacement" : "schedule-lesson"} data-lesson-type={lessonTypeKey(lesson.subjectType)}>
                       <time>{lesson.startTime}<span>–{lesson.endTime}</span></time>
-                      <div><h4>{lesson.subject}</h4><p>{lesson.teacher || "Преподаватель не указан"} <span aria-hidden="true">·</span> {lesson.room ? `ауд. ${lesson.room}` : "аудитория не указана"}{lesson.groupName && <> <span aria-hidden="true">·</span> группа {lesson.groupName}</>}</p>{lesson.weekType !== "both" && <small>{lesson.weekType === "odd" ? "Нечётная неделя" : "Чётная неделя"}</small>}</div>
+                      <div><h4>{lesson.subject}</h4>{lesson.subjectType && <div className={styles.lessonTypeTag}><LessonTypeBadge subjectType={lesson.subjectType} /></div>}<p>{lesson.teacher || "Преподаватель не указан"} <span aria-hidden="true">·</span> {lesson.room ? `ауд. ${lesson.room}` : "аудитория не указана"}{lesson.groupName && <> <span aria-hidden="true">·</span> группа {lesson.groupName}</>}</p>{lesson.weekType !== "both" && <small>{lesson.weekType === "odd" ? "Нечётная неделя" : "Чётная неделя"}</small>}</div>
                       {lesson.isReplacement && <span className="lesson-replacement-badge">Замена</span>}
                     </article>
                   ))}

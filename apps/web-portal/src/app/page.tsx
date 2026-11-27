@@ -144,13 +144,11 @@ export default function HomePage() {
             <p className="eyebrow">Карьерный центр</p>
             <h2>Практика — часть учебного пути</h2>
             <p className="section-lead">Карьерный центр помогает выстроить безопасный и понятный путь между студентом и работодателем: от знакомства с задачей до результата и портфолио.</p>
-            <div className="career-route" aria-label="Этапы практики">
-              <span><b>Студент</b><small>Выбирает задачу</small></span>
-              <i aria-hidden="true" />
-              <span><b>Работодатель</b><small>Даёт обратную связь</small></span>
-              <i aria-hidden="true" />
-              <span><b>Карьерный центр</b><small>Поддерживает процесс</small></span>
-            </div>
+            <ol className="career-route" aria-label="Этапы практики">
+              <li><b>Студент</b><small>Выбирает задачу</small></li>
+              <li><b>Работодатель</b><small>Даёт обратную связь</small></li>
+              <li><b>Карьерный центр</b><small>Поддерживает процесс</small></li>
+            </ol>
             <div className="home-link-row">
               <Link href="/career-center" className="inline-action">Как работает центр <Icon name="arrow-right" size={17} /></Link>
               <Link href="/career" className="subtle-link">Перейти к задачам</Link>

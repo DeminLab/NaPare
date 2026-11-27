@@ -4,9 +4,9 @@
 
 .schedulePage :global(.schedule-page-hero) {
   background: radial-gradient(ellipse at 78% 15%, rgb(72 106 215 / 0.46), transparent 43%), #0d1d43;
-  min-height: 456px;
+  min-height: 390px;
   overflow: hidden;
-  padding-bottom: 70px;
+  padding: 122px 24px 42px;
   position: relative;
 }
 
@@ -17,11 +17,14 @@
 }
 
 .schedulePage :global(.schedule-page-hero h1) {
-  max-width: 570px;
+  font-size: clamp(38px, 5vw, 60px);
+  max-width: 780px;
 }
 
 .schedulePage :global(.schedule-page-hero .public-page-hero-inner > p:last-child) {
-  max-width: 550px;
+  font-size: clamp(16px, 1.6vw, 19px);
+  margin-top: 16px;
+  max-width: 680px;
 }
 
 .heroVisual {
@@ -136,17 +139,71 @@
   min-height: 46px;
 }
 
+.scheduleContent :global(.schedule-lesson[data-lesson-type="lecture"]) {
+  box-shadow: inset 3px 0 0 var(--color-lesson-lecture);
+}
+
+.scheduleContent :global(.schedule-lesson[data-lesson-type="practice"]) {
+  box-shadow: inset 3px 0 0 var(--color-lesson-practice);
+}
+
+.scheduleContent :global(.schedule-lesson[data-lesson-type="lab"]) {
+  box-shadow: inset 3px 0 0 var(--color-lesson-lab);
+}
+
+.lessonTypeLegend {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 14px;
+}
+
+.lessonTypeLegendLabel {
+  color: #68758d;
+  font-size: 12px;
+  font-weight: 650;
+  margin-right: 2px;
+}
+
+.lessonTypeTag {
+  margin: 5px 0 2px;
+}
+
+@media (max-width: 420px) {
+  .lessonTypeLegend {
+    gap: 6px;
+  }
+
+  .lessonTypeLegend :global(.lesson-type-badge) {
+    font-size: 10px;
+    padding: 2px 7px;
+  }
+}
+
+@media (max-width: 960px) {
+  .heroCalendar,
+  .heroOrbit {
+    display: none;
+  }
+}
+
 .searchField {
   position: relative;
 }
 
 .searchIcon {
+  align-items: center;
   color: #5b6caa;
+  display: flex;
+  height: 24px;
+  justify-content: center;
   left: 14px;
   pointer-events: none;
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
+  width: 24px;
 }
 
 .scheduleContent :global(.schedule-search input) {
@@ -163,8 +220,18 @@
 
 @media (max-width: 720px) {
   .schedulePage :global(.schedule-page-hero) {
-    min-height: 460px;
-    padding: 250px 20px 42px;
+    min-height: 0;
+    padding: 142px 20px 32px;
+  }
+
+  .schedulePage :global(.schedule-page-hero h1) {
+    font-size: clamp(32px, 8.7vw, 39px);
+  }
+
+  .schedulePage :global(.schedule-page-hero .public-page-hero-inner > p:last-child) {
+    font-size: 15px;
+    line-height: 1.5;
+    margin-top: 14px;
   }
 
   .heroVisual {
@@ -172,7 +239,7 @@
     background-position: center, 68% 35%;
     background-size: cover;
     inset: 0 0 auto;
-    height: 285px;
+    height: 220px;
   }
 
   .heroCalendar {
@@ -183,10 +250,7 @@
   }
 
   .heroOrbit {
-    height: 64px;
-    left: 7%;
-    top: 168px;
-    width: 33%;
+    display: none;
   }
 
   .scheduleContent :global(.schedule-picker) {
