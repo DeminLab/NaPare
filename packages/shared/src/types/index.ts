@@ -9,7 +9,7 @@ export type { Role, AbsenceType, LessonChangeType, NotificationType, LessonStatu
 
 export interface User {
   id: string;
-  email: string;
+  email: string | null;
   firstName: string;
   lastName: string;
   phone?: string;
@@ -204,7 +204,7 @@ export interface AuthResponse {
   refreshToken: string;
   user: {
     id: string;
-    email: string;
+    email: string | null;
     firstName: string;
     lastName: string;
     roles: Role[];

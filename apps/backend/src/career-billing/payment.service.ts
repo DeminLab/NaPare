@@ -40,6 +40,10 @@ export class PaymentService {
     if (email.length > 64 || this.config.get('TKASSA_TERMINAL_CURRENCY') !== 'RUB') throw new ServiceUnavailableException('Нужны RUB-терминал и допустимый email для чека');
     return { Email: email, Taxation: taxation, Items: [{ Name: 'Доступ к карьерным сервисам НаПаре', Price: amount, Quantity: 1, Amount: amount, Tax: tax, PaymentMethod: 'full_payment', PaymentObject: 'service' }] };
   }
+  private receiptEmail(actor: AuthenticatedUser): string {
+    if (!actor.email?.trim()) throw new BadRequestException('Для оплаты укажите email для чека');
+    return actor.email.trim();
+  }
   async list(actor: AuthenticatedUser, companyId: string) {
     await this.company(actor, companyId);
     return this.db.getRepository(CareerPayment).find({ where: { companyId }, order: { createdAt: 'DESC' }, take: 100 });
@@ -49,7 +53,7 @@ export class PaymentService {
     try {
       this.bank.assertConfigured();
       const amountMinor = this.price();
-      this.origin(); this.receipt(actor.email, amountMinor);
+      this.origin(); this.receipt(this.receiptEmail(actor), amountMinor);
       return { available: true, product: 'career_access', amountMinor, currency: 'RUB', label: 'Доступ к карьерным сервисам НаПаре' };
     } catch { return { available: false, reason: 'Оплата услуг пока не подключена. Обратитесь к оператору платформы.' }; }
   }
@@ -70,11 +74,12 @@ export class PaymentService {
   }
   async create(actor: AuthenticatedUser, dto: CreatePaymentDto) {
     await this.company(actor, dto.companyId);
+    const email = this.receiptEmail(actor);
     if (!this.bank.enabled()) throw new ServiceUnavailableException('Платёжные запросы отключены');
     const repository = this.db.getRepository(CareerPayment);
     let order = await repository.findOneBy({ companyId: dto.companyId, idempotencyKey: dto.idempotencyKey });
     if (!order) {
-      try { order = await repository.save(repository.create({ ...dto, createdBy: actor.id, receiptEmail: actor.email, amountMinor: this.price(), currency: 'RUB' })); }
+      try { order = await repository.save(repository.create({ ...dto, createdBy: actor.id, receiptEmail: email, amountMinor: this.price(), currency: 'RUB' })); }
       catch (error) {
         if ((error as { driverError?: { code?: string } }).driverError?.code !== '23505') throw error;
         order = await repository.findOneByOrFail({ companyId: dto.companyId, idempotencyKey: dto.idempotencyKey });
@@ -85,7 +90,7 @@ export class PaymentService {
       const payments = manager.getRepository(CareerPayment);
       const current = await payments.findOneOrFail({ where: { id: order!.id }, lock: { mode: 'pessimistic_write' } });
       if (current.state !== 'created') return { order: current, claimed: false };
-      this.origin(); this.receipt(actor.email, current.amountMinor);
+      this.origin(); this.receipt(email, current.amountMinor);
       // Commit uncertainty before touching the bank. A process crash must never
       // return the order to a state that would blindly issue Init again.
       current.state = 'unknown';
@@ -100,7 +105,7 @@ export class PaymentService {
           NotificationURL: `${this.origin()}/api/v1/career/payments/notification`,
           SuccessURL: `${this.origin()}/career?tab=companies&payment=${current.id}`,
           FailURL: `${this.origin()}/career?tab=companies&payment=${current.id}`,
-          Receipt: this.receipt(actor.email, current.amountMinor),
+          Receipt: this.receipt(email, current.amountMinor),
         });
         this.checkBankObject(current, result, false);
         return await this.db.transaction(async manager => {

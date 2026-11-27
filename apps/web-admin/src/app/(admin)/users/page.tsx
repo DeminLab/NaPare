@@ -23,7 +23,7 @@ import {
 interface AdminUser {
   id: string;
   username?: string | null;
-  email: string;
+  email: string | null;
   firstName: string;
   lastName: string;
   role?: string;
@@ -236,7 +236,7 @@ export default function UsersPage() {
           (status === "all" ||
             (status === "active" ? user.isActive : !user.isActive)) &&
           (!query ||
-            `${user.firstName} ${user.lastName} ${user.username || ""} ${user.email}`
+            `${user.firstName} ${user.lastName} ${user.username || ""} ${user.email || ""}`
               .toLowerCase()
               .includes(query))
         );
@@ -321,7 +321,7 @@ export default function UsersPage() {
           username: newUser.username.trim(),
           firstName: newUser.firstName.trim(),
           lastName: newUser.lastName.trim(),
-          email: newUser.email.trim(),
+          email: newUser.email.trim() || null,
           groupId: newUser.groupId || undefined,
           sourceTeacherId: newUser.sourceTeacherId || undefined,
         }),
@@ -669,7 +669,7 @@ export default function UsersPage() {
                 raspGroupItem?.faculty || "—";
               return (
                 <div key={user.id}>
-                  <article className="space-y-3 p-4 xl:hidden"><div className="flex items-start justify-between gap-3"><div className="flex min-w-0 items-start gap-3"><input type="checkbox" checked={selectedIds.includes(user.id)} onChange={() => toggle(user.id)} aria-label={`Выбрать ${user.firstName} ${user.lastName}`} className="mt-1 h-5 w-5 shrink-0" /><div className="min-w-0"><button type="button" onClick={() => setDetail(user)} className="min-h-11 break-words text-left text-base font-semibold text-[var(--color-text)]">{user.firstName} {user.lastName}</button><p className="text-sm text-[var(--color-text-secondary)]">{roleLabels[currentRole] || currentRole} · {groupName || 'Группа не назначена'}</p></div></div><Badge variant={user.isActive ? 'green' : 'red'}>{user.isActive ? 'Активен' : 'Заблокирован'}</Badge></div><div className="flex flex-wrap items-center justify-between gap-2"><span className="min-w-0 break-all text-sm text-[var(--color-text-secondary)]"><span className="font-semibold text-[var(--color-text)]">Логин: {user.username || 'не назначен'}</span><br />Email: {user.email}</span><Button variant="secondary" onClick={() => setDetail(user)}>Данные и действия →</Button></div></article>
+                  <article className="space-y-3 p-4 xl:hidden"><div className="flex items-start justify-between gap-3"><div className="flex min-w-0 items-start gap-3"><input type="checkbox" checked={selectedIds.includes(user.id)} onChange={() => toggle(user.id)} aria-label={`Выбрать ${user.firstName} ${user.lastName}`} className="mt-1 h-5 w-5 shrink-0" /><div className="min-w-0"><button type="button" onClick={() => setDetail(user)} className="min-h-11 break-words text-left text-base font-semibold text-[var(--color-text)]">{user.firstName} {user.lastName}</button><p className="text-sm text-[var(--color-text-secondary)]">{roleLabels[currentRole] || currentRole} · {groupName || 'Группа не назначена'}</p></div></div><Badge variant={user.isActive ? 'green' : 'red'}>{user.isActive ? 'Активен' : 'Заблокирован'}</Badge></div><div className="flex flex-wrap items-center justify-between gap-2"><span className="min-w-0 break-all text-sm text-[var(--color-text-secondary)]"><span className="font-semibold text-[var(--color-text)]">Логин: {user.username || 'не назначен'}</span><br />Email: {user.email || 'не указан'}</span><Button variant="secondary" onClick={() => setDetail(user)}>Данные и действия →</Button></div></article>
                 <div
                   className="grid gap-3 px-4 py-4 hidden xl:grid-cols-[36px_minmax(190px,1.4fr)_minmax(180px,1.2fr)_140px_140px_130px_110px_110px] xl:grid xl:items-center xl:px-4"
                 >
@@ -694,7 +694,7 @@ export default function UsersPage() {
                   </div>
                   <div>
                     <span className="block break-all text-sm font-semibold text-[var(--color-text)]">Логин · {user.username || "не назначен"}</span>
-                    <span className="block break-all text-xs text-[var(--color-text-secondary)]">Email · {user.email}</span>
+                    <span className="block break-all text-xs text-[var(--color-text-secondary)]">Email · {user.email || "не указан"}</span>
                   </div>
                   <div>
                     <span className="md:hidden text-xs text-slate-400">
@@ -812,7 +812,7 @@ export default function UsersPage() {
               <div className="flex justify-between gap-4 py-3">
                 <dt className="text-sm text-[var(--color-text-secondary)]">Email</dt>
                 <dd className="break-all text-right text-sm font-medium text-slate-800">
-                  {detail.email}
+                  {detail.email || "не указан"}
                 </dd>
               </div>
               <div className="flex justify-between gap-4 py-3">
@@ -971,13 +971,13 @@ export default function UsersPage() {
             required
           />
           <Input
-            label="Корпоративная почта"
+            label={newUser.role === "teacher" ? "Email преподавателя (необязательно)" : "Корпоративная почта"}
             type="email"
             value={newUser.email}
             onChange={(event) =>
               setNewUser((item) => ({ ...item, email: event.target.value }))
             }
-            required
+            required={newUser.role !== "teacher"}
           />
           <Input
             label="Временный пароль"
@@ -1040,6 +1040,7 @@ export default function UsersPage() {
               Преподаватель в расписании СИБИТа
               <select
                 value={newUser.sourceTeacherId}
+                required={!newUser.email.trim()}
                 onChange={(event) => {
                   const sourceTeacherId = event.target.value;
                   const teacher = raspTeachers.find((item) => item.id === sourceTeacherId);
@@ -1048,12 +1049,14 @@ export default function UsersPage() {
                 }}
                 className="mt-1.5 h-11 w-full rounded-xl border border-[var(--color-border)] bg-white px-3 text-sm outline-none focus:border-sky-500"
               >
-                <option value="">Не связывать пока</option>
+                <option value="" disabled={!newUser.email.trim()}>
+                  {newUser.email.trim() ? "Не связывать пока" : "Выберите преподавателя"}
+                </option>
                 {raspTeachers.filter((teacher) => !teacher.linkedUser && !/вакансия|не назначен/i.test(teacher.name)).map((teacher) => (
                   <option key={teacher.id} value={teacher.id}>{teacher.name} · {teacher.lessonCount} пар · {teacher.groups.map((item) => item.name).join(", ")}</option>
                 ))}
               </select>
-              <span className="mt-1 block text-xs font-normal leading-5 text-[var(--color-text-secondary)]">После создания аккаунта расписание привяжется по точному ID преподавателя. Укажите логин, действующую корпоративную почту и временный пароль.</span>
+              <span className="mt-1 block text-xs font-normal leading-5 text-[var(--color-text-secondary)]">После создания расписание привяжется по точному ID преподавателя. Укажите логин и временный пароль; email можно оставить пустым.</span>
             </label>
           )}
           <div className="flex justify-end gap-2 pt-2">

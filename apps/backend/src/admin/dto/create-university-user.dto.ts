@@ -1,3 +1,4 @@
+import { Transform } from 'class-transformer';
 import { IsEmail, IsEnum, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -11,9 +12,11 @@ export class CreateUniversityUserDto {
   @Matches(/^[a-zA-Z0-9._-]+$/)
   username: string;
 
-  @ApiProperty({ example: 'student@university.ru' })
+  @ApiPropertyOptional({ example: 'teacher@university.ru', nullable: true, description: 'Email обязателен для большинства ролей; преподавателю можно не указывать.' })
+  @Transform(({ value }) => typeof value === 'string' && value.trim() === '' ? null : value)
+  @IsOptional()
   @IsEmail()
-  email: string;
+  email?: string | null;
 
   @ApiProperty({ example: 'temporary-password-2026', minLength: 6 })
   @IsString()

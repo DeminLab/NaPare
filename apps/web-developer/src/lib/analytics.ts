@@ -76,7 +76,7 @@ export interface TelemetryEvent {
   userAgent: string | null;
   metadata: Record<string, unknown> | null;
   createdAt: string;
-  user: { id: string; email: string; firstName: string; lastName: string; role: string } | null;
+  user: { id: string; email: string | null; firstName: string; lastName: string; role: string } | null;
 }
 
 export interface EventPage {
@@ -129,7 +129,7 @@ export interface UserSession {
   expiresAt: string;
   revokedAt: string | null;
   revokeReason: string | null;
-  user?: { id: string; email: string; firstName: string; lastName: string; role: string } | null;
+  user?: { id: string; email: string | null; firstName: string; lastName: string; role: string } | null;
 }
 
 export interface SessionPage {

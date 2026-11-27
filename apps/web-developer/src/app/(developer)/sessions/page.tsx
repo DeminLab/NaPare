@@ -91,7 +91,7 @@ export default function PlatformSessionsPage() {
       render: (session: UserSession) => session.user ? (
         <Link href={`/users/${session.user.id}`} className="block min-w-0 hover:text-[var(--color-brand)]">
           <p className="truncate text-sm font-medium">{session.user.firstName} {session.user.lastName}</p>
-          <p className="truncate text-[11px] text-[var(--color-text-secondary)]">{session.user.email} · {roles[session.user.role] ?? session.user.role}</p>
+          <p className="truncate text-[11px] text-[var(--color-text-secondary)]">{session.user.email || 'не указан'} · {roles[session.user.role] ?? session.user.role}</p>
         </Link>
       ) : <span className="text-xs text-[var(--color-text-secondary)]">Аккаунт удалён</span>,
     },
@@ -176,7 +176,7 @@ export default function PlatformSessionsPage() {
             <div className="space-y-4">
               <p className="text-sm leading-6 text-[var(--color-text-secondary)]">Сессия будет отозвана немедленно. Пользователь сможет продолжить работу только после нового входа на этом устройстве.</p>
               <dl className="grid gap-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-secondary)] p-3 text-sm sm:grid-cols-2">
-                <div><dt className="text-xs text-[var(--color-text-secondary)]">Пользователь</dt><dd className="mt-0.5">{selected.user ? `${selected.user.firstName} ${selected.user.lastName} · ${selected.user.email}` : 'Аккаунт удалён'}</dd></div>
+                <div><dt className="text-xs text-[var(--color-text-secondary)]">Пользователь</dt><dd className="mt-0.5">{selected.user ? `${selected.user.firstName} ${selected.user.lastName} · ${selected.user.email || 'не указан'}` : 'Аккаунт удалён'}</dd></div>
                 <div><dt className="text-xs text-[var(--color-text-secondary)]">Устройство</dt><dd className="mt-0.5">{selected.device} · {selected.os} · {selected.browser}</dd></div>
                 <div><dt className="text-xs text-[var(--color-text-secondary)]">IP</dt><dd className="mt-0.5 font-mono text-xs">{selected.ip || '—'}</dd></div>
                 <div><dt className="text-xs text-[var(--color-text-secondary)]">Последняя активность</dt><dd className="mt-0.5">{formatDate(selected.lastSeenAt)}</dd></div>

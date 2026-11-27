@@ -2,7 +2,7 @@ import { UserRole } from "./user-role";
 
 export interface JwtPayload {
   sub: string;
-  email: string;
+  email: string | null;
   role: UserRole;
   organizationId: string | null;
   groupId?: string | null;

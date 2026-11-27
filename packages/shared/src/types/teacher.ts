@@ -11,7 +11,7 @@ export interface Teacher {
 export interface TeacherWithUser extends Teacher {
   firstName: string;
   lastName: string;
-  email: string;
+  email: string | null;
   phone?: string;
   avatarUrl?: string;
 }

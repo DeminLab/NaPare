@@ -259,7 +259,7 @@ export class InvitesService {
         () =>
           this.db.getRepository(LinkRequest).save({
             organizationId: subject.organizationId!,
-            studentEmail: subject.email,
+            studentEmail: subject.email ?? email,
             studentFullName: dto.studentFullName.trim(),
             note: dto.note?.trim() || null,
           }),

@@ -2,7 +2,7 @@ import { UserRole } from './user-role';
 
 export interface AuthenticatedUser {
   id: string;
-  email: string;
+  email: string | null;
   /** Legacy mirror of the active organization's single role (ADR-0009). */
   role: UserRole;
   /**

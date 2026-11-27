@@ -200,6 +200,7 @@ export class PlatformService {
       const current = await manager.findOneByOrFail(User, { id });
       const nextRole = dto.role ?? current.role;
       const nextOrganizationId = dto.organizationId !== undefined ? dto.organizationId : current.organizationId;
+      if (current.email === null && nextRole !== UserRole.TEACHER) throw new ConflictException('Нельзя сменить роль преподавателя без email. Сначала укажите email для аккаунта.');
       this.assertUniversityScope(access, nextOrganizationId);
       if (![UserRole.DEVELOPER, UserRole.SUPERADMIN, UserRole.EMPLOYER, UserRole.CAREER_STAFF, UserRole.CAREER_ADMIN].includes(nextRole) && !nextOrganizationId) throw new BadRequestException('Для этой роли требуется привязка к университету.');
       if (dto.organizationId && !await manager.getRepository(University).existsBy({ id: dto.organizationId })) throw new BadRequestException('Университет не найден.');

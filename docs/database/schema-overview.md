@@ -6,7 +6,7 @@
 
 | Область | Основные таблицы | Источник |
 |---|---|---|
-| Учётные записи и организация | `universities`, `faculties`, `groups`, `teachers`, `users` | `apps/backend/src/users/entities/`, начальная миграция; миграция `1700000000054-PublicUniversitySchedule` добавляет `publicScheduleEnabled`; миграция `1700000000055-Usernames` добавляет уникальный username (существующим аккаунтам его назначает администратор), а `1700000000057-UsernameAuthPolicies` включает поиск по username в существующие RLS-политики `users` |
+| Учётные записи и организация | `universities`, `faculties`, `groups`, `teachers`, `users` | `apps/backend/src/users/entities/`, начальная миграция; миграция `1700000000054-PublicUniversitySchedule` добавляет `publicScheduleEnabled`; миграция `1700000000055-Usernames` добавляет уникальный username (существующим аккаунтам его назначает администратор), миграция `1700000000057-UsernameAuthPolicies` включает поиск по username в существующие RLS-политики `users`, а `1700000000062-NullableTeacherEmail` разрешает `NULL` только преподавателям с `sourceTeacherId` (уникальность заданных email сохранена) |
 | Расписание | `lessons`, `lesson_changes`, `rooms` | `apps/backend/src/schedule/entities/`; tenant-scoped каталог аудиторий добавлен миграцией `1700000000061-UniversityRooms` |
 | Пространство пары | `pair_spaces`, `announcements`, `homeworks`, `homework_submissions`, `file_attachments`, `discussion_messages` | `apps/backend/src/pair-space/entities/` |
 | Учёт отсутствий | `absences`, `absence_confirmations`, `attendance_records` | `apps/backend/src/absences/`; таблица `attendance_qr_sessions` удалена миграцией `1700000000045-RemoveAttendanceQrSessions` |

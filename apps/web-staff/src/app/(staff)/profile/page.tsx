@@ -7,7 +7,7 @@ import { useWorkspaceQuery } from '@napare/ui/workspace-shell';
 import { apiFetch, type PaginatedResponse, getNotifications, getUser, logout } from '@/lib/api';
 import { Badge, Button, Card, EmptyState, LoadingState, RequestState, Skeleton } from '@/components/ui';
 
-interface User { id: string; email: string; firstName: string; lastName: string; role: string; organizationId: string; isActive: boolean; }
+interface User { id: string; email: string | null; firstName: string; lastName: string; role: string; organizationId: string; isActive: boolean; }
 interface Group { id: string; name: string; studentCount: number; }
 interface Activity { id: string; title: string; body: string; createdAt: string; isRead: boolean; }
 type ProfileTab = 'info' | 'groups' | 'activity' | 'security';

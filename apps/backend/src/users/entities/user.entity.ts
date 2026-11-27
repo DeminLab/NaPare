@@ -5,11 +5,13 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   Index,
+  Check,
 } from "typeorm";
 import { Exclude } from "class-transformer";
 import { UserRole } from "../../auth/interfaces/user-role";
 
 @Entity("users")
+@Check("CHK_users_email_or_linked_teacher", '"email" IS NOT NULL OR ("role" = \'teacher\' AND "sourceTeacherId" IS NOT NULL)')
 @Index("IDX_users_organization_id", ["organizationId"])
 @Index("UQ_users_university_source_teacher", ["organizationId", "sourceTeacherId"], { unique: true, where: '"sourceTeacherId" IS NOT NULL' })
 @Index("IDX_users_max_user_id", ["maxUserId"], { unique: true })
@@ -18,8 +20,8 @@ export class User {
   @PrimaryGeneratedColumn("uuid")
   id: string;
 
-  @Column({ unique: true })
-  email: string;
+  @Column({ type: "varchar", length: 255, unique: true, nullable: true })
+  email: string | null;
 
   /** Administrator-assigned sign-in identifier; legacy accounts need assignment before login. */
   @Column({ type: "varchar", length: 32, nullable: true })

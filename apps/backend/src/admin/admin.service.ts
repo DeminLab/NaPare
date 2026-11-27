@@ -187,6 +187,9 @@ export class AdminService {
     ) {
       throw new ForbiddenException("Недостаточно прав для изменения роли этой учётной записи");
     }
+    if (user.email === null && updateUserRoleDto.role !== UserRole.TEACHER) {
+      throw new ConflictException("Нельзя сменить роль преподавателя без email. Сначала укажите email для аккаунта.");
+    }
 
     const updatedUser = await this.usersService.update(userId, {
       role: updateUserRoleDto.role,
@@ -236,7 +239,14 @@ export class AdminService {
       throw new ForbiddenException(
         "Insufficient permissions to create this role",
       );
-    if (await this.usersService.findByEmail(data.email.trim()))
+    const email = data.email?.trim().toLowerCase() || null;
+    if (!email && data.role !== UserRole.TEACHER) {
+      throw new BadRequestException("Для этой роли необходимо указать email.");
+    }
+    if (!email && !data.sourceTeacherId) {
+      throw new BadRequestException("Без email можно создать только преподавателя, связанного с расписанием СИБИТа.");
+    }
+    if (email && await this.usersService.findByEmail(email))
       throw new ConflictException("Пользователь с такой почтой уже существует");
     const username = normalizeUsername(data.username);
     if (await this.usersService.findByUsername(username)) {
@@ -272,7 +282,7 @@ export class AdminService {
     }
     const created = await this.usersService.create({
       username,
-      email: data.email.trim(),
+      email,
       passwordHash: await bcrypt.hash(data.password, 12),
       firstName: data.firstName.trim(),
       lastName: data.lastName.trim(),
@@ -291,6 +301,9 @@ export class AdminService {
     this.tenantContext.assertAccess(organizationId);
     const user = await this.userRepository.findOne({ where: { id: userId, organizationId } });
     if (!user || user.role !== UserRole.TEACHER) throw new NotFoundException("Учётная запись преподавателя не найдена.");
+    if (!sourceTeacherId && user.email === null) {
+      throw new ConflictException("Нельзя отвязать преподавателя без email от расписания. Сначала укажите email для аккаунта.");
+    }
     if (sourceTeacherId) {
       const university = await this.getUniversity(organizationId);
       if (!await this.isRaspScheduleEnabled(university) || !(await this.sibitConnectorService.getTeachers(readScheduleConnectorSettings(university).config.academicYear)).some((teacher) => teacher.id === sourceTeacherId)) {

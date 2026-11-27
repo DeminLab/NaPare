@@ -246,7 +246,7 @@ export async function logout(): Promise<void> {
 
 export interface Me {
   id: string;
-  email: string;
+  email: string | null;
   firstName: string;
   lastName: string;
   /** /users/me returns the account's primary role as a singular field. */

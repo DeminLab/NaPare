@@ -4,7 +4,7 @@ export interface AuthResponse {
   user: {
     id: string;
     username: string | null;
-    email: string;
+    email: string | null;
     firstName: string;
     lastName: string;
     role: UserRole;

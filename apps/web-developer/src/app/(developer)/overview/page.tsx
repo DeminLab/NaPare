@@ -202,7 +202,7 @@ export default function DeveloperOverviewPage() {
                         <div className="min-w-0">
                           <p className="truncate font-mono text-xs text-[var(--color-text)]">{event.name}</p>
                           <p className="mt-1 text-[11px] text-[var(--color-text-secondary)]">
-                            {event.user ? `${event.user.firstName} ${event.user.lastName} · ${event.user.email}` : 'Системное событие'} · {relativeTime(event.createdAt)}
+                            {event.user ? `${event.user.firstName} ${event.user.lastName} · ${event.user.email || 'не указан'}` : 'Системное событие'} · {relativeTime(event.createdAt)}
                           </p>
                         </div>
                         <div className="flex shrink-0 items-center gap-1.5">

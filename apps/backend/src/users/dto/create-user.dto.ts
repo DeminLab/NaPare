@@ -8,8 +8,9 @@ export class CreateUserDto {
   @Matches(/^[a-zA-Z0-9._-]+$/)
   username: string;
 
+  @IsOptional()
   @IsEmail()
-  email: string;
+  email: string | null;
 
   @IsString()
   passwordHash: string;
