@@ -970,9 +970,13 @@ export class AdminService {
     }
     if (requesterRole !== UserRole.TEACHER)
       return this.getGroups(organizationId, pagination);
+    const university = await this.getUniversity(organizationId);
+    const academicYear = readScheduleConnectorSettings(university).config.academicYear
+      ?? currentAcademicYear();
     const groupIds = await this.scheduleService.getTeacherGroupIds(
       organizationId,
       requesterId,
+      academicYear,
     );
     if (!groupIds.length) return toPaginatedResponse([], 0, pagination);
     const [data, total] = await this.groupRepository.findAndCount({
@@ -1244,6 +1248,13 @@ function normalizedKey(value: string): string {
 function academicStartYear(value: string): number {
   const year = Number(value.slice(0, 4));
   return Number.isInteger(year) ? year : new Date().getFullYear();
+}
+
+function currentAcademicYear(now = new Date()): string {
+  const startYear = now.getUTCMonth() >= 8
+    ? now.getUTCFullYear()
+    : now.getUTCFullYear() - 1;
+  return `${startYear}-${startYear + 1}`;
 }
 
 function sibitLessonKey(externalId: string | null, groupId: string): string {

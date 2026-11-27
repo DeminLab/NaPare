@@ -8,7 +8,7 @@ import { LessonChange } from "./entities/lesson-change.entity";
 import { Group } from "../users/entities/group.entity";
 import { EventEmitter2 } from "@nestjs/event-emitter";
 import { TenantContext } from "../common/tenant/tenant-context";
-import { DataSource } from "typeorm";
+import { And, DataSource, LessThan, MoreThanOrEqual } from "typeorm";
 import { RaspScraperService } from "../auth/rasp-scraper.service";
 import { LessonIdentifierService } from "../common/identifiers/lesson-identifier.service";
 
@@ -59,6 +59,38 @@ describe("ScheduleService", () => {
 
   it("should be defined", () => {
     expect(service).toBeDefined();
+  });
+
+  describe("getTeacherGroupIds", () => {
+    it("limits displayed teacher groups to the selected academic year", async () => {
+      mockLessonRepo.find.mockResolvedValue([
+        { groupId: "group-current" },
+        { groupId: "group-current" },
+      ]);
+
+      await expect(
+        service.getTeacherGroupIds("uni-1", "teacher-1", "2026-2027"),
+      ).resolves.toEqual(["group-current"]);
+
+      expect(mockLessonRepo.find).toHaveBeenCalledWith({
+        select: ["groupId"],
+        where: {
+          organizationId: "uni-1",
+          teacherId: "teacher-1",
+          startDate: And(
+            MoreThanOrEqual(new Date("2026-09-01T00:00:00.000Z")),
+            LessThan(new Date("2027-09-01T00:00:00.000Z")),
+          ),
+        },
+      });
+    });
+
+    it("rejects malformed academic years before querying lessons", async () => {
+      await expect(
+        service.getTeacherGroupIds("uni-1", "teacher-1", "not-a-year"),
+      ).rejects.toThrow("Некорректный учебный год");
+      expect(mockLessonRepo.find).not.toHaveBeenCalled();
+    });
   });
 
   describe("findById", () => {

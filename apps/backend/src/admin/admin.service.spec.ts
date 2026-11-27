@@ -597,6 +597,16 @@ describe("AdminService", () => {
 
     it("returns only the teacher's own lesson groups for attendance", async () => {
       mockScheduleService.getTeacherGroupIds.mockResolvedValue(["group-1"]);
+      mockUniversityRepository.findOne.mockResolvedValue({
+        id: "uni-1",
+        connectorConfig: {
+          scheduleConnector: {
+            provider: "rasp-sano",
+            enabled: true,
+            config: { academicYear: "2026-2027" },
+          },
+        },
+      });
       const groupRepository = module.get(getRepositoryToken(Group));
       groupRepository.findAndCount.mockResolvedValue([
         [{ id: "group-1", name: "ПИ-21" }],
@@ -611,6 +621,11 @@ describe("AdminService", () => {
       );
 
       expect(result.data).toEqual([{ id: "group-1", name: "ПИ-21" }]);
+      expect(mockScheduleService.getTeacherGroupIds).toHaveBeenCalledWith(
+        "uni-1",
+        "teacher-1",
+        "2026-2027",
+      );
       expect(groupRepository.findAndCount).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { organizationId: "uni-1", id: expect.anything() },

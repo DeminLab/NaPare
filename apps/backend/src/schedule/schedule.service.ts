@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
@@ -443,11 +444,32 @@ export class ScheduleService {  private readonly logger = new Logger(ScheduleSer
   async getTeacherGroupIds(
     organizationId: string,
     teacherId: string,
+    academicYear?: string,
   ): Promise<string[]> {
     this.tenantContext.assertAccess(organizationId);
+    const yearMatch = academicYear ? /^(\d{4})-(\d{4})$/.exec(academicYear) : null;
+    const startYear = yearMatch ? Number(yearMatch[1]) : null;
+    const endYear = yearMatch ? Number(yearMatch[2]) : null;
+    if (
+      academicYear !== undefined &&
+      (startYear === null || endYear !== startYear + 1)
+    ) {
+      throw new BadRequestException("Некорректный учебный год");
+    }
     const lessons = await this.lessonRepository.find({
       select: ["groupId"],
-      where: { organizationId, teacherId },
+      where: {
+        organizationId,
+        teacherId,
+        ...(startYear !== null && endYear !== null
+          ? {
+              startDate: And(
+                MoreThanOrEqual(new Date(Date.UTC(startYear, 8, 1))),
+                LessThan(new Date(Date.UTC(endYear, 8, 1))),
+              ),
+            }
+          : {}),
+      },
     });
     return [
       ...new Set(lessons.map((lesson) => lesson.groupId).filter(Boolean)),
