@@ -1,7 +1,7 @@
 import { Controller, Get, Param, ParseUUIDPipe, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 
-import { PublicScheduleLessonsQueryDto } from './dto/public-schedule-query.dto';
+import { PublicScheduleLessonsQueryDto, PublicScheduleSearchQueryDto } from './dto/public-schedule-query.dto';
 import { PublicScheduleService } from './public-schedule.service';
 
 @ApiTags('public-schedule')
@@ -28,5 +28,12 @@ export class PublicScheduleController {
   @ApiOkResponse({ description: 'Публичное расписание получено' })
   listLessons(@Query() query: PublicScheduleLessonsQueryDto) {
     return this.publicSchedule.listLessons(query);
+  }
+
+  @Get('search')
+  @ApiOperation({ summary: 'Публичный поиск занятий по преподавателю или аудитории в опубликованном вузе' })
+  @ApiOkResponse({ description: 'Занятия опубликованного вуза за выбранную неделю' })
+  searchLessons(@Query() query: PublicScheduleSearchQueryDto) {
+    return this.publicSchedule.searchLessons(query);
   }
 }

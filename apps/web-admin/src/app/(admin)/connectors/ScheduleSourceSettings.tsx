@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { apiFetch } from "@/lib/api";
 import { Button, Card, Skeleton } from "@/components/ui";
 
@@ -15,6 +16,12 @@ interface SyncResult {
   timestamp?: string;
   lessons?: number;
   groups?: number;
+  groupsPersisted?: number;
+  groupsCreated?: number;
+  groupsUpdated?: number;
+  groupsUnchanged?: number;
+  groupsSkippedArchived?: number;
+  groupsSkippedUnresolved?: number;
   imported?: number;
   updated?: number;
   studentsLinked?: number;
@@ -26,6 +33,7 @@ export function ScheduleSourceSettings() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [syncCompleted, setSyncCompleted] = useState(false);
   const [academicYear, setAcademicYear] = useState("");
 
   async function load() {
@@ -54,21 +62,9 @@ export function ScheduleSourceSettings() {
     setBusy(true);
     setError("");
     setNotice("");
+    setSyncCompleted(false);
     try {
-      if (academicYear && !/^\d{4}-\d{4}$/.test(academicYear)) {
-        throw new Error("Укажите учебный год в формате 2026-2027.");
-      }
-      const payload = {
-        provider: settings.provider,
-        enabled: settings.enabled,
-        config: { ...settings.config, ...(academicYear ? { academicYear } : {}) },
-      };
-      if (!academicYear) delete payload.config.academicYear;
-      const saved = await apiFetch<ScheduleSettings>("/admin/connectors/schedule", {
-        method: "PATCH",
-        body: JSON.stringify(payload),
-      });
-      setSettings({ ...settings, ...saved, config: saved.config ?? settings.config });
+      await saveSettings();
       setNotice("Настройки источника расписания сохранены.");
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Не удалось сохранить настройки.");
@@ -77,11 +73,30 @@ export function ScheduleSourceSettings() {
     }
   }
 
-  async function run(action: "test" | "sync") {
+  function settingsPayload() {
+    if (!settings) throw new Error("Настройки источника ещё не загружены.");
+    if (academicYear && !/^\d{4}-\d{4}$/.test(academicYear)) {
+      throw new Error("Укажите учебный год в формате 2026-2027.");
+    }
+    const config = { ...settings.config, ...(academicYear ? { academicYear } : {}) };
+    if (!academicYear) delete config.academicYear;
+    return { provider: settings.provider, enabled: settings.enabled, config };
+  }
+
+  async function saveSettings() {
+    const saved = await apiFetch<ScheduleSettings>("/admin/connectors/schedule", {
+      method: "PATCH",
+      body: JSON.stringify(settingsPayload()),
+    });
+    setSettings(current => current ? { ...current, ...saved, config: saved.config ?? current.config } : current);
+  }
+
+  async function runTest() {
     if (busy) return;
     setBusy(true);
     setError("");
     setNotice("");
+    setSyncCompleted(false);
     try {
       if (settings?.provider !== "rasp-sano" || !settings.enabled) {
         throw new Error("Сначала выберите Rasp.SANO и включите источник.");
@@ -89,15 +104,42 @@ export function ScheduleSourceSettings() {
       if (!settings.raspSanoAvailable) {
         throw new Error("Rasp.SANO доступен только единственному активному вузу СИБИТ в Омске. Используйте файловый импорт.");
       }
-      if (action === "test") {
-        const result = await apiFetch<{ status?: string; academicYear?: string | null; academicYearsAvailable?: number; groupsAvailable?: number }>("/admin/connectors/schedule/test", { method: "POST" });
-        setNotice(`Источник доступен${result.academicYear ? ` · учебный год ${result.academicYear}` : ""}. Доступно групп: ${result.groupsAvailable ?? 0}, учебных лет: ${result.academicYearsAvailable ?? 0}. Данные не записывались.`);
-      } else {
-        const result = await apiFetch<SyncResult>("/admin/schedule/sync", { method: "POST" });
-        setNotice(`Синхронизация завершена: ${result.imported ?? result.lessons ?? 0} добавлено, ${result.updated ?? 0} обновлено; групп — ${result.groups ?? 0}.`);
-      }
+      const result = await apiFetch<{ status?: string; academicYear?: string | null; academicYearsAvailable?: number; groupsAvailable?: number }>("/admin/connectors/schedule/test", { method: "POST" });
+      setNotice(`Источник доступен${result.academicYear ? ` · учебный год ${result.academicYear}` : ""}. Доступно групп: ${result.groupsAvailable ?? 0}, учебных лет: ${result.academicYearsAvailable ?? 0}. Данные не записывались.`);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Не удалось выполнить действие с источником.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function saveAndSync() {
+    if (!settings || busy) return;
+    if (settings.provider !== "rasp-sano" || !settings.enabled) {
+      setError("Выберите Rasp.SANO и включите источник, чтобы загрузить группы и расписание.");
+      return;
+    }
+    if (!settings.raspSanoAvailable) {
+      setError("Rasp.SANO доступен только единственному активному вузу СИБИТ в Омске. Используйте файловый импорт.");
+      return;
+    }
+    setBusy(true);
+    setError("");
+    setNotice("");
+    setSyncCompleted(false);
+    let saved = false;
+    try {
+      await saveSettings();
+      saved = true;
+      const result = await apiFetch<SyncResult>("/admin/schedule/sync", { method: "POST" });
+      const groupSummary = typeof result.groupsPersisted === "number"
+        ? `Группы: загружено ${result.groupsPersisted} из ${result.groups ?? result.groupsPersisted} (создано ${result.groupsCreated ?? 0}, обновлено ${result.groupsUpdated ?? 0}, без изменений ${result.groupsUnchanged ?? 0}); пропущено — архивных ${result.groupsSkippedArchived ?? 0}, не сопоставлено ${result.groupsSkippedUnresolved ?? 0}.`
+        : `Группы: источник вернул ${result.groups ?? 0}; сервер не сообщил число сохранённых групп.`;
+      setNotice(`Синхронизация завершена. ${groupSummary} Занятия: в источнике ${result.lessons ?? 0}, добавлено ${result.imported ?? 0}, обновлено ${result.updated ?? 0}.`);
+      setSyncCompleted(true);
+    } catch (reason) {
+      const message = reason instanceof Error ? reason.message : "Не удалось выполнить синхронизацию.";
+      setError(saved ? `Настройки сохранены, но расписание не загрузилось: ${message}` : message);
     } finally {
       setBusy(false);
     }
@@ -120,7 +162,7 @@ export function ScheduleSourceSettings() {
         <div className="flex items-center rounded-xl border border-[var(--color-border)] px-4 py-3">
           <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm font-semibold text-[var(--color-text)]">
             <input type="checkbox" checked={settings.enabled} disabled={busy || settings.provider === "file-only" || !settings.raspSanoAvailable} onChange={event => setSettings(current => current ? { ...current, enabled: event.target.checked } : current)} className="h-5 w-5 rounded border-slate-300 text-[var(--color-brand)] focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]" />
-            Включить автоматический источник
+            Включить источник расписания
           </label>
         </div>
       </div>
@@ -131,14 +173,17 @@ export function ScheduleSourceSettings() {
       <div className="rounded-xl border border-indigo-100 bg-indigo-50/70 p-4 text-sm text-indigo-950">
         <p className="font-semibold">Адрес источника задан платформой</p>
         <p className="mt-1">{settings.provider === "rasp-sano" ? "Источник содержит расписание СИБИТа и использует rasp.sano.ru. Адрес нельзя заменить на произвольный сайт." : "Rasp.SANO сейчас поддерживает расписание СИБИТа. Для другого источника используйте файловый импорт."}</p>
+        {settings.provider === "rasp-sano" && <p className="mt-2">Одного подключения недостаточно: чтобы создать группы и загрузить пары, сохраните настройки кнопкой «Сохранить и загрузить расписание».</p>}
         {!settings.raspSanoAvailable && <p role="status" className="mt-2 font-semibold">Автоматический источник доступен только единственному активному вузу СИБИТ в Омске. Для этого вуза он не разрешён; используйте файловый импорт или обратитесь к владельцу платформы, если название вуза-дубликата ошибочно.</p>}
       </div>
       {error && <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
-      {notice && <p role="status" aria-live="polite" className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{notice}</p>}
+      {notice && <div role="status" aria-live="polite" className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800"><p>{notice}</p>{syncCompleted && <p className="mt-2">Чтобы показать расписание на общей странице, отдельно включите публикацию в <Link href="/university?section=publication" className="font-semibold underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-800">настройках вуза</Link>.</p>}</div>}
       <div className="flex flex-wrap gap-2">
         <Button loading={busy} disabled={busy || (settings.provider === "rasp-sano" && !settings.raspSanoAvailable)} onClick={() => void save()}>Сохранить настройки</Button>
-        <Button variant="secondary" loading={busy} disabled={busy || settings.provider !== "rasp-sano" || !settings.enabled || !settings.raspSanoAvailable} onClick={() => void run("test")}>Проверить источник</Button>
-        <Button variant="secondary" loading={busy} disabled={busy || settings.provider !== "rasp-sano" || !settings.enabled || !settings.raspSanoAvailable} onClick={() => void run("sync")}>Загрузить расписание</Button>
+        {settings.provider === "rasp-sano" && <>
+          <Button variant="secondary" loading={busy} disabled={busy || !settings.enabled || !settings.raspSanoAvailable} onClick={() => void runTest()}>Проверить источник</Button>
+          <Button variant="primary" loading={busy} disabled={busy || !settings.enabled || !settings.raspSanoAvailable} onClick={() => void saveAndSync()}>Сохранить и загрузить расписание</Button>
+        </>}
       </div>
     </> : <div role="alert" className="space-y-3 text-sm"><p className="text-red-700">{error || "Настройки источника недоступны."}</p><Button variant="secondary" onClick={() => void load()}>Повторить</Button></div>}
   </Card>;

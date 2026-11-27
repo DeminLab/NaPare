@@ -163,8 +163,8 @@
 
 @media (max-width: 720px) {
   .schedulePage :global(.schedule-page-hero) {
-    min-height: 590px;
-    padding: 370px 20px 62px;
+    min-height: 460px;
+    padding: 250px 20px 42px;
   }
 
   .heroVisual {
@@ -172,20 +172,20 @@
     background-position: center, 68% 35%;
     background-size: cover;
     inset: 0 0 auto;
-    height: 430px;
+    height: 285px;
   }
 
   .heroCalendar {
     height: 60px;
     left: 9%;
-    top: 92px;
+    top: 66px;
     width: 60px;
   }
 
   .heroOrbit {
     height: 64px;
     left: 7%;
-    top: 220px;
+    top: 168px;
     width: 33%;
   }
 

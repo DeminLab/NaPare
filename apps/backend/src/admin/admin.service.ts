@@ -524,6 +524,12 @@ export class AdminService {
     status: string;
     timestamp: string;
     groups: number;
+    groupsPersisted: number;
+    groupsCreated: number;
+    groupsUpdated: number;
+    groupsUnchanged: number;
+    groupsSkippedArchived: number;
+    groupsSkippedUnresolved: number;
     lessons: number;
     teachers: number;
     imported: number;
@@ -567,7 +573,17 @@ export class AdminService {
   private async persistSibitCatalog(
     organizationId: string,
     catalog: RaspCatalog,
-  ): Promise<{ imported: number; updated: number; studentsLinked: number }> {
+  ): Promise<{
+    imported: number;
+    updated: number;
+    studentsLinked: number;
+    groupsPersisted: number;
+    groupsCreated: number;
+    groupsUpdated: number;
+    groupsUnchanged: number;
+    groupsSkippedArchived: number;
+    groupsSkippedUnresolved: number;
+  }> {
     const [users, existingLessons] =
       await Promise.all([
         this.userRepository.find({ where: { organizationId } }),
@@ -578,6 +594,12 @@ export class AdminService {
 
     const groupsBySourceId = new Map<string, Group>();
     const blockedSourceGroupIds = new Set<string>();
+    let groupsPersisted = 0;
+    let groupsCreated = 0;
+    let groupsUpdated = 0;
+    let groupsUnchanged = 0;
+    let groupsSkippedArchived = 0;
+    let groupsSkippedUnresolved = 0;
 
     for (const sourceGroup of catalog.groups) {
       const sourceFacultyName = sourceGroup.faculty || "Не указан";
@@ -601,7 +623,7 @@ export class AdminService {
         if (archivedFaculty || group?.archivedAt) {
           // Preserve source-ID resolution for an archived row, but do not
           // create, move, rename, or reactivate anything under an archive.
-          return { group, blocked: true };
+          return { group, blocked: true, state: 'archived' as const };
         }
         if (group) {
           const changed = group.externalId !== sourceGroup.groupId || group.facultyId !== faculty.id || group.name !== sourceGroup.name;
@@ -609,18 +631,32 @@ export class AdminService {
             Object.assign(group, { externalId: sourceGroup.groupId, facultyId: faculty.id, name: sourceGroup.name });
             await groups.save(group);
           }
-          return { group, blocked: false };
+          return { group, blocked: false, state: changed ? 'updated' as const : 'unchanged' as const };
         }
         const created = await groups.save(groups.create({
           organizationId, facultyId: faculty.id, name: sourceGroup.name,
           externalId: sourceGroup.groupId,
           curriculumYear: academicStartYear(sourceGroup.academicYear),
         }));
-        return { group: created, blocked: false };
+        return { group: created, blocked: false, state: 'created' as const };
       });
       let group = result.group;
-      if (!group) continue;
-      if (result.blocked) blockedSourceGroupIds.add(sourceGroup.groupId);
+      if (result.blocked) {
+        groupsSkippedArchived++;
+        if (group) {
+          blockedSourceGroupIds.add(sourceGroup.groupId);
+          groupsBySourceId.set(sourceGroup.groupId, group);
+        }
+        continue;
+      }
+      if (!group) {
+        groupsSkippedUnresolved++;
+        continue;
+      }
+      groupsPersisted++;
+      if (result.state === 'created') groupsCreated++;
+      else if (result.state === 'updated') groupsUpdated++;
+      else groupsUnchanged++;
       groupsBySourceId.set(sourceGroup.groupId, group);
     }
 
@@ -715,7 +751,17 @@ export class AdminService {
       }
     }
 
-    return { imported, updated, studentsLinked };
+    return {
+      imported,
+      updated,
+      studentsLinked,
+      groupsPersisted,
+      groupsCreated,
+      groupsUpdated,
+      groupsUnchanged,
+      groupsSkippedArchived,
+      groupsSkippedUnresolved,
+    };
   }
 
   async getUniversityStats(organizationId: string): Promise<UniversityStats> {

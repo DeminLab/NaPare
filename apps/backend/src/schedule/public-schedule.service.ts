@@ -8,7 +8,7 @@ import { Faculty } from '../users/entities/faculty.entity';
 import { Group } from '../users/entities/group.entity';
 import { University } from '../users/entities/university.entity';
 import { ScheduleReadService } from './schedule-read.service';
-import { PublicScheduleLessonsQueryDto } from './dto/public-schedule-query.dto';
+import { PublicScheduleLessonsQueryDto, PublicScheduleSearchQueryDto } from './dto/public-schedule-query.dto';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const MAX_RANGE_DAYS = 31;
@@ -88,6 +88,44 @@ export class PublicScheduleService {
     );
   }
 
+  async searchLessons(query: PublicScheduleSearchQueryDto) {
+    this.range(query.from, query.to, 7);
+    const value = query.query.trim().toLocaleLowerCase('ru-RU').replace(/\s+/g, ' ');
+    if (value.length < 2) throw new BadRequestException('Введите не менее двух символов для поиска.');
+    await this.requirePublishedUniversity(query.organizationId);
+
+    return this.tenant.runWithDatabaseAccess(
+      { tables: ['groups', 'faculties', 'lessons', 'lesson_occurrences', 'lesson_series', 'users'], organizationIds: [query.organizationId], replaceActor: true },
+      async () => {
+        const result = await this.scheduleRead.readRange(
+          { id: 'public-schedule', role: UserRole.SUPERADMIN, organizationId: query.organizationId },
+          { from: query.from, to: query.to },
+        );
+        return result.days.flatMap((day) => day.lessons
+          .filter((lesson) => lesson.state !== 'cancelled')
+          .filter((lesson) => {
+            const target = query.mode === 'teacher' ? lesson.teacherName : lesson.room;
+            return target?.toLocaleLowerCase('ru-RU').replace(/\s+/g, ' ').includes(value);
+          })
+          .map((lesson) => ({
+            lessonId: lesson.lessonId ?? lesson.id,
+            date: lesson.date,
+            dayName: new Intl.DateTimeFormat('ru-RU', { weekday: 'long', timeZone: 'UTC' }).format(new Date(`${lesson.date}T12:00:00.000Z`)),
+            startTime: lesson.startTime,
+            endTime: lesson.endTime,
+            pairNumber: lesson.pairNumber ?? 0,
+            subject: lesson.subject,
+            ...(lesson.subjectType ? { subjectType: lesson.subjectType } : {}),
+            ...(lesson.teacherName ? { teacher: lesson.teacherName } : {}),
+            ...(lesson.room ? { room: lesson.room } : {}),
+            ...(lesson.groupName ? { groupName: lesson.groupName } : {}),
+            weekType: lesson.weekType ?? 'both',
+            isReplacement: lesson.isReplacement ?? false,
+          })));
+      },
+    );
+  }
+
   private async requirePublishedUniversity(organizationId: string): Promise<Pick<University, 'id'>> {
     const university = await this.tenant.runWithDatabaseAccess(READ_UNIVERSITIES, () =>
       this.universities.findOne({
@@ -99,12 +137,12 @@ export class PublicScheduleService {
     return university;
   }
 
-  private range(from: string, to: string): void {
+  private range(from: string, to: string, maxRangeDays = MAX_RANGE_DAYS): void {
     const startMs = Date.parse(`${from}T00:00:00.000Z`);
     const endMs = Date.parse(`${to}T00:00:00.000Z`);
     const dayCount = Math.floor((endMs - startMs) / DAY_MS) + 1;
-    if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || dayCount < 1 || dayCount > MAX_RANGE_DAYS) {
-      throw new BadRequestException(`Период должен включать от 1 до ${MAX_RANGE_DAYS} календарных дней.`);
+    if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || dayCount < 1 || dayCount > maxRangeDays) {
+      throw new BadRequestException(`Период должен включать от 1 до ${maxRangeDays} календарных дней.`);
     }
   }
 }
