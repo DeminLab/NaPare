@@ -62,14 +62,14 @@ describe("ScheduleService", () => {
   });
 
   describe("getTeacherGroupIds", () => {
-    it("limits displayed teacher groups to the selected academic year", async () => {
+    it("limits displayed teacher groups to upcoming lessons in the selected academic year", async () => {
       mockLessonRepo.find.mockResolvedValue([
         { groupId: "group-current" },
         { groupId: "group-current" },
       ]);
 
       await expect(
-        service.getTeacherGroupIds("uni-1", "teacher-1", "2026-2027"),
+        service.getTeacherGroupIds("uni-1", "teacher-1", "2026-2027", new Date("2026-11-28T18:00:00.000Z")),
       ).resolves.toEqual(["group-current"]);
 
       expect(mockLessonRepo.find).toHaveBeenCalledWith({
@@ -78,7 +78,7 @@ describe("ScheduleService", () => {
           organizationId: "uni-1",
           teacherId: "teacher-1",
           startDate: And(
-            MoreThanOrEqual(new Date("2026-09-01T00:00:00.000Z")),
+            MoreThanOrEqual(new Date("2026-11-28T00:00:00.000Z")),
             LessThan(new Date("2027-09-01T00:00:00.000Z")),
           ),
         },

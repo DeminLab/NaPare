@@ -445,6 +445,7 @@ export class ScheduleService {  private readonly logger = new Logger(ScheduleSer
     organizationId: string,
     teacherId: string,
     academicYear?: string,
+    asOf = new Date(),
   ): Promise<string[]> {
     this.tenantContext.assertAccess(organizationId);
     const yearMatch = academicYear ? /^(\d{4})-(\d{4})$/.exec(academicYear) : null;
@@ -456,6 +457,12 @@ export class ScheduleService {  private readonly logger = new Logger(ScheduleSer
     ) {
       throw new BadRequestException("Некорректный учебный год");
     }
+    const today = new Date(asOf);
+    today.setUTCHours(0, 0, 0, 0);
+    const academicYearStart = startYear === null
+      ? today
+      : new Date(Date.UTC(startYear, 8, 1));
+    const visibleFrom = today > academicYearStart ? today : academicYearStart;
     const lessons = await this.lessonRepository.find({
       select: ["groupId"],
       where: {
@@ -464,7 +471,7 @@ export class ScheduleService {  private readonly logger = new Logger(ScheduleSer
         ...(startYear !== null && endYear !== null
           ? {
               startDate: And(
-                MoreThanOrEqual(new Date(Date.UTC(startYear, 8, 1))),
+                MoreThanOrEqual(visibleFrom),
                 LessThan(new Date(Date.UTC(endYear, 8, 1))),
               ),
             }
