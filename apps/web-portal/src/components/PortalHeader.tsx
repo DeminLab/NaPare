@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Icon } from "@napare/ui";
 
 const links = [
   ["/schedule", "Расписание"],
@@ -12,7 +13,7 @@ const links = [
   ["/pricing", "Стоимость"],
 ] as const;
 
-export function PortalHeader() {
+export function PortalHeader({ searchHref }: { searchHref?: string }) {
   const pathname = usePathname();
   return (
     <header className="portal-header">
@@ -34,6 +35,7 @@ export function PortalHeader() {
           </Link>
         ))}
       </nav>
+      {searchHref && <Link href={searchHref} className="portal-header-search" aria-label="Открыть поиск расписания"><Icon name="search" size={18} /></Link>}
       <details className="portal-menu">
         <summary aria-label="Меню сайта" aria-controls="mobile-page-nav">
           <span className="menu-lines" aria-hidden="true">

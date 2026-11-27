@@ -655,17 +655,18 @@
 
 /* Keep the approved single-column login layout after the route's legacy grid rules. */
 body .login-layout.login-focused.login-focused {
-  align-items: center;
+  align-content: start;
+  align-items: start;
   background:
     radial-gradient(ellipse at 84% 25%, rgb(42 112 255 / .52), transparent 38%),
     radial-gradient(ellipse at 18% 77%, rgb(65 91 239 / .48), transparent 43%),
     linear-gradient(135deg, #071a43 0%, #173a78 52%, #172765 100%);
-  display: flex;
+  display: grid;
   isolation: isolate;
-  justify-content: center;
-  min-height: max(850px, 100svh);
-  overflow: hidden;
-  padding: 128px 24px 74px;
+  justify-items: center;
+  min-height: 100svh;
+  overflow: visible;
+  padding: 112px 24px 48px;
   position: relative;
 }
 body .login-layout.login-focused.login-focused::before {
@@ -703,22 +704,23 @@ body .login-layout.login-focused.login-focused .login-home-return {
   color: #fff;
   display: inline-flex;
   gap: 9px;
-  left: max(24px, calc((100vw - 1440px) / 2));
+  align-self: flex-start;
+  left: auto;
+  margin-bottom: 18px;
   min-height: 46px;
   padding: 0 18px;
-  position: absolute;
-  top: 112px;
-  z-index: 6;
+  position: relative;
+  top: auto;
 }
 body .login-layout.login-focused.login-focused .login-panel {
-  align-items: center;
+  align-items: stretch;
   display: flex;
-  flex: 0 1 580px;
+  flex: none;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   min-height: 0;
   padding: 0;
-  width: 100%;
+  width: min(100%, 580px);
 }
 body .login-layout.login-focused.login-focused .login-card {
   backdrop-filter: blur(22px);
@@ -747,8 +749,8 @@ body .login-layout.login-focused .login-form input:focus-visible {
   outline-offset: 2px;
 }
 @media (max-width: 720px) {
-  body .login-layout.login-focused.login-focused { min-height: 100svh; padding: 148px 16px 44px; }
-  body .login-layout.login-focused.login-focused .login-home-return { left: 16px; top: 78px; }
+  body .login-layout.login-focused.login-focused { min-height: 100svh; padding: 112px 16px 44px; }
+  body .login-layout.login-focused.login-focused .login-home-return { left: auto; top: auto; }
   body .login-layout.login-focused.login-focused .login-card { border-radius: 24px; padding: 28px 22px; }
 }
 @media (max-width: 639px) {

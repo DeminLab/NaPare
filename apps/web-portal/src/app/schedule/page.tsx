@@ -14,22 +14,37 @@ export const metadata: Metadata = {
 export default function PublicSchedulePage() {
   return (
     <main className={`public-info-page ${styles.schedulePage}`}>
-      <PortalHeader />
+      <PortalHeader searchHref="#public-schedule-filters" />
       <section className="public-page-hero schedule-page-hero">
         <div className={styles.heroVisual} aria-hidden="true">
-          <span className={styles.heroCalendar}><Icon name="calendar" size={31} /></span>
           <span className={styles.heroOrbit} />
+          <span className={styles.heroOrbitSecondary} />
+          <span className={styles.heroCalendar}><Icon name="calendar" size={47} /></span>
+          <span className={styles.heroCalendarCheck}><Icon name="check" size={23} /></span>
         </div>
         <div className="public-page-hero-inner">
-          <p className="eyebrow">Открытый доступ</p>
-          <h1>Расписание, которое можно посмотреть заранее</h1>
-          <p>Выберите учебный год и группу. Расписание открыто для просмотра; личные материалы и изменения доступны в кабинете университета.</p>
+          <p className="eyebrow">Публичное расписание</p>
+          <h1>Расписание занятий</h1>
+          <p>Выберите университет и группу, чтобы посмотреть пары на неделю. Без регистрации и входа в кабинет.</p>
+          <div className={styles.heroFeatures} aria-label="Возможности расписания">
+            <span><Icon name="building" size={17} /> Университеты</span>
+            <span><Icon name="users" size={17} /> Учебные группы</span>
+            <span><Icon name="search" size={17} /> Поиск занятий</span>
+          </div>
         </div>
+        <div className={styles.publicStatus}><span aria-hidden="true" /> Открыто для просмотра</div>
       </section>
       <section className={`public-page-content schedule-page-content ${styles.scheduleContent}`}>
         <div className="public-content-inner">
           <PublicSchedule />
-          <p className="public-data-note">Публичный источник сейчас подключён для СИБИТа. Расписание других вузов появится здесь после согласования и настройки публикации университетом.</p>
+          <section className={styles.moreSection} aria-labelledby="schedule-more-title">
+            <h2 id="schedule-more-title">Дополнительно</h2>
+            <div className={styles.moreLinks}>
+              <a href="/career-center"><span><Icon name="briefcase" size={19} /></span><strong>Карьерный центр</strong><Icon name="chevron-right" size={16} /></a>
+              <a href="/employers"><span><Icon name="users" size={19} /></span><strong>Работодателям</strong><Icon name="chevron-right" size={16} /></a>
+              <a href="/universities"><span><Icon name="layers" size={19} /></span><strong>Публикация для вузов</strong><Icon name="chevron-right" size={16} /></a>
+            </div>
+          </section>
         </div>
       </section>
       <PortalFooter />

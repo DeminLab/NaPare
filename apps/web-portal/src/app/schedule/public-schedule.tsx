@@ -82,6 +82,15 @@ export function PublicSchedule() {
   const [publicSearchRetry, setPublicSearchRetry] = useState(0);
 
   useEffect(() => {
+    const openFiltersFromHash = () => {
+      if (window.location.hash === "#public-schedule-filters") setFiltersOpen(true);
+    };
+    openFiltersFromHash();
+    window.addEventListener("hashchange", openFiltersFromHash);
+    return () => window.removeEventListener("hashchange", openFiltersFromHash);
+  }, []);
+
+  useEffect(() => {
     const controller = new AbortController();
     setUniversitiesLoading(true);
     setUniversitiesError(false);
@@ -186,17 +195,18 @@ export function PublicSchedule() {
   const activeLoading = browseMode === "group" ? lessonsLoading : publicSearchLoading;
   const activeError = browseMode === "group" ? lessonsError : publicSearchError;
   const hasActiveSchedule = browseMode === "group" ? Boolean(selectedGroup) : searchReady;
+  const summaryReady = hasActiveSchedule && !activeLoading && !activeError;
   const activeScheduleTitle = browseMode === "group"
     ? selectedGroup?.name || "Выберите группу"
     : browseMode === "teacher"
       ? (browseQuery.trim() ? `Преподаватель: ${browseQuery.trim()}` : "Найдите преподавателя")
       : (browseQuery.trim() ? `Аудитория: ${browseQuery.trim()}` : "Найдите аудиторию");
-  const visibleLessonCount = browseMode === "group" ? lessons.length : publicSearchLessons.length;
+  const visibleLessonCount = lessonsByDay.reduce((count, day) => count + day.lessons.length, 0);
   const rangeLabel = `${weekDates[0].toLocaleDateString("ru-RU", { day: "numeric", month: "long" })} — ${weekDates[6].toLocaleDateString("ru-RU", { day: "numeric", month: "long" })}`;
 
   return (
-    <div className="public-schedule-browser">
-      <button type="button" className="schedule-filter-toggle" aria-expanded={filtersOpen} aria-controls="public-schedule-filters" onClick={() => setFiltersOpen((open) => !open)}>
+    <div className={`public-schedule-browser ${styles.scheduleBrowser}`}>
+      <button id="schedule-filter-toggle" type="button" className="schedule-filter-toggle" aria-expanded={filtersOpen} aria-controls="public-schedule-filters" onClick={() => setFiltersOpen((open) => !open)}>
         <Icon name="settings" size={18} />
         <span>Фильтры</span>
         {browseMode !== "group" && browseQuery.trim() && <span className="schedule-filter-summary">{browseMode === "teacher" ? "Преподаватель" : "Аудитория"}</span>}
@@ -266,11 +276,20 @@ export function PublicSchedule() {
             <button type="button" className="schedule-today-button" onClick={() => setWeek(mondayOf(new Date()))}>Сегодня</button>
           </div>
         </header>
+        {hasActiveSchedule && <nav className={styles.weekStrip} aria-label="Дни выбранной недели">
+          {weekDates.map((date, index) => {
+            const day = lessonsByDay[index];
+            const currentDay = dateKey(new Date()) === day.date;
+            return <button key={day.date} type="button" className={currentDay ? styles.weekDayCurrent : ""} aria-label={`${day.label}, ${day.short}, занятий: ${day.lessons.length}`} onClick={() => document.getElementById(`schedule-day-${day.date}`)?.scrollIntoView({ behavior: "smooth", block: "start" })}>
+              <span>{date.toLocaleDateString("ru-RU", { weekday: "short" })}</span><strong>{date.getDate()}</strong><small>{day.lessons.length > 0 ? day.lessons.length : "—"}</small>
+            </button>;
+          })}
+        </nav>}
         {!hasActiveSchedule && <div className="schedule-empty-prompt"><span aria-hidden="true"><Icon name="calendar" size={25} /></span><strong>{browseMode === "group" ? (universities.length ? "Выберите вуз и группу" : "Публичных расписаний пока нет") : "Введите запрос в фильтрах"}</strong><p>{browseMode === "group" ? (universities.length ? "Выберите университет, затем найдите группу из опубликованной структуры." : "Университеты появятся здесь после включения публикации в их кабинетах.") : "Укажите не менее двух символов имени преподавателя или номера аудитории."}</p></div>}
         {activeLoading && hasActiveSchedule && <p className="schedule-state schedule-loading" role="status" aria-busy="true">Загружаем опубликованное расписание…</p>}
         {activeError && hasActiveSchedule && <div className="schedule-error schedule-error-main" role="alert"><p>{friendlySourceError()}</p><button type="button" onClick={() => browseMode === "group" ? setLessonsRetry((value) => value + 1) : setPublicSearchRetry((value) => value + 1)}>Загрузить ещё раз</button></div>}
         {hasActiveSchedule && !activeLoading && !activeError && <>
-          {browseMode === "group" && <label className={`schedule-search ${styles.searchField}`}><span className="ds-sr-only">Поиск по занятиям выбранной группы</span><span className={styles.searchIcon} aria-hidden="true"><Icon name="search" size={21} /></span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Предмет, преподаватель или аудитория" disabled={!selectedGroup} /></label>}
+          {browseMode === "group" && <label id="schedule-search" className={`schedule-search ${styles.searchField}`}><span className="ds-sr-only">Поиск по занятиям выбранной группы</span><span className={styles.searchIcon} aria-hidden="true"><Icon name="search" size={21} /></span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Предмет, преподаватель или аудитория" disabled={!selectedGroup} /></label>}
           {visibleLessonCount > 0 && <div className={styles.lessonTypeLegend} role="group" aria-label="Цвета типов занятий">
             <span className={styles.lessonTypeLegendLabel}>Тип занятия</span>
             <LessonTypeBadge subjectType="lecture" />
@@ -279,7 +298,7 @@ export function PublicSchedule() {
           </div>}
           <div className="schedule-day-list">
             {lessonsByDay.map((day) => (
-              <section key={day.date} className="schedule-day">
+              <section key={day.date} id={`schedule-day-${day.date}`} className="schedule-day">
                 <header><h3>{day.label}</h3><span>{day.short}</span><b>{day.lessons.length} {day.lessons.length === 1 ? "пара" : day.lessons.length > 1 && day.lessons.length < 5 ? "пары" : "пар"}</b></header>
                 {day.lessons.length > 0 ? <div className="schedule-lesson-list">
                   {day.lessons.map((lesson) => (
@@ -297,6 +316,25 @@ export function PublicSchedule() {
         </>}
         <p className="schedule-privacy-note">Публично показываются только расписания, которые вузы включили для публикации. Персональные данные и материалы кабинетов не выводятся.</p>
       </section>
+      <aside className={styles.scheduleRail} aria-label="О выбранной неделе">
+        <section className={styles.railCard}>
+          <div className={styles.railHeading}><span><Icon name="calendar" size={18} /></span><div><h2>Обзор недели</h2><p>{rangeLabel}</p></div></div>
+          {summaryReady ? <>
+            <p className={styles.railMetric}>{visibleLessonCount} <span>{visibleLessonCount === 1 ? "занятие" : visibleLessonCount > 1 && visibleLessonCount < 5 ? "занятия" : "занятий"}</span></p>
+            <div className={styles.railProgress} aria-hidden="true"><span style={{ width: `${Math.min(100, visibleLessonCount * 12)}%` }} /></div>
+            <p className={styles.railCaption}>{selectedGroup ? `в расписании группы ${selectedGroup.name}` : browseMode === "teacher" ? `в расписании преподавателя ${browseQuery.trim()}` : `в аудитории ${browseQuery.trim()}`}</p>
+          </> : <p className={styles.railBody}>{activeLoading ? "Загружаем расписание за выбранную неделю…" : activeError ? "Не удалось загрузить расписание. Попробуйте ещё раз." : browseMode === "group" ? "Выберите опубликованную группу — здесь появится число занятий за выбранную неделю." : "Введите имя преподавателя или номер аудитории, чтобы увидеть сводку."}</p>}
+        </section>
+        <section className={styles.railCard}>
+          <div className={styles.railHeading}><span><Icon name="search" size={18} /></span><div><h2>Как искать</h2><p>Открытый доступ</p></div></div>
+          <ul className={styles.railList}><li>Выберите вуз и учебную группу</li><li>Ищите по предмету, преподавателю или аудитории</li><li>Листайте недели и выбирайте нужный день</li></ul>
+        </section>
+        <section className={`${styles.railCard} ${styles.railNotice}`}>
+          <div className={styles.railHeading}><span><Icon name="info" size={18} /></span><div><h2>Публикация</h2><p>Данные задаёт университет</p></div></div>
+          <p className={styles.railBody}>Показываются только занятия из расписаний, которые вуз включил для публичного просмотра.</p>
+          <a href="/universities">Для университетов <Icon name="arrow-right" size={15} /></a>
+        </section>
+      </aside>
     </div>
   );
 }

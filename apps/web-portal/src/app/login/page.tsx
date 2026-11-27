@@ -198,8 +198,8 @@ export default function LoginPage() {
     <>
       <main className="login-layout login-focused">
         <PortalHeader />
+        <section className="login-panel">
         <Link href="/" className="login-home-return"><span aria-hidden="true">←</span> На главную</Link>
-      <section className="login-panel">
         <div className="login-card">
           <MaxLaunchAuth captureOnly />
           <Link href="/" className="brand login-brand"><img src="/brand/np-mark.png" alt="" width={34} height={34} />НаПаре</Link>
