@@ -229,13 +229,23 @@ async function main() {
           accountStatus: wasCreated ? 'created' : 'existing',
         });
 
-        const updated = await manager.query(
+        await manager.query(
           `UPDATE lessons SET "teacherId" = $1
-           WHERE "organizationId" = $2 AND source = 'sibit' AND "sourceTeacherId" = $3
-           RETURNING "groupId"`,
+           WHERE "organizationId" = $2 AND source = 'sibit' AND "sourceTeacherId" = $3`,
           [user.id, organizationId, teacher.sourceTeacherId],
-        ) as Array<{ groupId: string }>;
-        groupLinks.push({ teacher: teacher.sourceTeacherId, groups: new Set(updated.map((row) => row.groupId)).size, lessons: updated.length });
+        );
+        const linkCounts = await manager.query(
+          `SELECT COUNT(*)::int AS lessons, COUNT(DISTINCT "groupId")::int AS groups
+           FROM lessons
+           WHERE "organizationId" = $1 AND source = 'sibit'
+             AND "sourceTeacherId" = $2 AND "teacherId" = $3`,
+          [organizationId, teacher.sourceTeacherId, user.id],
+        ) as Array<{ lessons: number; groups: number }>;
+        groupLinks.push({
+          teacher: teacher.sourceTeacherId,
+          groups: Number(linkCounts[0]?.groups ?? 0),
+          lessons: Number(linkCounts[0]?.lessons ?? 0),
+        });
       }
       const credentialFile = JSON.stringify({ createdAt: new Date().toISOString(), accounts: accountDetails }, null, 2) + '\n';
       await writeFile(credentialsPath!, credentialFile, { encoding: 'utf8', mode: 0o600 });
