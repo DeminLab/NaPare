@@ -39,6 +39,64 @@ const filters: Array<{ id: Category; label: string }> = [
   { id: "teachers", label: "Преподаватели" },
   { id: "system", label: "Система" },
 ];
+const deaneryRoutes = new Set([
+  "/",
+  "/login",
+  "/dashboard",
+  "/analytics",
+  "/users",
+  "/structure",
+  "/faculties",
+  "/groups",
+  "/onboarding",
+  "/absences",
+  "/requests",
+  "/requests/reports",
+  "/schedule-import",
+  "/connectors",
+  "/connectors/rooms",
+  "/notifications",
+  "/audit-log",
+  "/university",
+  "/curation",
+]);
+const deaneryBasePath = "/deanery";
+const safeUrlBase = "https://napare.invalid";
+
+function normalizeNotificationDeepLink(value?: string): string | null {
+  if (
+    !value ||
+    value !== value.trim() ||
+    !value.startsWith("/") ||
+    value.startsWith("//") ||
+    /[\\\u0000-\u001f\u007f]/.test(value)
+  ) {
+    return null;
+  }
+
+  let url: URL;
+  try {
+    url = new URL(value, safeUrlBase);
+  } catch {
+    return null;
+  }
+  if (url.origin !== safeUrlBase) return null;
+
+  let pathname = url.pathname;
+  if (pathname === deaneryBasePath) pathname = "/";
+  else if (pathname.startsWith(`${deaneryBasePath}/`)) {
+    pathname = pathname.slice(deaneryBasePath.length);
+  }
+
+  // Schedule events can point to staff-only routes or a removed deanery page.
+  if (/^\/(?:schedule(?:\/|$)|week(?:\/|$)|pair-space(?:\/|$))/.test(pathname)) {
+    return "/schedule-import";
+  }
+
+  if (!deaneryRoutes.has(pathname)) return null;
+  return `${pathname}${url.search}${url.hash}`;
+}
+
 const time = (value?: string) =>
   value
     ? new Date(value).toLocaleString("ru-RU", {
@@ -190,7 +248,9 @@ export default function UniversityNotificationsPage() {
         />
       ) : (
         <div className="space-y-3">
-            {pageItems.map((item) => (
+          {pageItems.map((item) => {
+            const deepLink = normalizeNotificationDeepLink(item.deepLink);
+            return (
               <article
                 key={item.id}
                 className={`flex gap-3 rounded-2xl border p-4 shadow-sm transition-shadow hover:shadow-md sm:gap-4 sm:p-5 ${!item.isRead ? "border-[var(--color-brand)]/20 bg-white" : "border-[var(--color-border)] bg-white"}`}
@@ -214,9 +274,9 @@ export default function UniversityNotificationsPage() {
                     </time>
                   </div>
                   <div className="mt-3 flex flex-wrap items-center gap-2">
-                    {item.deepLink && (
+                    {deepLink && (
                       <Link
-                        href={item.deepLink}
+                        href={deepLink}
                         className="inline-flex min-h-10 items-center rounded-lg bg-[var(--color-brand)] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[var(--color-brand-strong)]"
                       >
                         Открыть связанный раздел →
@@ -237,7 +297,8 @@ export default function UniversityNotificationsPage() {
                   </div>
                 </div>
               </article>
-            ))}
+            );
+          })}
         </div>
       )}
       {!loading && !error && visible.length > 0 && <ListPagination page={currentPage} pageSize={pageSize} total={visible.length} onChange={setPage} />}

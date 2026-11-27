@@ -9,6 +9,20 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   output: 'standalone',
+  async redirects() {
+    return [
+      {
+        source: '/schedule',
+        destination: '/schedule-import',
+        permanent: false,
+      },
+      {
+        source: '/schedule/:id',
+        destination: '/schedule-import',
+        permanent: false,
+      },
+    ];
+  },
   async rewrites() {
     return [
       {
