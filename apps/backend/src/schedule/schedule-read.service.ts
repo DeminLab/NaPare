@@ -93,8 +93,9 @@ export class ScheduleReadService {
   ) {}
 
   async readRange(actor: ScheduleReadActor, query: ScheduleReadQuery): Promise<ScheduleRangeResult> {
-    if (!actor.organizationId) throw new BadRequestException('Пользователь не привязан к университету');
-    this.tenantContext.assertAccess(actor.organizationId);
+    const organizationId = actor.organizationId;
+    if (!organizationId) throw new BadRequestException('Пользователь не привязан к университету');
+    this.tenantContext.assertAccess(organizationId);
 
     const fromDate = parseIsoDate(query.from, 'начала');
     const toDate = parseIsoDate(query.to, 'окончания');
@@ -102,14 +103,14 @@ export class ScheduleReadService {
     const days = Math.round((toDate.getTime() - fromDate.getTime()) / DAY_MS) + 1;
     if (days > MAX_RANGE_DAYS) throw new BadRequestException(`Период больше ${MAX_RANGE_DAYS} дней`);
 
-    const scope = this.resolveScope(actor, query);
+    const scope = await this.resolveScope(actor, query, organizationId);
     const from = isoDate(fromDate);
     const to = isoDate(toDate);
 
     const [lessons, occurrences] = await Promise.all([
       this.lessons.find({
         where: {
-          organizationId: actor.organizationId,
+          organizationId,
           startDate: Between(fromDate, new Date(toDate.getTime() + DAY_MS - 1)),
           ...(scope.groupId ? { groupId: scope.groupId } : {}),
           ...(scope.teacherId ? { teacherId: scope.teacherId } : {}),
@@ -118,7 +119,7 @@ export class ScheduleReadService {
       }),
       this.occurrences.find({
         where: {
-          organizationId: actor.organizationId,
+          organizationId,
           startsAt: Between(fromDate, new Date(toDate.getTime() + DAY_MS - 1)),
           ...(scope.groupId ? { groupId: scope.groupId } : {}),
           ...(scope.teacherId ? { teacherId: scope.teacherId } : {}),
@@ -130,11 +131,11 @@ export class ScheduleReadService {
     const seriesIds = [...new Set(occurrences.map(occurrence => occurrence.seriesId))];
     const seriesRows = seriesIds.length ? await this.series.find({ where: { id: In(seriesIds) } }) : [];
     const seriesById = new Map(seriesRows.map(row => [row.id, row]));
-    const groupNames = await this.groupNames(actor.organizationId, [
+    const groupNames = await this.groupNames(organizationId, [
       ...lessons.map(lesson => lesson.groupId),
       ...occurrences.map(occurrence => occurrence.groupId),
     ]);
-    const teacherNames = await this.teacherNames(actor.organizationId, [
+    const teacherNames = await this.teacherNames(organizationId, [
       ...lessons.map(lesson => lesson.teacherId),
       ...occurrences.map(occurrence => occurrence.teacherId),
     ]);
@@ -241,10 +242,17 @@ export class ScheduleReadService {
     };
   }
 
-  private resolveScope(actor: ScheduleReadActor, query: ScheduleReadQuery): { groupId: string | null; teacherId: string | null } {
+  private async resolveScope(actor: ScheduleReadActor, query: ScheduleReadQuery, organizationId: string): Promise<{ groupId: string | null; teacherId: string | null }> {
     if (actor.role === UserRole.STUDENT) {
       if (!actor.groupId) throw new NotFoundException('У студента не указана учебная группа');
-      return { groupId: actor.groupId, teacherId: null };
+      const groupId = isPostgresUuid(actor.groupId)
+        ? actor.groupId
+        : (await this.groups.findOne({
+            where: { externalId: actor.groupId, organizationId },
+            select: { id: true },
+          }))?.id;
+      if (!groupId) throw new NotFoundException('Учебная группа студента не найдена');
+      return { groupId, teacherId: null };
     }
     if (actor.role === UserRole.TEACHER) {
       return { groupId: null, teacherId: actor.id };
@@ -265,4 +273,8 @@ export class ScheduleReadService {
     const rows = await this.users.find({ where: { id: In(unique), organizationId }, select: { id: true, firstName: true, lastName: true } });
     return new Map(rows.map(row => [row.id, `${row.firstName} ${row.lastName}`.trim()]));
   }
+}
+
+function isPostgresUuid(value: string): boolean {
+  return /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(value);
 }

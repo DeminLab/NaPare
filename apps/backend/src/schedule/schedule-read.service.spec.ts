@@ -2,18 +2,21 @@ import { BadRequestException } from '@nestjs/common';
 import { UserRole } from '../auth/interfaces/user-role';
 import { ScheduleReadService } from './schedule-read.service';
 
+const GROUP_A_ID = '11111111-1111-4111-8111-111111111111';
+const GROUP_B_ID = '22222222-2222-4222-8222-222222222222';
+
 const actor = (overrides: Record<string, unknown> = {}) => ({
   id: 'student-a',
   role: UserRole.STUDENT,
   organizationId: 'university-a',
-  groupId: 'group-a',
+  groupId: GROUP_A_ID,
   ...overrides,
 });
 
 const lesson = (overrides: Record<string, unknown> = {}) => ({
   id: 'lesson-a',
   organizationId: 'university-a',
-  groupId: 'group-a',
+  groupId: GROUP_A_ID,
   teacherId: 'teacher-a',
   subject: 'Математика',
   subjectType: 'lecture',
@@ -37,7 +40,7 @@ const occurrence = (overrides: Record<string, unknown> = {}) => ({
   organizationId: 'university-a',
   seriesId: 'series-a',
   courseId: 'course-a',
-  groupId: 'group-a',
+  groupId: GROUP_A_ID,
   teacherId: 'teacher-a',
   startsAt: new Date('2026-11-16T10:00:00.000Z'),
   endsAt: new Date('2026-11-16T11:30:00.000Z'),
@@ -54,23 +57,25 @@ const build = (options: {
   occurrences?: Array<Record<string, unknown>>;
   series?: Array<Record<string, unknown>>;
   groups?: Array<Record<string, unknown>>;
+  externalGroup?: Record<string, unknown> | null;
   users?: Array<Record<string, unknown>>;
 } = {}) => {
   const lessonFind = jest.fn().mockResolvedValue(options.lessons ?? []);
   const occurrenceFind = jest.fn().mockResolvedValue(options.occurrences ?? []);
   const seriesFind = jest.fn().mockResolvedValue(options.series ?? []);
   const groupFind = jest.fn().mockResolvedValue(options.groups ?? []);
+  const groupFindOne = jest.fn().mockResolvedValue(options.externalGroup ?? null);
   const userFind = jest.fn().mockResolvedValue(options.users ?? []);
   const tenantContext = { assertAccess: jest.fn() };
   const service = new ScheduleReadService(
     { find: lessonFind } as never,
     { find: occurrenceFind } as never,
     { find: seriesFind } as never,
-    { find: groupFind } as never,
+    { find: groupFind, findOne: groupFindOne } as never,
     { find: userFind } as never,
     tenantContext as never,
   );
-  return { service, lessonFind, occurrenceFind, seriesFind, groupFind, userFind, tenantContext };
+  return { service, lessonFind, occurrenceFind, seriesFind, groupFind, groupFindOne, userFind, tenantContext };
 };
 
 describe('Schedule read model', () => {
@@ -85,7 +90,7 @@ describe('Schedule read model', () => {
   it('maps a legacy lesson into a dated entry with names', async () => {
     const { service } = build({
       lessons: [lesson({ isChanged: true, changeDescription: 'Перенос в другой корпус' })],
-      groups: [{ id: 'group-a', name: 'ИС-21' }],
+      groups: [{ id: GROUP_A_ID, name: 'ИС-21' }],
       users: [{ id: 'teacher-a', firstName: 'Иван', lastName: 'Иванов' }],
     });
     const result = await service.readRange(actor(), { from: '2026-11-16', to: '2026-11-16' });
@@ -146,14 +151,43 @@ describe('Schedule read model', () => {
 
   it('forces a student to their own group even if another group is requested', async () => {
     const { service, lessonFind } = build();
-    await service.readRange(actor(), { from: '2026-11-16', to: '2026-11-16', groupId: 'group-b' });
-    expect(lessonFind.mock.calls[0][0].where.groupId).toBe('group-a');
+    await service.readRange(actor(), { from: '2026-11-16', to: '2026-11-16', groupId: GROUP_B_ID });
+    expect(lessonFind.mock.calls[0][0].where.groupId).toBe(GROUP_A_ID);
+  });
+
+  it('resolves a legacy student group ID before querying UUID schedule columns', async () => {
+    const internalGroupId = '2d65b4f6-9136-4a5a-8aa4-03ad0fd31a21';
+    const { service, lessonFind, occurrenceFind, groupFindOne } = build({
+      externalGroup: { id: internalGroupId },
+    });
+
+    await service.readRange(actor({ groupId: '12131' }), {
+      from: '2026-11-16', to: '2026-11-16', groupId: GROUP_B_ID,
+    });
+
+    expect(groupFindOne).toHaveBeenCalledWith({
+      where: { externalId: '12131', organizationId: 'university-a' },
+      select: { id: true },
+    });
+    expect(lessonFind.mock.calls[0][0].where.groupId).toBe(internalGroupId);
+    expect(occurrenceFind.mock.calls[0][0].where.groupId).toBe(internalGroupId);
+  });
+
+  it('rejects an unknown legacy student group before querying UUID schedule columns', async () => {
+    const { service, lessonFind, occurrenceFind } = build({ externalGroup: null });
+
+    await expect(service.readRange(actor({ groupId: 'unknown-external-group' }), {
+      from: '2026-11-16', to: '2026-11-16',
+    })).rejects.toThrow('Учебная группа студента не найдена');
+
+    expect(lessonFind).not.toHaveBeenCalled();
+    expect(occurrenceFind).not.toHaveBeenCalled();
   });
 
   it('forces a teacher to their own lessons', async () => {
     const { service, lessonFind, occurrenceFind } = build();
     await service.readRange(actor({ id: 'teacher-a', role: UserRole.TEACHER, groupId: null }), {
-      from: '2026-11-16', to: '2026-11-16', teacherId: 'teacher-b', groupId: 'group-b',
+      from: '2026-11-16', to: '2026-11-16', teacherId: 'teacher-b', groupId: GROUP_B_ID,
     });
     expect(lessonFind.mock.calls[0][0].where.teacherId).toBe('teacher-a');
     expect(lessonFind.mock.calls[0][0].where.groupId).toBeUndefined();
