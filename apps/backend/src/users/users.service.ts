@@ -165,8 +165,15 @@ export class UsersService {
     pagination: PaginationQueryDto,
   ): Promise<PaginatedResponse<User>> {
     this.tenantContext.assertAccess(organizationId);
+    const group = await this.groups?.findOne({
+      where: { id: groupId, organizationId },
+      select: { id: true, externalId: true },
+    });
+    const groupIds = new Set([groupId]);
+    if (group?.externalId) groupIds.add(group.externalId);
+
     const [data, total] = await this.usersRepository.findAndCount({
-      where: { groupId, organizationId },
+      where: { groupId: In([...groupIds]), organizationId },
       order: { lastName: "ASC", firstName: "ASC" },
       skip: (pagination.page - 1) * pagination.limit,
       take: pagination.limit,
